@@ -16,6 +16,9 @@ List of augmenters:
 
     * Superpixels
     * Voronoi
+    * UniformVoronoi
+    * RegularGridVoronoi
+    * RelativeRegularGridVoronoi
 
 """
 from __future__ import print_function, division, absolute_import
@@ -23,7 +26,7 @@ from __future__ import print_function, division, absolute_import
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-# use skimage.segmentation instead from ... import segmentation here,
+# use skimage.segmentation instead `from skimage import segmentation` here,
 # because otherwise unittest seems to mix up imgaug.augmenters.segmentation
 # with skimage.segmentation for whatever reason
 import skimage.segmentation
@@ -76,8 +79,7 @@ def _ensure_image_max_size(image, max_size, interpolation):
 
 # TODO add compactness parameter
 class Superpixels(meta.Augmenter):
-    """
-    Transform images parially/completely to their superpixel representation.
+    """Transform images parially/completely to their superpixel representation.
 
     This implementation uses skimage's version of the SLIC algorithm.
 
@@ -135,11 +137,11 @@ class Superpixels(meta.Augmenter):
 
         Behaviour based on chosen datatypes for this parameter:
 
-            * If a number, then that number will always be used.
-            * If tuple ``(a, b)``, then a random probability will be sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list per
-              image.
+            * If a ``number``, then that ``number`` will always be used.
+            * If ``tuple`` ``(a, b)``, then a random probability will be
+              sampled from the interval ``[a, b]`` per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, it is expected to return
               values between ``0.0`` and ``1.0`` and will be queried *for each
               individual segment* to determine whether it is supposed to
@@ -152,12 +154,12 @@ class Superpixels(meta.Augmenter):
         superpixels. Higher values are computationally more intensive and
         will hence lead to a slowdown.
 
-            * If a single int, then that value will always be used as the
+            * If a single ``int``, then that value will always be used as the
               number of segments.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -190,18 +192,18 @@ class Superpixels(meta.Augmenter):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Superpixels(p_replace=1.0, n_segments=64)
 
-    Generates around ``64`` superpixels per image and replaces all of them with
+    Generate around ``64`` superpixels per image and replace all of them with
     their average color (standard superpixel image).
 
     >>> aug = iaa.Superpixels(p_replace=0.5, n_segments=64)
 
-    Generates around ``64`` superpixels per image and replaces half of them
+    Generate around ``64`` superpixels per image and replace half of them
     with their average color, while the other half are left unchanged (i.e.
     they still show the input image's content).
 
     >>> aug = iaa.Superpixels(p_replace=(0.25, 1.0), n_segments=(16, 128))
 
-    Generates between ``16`` and ``128`` superpixels per image and replaces
+    Generate between ``16`` and ``128`` superpixels per image and replace
     ``25`` to ``100`` percent of them with their average color.
 
     """
@@ -255,7 +257,8 @@ class Superpixels(meta.Augmenter):
             image = images[i]
 
             orig_shape = image.shape
-            image = _ensure_image_max_size(image, self.max_size, self.interpolation)
+            image = _ensure_image_max_size(image, self.max_size,
+                                           self.interpolation)
 
             segments = skimage.segmentation.slic(
                 image, n_segments=n_segments_samples[i], compactness=10)
@@ -510,11 +513,11 @@ class Voronoi(meta.Augmenter):
 
         Behaviour based on chosen datatypes for this parameter:
 
-            * If a number, then that number will always be used.
-            * If tuple ``(a, b)``, then a random probability will be sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list per
-              image.
+            * If a ``number``, then that ``number`` will always be used.
+            * If ``tuple`` ``(a, b)``, then a random probability will be
+              sampled from the interval ``[a, b]`` per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, it is expected to return
               values between ``0.0`` and ``1.0`` and will be queried *for each
               individual segment* to determine whether it is supposed to
@@ -553,9 +556,9 @@ class Voronoi(meta.Augmenter):
 
     Create an augmenter that places a ``20x40`` (``HxW``) grid of cells on
     the image and replaces all pixels within each cell by the cell's average
-    color. The process is performed at an image size not exceeding 128px on
-    any side. If necessary, the downscaling is performed using linear
-    interpolation.
+    color. The process is performed at an image size not exceeding ``128`` px
+    on any side (default). If necessary, the downscaling is performed using
+    ``linear`` interpolation (default).
 
     >>> points_sampler = iaa.DropoutPointsSampler(
     >>>     iaa.RelativeRegularGridPointsSampler(
@@ -579,6 +582,7 @@ class Voronoi(meta.Augmenter):
     remaining ``10`` percent's pixels remain unchanged.
 
     """
+
     def __init__(self, points_sampler, p_replace=1.0, max_size=128,
                  interpolation="linear",
                  name=None, deterministic=False, random_state=None):
@@ -650,10 +654,12 @@ class Voronoi(meta.Augmenter):
 class UniformVoronoi(Voronoi):
     """Uniformly sample Voronoi cells on images and average colors within them.
 
-    This augmenter is a shortcut for the combination of ``Voronoi`` with
-    ``UniformPointsSampler``. Hence, it generates a fixed amount of ``N``
-    random coordinates of voronoi cells on each image. The cell coordinates
-    are sampled uniformly using the image height and width as maxima.
+    This augmenter is a shortcut for the combination of
+    :class:`imgaug.augmenters.segmentation.Voronoi` with
+    :class:`imgaug.augmenters.segmentation.UniformPointsSampler`. Hence, it
+    generates a fixed amount of ``N`` random coordinates of voronoi cells on
+    each image. The cell coordinates are sampled uniformly using the image
+    height and width as maxima.
 
     dtype support::
 
@@ -664,11 +670,11 @@ class UniformVoronoi(Voronoi):
     n_points : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
         Number of points to sample on each image.
 
-            * If a single int, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a single ``int``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -689,11 +695,11 @@ class UniformVoronoi(Voronoi):
 
         Behaviour based on chosen datatypes for this parameter:
 
-            * If a number, then that number will always be used.
-            * If tuple ``(a, b)``, then a random probability will be sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list per
-              image.
+            * If a ``number``, then that ``number`` will always be used.
+            * If ``tuple`` ``(a, b)``, then a random probability will be
+              sampled from the interval ``[a, b]`` per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, it is expected to return
               values between ``0.0`` and ``1.0`` and will be queried *for each
               individual segment* to determine whether it is supposed to
@@ -735,17 +741,18 @@ class UniformVoronoi(Voronoi):
     ``[0, H]``, where ``H`` is the image height and ``W`` the image width.
     Then use these coordinates to group the image pixels into voronoi
     cells and average the colors within them. The process is performed at an
-    image size not exceeding 128px on any side. If necessary, the downscaling
-    is performed using linear interpolation.
+    image size not exceeding ``128`` px on any side (default). If necessary,
+    the downscaling is performed using ``linear`` interpolation (default).
 
     >>> aug = iaa.UniformVoronoi(250, p_replace=0.9, max_size=None)
 
     Same as above, but always samples ``N=250`` cells, replaces only
     ``90`` percent of them with their average color (the pixels of the
     remaining ``10`` percent are not changed) and performs the transformation
-    at the original image size.
+    at the original image size (``max_size=None``).
 
     """
+
     def __init__(self, n_points, p_replace=1.0, max_size=128,
                  interpolation="linear",
                  name=None, deterministic=False, random_state=None):
@@ -763,8 +770,10 @@ class UniformVoronoi(Voronoi):
 class RegularGridVoronoi(Voronoi):
     """Sample Voronoi cells from regular grids and color-average them.
 
-    This augmenter is a shortcut for the combination of ``Voronoi``,
-    ``RegularGridPointsSampler`` and ``DropoutPointsSampler``. Hence, it
+    This augmenter is a shortcut for the combination of
+    :class:`imgaug.augmenters.segmentation.Voronoi`,
+    :class:`imgaug.augmenters.segmentation.RegularGridPointsSampler` and
+    :class:`imgaug.augmenters.segmentation.DropoutPointsSampler`. Hence, it
     generates a regular grid with ``R`` rows and ``C`` columns of coordinates
     on each image. Then, it drops ``p`` percent of the ``R*C`` coordinates
     to randomize the grid. Each image pixel then belongs to the voronoi
@@ -782,25 +791,25 @@ class RegularGridVoronoi(Voronoi):
         value is clipped to the interval ``[1..H]``, where ``H`` is the image
         height.
 
-            * If a single int, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a single ``int``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
     n_cols : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        Number of columns of coordinates to place on each image, i.e. the number
-        of coordinates on the x-axis. Note that for each image, the sampled
-        value is clipped to the interval ``[1..W]``, where ``W`` is the image
-        width.
+        Number of columns of coordinates to place on each image, i.e. the
+        number of coordinates on the x-axis. Note that for each image, the
+        sampled value is clipped to the interval ``[1..W]``, where ``W`` is
+        the image width.
 
-            * If a single int, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a single ``int``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -813,9 +822,9 @@ class RegularGridVoronoi(Voronoi):
         operation, i.e. even ``1.0`` will only drop all *except one*
         coordinate.
 
-            * If a float, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
-              the interval ``[a, b]`` per image.
+            * If a ``float``, then that value will be used for all images.
+            * If a ``tuple`` ``(a, b)``, then a value ``p`` will be sampled
+              from the interval ``[a, b]`` per image.
             * If a ``StochasticParameter``, then this parameter will be used to
               determine per coordinate whether it should be *kept* (sampled
               value of ``>0.5``) or shouldn't be kept (sampled value of
@@ -841,11 +850,11 @@ class RegularGridVoronoi(Voronoi):
 
         Behaviour based on chosen datatypes for this parameter:
 
-            * If a number, then that number will always be used.
-            * If tuple ``(a, b)``, then a random probability will be sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list per
-              image.
+            * If a ``number``, then that number will always be used.
+            * If ``tuple`` ``(a, b)``, then a random probability will be
+              sampled from the interval ``[a, b]`` per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, it is expected to return
               values between ``0.0`` and ``1.0`` and will be queried *for each
               individual segment* to determine whether it is supposed to
@@ -886,8 +895,8 @@ class RegularGridVoronoi(Voronoi):
     to create a less regular pattern. Then use the remaining coordinates
     to group the image pixels into voronoi cells and average the colors
     within them. The process is performed at an image size not exceeding
-    128px on any side. If necessary, the downscaling is performed using
-    linear interpolation.
+    ``128`` px on any side (default). If necessary, the downscaling is
+    performed using ``linear`` interpolation (default).
 
     >>> aug = iaa.RegularGridVoronoi(
     >>>     (10, 30), 20, p_drop_points=0.0, p_replace=0.9, max_size=None)
@@ -896,9 +905,10 @@ class RegularGridVoronoi(Voronoi):
     drops none of the generates points, replaces only ``90`` percent of
     the voronoi cells with their average color (the pixels of the remaining
     ``10`` percent are not changed) and performs the transformation
-    at the original image size.
+    at the original image size (``max_size=None``).
 
     """
+
     def __init__(self, n_rows, n_cols, p_drop_points=0.4, p_replace=1.0,
                  max_size=128, interpolation="linear",
                  name=None, deterministic=False, random_state=None):
@@ -919,15 +929,18 @@ class RegularGridVoronoi(Voronoi):
 class RelativeRegularGridVoronoi(Voronoi):
     """Sample Voronoi cells from image-dependent grids and color-average them.
 
-    This augmenter is a shortcut for the combination of ``Voronoi``,
-    ``RegularGridPointsSampler`` and ``DropoutPointsSampler``. Hence, it
+    This augmenter is a shortcut for the combination of
+    :class:`imgaug.augmenters.segmentation.Voronoi`,
+    :class:`imgaug.augmenters.segmentation.RegularGridPointsSampler` and
+    :class:`imgaug.augmenters.segmentation.DropoutPointsSampler`. Hence, it
     generates a regular grid with ``R`` rows and ``C`` columns of coordinates
     on each image. Then, it drops ``p`` percent of the ``R*C`` coordinates
     to randomize the grid. Each image pixel then belongs to the voronoi
     cell with the closest coordinate.
 
     .. note::
-        In contrast to the other Voronoi augmenters, this one uses
+
+        In contrast to the other voronoi augmenters, this one uses
         ``None`` as the default value for `max_size`, i.e. the color averaging
         is always performed at full resolution. This enables the augmenter to
         make most use of the added points for larger images. It does however
@@ -946,11 +959,11 @@ class RelativeRegularGridVoronoi(Voronoi):
         Note that for each image, the number of coordinates is clipped to the
         interval ``[1,H]``, where ``H`` is the image height.
 
-            * If a single number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the interval
+            * If a single ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the interval
               ``[a, b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -961,11 +974,11 @@ class RelativeRegularGridVoronoi(Voronoi):
         Note that for each image, the number of coordinates is clipped to the
         interval ``[1,W]``, where ``W`` is the image width.
 
-            * If a single number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the interval
+            * If a single ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the interval
               ``[a, b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -978,9 +991,9 @@ class RelativeRegularGridVoronoi(Voronoi):
         operation, i.e. even ``1.0`` will only drop all *except one*
         coordinate.
 
-            * If a float, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
-              the interval ``[a, b]`` per image.
+            * If a ``float``, then that value will be used for all images.
+            * If a ``tuple`` ``(a, b)``, then a value ``p`` will be sampled
+              from the interval ``[a, b]`` per image.
             * If a ``StochasticParameter``, then this parameter will be used to
               determine per coordinate whether it should be *kept* (sampled
               value of ``>0.5``) or shouldn't be kept (sampled value of
@@ -1006,11 +1019,11 @@ class RelativeRegularGridVoronoi(Voronoi):
 
         Behaviour based on chosen datatypes for this parameter:
 
-            * If a number, then that number will always be used.
-            * If tuple ``(a, b)``, then a random probability will be sampled
-              from the interval ``[a, b]`` per image.
-            * If a list, then a random value will be sampled from that list per
-              image.
+            * If a ``number``, then that ``number`` will always be used.
+            * If ``tuple`` ``(a, b)``, then a random probability will be
+              sampled from the interval ``[a, b]`` per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, it is expected to return
               values between ``0.0`` and ``1.0`` and will be queried *for each
               individual segment* to determine whether it is supposed to
@@ -1064,8 +1077,8 @@ class RelativeRegularGridVoronoi(Voronoi):
     ``C=0.1*W`` rows. No points are dropped. The augmenter replaces only
     ``90`` percent of the voronoi cells with their average color (the pixels
     of the remaining ``10`` percent are not changed). Images larger than
-    ``512px`` are temporarily downscaled (*before* sampling the grid points)
-    so that no side exceeds ``512px``. This improves performance, but
+    ``512`` px are temporarily downscaled (*before* sampling the grid points)
+    so that no side exceeds ``512`` px. This improves performance, but
     degrades the quality of the resulting image.
 
     """
@@ -1092,7 +1105,8 @@ class PointsSamplerIf(object):
     """Interface for all point samplers.
 
     Point samplers return coordinate arrays of shape ``Nx2``.
-    These coordinates can be used in other augmenters, see e.g. ``Voronoi``.
+    These coordinates can be used in other augmenters, see e.g.
+    :class:`imgaug.augmenters.segmentation.Voronoi`.
 
     """
 
@@ -1104,7 +1118,7 @@ class PointsSamplerIf(object):
         ----------
         images : ndarray or list of ndarray
             One or more images for which to generate points.
-            If this is a list of arrays, each one of them is expected to
+            If this is a ``list`` of arrays, each one of them is expected to
             have three dimensions.
             If this is an array, it must be four-dimensional and the first
             axis is expected to denote the image index. For ``RGB`` images
@@ -1160,25 +1174,25 @@ class RegularGridPointsSampler(PointsSamplerIf):
         value is clipped to the interval ``[1..H]``, where ``H`` is the image
         height.
 
-            * If a single int, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a single ``int``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
     n_cols : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        Number of columns of coordinates to place on each image, i.e. the number
-        of coordinates on the x-axis. Note that for each image, the sampled
-        value is clipped to the interval ``[1..W]``, where ``W`` is the image
-        width.
+        Number of columns of coordinates to place on each image, i.e. the
+        number of coordinates on the x-axis. Note that for each image, the
+        sampled value is clipped to the interval ``[1..W]``, where ``W`` is
+        the image width.
 
-            * If a single int, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a single ``int``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -1189,7 +1203,7 @@ class RegularGridPointsSampler(PointsSamplerIf):
     >>>     n_rows=(5, 20),
     >>>     n_cols=50)
 
-    Creates a point sampler that generates regular grids of points. These grids
+    Create a point sampler that generates regular grids of points. These grids
     contain ``r`` points on the y-axis, where ``r`` is sampled
     uniformly from the discrete interval ``[5..20]`` per image.
     On the x-axis, the grids always contain ``50`` points.
@@ -1278,11 +1292,11 @@ class RelativeRegularGridPointsSampler(PointsSamplerIf):
         Note that for each image, the number of coordinates is clipped to the
         interval ``[1,H]``, where ``H`` is the image height.
 
-            * If a single number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the interval
+            * If a single ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the interval
               ``[a, b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -1293,11 +1307,11 @@ class RelativeRegularGridPointsSampler(PointsSamplerIf):
         Note that for each image, the number of coordinates is clipped to the
         interval ``[1,W]``, where ``W`` is the image width.
 
-            * If a single number, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the interval
+            * If a single ``number``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the interval
               ``[a, b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -1308,7 +1322,7 @@ class RelativeRegularGridPointsSampler(PointsSamplerIf):
     >>>     n_rows_frac=(0.01, 0.1),
     >>>     n_cols_frac=0.2)
 
-    Creates a point sampler that generates regular grids of points. These grids
+    Create a point sampler that generates regular grids of points. These grids
     contain ``round(y*H)`` points on the y-axis, where ``y`` is sampled
     uniformly from the interval ``[0.01, 0.1]`` per image and ``H`` is the
     image height. On the x-axis, the grids always contain ``0.2*W`` points,
@@ -1376,9 +1390,9 @@ class DropoutPointsSampler(PointsSamplerIf):
         operation, i.e. even ``1.0`` will only drop all *except one*
         coordinate.
 
-            * If a float, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
-              the interval ``[a, b]`` per image.
+            * If a ``float``, then that value will be used for all images.
+            * If a ``tuple`` ``(a, b)``, then a value ``p`` will be sampled
+              from the interval ``[a, b]`` per image.
             * If a ``StochasticParameter``, then this parameter will be used to
               determine per coordinate whether it should be *kept* (sampled
               value of ``>0.5``) or shouldn't be kept (sampled value of
@@ -1394,9 +1408,9 @@ class DropoutPointsSampler(PointsSamplerIf):
     >>>     iaa.RegularGridPointsSampler(10, 20),
     >>>     0.2)
 
-    Creates a point sampler that first generates points following a regular
-    grid of 10 rows and 20 columns, then randomly drops ``20`` percent of these
-    points.
+    Create a point sampler that first generates points following a regular
+    grid of ``10`` rows and ``20`` columns, then randomly drops ``20`` percent
+    of these points.
 
     """
 
@@ -1498,11 +1512,11 @@ class UniformPointsSampler(PointsSamplerIf):
     n_points : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
         Number of points to sample on each image.
 
-            * If a single int, then that value will always be used.
-            * If a tuple ``(a, b)``, then a value from the discrete interval
-              ``[a..b]`` will be sampled per image.
-            * If a list, then a random value will be sampled from that list
-              per image.
+            * If a single ``int``, then that value will always be used.
+            * If a ``tuple`` ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a ``list``, then a random value will be sampled from that
+              ``list`` per image.
             * If a ``StochasticParameter``, then that parameter will be
               queried to draw one value per image.
 
@@ -1511,7 +1525,7 @@ class UniformPointsSampler(PointsSamplerIf):
     >>> import imgaug.augmenters as iaa
     >>> sampler = iaa.UniformPointsSampler(500)
 
-    Creates a point sampler that generates an array of 500 random points for
+    Create a point sampler that generates an array of ``500`` random points for
     each input image. The x- and y-coordinates of each point are sampled
     from uniform distributions.
 
@@ -1577,8 +1591,8 @@ class SubsamplingPointsSampler(PointsSamplerIf):
     Parameters
     ----------
     other_points_sampler : PointsSamplerIf
-        Another point sampler that is queried to generate a list of points.
-        The dropout operation will be applied to that list.
+        Another point sampler that is queried to generate a ``list`` of points.
+        The dropout operation will be applied to that ``list``.
 
     n_points_max : int
         Maximum number of allowed points. If `other_points_sampler` generates
@@ -1593,7 +1607,7 @@ class SubsamplingPointsSampler(PointsSamplerIf):
     >>>     50
     >>> )
 
-    Creates a points sampler that places ``y*H`` points on the y-axis (with
+    Create a points sampler that places ``y*H`` points on the y-axis (with
     ``y`` being ``0.1`` and ``H`` being an image's height) and ``x*W`` on
     the x-axis (analogous). Then, if that number of placed points exceeds
     ``50`` (can easily happen for larger images), a random subset of ``50``

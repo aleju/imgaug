@@ -36,10 +36,15 @@ import imgaug as ia
 from .. import parameters as iap
 
 
+def _int_r(value):
+    return int(np.round(value))
+
+
 # TODO somehow integrate this with ia.pad()
 def _handle_pad_mode_param(pad_mode):
-    pad_modes_available = {"constant", "edge", "linear_ramp", "maximum", "mean", "median", "minimum", "reflect",
-                           "symmetric", "wrap"}
+    pad_modes_available = {
+        "constant", "edge", "linear_ramp", "maximum", "mean", "median",
+        "minimum", "reflect", "symmetric", "wrap"}
     if pad_mode == ia.ALL:
         return iap.Choice(list(pad_modes_available))
     elif ia.is_string(pad_mode):
@@ -54,11 +59,13 @@ def _handle_pad_mode_param(pad_mode):
         return iap.Choice(pad_mode)
     elif isinstance(pad_mode, iap.StochasticParameter):
         return pad_mode
-    raise Exception("Expected pad_mode to be ia.ALL or string or list of strings or StochasticParameter, got %s." % (
-        type(pad_mode),))
+    raise Exception(
+        "Expected pad_mode to be ia.ALL or string or list of strings or "
+        "StochasticParameter, got %s." % (type(pad_mode),))
 
 
-def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left):
+def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
+                            crop_left):
     remaining_height = height - (crop_top + crop_bottom)
     remaining_width = width - (crop_left + crop_right)
     if remaining_height < 1:
@@ -133,13 +140,17 @@ def _handle_position_parameter(position):
         return iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0)
     elif position == "normal":
         return (
-            iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2), minval=0.0, maxval=1.0),
-            iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2), minval=0.0, maxval=1.0)
+            iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2),
+                     minval=0.0, maxval=1.0),
+            iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2),
+                     minval=0.0, maxval=1.0)
         )
     elif position == "center":
         return iap.Deterministic(0.5), iap.Deterministic(0.5)
-    elif ia.is_string(position) and re.match(r"^(left|center|right)-(top|center|bottom)$", position):
-        mapping = {"top": 0.0, "center": 0.5, "bottom": 1.0, "left": 0.0, "right": 1.0}
+    elif (ia.is_string(position)
+          and re.match(r"^(left|center|right)-(top|center|bottom)$", position)):
+        mapping = {"top": 0.0, "center": 0.5, "bottom": 1.0, "left": 0.0,
+                   "right": 1.0}
         return (
             iap.Deterministic(mapping[position.split("-")[0]]),
             iap.Deterministic(mapping[position.split("-")[1]])
@@ -154,10 +165,12 @@ def _handle_position_parameter(position):
         for el in position:
             if ia.is_single_number(el) and (el < 0 or el > 1.0):
                 raise Exception(
-                    "Both position values must be within the value range [0.0, 1.0]. Got type %s with value %.8f." % (
-                        type(el), el,)
-                )
-        position = [iap.Deterministic(el) if ia.is_single_number(el) else el for el in position]
+                    "Both position values must be within the value range "
+                    "[0.0, 1.0]. Got type %s with value %.8f." % (
+                        type(el), el,))
+        position = [iap.Deterministic(el)
+                    if ia.is_single_number(el)
+                    else el for el in position]
 
         only_sparams = all([isinstance(el, iap.StochasticParameter)
                             for el in position])
@@ -169,11 +182,16 @@ def _handle_position_parameter(position):
         return tuple(position)
     else:
         raise Exception(
-            ("Expected one of the following as position parameter: string 'uniform', string 'normal', string 'center', "
-             + "a string matching regex ^(left|center|right)-(top|center|bottom)$, a single StochasticParameter or a "
-             + "tuple of two entries, both being either StochasticParameter or floats or int. Got instead type %s with "
-             + "content '%s'.") % (
-                type(position), str(position) if len(str(position)) < 20 else str(position)[0:20] + "..."
+            "Expected one of the following as position parameter: string "
+            "'uniform', string 'normal', string 'center', a string matching "
+            "regex ^(left|center|right)-(top|center|bottom)$, a single "
+            "StochasticParameter or a tuple of two entries, both being either "
+            "StochasticParameter or floats or int. Got instead type %s with "
+            "content '%s'." % (
+                type(position),
+                (str(position)
+                 if len(str(position)) < 20
+                 else str(position)[0:20] + "...")
             )
         )
 
@@ -185,8 +203,7 @@ def Scale(*args, **kwargs):
 
 
 class Resize(meta.Augmenter):
-    """
-    Augmenter that resizes images to specified heights and widths.
+    """Augmenter that resizes images to specified heights and widths.
 
     dtype support::
 
@@ -197,51 +214,53 @@ class Resize(meta.Augmenter):
     size : 'keep' or int or float or tuple of int or tuple of float or list of int or list of float or imgaug.parameters.StochasticParameter or dict
         The new size of the images.
 
-            * If this has the string value "keep", the original height and
+            * If this has the string value ``keep``, the original height and
               width values will be kept (image is not resized).
-            * If this is an integer, this value will always be used as the new
+            * If this is an ``int``, this value will always be used as the new
               height and width of the images.
-            * If this is a float v, then per image the image's height H and
-              width W will be changed to ``H*v`` and ``W*v``.
-            * If this is a tuple, it is expected to have two entries ``(a, b)``.
-              If at least one of these are floats, a value will be sampled from
-              range ``[a, b]`` and used as the float value to resize the image
-              (see above). If both are integers, a value will be sampled from
-              the discrete range ``[a..b]`` and used as the integer value
-              to resize the image (see above).
-            * If this is a list, a random value from the list will be picked
-              to resize the image. All values in the list must be integers or
-              floats (no mixture is possible).
-            * If this is a StochasticParameter, then this parameter will first
-              be queried once per image. The resulting value will be used
+            * If this is a ``float`` ``v``, then per image the image's height
+              ``H`` and width ``W`` will be changed to ``H*v`` and ``W*v``.
+            * If this is a ``tuple``, it is expected to have two entries
+              ``(a, b)``. If at least one of these are ``float`` s, a value
+              will be sampled from range ``[a, b]`` and used as the ``float``
+              value to resize the image (see above). If both are ``int`` s, a
+              value will be sampled from the discrete range ``[a..b]`` and
+              used as the integer value to resize the image (see above).
+            * If this is a ``list``, a random value from the ``list`` will be
+              picked to resize the image. All values in the ``list`` must be
+              ``int`` s or ``float`` s (no mixture is possible).
+            * If this is a ``StochasticParameter``, then this parameter will
+              first be queried once per image. The resulting value will be used
               for both height and width.
-            * If this is a dictionary, it may contain the keys "height" and
-              "width" or the keys "shorter-side" and "longer-side". Each key may have the
-              same datatypes as above and describes the scaling on x and y-axis
-              or the shorter and longer-axis, respectively. Both axis are sampled
-              independently. Additionally, one of the keys may have the value
-              "keep-aspect-ratio", which means that the respective side of the
-              image will be resized so that the original aspect ratio is kept.
-              This is useful when only resizing one image size by a pixel
-              value (e.g. resize images to a height of 64 pixels and resize
-              the width so that the overall aspect ratio is maintained).
+            * If this is a ``dict``, it may contain the keys ``height`` and
+              ``width`` or the keys ``shorter-side`` and ``longer-side``. Each
+              key may have the same datatypes as above and describes the
+              scaling on x and y-axis or the shorter and longer axis,
+              respectively. Both axis are sampled independently. Additionally,
+              one of the keys may have the value ``keep-aspect-ratio``, which
+              means that the respective side of the image will be resized so
+              that the original aspect ratio is kept. This is useful when only
+              resizing one image size by a pixel value (e.g. resize images to
+              a height of ``64`` pixels and resize the width so that the
+              overall aspect ratio is maintained).
 
     interpolation : imgaug.ALL or int or str or list of int or list of str or imgaug.parameters.StochasticParameter, optional
         Interpolation to use.
 
-            * If imgaug.ALL, then a random interpolation from ``nearest``, ``linear``,
-              ``area`` or ``cubic`` will be picked (per image).
-            * If int, then this interpolation will always be used.
+            * If ``imgaug.ALL``, then a random interpolation from ``nearest``,
+              ``linear``, ``area`` or ``cubic`` will be picked (per image).
+            * If ``int``, then this interpolation will always be used.
               Expected to be any of the following:
               ``cv2.INTER_NEAREST``, ``cv2.INTER_LINEAR``, ``cv2.INTER_AREA``,
               ``cv2.INTER_CUBIC``
             * If string, then this interpolation will always be used.
               Expected to be any of the following:
               ``nearest``, ``linear``, ``area``, ``cubic``
-            * If list of ints/strings, then a random one of the values will be
-              picked per image as the interpolation.
-              If a StochasticParameter, then this parameter will be queried per
-              image and is expected to return an integer or string.
+            * If ``list`` of ``int`` / ``str``, then a random one of the values
+              will be picked per image as the interpolation.
+            * If a ``StochasticParameter``, then this parameter will be
+              queried per image and is expected to return an ``int`` or
+              ``str``.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -254,62 +273,69 @@ class Resize(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Resize(32)
 
-    resizes all images to ``32x32`` pixels.
+    Resize all images to ``32x32`` pixels.
 
     >>> aug = iaa.Resize(0.5)
 
-    resizes all images to 50 percent of their original size.
+    Resize all images to ``50`` percent of their original size.
 
     >>> aug = iaa.Resize((16, 22))
 
-    resizes all images to a random height and width within the
-    discrete range ``16<=x<=22``.
+    Resize all images to a random height and width within the discrete
+    interval ``[16..22]`` (uniformly sampled per image).
 
     >>> aug = iaa.Resize((0.5, 0.75))
 
-    resizes all image's height and width to ``H*v`` and ``W*v``,
-    where ``v`` is randomly sampled from the range ``0.5<=x<=0.75``.
+    Resize all any input image so that its height (``H``) and width (``W``)
+    become ``H*v`` and ``W*v``, where ``v`` is uniformly sampled from the
+    interval ``[0.5, 0.75]``.
 
     >>> aug = iaa.Resize([16, 32, 64])
 
-    resizes all images either to ``16x16``, ``32x32`` or ``64x64`` pixels.
+    Resize all images either to ``16x16``, ``32x32`` or ``64x64`` pixels.
 
     >>> aug = iaa.Resize({"height": 32})
 
-    resizes all images to a height of 32 pixels and keeps the original
+    Resize all images to a height of ``32`` pixels and keeps the original
     width.
 
     >>> aug = iaa.Resize({"height": 32, "width": 48})
 
-    resizes all images to a height of 32 pixels and a width of 48.
+    Resize all images to a height of ``32`` pixels and a width of ``48``.
 
     >>> aug = iaa.Resize({"height": 32, "width": "keep-aspect-ratio"})
 
-    resizes all images to a height of 32 pixels and resizes the x-axis
-    (width) so that the aspect ratio is maintained.
+    Resize all images to a height of ``32`` pixels and resizes the
+    x-axis (width) so that the aspect ratio is maintained.
 
-    >>> aug = iaa.Resize({"shorter-side": 224, "longer-side": "keep-aspect-ratio"})
+    >>> aug = iaa.Resize(
+    >>>     {"shorter-side": 224, "longer-side": "keep-aspect-ratio"})
 
-    resizes all images to a height/width of 224 pixels depending on which axis is shorter
-    and resizes the other axis so that the aspect ratio is maintained.
+    Resize all images to a height/width of ``224`` pixels, depending on which
+    axis is shorter and resize the other axis so that the aspect ratio is
+    maintained.
 
     >>> aug = iaa.Resize({"height": (0.5, 0.75), "width": [16, 32, 64]})
 
-    resizes all images to a height of ``H*v``, where ``H`` is the original height
-    and v is a random value sampled from the range ``0.5<=x<=0.75``.
-    The width/x-axis of each image is resized to either 16 or 32 or
-    64 pixels.
+    Resize all images to a height of ``H*v``, where ``H`` is the original
+    height and ``v`` is a random value sampled from the interval
+    ``[0.5, 0.75]``. The width/x-axis of each image is resized to either
+    ``16`` or ``32`` or ``64`` pixels.
 
     >>> aug = iaa.Resize(32, interpolation=["linear", "cubic"])
 
-    resizes all images to ``32x32`` pixels. Randomly uses either ``linear``
+    Resize all images to ``32x32`` pixels. Randomly use either ``linear``
     or ``cubic`` interpolation.
 
     """
-    def __init__(self, size, interpolation="cubic", name=None, deterministic=False, random_state=None):
-        super(Resize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+
+    def __init__(self, size, interpolation="cubic",
+                 name=None, deterministic=False, random_state=None):
+        super(Resize, self).__init__(name=name, deterministic=deterministic,
+                                     random_state=random_state)
 
         def handle(val, allow_dict):
             if val == "keep":
@@ -324,18 +350,24 @@ class Resize(meta.Augmenter):
                 if len(val.keys()) == 0:
                     return iap.Deterministic("keep")
                 elif any([key in ["height", "width"] for key in val.keys()]):
-                    assert all([key in ["height", "width"] for key in val.keys()]), (
-                        "Expected dict to contain height and width keys, found "
-                        "neither of them.")
+                    hw_keys_exist = all([
+                        key in ["height", "width"] for key in val.keys()])
+                    assert hw_keys_exist, (
+                        "Expected dict to contain height and width keys, "
+                        "found neither of them.")
                     if "height" in val and "width" in val:
-                        assert val["height"] != "keep-aspect-ratio" or val["width"] != "keep-aspect-ratio", (
+                        not_both_kaa = (
+                            val["height"] != "keep-aspect-ratio"
+                            or val["width"] != "keep-aspect-ratio")
+                        assert not_both_kaa, (
                             "Expected height and width to not be both set "
                             "to \"keep-aspect-ratio\".")
 
                     size_tuple = []
                     for k in ["height", "width"]:
                         if k in val:
-                            if val[k] == "keep-aspect-ratio" or val[k] == "keep":
+                            if (val[k] == "keep-aspect-ratio"
+                                    or val[k] == "keep"):
                                 entry = iap.Deterministic(val[k])
                             else:
                                 entry = handle(val[k], False)
@@ -343,19 +375,27 @@ class Resize(meta.Augmenter):
                             entry = iap.Deterministic("keep")
                         size_tuple.append(entry)
                     return tuple(size_tuple)
-                elif any([key in ["shorter-side", "longer-side"] for key in val.keys()]):
-                    assert all([key in ["shorter-side", "longer-side"] for key in val.keys()]), (
-                        "Expected dict to contain shorter-side and longer-side keys, found "
-                        "neither of them.")
+                elif any([key in ["shorter-side", "longer-side"]
+                          for key in val.keys()]):
+                    sl_keys_exist = all([
+                        key in ["shorter-side", "longer-side"]
+                        for key in val.keys()])
+                    assert sl_keys_exist, (
+                        "Expected dict to contain shorter-side and "
+                        "longer-side keys, found neither of them.")
                     if "shorter-side" in val and "longer-side" in val:
-                        assert val["shorter-side"] != "keep-aspect-ratio" or val["longer-side"] != "keep-aspect-ratio", (
+                        not_both_kaa = (
+                            val["shorter-side"] != "keep-aspect-ratio"
+                            or val["longer-side"] != "keep-aspect-ratio")
+                        assert not_both_kaa, (
                             "Expected shorter-side and longer-side to not be "
                             "both set to \"keep-aspect-ratio\".")
 
                     size_tuple = []
                     for k in ["shorter-side", "longer-side"]:
                         if k in val:
-                            if val[k] == "keep-aspect-ratio" or val[k] == "keep":
+                            if (val[k] == "keep-aspect-ratio"
+                                    or val[k] == "keep"):
                                 entry = iap.Deterministic(val[k])
                             else:
                                 entry = handle(val[k], False)
@@ -390,18 +430,24 @@ class Resize(meta.Augmenter):
                 return val
 
             raise Exception(
-                "Expected number, tuple of two numbers, list of numbers, dictionary of "
-                "form {'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
-                "'width': <analogous>}, dictionary of form {'shorter-side': number/tuple/list"
-                "/'keep-aspect-ratio'/'keep', 'longer-side': <analogous>},"
+                "Expected number, tuple of two numbers, list of numbers, "
+                "dictionary of form "
+                "{'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
+                "'width': <analogous>}, dictionary of form "
+                "{'shorter-side': number/tuple/list/'keep-aspect-ratio'/"
+                "'keep', 'longer-side': <analogous>} "
                 " or StochasticParameter, got %s." % (type(val),)
             )
 
         self.size = handle(size, True)
-        self.size_order = 'SL' if (isinstance(size, dict) and 'shorter-side' in size) else 'HW'
+        self.size_order = (
+            'SL'
+            if (isinstance(size, dict) and 'shorter-side' in size)
+            else 'HW')
 
         if interpolation == ia.ALL:
-            self.interpolation = iap.Choice(["nearest", "linear", "area", "cubic"])
+            self.interpolation = iap.Choice(
+                ["nearest", "linear", "area", "cubic"])
         elif ia.is_single_integer(interpolation):
             self.interpolation = iap.Deterministic(interpolation)
         elif ia.is_string(interpolation):
@@ -411,18 +457,23 @@ class Resize(meta.Augmenter):
         elif isinstance(interpolation, iap.StochasticParameter):
             self.interpolation = interpolation
         else:
-            raise Exception("Expected int or string or iterable or StochasticParameter, got %s." % (
-                type(interpolation),))
+            raise Exception(
+                "Expected int or string or iterable or StochasticParameter, "
+                "got %s." % (type(interpolation),))
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
-        samples_a, samples_b, samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=True)
+        samples_a, samples_b, samples_ip = self._draw_samples(
+            nb_images, random_state, do_sample_ip=True)
         for i in sm.xrange(nb_images):
             image = images[i]
-            sample_a, sample_b, sample_ip = samples_a[i], samples_b[i], samples_ip[i]
-            h, w = self._compute_height_width(image.shape, sample_a, sample_b, self.size_order)
-            image_rs = ia.imresize_single_image(image, (h, w), interpolation=sample_ip)
+            sample_a, sample_b, sample_ip = (samples_a[i], samples_b[i],
+                                             samples_ip[i])
+            h, w = self._compute_height_width(image.shape, sample_a, sample_b,
+                                              self.size_order)
+            image_rs = ia.imresize_single_image(image, (h, w),
+                                                interpolation=sample_ip)
             result.append(image_rs)
 
         if not isinstance(images, list):
@@ -435,18 +486,25 @@ class Resize(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         result = []
         nb_heatmaps = len(heatmaps)
-        samples_a, samples_b, samples_ip = self._draw_samples(nb_heatmaps, random_state, do_sample_ip=True)
+        samples_a, samples_b, samples_ip = self._draw_samples(
+            nb_heatmaps, random_state, do_sample_ip=True)
+
         for i in sm.xrange(nb_heatmaps):
             heatmaps_i = heatmaps[i]
-            sample_a, sample_b, sample_ip = samples_a[i], samples_b[i], samples_ip[i]
-            h_img, w_img = self._compute_height_width(heatmaps_i.shape, sample_a, sample_b, self.size_order)
-            h = int(np.round(h_img * (heatmaps_i.arr_0to1.shape[0] / heatmaps_i.shape[0])))
-            w = int(np.round(w_img * (heatmaps_i.arr_0to1.shape[1] / heatmaps_i.shape[1])))
+            arr_shape = heatmaps_i.arr_0to1.shape
+            img_shape = heatmaps_i.shape
+            sample_a, sample_b, sample_ip = \
+                samples_a[i], samples_b[i], samples_ip[i]
+            h_img, w_img = self._compute_height_width(
+                img_shape, sample_a, sample_b, self.size_order)
+            h = int(np.round(h_img * (arr_shape[0] / img_shape[0])))
+            w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
             h = max(h, 1)
             w = max(w, 1)
             # TODO change this to always have cubic or automatic interpolation?
-            heatmaps_i_resized = heatmaps_i.resize((h, w), interpolation=sample_ip)
-            heatmaps_i_resized.shape = (h_img, w_img) + heatmaps_i.shape[2:]
+            heatmaps_i_resized = heatmaps_i.resize(
+                (h, w), interpolation=sample_ip)
+            heatmaps_i_resized.shape = (h_img, w_img) + img_shape[2:]
             result.append(heatmaps_i_resized)
 
         return result
@@ -454,29 +512,36 @@ class Resize(meta.Augmenter):
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         result = []
         nb_segmaps = len(segmaps)
-        samples_h, samples_w, _ = self._draw_samples(nb_segmaps, random_state, do_sample_ip=False)
+        samples_h, samples_w, _ = self._draw_samples(
+            nb_segmaps, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_segmaps):
             segmaps_i = segmaps[i]
+            arr_shape = segmaps_i.arr.shape
+            img_shape = segmaps_i.shape
             sample_h, sample_w = samples_h[i], samples_w[i]
-            h_img, w_img = self._compute_height_width(segmaps_i.shape, sample_h, sample_w, self.size_order)
-            h = int(np.round(h_img * (segmaps_i.arr.shape[0] / segmaps_i.shape[0])))
-            w = int(np.round(w_img * (segmaps_i.arr.shape[1] / segmaps_i.shape[1])))
+            h_img, w_img = self._compute_height_width(
+                img_shape, sample_h, sample_w, self.size_order)
+            h = int(np.round(h_img * (arr_shape[0] / img_shape[0])))
+            w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
             h = max(h, 1)
             w = max(w, 1)
             heatmaps_i_resized = segmaps_i.resize((h, w))
-            heatmaps_i_resized.shape = (h_img, w_img) + segmaps_i.shape[2:]
+            heatmaps_i_resized.shape = (h_img, w_img) + img_shape[2:]
             result.append(heatmaps_i_resized)
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        samples_a, samples_b, _samples_ip = self._draw_samples(nb_images, random_state, do_sample_ip=False)
+        samples_a, samples_b, _samples_ip = self._draw_samples(
+            nb_images, random_state, do_sample_ip=False)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
             sample_a, sample_b = samples_a[i], samples_b[i]
-            h, w = self._compute_height_width(keypoints_on_image.shape, sample_a, sample_b, self.size_order)
+            h, w = self._compute_height_width(
+                keypoints_on_image.shape, sample_a, sample_b, self.size_order)
             new_shape = (h, w) + keypoints_on_image.shape[2:]
             keypoints_on_image_rs = keypoints_on_image.on(new_shape)
 
@@ -492,13 +557,16 @@ class Resize(meta.Augmenter):
     def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
         rngs = random_state.duplicate(3)
         if isinstance(self.size, tuple):
-            samples_h = self.size[0].draw_samples(nb_images, random_state=rngs[0])
-            samples_w = self.size[1].draw_samples(nb_images, random_state=rngs[1])
+            samples_h = self.size[0].draw_samples(nb_images,
+                                                  random_state=rngs[0])
+            samples_w = self.size[1].draw_samples(nb_images,
+                                                  random_state=rngs[1])
         else:
             samples_h = self.size.draw_samples(nb_images, random_state=rngs[0])
             samples_w = samples_h
         if do_sample_ip:
-            samples_ip = self.interpolation.draw_samples(nb_images, random_state=rngs[2])
+            samples_ip = self.interpolation.draw_samples(nb_images,
+                                                         random_state=rngs[2])
         else:
             samples_ip = None
         return samples_h, samples_w, samples_ip
@@ -548,11 +616,12 @@ class Resize(meta.Augmenter):
 
 
 class CropAndPad(meta.Augmenter):
-    """
-    Crop/pad images by pixel amounts or fractions of image sizes.
+    """Crop/pad images by pixel amounts or fractions of image sizes.
 
     Cropping removes pixels at the sides (i.e. extracts a subimage from
     a given full image). Padding adds pixels to the sides (e.g. black pixels).
+
+    This augmenter will never crop images below a height or width of ``1``.
 
     .. note ::
 
@@ -592,54 +661,59 @@ class CropAndPad(meta.Augmenter):
         on each side of the image. Either this or the parameter `percent` may
         be set, not both at the same time.
 
-            * If None, then pixel-based cropping/padding will not be used.
-            * If int, then that exact number of pixels will always be
+            * If ``None``, then pixel-based cropping/padding will not be used.
+            * If ``int``, then that exact number of pixels will always be
               cropped/padded.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left), unless `sample_independently` is set to False, as then
-              only one value will be sampled per image and used for all sides.
-            * If a tuple of two ints with values ``a`` and ``b``, then each
-              side will be cropped/padded by a random amount in the range
-              ``a <= x <= b``. ``x`` is sampled per image side. If however
-              `sample_independently` is set to False, only one value will be
-              sampled per image and used for all sides.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single integer (always crop/pad
-              by exactly that value), a tuple of two ints ``a`` and ``b``
-              (crop/pad by an amount ``a <= x <= b``), a list of ints (crop/pad
-              by a random value that is contained in the list) or a
-              StochasticParameter (sample the amount to crop/pad from that
-              parameter).
+            * If ``StochasticParameter``, then that parameter will be used for
+              each image. Four samples will be drawn per image (top, right,
+              bottom, left), unless `sample_independently` is set to ``False``,
+              as then only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of two ``int`` s with values ``a`` and ``b``,
+              then each side will be cropped/padded by a random amount sampled
+              uniformly per image and side from the inteval ``[a, b]``. If
+              however `sample_independently` is set to ``False``, only one
+              value will be sampled per image and used for all sides.
+            * If a ``tuple`` of four entries, then the entries represent top,
+              right, bottom, left. Each entry may be a single ``int`` (always
+              crop/pad by exactly that value), a ``tuple`` of two ``int`` s
+              ``a`` and ``b`` (crop/pad by an amount within ``[a, b]``), a
+              ``list`` of ``int`` s (crop/pad by a random value that is
+              contained in the ``list``) or a ``StochasticParameter`` (sample
+              the amount to crop/pad from that parameter).
 
-    percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
+    percent : None or number or imgaug.parameters.StochasticParameter or tuple, optional
         The number of pixels to crop (negative values) or pad (positive values)
-        on each side of the image given *in percent* of the image height/width.
-        E.g. if this is set to 0.1, the augmenter will always crop away 10
-        percent of the image's height at the top, 10 percent of the width on
-        the right, 10 percent of the height at the bottom and 10 percent of
-        the width on the left. Either this or the parameter `px` may be set,
-        not both at the same time.
+        on each side of the image given as a *fraction* of the image
+        height/width. E.g. if this is set to ``-0.1``, the augmenter will
+        always crop away ``10%`` of the image's height at both the top and the
+        bottom (both ``10%`` each), as well as ``10%`` of the width at the
+        right and left.
+        Expected value range is ``(-1.0, inf)``.
+        Either this or the parameter `px` may be set, not both
+        at the same time.
 
-            * If None, then percent-based cropping/padding will not be used.
-            * If int, then expected to be 0 (no cropping/padding).
-            * If float, then that percentage will always be cropped/padded.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left). If however `sample_independently` is set to False, only
-              one value will be sampled per image and used for all sides.
-            * If a tuple of two floats with values ``a`` and ``b``, then each
-              side will be cropped/padded by a random percentage in the range
-              ``a <= x <= b``. ``x`` is sampled per image side.
-              If however `sample_independently` is set to False, only one value
-              will be sampled per image and used for all sides.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single float (always crop/pad
-              by exactly that percent value), a tuple of two floats ``a`` and
-              ``b`` (crop/pad by a percentage ``a <= x <= b``), a list of
-              floats (crop by a random value that is contained in the list) or
-              a StochasticParameter (sample the percentage to crop/pad from
-              that parameter).
+            * If ``None``, then fraction-based cropping/padding will not be
+              used.
+            * If ``number``, then that fraction will always be cropped/padded.
+            * If ``StochasticParameter``, then that parameter will be used for
+              each image. Four samples will be drawn per image (top, right,
+              bottom, left). If however `sample_independently` is set to
+              ``False``, only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of two ``float`` s with values ``a`` and ``b``,
+              then each side will be cropped/padded by a random fraction
+              sampled uniformly per image and side from the interval
+              ``[a, b]``. If however `sample_independently` is set to
+              ``False``, only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of four entries, then the entries represent top,
+              right, bottom, left. Each entry may be a single ``float``
+              (always crop/pad by exactly that percent value), a ``tuple`` of
+              two ``float`` s ``a`` and ``b`` (crop/pad by a fraction from
+              ``[a, b]``), a ``list`` of ``float`` s (crop/pad by a random
+              value that is contained in the list) or a ``StochasticParameter``
+              (sample the percentage to crop/pad from that parameter).
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         Padding mode to use. The available modes match the numpy padding modes,
@@ -651,39 +725,41 @@ class CropAndPad(meta.Augmenter):
 
             * If ``imgaug.ALL``, then a random mode from all available modes
               will be sampled per image.
-            * If a string, it will be used as the pad mode for all images.
-            * If a list of strings, a random one of these will be sampled per
-              image and used as the mode.
-            * If StochasticParameter, a random mode will be sampled from this
-              parameter per image.
+            * If a ``str``, it will be used as the pad mode for all images.
+            * If a ``list`` of ``str``, a random one of these will be sampled
+              per image and used as the mode.
+            * If ``StochasticParameter``, a random mode will be sampled from
+              this parameter per image.
 
     pad_cval : number or tuple of number list of number or imgaug.parameters.StochasticParameter, optional
         The constant value to use if the pad mode is ``constant`` or the end
         value to use if the mode is ``linear_ramp``.
         See :func:`imgaug.imgaug.pad` for more details.
 
-            * If number, then that value will be used.
-            * If a tuple of two numbers and at least one of them is a float,
-              then a random number will be sampled from the continuous range
-              ``a <= x <= b`` and used as the value. If both numbers are
-              integers, the range is discrete.
-            * If a list of number, then a random value will be chosen from the
-              elements of the list and used as the value.
-            * If StochasticParameter, a random value will be sampled from that
-              parameter per image.
+            * If ``number``, then that value will be used.
+            * If a ``tuple`` of two ``number`` s and at least one of them is
+              a ``float``, then a random number will be uniformly sampled per
+              image from the continuous interval ``[a, b]`` and used as the
+              value. If both ``number`` s are ``int`` s, the interval is
+              discrete.
+            * If a ``list`` of ``number``, then a random value will be chosen
+              from the elements of the ``list`` and used as the value.
+            * If ``StochasticParameter``, a random value will be sampled from
+              that parameter per image.
 
     keep_size : bool, optional
         After cropping and padding, the result image will usually have a
         different height/width compared to the original input image. If this
-        parameter is set to True, then the cropped/padded image will be resized
-        to the input image's size, i.e. the augmenter's output shape is always
-        identical to the input shape.
+        parameter is set to ``True``, then the cropped/padded image will be
+        resized to the input image's size, i.e. the augmenter's output shape
+        is always identical to the input shape.
 
     sample_independently : bool, optional
-        If False AND the values for `px`/`percent` result in exactly one
-        probability distribution for the amount to crop/pad, only one single
+        If ``False`` *and* the values for `px`/`percent` result in exactly
+        *one* probability distribution for all image sides, only one single
         value will be sampled from that probability distribution and used for
         all sides. I.e. the crop/pad amount then is the same for all sides.
+        If ``True``, four values will be sampled independently, one per side.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -696,75 +772,84 @@ class CropAndPad(meta.Augmenter):
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.CropAndPad(px=(-10, 0))
 
-    crops each side by a random value from the range -10px to 0px (the value
-    is sampled per side).
+    Crop each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[-10..0]``.
 
     >>> aug = iaa.CropAndPad(px=(0, 10))
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding happens by zero-padding (i.e. adds
-    black pixels).
+    Pad each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. The padding happens by
+    zero-padding, i.e. it adds black pixels (default setting).
 
     >>> aug = iaa.CropAndPad(px=(0, 10), pad_mode="edge")
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding uses the ``edge`` mode from numpy's
-    pad function.
+    Pad each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. The padding uses the
+    ``edge`` mode from numpy's pad function, i.e. the pixel colors around
+    the image sides are repeated.
 
     >>> aug = iaa.CropAndPad(px=(0, 10), pad_mode=["constant", "edge"])
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding uses randomly either the ``constant``
-    or ``edge`` mode from numpy's pad function.
+    Similar to the previous example, but uses zero-padding (``constant``) for
+    half of the images and ``edge`` padding for the other half.
 
     >>> aug = iaa.CropAndPad(px=(0, 10), pad_mode=ia.ALL, pad_cval=(0, 255))
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). It uses a random mode for numpy's pad function.
-    If the mode is ``constant`` or ``linear_ramp``, it samples a random value
-    ``v`` from the range ``[0, 255]`` and uses that as the constant
-    value (``mode=constant``) or end value (``mode=linear_ramp``).
+    Similar to the previous example, but uses any available padding mode.
+    In case the padding mode ends up being ``constant`` or ``linear_ramp``,
+    and random intensity is uniformly sampled (once per image) from the
+    discrete interval ``[0..255]`` and used as the intensity of the new
+    pixels.
 
     >>> aug = iaa.CropAndPad(px=(0, 10), sample_independently=False)
 
-    samples one value v from the discrete range ``[0..10]`` and pads all sides
-    by v pixels.
+    Pad each side by a random pixel value sampled uniformly once per image
+    from the discrete interval ``[0..10]``. Each sampled value is used
+    for *all* sides of the corresponding image.
 
     >>> aug = iaa.CropAndPad(px=(0, 10), keep_size=False)
 
-    pads each side by a random value from the range 0px to 10px (the value
-    is sampled per side). After padding, the images are NOT resized to
-    their original size (i.e. the images may end up having different
-    heights/widths).
+    Pad each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. Afterwards, do **not**
+    resize the padded image back to the input image's size. This will increase
+    the image's height and width by a maximum of ``20`` pixels.
 
     >>> aug = iaa.CropAndPad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
 
-    pads the top and bottom by a random value from the range 0px to 10px
-    and the left and right by a random value in the range 0px to 5px.
+    Pad the top and bottom by a random pixel value sampled uniformly from the
+    discrete interval ``[0..10]``. Pad the left and right analogously by
+    a random value sampled from ``[0..5]``. Each value is always sampled
+    independently.
 
     >>> aug = iaa.CropAndPad(percent=(0, 0.1))
 
-    pads each side by a random value from the range 0 percent to
-    10 percent. (Percent with respect to the side's size, e.g. for the
-    top side it uses the image's height.)
+    Pad each side by a random fraction sampled uniformly from the continuous
+    interval ``[0.0, 0.10]``. The fraction is sampled once per image and
+    side. E.g. a sampled fraction of ``0.1`` for the top side would pad by
+    ``0.1*H``, where ``H`` is the height of the input image.
 
-    >>> aug = iaa.CropAndPad(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
+    >>> aug = iaa.CropAndPad(
+    >>>     percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
 
-    pads each side by either 5 percent or 10 percent.
+    Pads each side by either ``5%`` or ``10%``. The values are sampled
+    once per side and image.
 
     >>> aug = iaa.CropAndPad(px=(-10, 10))
 
-    samples per side and image a value ``v`` from the discrete range ``[-10..10]``
-    and either crops (negative value) or pads (positive value) the side
-    by ``v`` pixels.
+    Sample uniformly per image and side a value ``v`` from the discrete range
+    ``[-10..10]``. Then either crop (negative sample) or pad (positive sample)
+    the side by ``v`` pixels.
 
     """
 
-    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True,
-                 sample_independently=True, name=None, deterministic=False, random_state=None):
-        super(CropAndPad, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0,
+                 keep_size=True, sample_independently=True,
+                 name=None, deterministic=False, random_state=None):
+        super(CropAndPad, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
 
         self.all_sides = None
         self.top = None
@@ -807,8 +892,9 @@ class CropAndPad(meta.Augmenter):
                     elif isinstance(p, iap.StochasticParameter):
                         return p
                     else:
-                        raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, "
-                                        + "got type %s." % (type(p),))
+                        raise Exception(
+                            "Expected int, tuple of two ints, list of ints or "
+                            "StochasticParameter, got type %s." % (type(p),))
 
                 if len(px) == 2:
                     self.all_sides = handle_param(px)
@@ -820,8 +906,10 @@ class CropAndPad(meta.Augmenter):
             elif isinstance(px, iap.StochasticParameter):
                 self.top = self.right = self.bottom = self.left = px
             else:
-                raise Exception("Expected int, tuple of 4 ints/tuples/lists/StochasticParameters or "
-                                + "StochasticParameter, got type %s." % (type(px),))
+                raise Exception(
+                    "Expected int, tuple of 4 "
+                    "ints/tuples/lists/StochasticParameters or "
+                    "StochasticParameter, got type %s." % (type(px),))
         else:  # = elif percent is not None:
             self.mode = "percent"
             if ia.is_single_number(percent):
@@ -862,8 +950,9 @@ class CropAndPad(meta.Augmenter):
                     elif isinstance(p, iap.StochasticParameter):
                         return p
                     else:
-                        raise Exception("Expected int, tuple of two ints, list of ints or StochasticParameter, "
-                                        + "got type %s." % (type(p),))
+                        raise Exception(
+                            "Expected int, tuple of two ints, list of ints or "
+                            "StochasticParameter, got type %s." % (type(p),))
 
                 if len(percent) == 2:
                     self.all_sides = handle_param(percent)
@@ -875,13 +964,16 @@ class CropAndPad(meta.Augmenter):
             elif isinstance(percent, iap.StochasticParameter):
                 self.top = self.right = self.bottom = self.left = percent
             else:
-                raise Exception("Expected number, tuple of 4 numbers/tuples/lists/StochasticParameters or "
-                                + "StochasticParameter, got type %s." % (type(percent),))
+                raise Exception(
+                    "Expected number, tuple of 4 "
+                    "numbers/tuples/lists/StochasticParameters or "
+                    "StochasticParameter, got type %s." % (type(percent),))
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
         # TODO enable ALL here, like in e.g. Affine
-        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
-                                                  list_to_choice=True, allow_floats=True)
+        self.pad_cval = iap.handle_discrete_param(
+            pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=True)
 
         self.keep_size = keep_size
         self.sample_independently = sample_independently
@@ -896,13 +988,17 @@ class CropAndPad(meta.Augmenter):
                 pad_top, pad_right, pad_bottom, pad_left, pad_mode, \
                 pad_cval = self._draw_samples_image(rngs[i], height, width)
 
-            image_cr = images[i][crop_top:height-crop_bottom, crop_left:width-crop_right, :]
+            image_cr = images[i][crop_top:height-crop_bottom,
+                                 crop_left:width-crop_right,
+                                 :]
 
-            image_cr_pa = ia.pad(image_cr, top=pad_top, right=pad_right, bottom=pad_bottom, left=pad_left,
-                                 mode=pad_mode, cval=pad_cval)
+            image_cr_pa = ia.pad(
+                image_cr, top=pad_top, right=pad_right, bottom=pad_bottom,
+                left=pad_left, mode=pad_mode, cval=pad_cval)
 
             if self.keep_size:
-                image_cr_pa = ia.imresize_single_image(image_cr_pa, (height, width))
+                image_cr_pa = ia.imresize_single_image(image_cr_pa,
+                                                       (height, width))
 
             result.append(image_cr_pa)
 
@@ -921,60 +1017,72 @@ class CropAndPad(meta.Augmenter):
         nb_heatmaps = len(heatmaps)
         rngs = random_state.duplicate(nb_heatmaps)
         for i in sm.xrange(nb_heatmaps):
-            height_image, width_image = heatmaps[i].shape[0:2]
-            height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
+            height_img, width_img = heatmaps[i].shape[0:2]
+            height_hms, width_hms = heatmaps[i].arr_0to1.shape[0:2]
 
-            vals = self._draw_samples_image(rngs[i], height_image, width_image)
-            crop_image_top, crop_image_right, crop_image_bottom, crop_image_left, \
-                pad_image_top, pad_image_right, pad_image_bottom, pad_image_left, \
-                _pad_mode, _pad_cval = vals
+            vals = self._draw_samples_image(rngs[i], height_img, width_img)
+            crop_img_t, crop_img_r, crop_img_b, crop_img_l, pad_img_t, \
+                pad_img_r, pad_img_b, pad_img_l, _pad_mode, _pad_cval = vals
 
-            if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                crop_top = int(np.round(height_heatmaps * (crop_image_top/height_image)))
-                crop_right = int(np.round(width_heatmaps * (crop_image_right/width_image)))
-                crop_bottom = int(np.round(height_heatmaps * (crop_image_bottom/height_image)))
-                crop_left = int(np.round(width_heatmaps * (crop_image_left/width_image)))
+            if (height_img, width_img) != (height_hms, width_hms):
+                crop_top = _int_r(height_hms * (crop_img_t/height_img))
+                crop_right = _int_r(width_hms * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_hms * (crop_img_b/height_img))
+                crop_left = _int_r(width_hms * (crop_img_l/width_img))
 
                 crop_top, crop_right, crop_bottom, crop_left = \
-                    _crop_prevent_zero_size(height_heatmaps, width_heatmaps,
-                                            crop_top, crop_right, crop_bottom, crop_left)
+                    _crop_prevent_zero_size(
+                        height_hms, width_hms,
+                        crop_top, crop_right, crop_bottom, crop_left)
 
-                pad_top = int(np.round(height_heatmaps * (pad_image_top/height_image)))
-                pad_right = int(np.round(width_heatmaps * (pad_image_right/width_image)))
-                pad_bottom = int(np.round(height_heatmaps * (pad_image_bottom/height_image)))
-                pad_left = int(np.round(width_heatmaps * (pad_image_left/width_image)))
+                pad_top = _int_r(height_hms * (pad_img_t/height_img))
+                pad_right = _int_r(width_hms * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_hms * (pad_img_b/height_img))
+                pad_left = _int_r(width_hms * (pad_img_l/width_img))
             else:
-                crop_top = crop_image_top
-                crop_right = crop_image_right
-                crop_bottom = crop_image_bottom
-                crop_left = crop_image_left
+                crop_top = crop_img_t
+                crop_right = crop_img_r
+                crop_bottom = crop_img_b
+                crop_left = crop_img_l
 
-                pad_top = pad_image_top
-                pad_right = pad_image_right
-                pad_bottom = pad_image_bottom
-                pad_left = pad_image_left
+                pad_top = pad_img_t
+                pad_right = pad_img_r
+                pad_bottom = pad_img_b
+                pad_left = pad_img_l
 
-            arr_cr = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom, crop_left:width_heatmaps-crop_right, :]
+            arr_cr = heatmaps[i].arr_0to1[crop_top:height_hms-crop_bottom,
+                                          crop_left:width_hms-crop_right,
+                                          :]
 
             # TODO switch to ia.pad()
             if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
                 if arr_cr.ndim == 2:
                     pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right))
                 else:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right),
+                                (0, 0))
 
-                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant", constant_values=0)
+                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant",
+                                   constant_values=0)
             else:
                 arr_cr_pa = arr_cr
 
             heatmaps[i].arr_0to1 = arr_cr_pa
 
             if self.keep_size:
-                heatmaps[i] = heatmaps[i].resize((height_heatmaps, width_heatmaps))
+                heatmaps[i] = heatmaps[i].resize((height_hms, width_hms))
             else:
+                new_height = (
+                    heatmaps[i].shape[0]
+                    - crop_img_t - crop_img_b
+                    + pad_img_t + pad_img_b)
+                new_width = (
+                    heatmaps[i].shape[1]
+                    - crop_img_l - crop_img_r
+                    + pad_img_l + pad_img_r)
                 heatmaps[i].shape = (
-                    heatmaps[i].shape[0] - crop_image_top - crop_image_bottom + pad_image_top + pad_image_bottom,
-                    heatmaps[i].shape[1] - crop_image_left - crop_image_right + pad_image_left + pad_image_right
+                    new_height,
+                    new_width
                 ) + heatmaps[i].shape[2:]
 
             result.append(heatmaps[i])
@@ -986,67 +1094,80 @@ class CropAndPad(meta.Augmenter):
         nb_segmaps = len(segmaps)
         rngs = random_state.duplicate(nb_segmaps)
         for i in sm.xrange(nb_segmaps):
-            height_image, width_image = segmaps[i].shape[0:2]
-            height_segmaps, width_segmaps = segmaps[i].arr.shape[0:2]
+            height_img, width_img = segmaps[i].shape[0:2]
+            height_seg, width_seg = segmaps[i].arr.shape[0:2]
 
-            vals = self._draw_samples_image(rngs[i], height_image, width_image)
-            crop_image_top, crop_image_right, crop_image_bottom, crop_image_left, \
-                pad_image_top, pad_image_right, pad_image_bottom, pad_image_left, \
-                _pad_mode, _pad_cval = vals
+            vals = self._draw_samples_image(rngs[i], height_img, width_img)
+            crop_img_t, crop_img_r, crop_img_b, crop_img_l, pad_img_t,\
+                pad_img_r, pad_img_b, pad_img_l, _pad_mode, _pad_cval = vals
 
-            if (height_image, width_image) != (height_segmaps, width_segmaps):
-                crop_top = int(np.round(height_segmaps * (crop_image_top/height_image)))
-                crop_right = int(np.round(width_segmaps * (crop_image_right/width_image)))
-                crop_bottom = int(np.round(height_segmaps * (crop_image_bottom/height_image)))
-                crop_left = int(np.round(width_segmaps * (crop_image_left/width_image)))
+            if (height_img, width_img) != (height_seg, width_seg):
+                crop_top = _int_r(height_seg * (crop_img_t/height_img))
+                crop_right = _int_r(width_seg * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_seg * (crop_img_b/height_img))
+                crop_left = _int_r(width_seg * (crop_img_l/width_img))
 
                 crop_top, crop_right, crop_bottom, crop_left = \
-                    _crop_prevent_zero_size(height_segmaps, width_segmaps,
-                                            crop_top, crop_right, crop_bottom, crop_left)
+                    _crop_prevent_zero_size(
+                        height_seg, width_seg, crop_top, crop_right,
+                        crop_bottom, crop_left)
 
-                pad_top = int(np.round(height_segmaps * (pad_image_top/height_image)))
-                pad_right = int(np.round(width_segmaps * (pad_image_right/width_image)))
-                pad_bottom = int(np.round(height_segmaps * (pad_image_bottom/height_image)))
-                pad_left = int(np.round(width_segmaps * (pad_image_left/width_image)))
+                pad_top = _int_r(height_seg * (pad_img_t/height_img))
+                pad_right = _int_r(width_seg * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_seg * (pad_img_b/height_img))
+                pad_left = _int_r(width_seg * (pad_img_l/width_img))
             else:
-                crop_top = crop_image_top
-                crop_right = crop_image_right
-                crop_bottom = crop_image_bottom
-                crop_left = crop_image_left
+                crop_top = crop_img_t
+                crop_right = crop_img_r
+                crop_bottom = crop_img_b
+                crop_left = crop_img_l
 
-                pad_top = pad_image_top
-                pad_right = pad_image_right
-                pad_bottom = pad_image_bottom
-                pad_left = pad_image_left
+                pad_top = pad_img_t
+                pad_right = pad_img_r
+                pad_bottom = pad_img_b
+                pad_left = pad_img_l
 
-            arr_cr = segmaps[i].arr[crop_top:height_segmaps - crop_bottom, crop_left:width_segmaps - crop_right, :]
+            arr_cr = segmaps[i].arr[crop_top:height_seg - crop_bottom,
+                                    crop_left:width_seg - crop_right,
+                                    :]
 
             # TODO switch to ia.pad()
             if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
                 if arr_cr.ndim == 2:
                     pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right))
                 else:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right),
+                                (0, 0))
 
-                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant", constant_values=0)
+                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant",
+                                   constant_values=0)
             else:
                 arr_cr_pa = arr_cr
 
             segmaps[i].arr = arr_cr_pa
 
             if self.keep_size:
-                segmaps[i] = segmaps[i].resize((height_segmaps, width_segmaps))
+                segmaps[i] = segmaps[i].resize((height_seg, width_seg))
             else:
+                new_height = (
+                    segmaps[i].shape[0]
+                    - crop_img_t - crop_img_b
+                    + pad_img_t + pad_img_b)
+                new_width = (
+                    segmaps[i].shape[1]
+                    - crop_img_l - crop_img_r
+                    + pad_img_l + pad_img_r)
                 segmaps[i].shape = (
-                   segmaps[i].shape[0] - crop_image_top - crop_image_bottom + pad_image_top + pad_image_bottom,
-                   segmaps[i].shape[1] - crop_image_left - crop_image_right + pad_image_left + pad_image_right
+                   new_height,
+                   new_width
                 ) + segmaps[i].shape[2:]
 
             result.append(segmaps[i])
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
         rngs = random_state.duplicate(nb_images)
@@ -1055,7 +1176,8 @@ class CropAndPad(meta.Augmenter):
             crop_top, crop_right, crop_bottom, crop_left, \
                 pad_top, pad_right, pad_bottom, pad_left, _pad_mode, \
                 _pad_cval = self._draw_samples_image(rngs[i], height, width)
-            shifted = keypoints_on_image.shift(x=-crop_left+pad_left, y=-crop_top+pad_top)
+            shifted = keypoints_on_image.shift(
+                x=-crop_left+pad_left, y=-crop_top+pad_top)
             shifted.shape = (
                 height - crop_top - crop_bottom + pad_top + pad_bottom,
                 width - crop_left - crop_right + pad_left + pad_right
@@ -1078,10 +1200,12 @@ class CropAndPad(meta.Augmenter):
         else:
             if self.all_sides is not None:
                 if self.sample_independently:
-                    samples = self.all_sides.draw_samples((4,), random_state=random_state)
+                    samples = self.all_sides.draw_samples(
+                        (4,), random_state=random_state)
                     top, right, bottom, left = samples
                 else:
-                    sample = self.all_sides.draw_sample(random_state=random_state)
+                    sample = self.all_sides.draw_sample(
+                        random_state=random_state)
                     top = right = bottom = left = sample
             else:
                 top = self.top.draw_sample(random_state=random_state)
@@ -1115,7 +1239,8 @@ class CropAndPad(meta.Augmenter):
         pad_cval = self.pad_cval.draw_sample(random_state=random_state)
         pad_cval = np.clip(np.round(pad_cval), 0, 255).astype(np.uint8)
 
-        crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom, crop_left)
+        crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
+            height, width, crop_top, crop_right, crop_bottom, crop_left)
 
         assert (
             crop_top >= 0
@@ -1134,16 +1259,19 @@ class CropAndPad(meta.Augmenter):
             "image width, got %d and %d vs. image width %d." % (
                 crop_left, crop_right, width))
 
-        return crop_top, crop_right, crop_bottom, crop_left, pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval
+        return (crop_top, crop_right, crop_bottom, crop_left,
+                pad_top, pad_right, pad_bottom, pad_left,
+                pad_mode, pad_cval)
 
     def get_parameters(self):
-        return [self.all_sides, self.top, self.right, self.bottom, self.left, self.pad_mode, self.pad_cval]
+        return [self.all_sides, self.top, self.right, self.bottom, self.left,
+                self.pad_mode, self.pad_cval]
 
 
-def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, sample_independently=True,
+def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True,
+        sample_independently=True,
         name=None, deterministic=False, random_state=None):
-    """
-    Pad images, i.e. adds columns/rows of pixels to them.
+    """Pad images, i.e. adds columns/rows of pixels to them.
 
     dtype support::
 
@@ -1153,49 +1281,63 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
     ----------
     px : None or int or imgaug.parameters.StochasticParameter or tuple, optional
         The number of pixels to pad on each side of the image.
+        Expected value range is ``[0, inf)``.
         Either this or the parameter `percent` may be set, not both at the same
         time.
 
-            * If None, then pixel-based padding will not be used.
-            * If int, then that exact number of pixels will always be padded.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left).
-            * If a tuple of two ints with values a and b, then each side will
-              be padded by a random amount in the range ``a <= x <= b``.
-              ``x`` is sampled per image side.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single integer (always pad by
-              exactly that value), a tuple of two ints ``a`` and ``b`` (pad by
-              an amount ``a <= x <= b``), a list of ints (pad by a random value
-              that is contained in the list) or a StochasticParameter (sample
+            * If ``None``, then pixel-based padding will not be used.
+            * If ``int``, then that exact number of pixels will always be
+              padded.
+            * If ``StochasticParameter``, then that parameter will be used for
+              each image. Four samples will be drawn per image (top, right,
+              bottom, left), unless `sample_independently` is set to ``False``,
+              as then only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of two ``int`` s with values ``a`` and ``b``,
+              then each side will be padded by a random amount sampled
+              uniformly per image and side from the inteval ``[a, b]``. If
+              however `sample_independently` is set to ``False``, only one
+              value will be sampled per image and used for all sides.
+            * If a ``tuple`` of four entries, then the entries represent top,
+              right, bottom, left. Each entry may be a single ``int`` (always
+              pad by exactly that value), a ``tuple`` of two ``int`` s
+              ``a`` and ``b`` (pad by an amount within ``[a, b]``), a
+              ``list`` of ``int`` s (pad by a random value that is
+              contained in the ``list``) or a ``StochasticParameter`` (sample
               the amount to pad from that parameter).
 
     percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
-        The number of pixels to pad on each side of the image given
-        *in percent* of the image height/width.
-        E.g. if this is set to 0.1, the augmenter will always add 10 percent
-        of the image's height to the top, 10 percent of the width to the right,
-        10 percent of the height at the bottom and 10 percent of the width to
-        the left. Either this or the parameter `px` may be set, not both at the
-        same time.
+        The number of pixels to pad
+        on each side of the image given as a *fraction* of the image
+        height/width. E.g. if this is set to ``0.1``, the augmenter will
+        always pad ``10%`` of the image's height at both the top and the
+        bottom (both ``10%`` each), as well as ``10%`` of the width at the
+        right and left.
+        Expected value range is ``[0.0, inf)``.
+        Either this or the parameter `px` may be set, not both
+        at the same time.
 
-            * If None, then percent-based padding will not be used.
-            * If int, then expected to be 0 (no padding).
-            * If float, then that percentage will always be padded.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left).
-            * If a tuple of two floats with values a and b, then each side will
-              be padded by a random percentage in the range ``a <= x <= b``.
-              ``x`` is sampled per image side.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single float (always pad by
-              exactly that percent value), a tuple of two floats ``a`` and ``b``
-              (pad by a percentage ``a <= x <= b``), a list of floats (pad by a
-              random value that is contained in the list) or a
-              StochasticParameter (sample the percentage to pad from that
-              parameter).
+            * If ``None``, then fraction-based padding will not be
+              used.
+            * If ``number``, then that fraction will always be padded.
+            * If ``StochasticParameter``, then that parameter will be used for
+              each image. Four samples will be drawn per image (top, right,
+              bottom, left). If however `sample_independently` is set to
+              ``False``, only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of two ``float`` s with values ``a`` and ``b``,
+              then each side will be padded by a random fraction
+              sampled uniformly per image and side from the interval
+              ``[a, b]``. If however `sample_independently` is set to
+              ``False``, only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of four entries, then the entries represent top,
+              right, bottom, left. Each entry may be a single ``float``
+              (always pad by exactly that fraction), a ``tuple`` of
+              two ``float`` s ``a`` and ``b`` (pad by a fraction from
+              ``[a, b]``), a ``list`` of ``float`` s (pad by a random
+              value that is contained in the list) or a ``StochasticParameter``
+              (sample the percentage to pad from that parameter).
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         Padding mode to use. The available modes match the numpy padding modes,
@@ -1207,39 +1349,41 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
 
             * If ``imgaug.ALL``, then a random mode from all available modes
               will be sampled per image.
-            * If a string, it will be used as the pad mode for all images.
-            * If a list of strings, a random one of these will be sampled per
-              image and used as the mode.
-            * If StochasticParameter, a random mode will be sampled from this
-              parameter per image.
+            * If a ``str``, it will be used as the pad mode for all images.
+            * If a ``list`` of ``str``, a random one of these will be sampled
+              per image and used as the mode.
+            * If ``StochasticParameter``, a random mode will be sampled from
+              this parameter per image.
 
     pad_cval : number or tuple of number list of number or imgaug.parameters.StochasticParameter, optional
         The constant value to use if the pad mode is ``constant`` or the end
         value to use if the mode is ``linear_ramp``.
         See :func:`imgaug.imgaug.pad` for more details.
 
-            * If number, then that value will be used.
-            * If a tuple of two numbers and at least one of them is a float,
-              then a random number will be sampled from the continuous range
-              ``a <= x <= b`` and used as the value. If both numbers are
-              integers, the range is discrete.
-            * If a list of number, then a random value will be chosen from the
-              elements of the list and used as the value.
-            * If StochasticParameter, a random value will be sampled from that
-              parameter per image.
+            * If ``number``, then that value will be used.
+            * If a ``tuple`` of two ``number`` s and at least one of them is
+              a ``float``, then a random number will be uniformly sampled per
+              image from the continuous interval ``[a, b]`` and used as the
+              value. If both ``number`` s are ``int`` s, the interval is
+              discrete.
+            * If a ``list`` of ``number``, then a random value will be chosen
+              from the elements of the ``list`` and used as the value.
+            * If ``StochasticParameter``, a random value will be sampled from
+              that parameter per image.
 
     keep_size : bool, optional
-        After padding, the result image will usually have a different
-        height/width compared to the original input image. If this parameter is
-        set to True, then the padded image will be resized to the input image's
-        size, i.e. the augmenter's output shape is always identical to the
-        input shape.
+        After padding, the result image will usually have a
+        different height/width compared to the original input image. If this
+        parameter is set to ``True``, then the padded image will be
+        resized to the input image's size, i.e. the augmenter's output shape
+        is always identical to the input shape.
 
     sample_independently : bool, optional
-        If False AND the values for `px`/`percent` result in exactly one
-        probability distribution for the amount to pad, only one single value
-        will be sampled from that probability distribution and used for all
-        sides. I.e. the pad amount then is the same for all sides.
+        If ``False`` *and* the values for `px`/`percent` result in exactly
+        *one* probability distribution for all image sides, only one single
+        value will be sampled from that probability distribution and used for
+        all sides. I.e. the pad amount then is the same for all sides.
+        If ``True``, four values will be sampled independently, one per side.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1252,56 +1396,65 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Pad(px=(0, 10))
 
-    pads each side by a random value from the range 0px to 10px (the value
-    is sampled per side). The added rows/columns are filled with black pixels.
-
-    >>> aug = iaa.Pad(px=(0, 10), sample_independently=False)
-
-    samples one value v from the discrete range ``[0..10]`` and pads all sides
-    by ``v`` pixels.
-
-    >>> aug = iaa.Pad(px=(0, 10), keep_size=False)
-
-    pads each side by a random value from the range 0px to 10px (the value
-    is sampled per side). After padding, the images are NOT resized to their
-    original size (i.e. the images may end up having different heights/widths).
-
-    >>> aug = iaa.Pad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
-
-    pads the top and bottom by a random value from the range 0px to 10px
-    and the left and right by a random value in the range 0px to 5px.
-
-    >>> aug = iaa.Pad(percent=(0, 0.1))
-
-    pads each side by a random value from the range 0 percent to
-    10 percent. (Percent with respect to the side's size, e.g. for the
-    top side it uses the image's height.)
-
-    >>> aug = iaa.Pad(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
-
-    pads each side by either 5 percent or 10 percent.
+    Pad each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. The padding happens by
+    zero-padding, i.e. it adds black pixels (default setting).
 
     >>> aug = iaa.Pad(px=(0, 10), pad_mode="edge")
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding uses the ``edge`` mode from numpy's
-    pad function.
+    Pad each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. The padding uses the
+    ``edge`` mode from numpy's pad function, i.e. the pixel colors around
+    the image sides are repeated.
 
     >>> aug = iaa.Pad(px=(0, 10), pad_mode=["constant", "edge"])
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). The padding uses randomly either the ``constant``
-    or ``edge`` mode from numpy's pad function.
+    Similar to the previous example, but uses zero-padding (``constant``) for
+    half of the images and ``edge`` padding for the other half.
 
     >>> aug = iaa.Pad(px=(0, 10), pad_mode=ia.ALL, pad_cval=(0, 255))
 
-    pads each side by a random value from the range 0px to 10px (the values
-    are sampled per side). It uses a random mode for numpy's pad function.
-    If the mode is ``constant`` or ``linear_ramp``, it samples a random value
-    ``v`` from the range ``[0, 255]`` and uses that as the constant
-    value (``mode=constant``) or end value (``mode=linear_ramp``).
+    Similar to the previous example, but uses any available padding mode.
+    In case the padding mode ends up being ``constant`` or ``linear_ramp``,
+    and random intensity is uniformly sampled (once per image) from the
+    discrete interval ``[0..255]`` and used as the intensity of the new
+    pixels.
+
+    >>> aug = iaa.Pad(px=(0, 10), sample_independently=False)
+
+    Pad each side by a random pixel value sampled uniformly once per image
+    from the discrete interval ``[0..10]``. Each sampled value is used
+    for *all* sides of the corresponding image.
+
+    >>> aug = iaa.Pad(px=(0, 10), keep_size=False)
+
+    Pad each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. Afterwards, do **not**
+    resize the padded image back to the input image's size. This will increase
+    the image's height and width by a maximum of ``20`` pixels.
+
+    >>> aug = iaa.Pad(px=((0, 10), (0, 5), (0, 10), (0, 5)))
+
+    Pad the top and bottom by a random pixel value sampled uniformly from the
+    discrete interval ``[0..10]``. Pad the left and right analogously by
+    a random value sampled from ``[0..5]``. Each value is always sampled
+    independently.
+
+    >>> aug = iaa.Pad(percent=(0, 0.1))
+
+    Pad each side by a random fraction sampled uniformly from the continuous
+    interval ``[0.0, 0.10]``. The fraction is sampled once per image and
+    side. E.g. a sampled fraction of ``0.1`` for the top side would pad by
+    ``0.1*H``, where ``H`` is the height of the input image.
+
+    >>> aug = iaa.Pad(
+    >>>     percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
+
+    Pads each side by either ``5%`` or ``10%``. The values are sampled
+    once per side and image.
 
     """
 
@@ -1318,8 +1471,9 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
         elif isinstance(v, list):
             return [recursive_validate(v_) for v_ in v]
         else:
-            raise Exception("Expected None or int or float or StochasticParameter or list or tuple, got %s." % (
-                type(v),))
+            raise Exception(
+                "Expected None or int or float or StochasticParameter or "
+                "list or tuple, got %s." % (type(v),))
 
     px = recursive_validate(px)
     percent = recursive_validate(percent)
@@ -1338,12 +1492,13 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True, 
 
 def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
          name=None, deterministic=False, random_state=None):
-    """
-    Crop images, i.e. remove columns/rows of pixels at the sides of images.
+    """Crop images, i.e. remove columns/rows of pixels at the sides of images.
 
-    That allows to cut out subimages from given (full) input images.
-    The number of pixels to cut off may be defined in absolute values or
-    percent of the image sizes.
+    This augmenter allows to extract smaller-sized subimages from given
+    full-sized input images. The number of pixels to cut off may be defined
+    in absolute values or as fractions of the image sizes.
+
+    This augmenter will never crop images below a height or width of ``1``.
 
     dtype support::
 
@@ -1352,63 +1507,78 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
     Parameters
     ----------
     px : None or int or imgaug.parameters.StochasticParameter or tuple, optional
-        The number of pixels to crop away (cut off) on each side of the image.
+        The number of pixels to crop on each side of the image.
+        Expected value range is ``[0, inf)``.
         Either this or the parameter `percent` may be set, not both at the same
         time.
 
-            * If None, then pixel-based cropping will not be used.
-            * If int, then that exact number of pixels will always be cropped.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left).
-            * If a tuple of two ints with values ``a`` and ``b``, then each
-              side will be cropped by a random amount in the range
-              ``a <= x <= b``. ``x`` is sampled per image side.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single integer (always crop by
-              exactly that value), a tuple of two ints ``a`` and ``b`` (crop by
-              an amount ``a <= x <= b``), a list of ints (crop by a random
-              value that is contained in the list) or a StochasticParameter
-              (sample the amount to crop from that parameter).
+            * If ``None``, then pixel-based cropping will not be used.
+            * If ``int``, then that exact number of pixels will always be
+              cropped.
+            * If ``StochasticParameter``, then that parameter will be used for
+              each image. Four samples will be drawn per image (top, right,
+              bottom, left), unless `sample_independently` is set to ``False``,
+              as then only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of two ``int`` s with values ``a`` and ``b``,
+              then each side will be cropped by a random amount sampled
+              uniformly per image and side from the inteval ``[a, b]``. If
+              however `sample_independently` is set to ``False``, only one
+              value will be sampled per image and used for all sides.
+            * If a ``tuple`` of four entries, then the entries represent top,
+              right, bottom, left. Each entry may be a single ``int`` (always
+              crop by exactly that value), a ``tuple`` of two ``int`` s
+              ``a`` and ``b`` (crop by an amount within ``[a, b]``), a
+              ``list`` of ``int`` s (crop by a random value that is
+              contained in the ``list``) or a ``StochasticParameter`` (sample
+              the amount to crop from that parameter).
 
     percent : None or int or float or imgaug.parameters.StochasticParameter or tuple, optional
-        The number of pixels to crop away (cut off) on each side of the image
-        given *in percent* of the image height/width.
-        E.g. if this is set to 0.1, the augmenter will always crop away
-        10 percent of the image's height at the top, 10 percent of the width
-        on the right, 10 percent of the height at the bottom and 10 percent
-        of the width on the left.
-        Either this or the parameter `px` may be set, not both at the same time.
+        The number of pixels to crop
+        on each side of the image given as a *fraction* of the image
+        height/width. E.g. if this is set to ``0.1``, the augmenter will
+        always crop ``10%`` of the image's height at both the top and the
+        bottom (both ``10%`` each), as well as ``10%`` of the width at the
+        right and left.
+        Expected value range is ``[0.0, 1.0)``.
+        Either this or the parameter `px` may be set, not both
+        at the same time.
 
-            * If None, then percent-based cropping will not be used.
-            * If int, then expected to be 0 (no cropping).
-            * If float, then that percentage will always be cropped away.
-            * If StochasticParameter, then that parameter will be used for each
-              image. Four samples will be drawn per image (top, right, bottom,
-              left).
-            * If a tuple of two floats with values ``a`` and ``b``, then each
-              side will be cropped by a random percentage in the range
-              ``a <= x <= b``. ``x`` is sampled per image side.
-            * If a tuple of four entries, then the entries represent top, right,
-              bottom, left. Each entry may be a single float (always crop by
-              exactly that percent value), a tuple of two floats a and ``b``
-              (crop by a percentage ``a <= x <= b``), a list of floats (crop by
-              a random value that is contained in the list) or a
-              StochasticParameter (sample the percentage to crop from that
-              parameter).
+            * If ``None``, then fraction-based cropping will not be
+              used.
+            * If ``number``, then that fraction will always be cropped.
+            * If ``StochasticParameter``, then that parameter will be used for
+              each image. Four samples will be drawn per image (top, right,
+              bottom, left). If however `sample_independently` is set to
+              ``False``, only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of two ``float`` s with values ``a`` and ``b``,
+              then each side will be cropped by a random fraction
+              sampled uniformly per image and side from the interval
+              ``[a, b]``. If however `sample_independently` is set to
+              ``False``, only one value will be sampled per image and used for
+              all sides.
+            * If a ``tuple`` of four entries, then the entries represent top,
+              right, bottom, left. Each entry may be a single ``float``
+              (always crop by exactly that fraction), a ``tuple`` of
+              two ``float`` s ``a`` and ``b`` (crop by a fraction from
+              ``[a, b]``), a ``list`` of ``float`` s (crop by a random
+              value that is contained in the list) or a ``StochasticParameter``
+              (sample the percentage to crop from that parameter).
 
     keep_size : bool, optional
-        After cropping, the result image has a different height/width than
-        the input image. If this parameter is set to True, then the cropped
-        image will be resized to the input image's size, i.e. the image size
-        is then not changed by the augmenter.
+        After cropping, the result image will usually have a
+        different height/width compared to the original input image. If this
+        parameter is set to ``True``, then the cropped image will be
+        resized to the input image's size, i.e. the augmenter's output shape
+        is always identical to the input shape.
 
     sample_independently : bool, optional
-        If False AND the values for `px`/`percent` result in exactly one
-        probability distribution for the amount to crop, only one
-        single value will be sampled from that probability distribution
-        and used for all sides. I.e. the crop amount then is the same
-        for all sides.
+        If ``False`` *and* the values for `px`/`percent` result in exactly
+        *one* probability distribution for all image sides, only one single
+        value will be sampled from that probability distribution and used for
+        all sides. I.e. the crop amount then is the same for all sides.
+        If ``True``, four values will be sampled independently, one per side.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1421,36 +1591,44 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Crop(px=(0, 10))
 
-    crops each side by a random value from the range 0px to 10px (the value
-    is sampled per side).
+    Crop each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``.
 
     >>> aug = iaa.Crop(px=(0, 10), sample_independently=False)
 
-    samples one value ``v`` from the discrete range ``[0..10]`` and crops all
-    sides by ``v`` pixels.
+    Crop each side by a random pixel value sampled uniformly once per image
+    from the discrete interval ``[0..10]``. Each sampled value is used
+    for *all* sides of the corresponding image.
 
     >>> aug = iaa.Crop(px=(0, 10), keep_size=False)
 
-    crops each side by a random value from the range 0px to 10px (the value
-    is sampled per side). After cropping, the images are NOT resized to their
-    original size (i.e. the images may end up having different heights/widths).
+    Crop each side by a random pixel value sampled uniformly per image and
+    side from the discrete interval ``[0..10]``. Afterwards, do **not**
+    resize the cropped image back to the input image's size. This will decrease
+    the image's height and width by a maximum of ``20`` pixels.
 
     >>> aug = iaa.Crop(px=((0, 10), (0, 5), (0, 10), (0, 5)))
 
-    crops the top and bottom by a random value from the range 0px to 10px
-    and the left and right by a random value in the range 0px to 5px.
+    Crop the top and bottom by a random pixel value sampled uniformly from the
+    discrete interval ``[0..10]``. Crop the left and right analogously by
+    a random value sampled from ``[0..5]``. Each value is always sampled
+    independently.
 
     >>> aug = iaa.Crop(percent=(0, 0.1))
 
-    crops each side by a random value from the range 0 percent to
-    10 percent. (Percent with respect to the side's size, e.g. for the
-    top side it uses the image's height.)
+    Crop each side by a random fraction sampled uniformly from the continuous
+    interval ``[0.0, 0.10]``. The fraction is sampled once per image and
+    side. E.g. a sampled fraction of ``0.1`` for the top side would crop by
+    ``0.1*H``, where ``H`` is the height of the input image.
 
-    >>> aug = iaa.Crop(percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
+    >>> aug = iaa.Crop(
+    >>>     percent=([0.05, 0.1], [0.05, 0.1], [0.05, 0.1], [0.05, 0.1]))
 
-    crops each side by either 5 percent or 10 percent.
+    Crops each side by either ``5%`` or ``10%``. The values are sampled
+    once per side and image.
 
     """
 
@@ -1467,8 +1645,9 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
         elif isinstance(v, list):
             return [recursive_negate(v_) for v_ in v]
         else:
-            raise Exception("Expected None or int or float or StochasticParameter or list or tuple, got %s." % (
-                type(v),))
+            raise Exception(
+                "Expected None or int or float or StochasticParameter or "
+                "list or tuple, got %s." % (type(v),))
 
     px = recursive_negate(px)
     percent = recursive_negate(percent)
@@ -1485,13 +1664,12 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
 
 
 # TODO maybe rename this to PadToMinimumSize?
-# TODO this is very similar to CropAndPad, maybe add a way to generate crop values imagewise via a callback in
-#      in CropAndPad?
+# TODO this is very similar to CropAndPad, maybe add a way to generate crop
+#      values imagewise via a callback in in CropAndPad?
 # TODO why is padding mode and cval here called pad_mode, pad_cval but in other
 #      cases mode/cval?
 class PadToFixedSize(meta.Augmenter):
-    """
-    Pad images to minimum width/height.
+    """Pad images to a predefined minimum width and/or height.
 
     If images are already at the minimum width/height or are larger, they will
     not be padded. Note that this also means that images will not be cropped if
@@ -1511,10 +1689,10 @@ class PadToFixedSize(meta.Augmenter):
     Parameters
     ----------
     width : int
-        Minimum width of new images.
+        Pad images up to this minimum width.
 
     height : int
-        Minimum height of new images.
+        Pad images up to this minimum height.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
@@ -1523,32 +1701,46 @@ class PadToFixedSize(meta.Augmenter):
         See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
-        Sets the center point of the padding, which determines how the required padding amounts are distributed
-        to each side. For a tuple ``(a, b)``, both ``a`` and ``b`` are expected to be in range ``[0.0, 1.0]``
-        and describe the fraction of padding applied to the left/right (low/high values for ``a``) and the fraction
-        of padding applied to the top/bottom (low/high values for ``b``). A padding position at ``(0.5, 0.5)``
-        would be the center of the image and distribute the padding equally to all sides. A padding position
-        at ``(0.0, 1.0)`` would be the left-bottom and would apply 100% of the required padding to the bottom and
-        left sides of the image so that the bottom left corner becomes more and more the new image center (depending on
-        how much is padded).
+        Sets the center point of the padding, which determines how the
+        required padding amounts are distributed to each side. For a ``tuple``
+        ``(a, b)``, both ``a`` and ``b`` are expected to be in range
+        ``[0.0, 1.0]`` and describe the fraction of padding applied to the
+        left/right (low/high values for ``a``) and the fraction of padding
+        applied to the top/bottom (low/high values for ``b``). A padding
+        position at ``(0.5, 0.5)`` would be the center of the image and
+        distribute the padding equally to all sides. A padding position at
+        ``(0.0, 1.0)`` would be the left-bottom and would apply 100% of the
+        required padding to the bottom and left sides of the image so that
+        the bottom left corner becomes more and more the new image
+        center (depending on how much is padded).
 
-            * If string ``uniform`` then the share of padding is randomly and uniformly distributed over each side.
+            * If string ``uniform`` then the share of padding is randomly and
+              uniformly distributed over each side.
               Equivalent to ``(Uniform(0.0, 1.0), Uniform(0.0, 1.0))``.
-            * If string ``normal`` then the share of padding is distributed based on a normal distribution,
-              leading to a focus on the center of the images.
-              Equivalent to ``(Clip(Normal(0.5, 0.45/2), 0, 1), Clip(Normal(0.5, 0.45/2), 0, 1))``.
-            * If string ``center`` then center point of the padding is identical to the image center.
+            * If string ``normal`` then the share of padding is distributed
+              based on a normal distribution, leading to a focus on the
+              center of the images.
+              Equivalent to
+              ``(Clip(Normal(0.5, 0.45/2), 0, 1),
+              Clip(Normal(0.5, 0.45/2), 0, 1))``.
+            * If string ``center`` then center point of the padding is
+              identical to the image center.
               Equivalent to ``(0.5, 0.5)``.
-            * If a string matching regex ``^(left|center|right)-(top|center|bottom)$``, e.g. ``left-top`` or
-              ``center-bottom`` then sets the center point of the padding to the X-Y position matching that
-              description.
-            * If a tuple of float, then expected to have exactly two entries between ``0.0`` and ``1.0``, which will
-              always be used as the combination the position matching (x, y) form.
-            * If a StochasticParameter, then that parameter will be queries once per call to ``augment_*()`` to get
-              ``Nx2`` center positions matching (x, y) form.
-            * If a tuple of StochasticParameter, then expected to have exactly two entries that will both be queries
-              per call to ``augment_*()``, each for ``(N,)`` values, to get the center positions. First parameter is
-              used for x, second for y.
+            * If a string matching regex
+              ``^(left|center|right)-(top|center|bottom)$``, e.g. ``left-top``
+              or ``center-bottom`` then sets the center point of the padding
+              to the X-Y position matching that description.
+            * If a tuple of float, then expected to have exactly two entries
+              between ``0.0`` and ``1.0``, which will always be used as the
+              combination the position matching (x, y) form.
+            * If a ``StochasticParameter``, then that parameter will be queried
+              once per call to ``augment_*()`` to get ``Nx2`` center positions
+              in ``(x, y)`` form (with ``N`` the number of images).
+            * If a ``tuple`` of ``StochasticParameter``, then expected to have
+              exactly two entries that will both be queried per call to
+              ``augment_*()``, each for ``(N,)`` values, to get the center
+              positions. First parameter is used for ``x`` coordinates,
+              second for ``y`` coordinates.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1594,33 +1786,39 @@ class PadToFixedSize(meta.Augmenter):
 
     """
 
-    def __init__(self, width, height, pad_mode="constant", pad_cval=0, position="uniform",
+    def __init__(self, width, height, pad_mode="constant", pad_cval=0,
+                 position="uniform",
                  name=None, deterministic=False, random_state=None):
-        super(PadToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(PadToFixedSize, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
 
-        # Position of where to pad. The further to the top left this is, the larger the share of
-        # pixels that will be added to the top and left sides. I.e. set to
-        # (Deterministic(0.0), Deterministic(0.0)) to only add at the top and left,
-        # (Deterministic(1.0), Deterministic(1.0)) to only add at the bottom right.
-        # Analogously (0.5, 0.5) pads equally on both axis, (0.0, 1.0) pads left and bottom,
-        # (1.0, 0.0) pads right and top.
+        # Position of where to pad. The further to the top left this is, the
+        # larger the share of pixels that will be added to the top and left
+        # sides. I.e. set to (Deterministic(0.0), Deterministic(0.0)) to only
+        # add at the top and left, (Deterministic(1.0), Deterministic(1.0))
+        # to only add at the bottom right. Analogously (0.5, 0.5) pads equally
+        # on both axis, (0.0, 1.0) pads left and bottom, (1.0, 0.0) pads right
+        # and top.
         self.position = _handle_position_parameter(position)
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
         # TODO enable ALL here like in eg Affine
-        self.pad_cval = iap.handle_discrete_param(pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
-                                                  list_to_choice=True, allow_floats=True)
+        self.pad_cval = iap.handle_discrete_param(
+            pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=True)
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
         w, h = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images, random_state)
+        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images,
+                                                                  random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
             ih, iw = image.shape[:2]
-            pad_x0, pad_x1, pad_y0, pad_y1 = self._calculate_paddings(h, w, ih, iw, pad_xs[i], pad_ys[i])
+            pad_x0, pad_x1, pad_y0, pad_y1 = self._calculate_paddings(
+                h, w, ih, iw, pad_xs[i], pad_ys[i])
             image = ia.pad(
                 image, top=pad_y0, right=pad_x1, bottom=pad_y1, left=pad_x0,
                 mode=pad_modes[i], cval=pad_cvals[i]
@@ -1628,12 +1826,13 @@ class PadToFixedSize(meta.Augmenter):
 
             result.append(image)
 
-        # TODO result is always a list. Should this be converted to an array if possible
-        # (not guaranteed that all images have same size, some might have been larger than desired
-        # height/width)
+        # TODO result is always a list. Should this be converted to an array
+        #      if possible (not guaranteed that all images have same size,
+        #      some might have been larger than desired height/width)
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
         w, h = self.size
@@ -1641,9 +1840,13 @@ class PadToFixedSize(meta.Augmenter):
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
             ih, iw = keypoints_on_image.shape[:2]
-            pad_x0, _pad_x1, pad_y0, _pad_y1 = self._calculate_paddings(h, w, ih, iw, pad_xs[i], pad_ys[i])
+            pad_x0, _pad_x1, pad_y0, _pad_y1 = self._calculate_paddings(
+                h, w, ih, iw, pad_xs[i], pad_ys[i])
             keypoints_padded = keypoints_on_image.shift(x=pad_x0, y=pad_y0)
-            keypoints_padded.shape = (max(ih, h), max(iw, w)) + keypoints_padded.shape[2:]
+            keypoints_padded.shape = (
+                max(ih, h),
+                max(iw, w)
+            ) + keypoints_padded.shape[2:]
 
             result.append(keypoints_padded)
 
@@ -1652,27 +1855,30 @@ class PadToFixedSize(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_images = len(heatmaps)
         w, h = self.size
-        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(nb_images, random_state)
+        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(nb_images,
+                                                                    random_state)
         for i in sm.xrange(nb_images):
-            height_image, width_image = heatmaps[i].shape[:2]
-            pad_image_left, pad_image_right, pad_image_top, pad_image_bottom = \
-                self._calculate_paddings(h, w, height_image, width_image, pad_xs[i], pad_ys[i])
-            height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
+            height_img, width_img = heatmaps[i].shape[:2]
+            pad_img_l, pad_img_r, pad_img_t, pad_img_b = \
+                self._calculate_paddings(
+                    h, w, height_img, width_img, pad_xs[i], pad_ys[i])
+            height_hm, width_hm = heatmaps[i].arr_0to1.shape[0:2]
 
-            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results in paddings of 1 on
-            # each side (assuming position=(0.5, 0.5)) giving 17x17 heatmaps when they should be
-            # 16x16. Error is due to each side getting projected 0.5 padding which is rounded to 1.
-            # This doesn't seem right.
-            if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                pad_top = int(np.round(height_heatmaps * (pad_image_top/height_image)))
-                pad_right = int(np.round(width_heatmaps * (pad_image_right/width_image)))
-                pad_bottom = int(np.round(height_heatmaps * (pad_image_bottom/height_image)))
-                pad_left = int(np.round(width_heatmaps * (pad_image_left/width_image)))
+            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results
+            #      in paddings of 1 on each side (assuming
+            #      position=(0.5, 0.5)) giving 17x17 heatmaps when they should
+            #      be 16x16. Error is due to each side getting projected 0.5
+            #      padding which is rounded to 1. This doesn't seem right.
+            if (height_img, width_img) != (height_hm, width_hm):
+                pad_top = _int_r(height_hm * (pad_img_t/height_img))
+                pad_right = _int_r(width_hm * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_hm * (pad_img_b/height_img))
+                pad_left = _int_r(width_hm * (pad_img_l/width_img))
             else:
-                pad_top = pad_image_top
-                pad_right = pad_image_right
-                pad_bottom = pad_image_bottom
-                pad_left = pad_image_left
+                pad_top = pad_img_t
+                pad_right = pad_img_r
+                pad_bottom = pad_img_b
+                pad_left = pad_img_l
 
             heatmaps[i].arr_0to1 = ia.pad(
                 heatmaps[i].arr_0to1,
@@ -1680,36 +1886,41 @@ class PadToFixedSize(meta.Augmenter):
                 mode="constant", cval=0
             )
             heatmaps[i].shape = (
-                height_image + pad_image_top + pad_image_bottom,
-                width_image + pad_image_left + pad_image_right
+                height_img + pad_img_t + pad_img_b,
+                width_img + pad_img_l + pad_img_r
             ) + heatmaps[i].shape[2:]
 
         return heatmaps
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+    def _augment_segmentation_maps(self, segmaps, random_state, parents,
+                                   hooks):
         nb_images = len(segmaps)
         w, h = self.size
-        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            height_image, width_image = segmaps[i].shape[:2]
-            pad_image_left, pad_image_right, pad_image_top, pad_image_bottom = \
-                self._calculate_paddings(h, w, height_image, width_image, pad_xs[i], pad_ys[i])
-            height_segmaps, width_segmaps = segmaps[i].arr.shape[0:2]
+        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(
+            nb_images, random_state)
 
-            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results in paddings of 1 on
-            # each side (assuming position=(0.5, 0.5)) giving 17x17 heatmaps when they should be
-            # 16x16. Error is due to each side getting projected 0.5 padding which is rounded to 1.
-            # This doesn't seem right.
-            if (height_image, width_image) != (height_segmaps, width_segmaps):
-                pad_top = int(np.round(height_segmaps * (pad_image_top/height_image)))
-                pad_right = int(np.round(width_segmaps * (pad_image_right/width_image)))
-                pad_bottom = int(np.round(height_segmaps * (pad_image_bottom/height_image)))
-                pad_left = int(np.round(width_segmaps * (pad_image_left/width_image)))
+        for i in sm.xrange(nb_images):
+            height_img, width_img = segmaps[i].shape[:2]
+            pad_img_l, pad_img_r, pad_img_t, pad_img_b = \
+                self._calculate_paddings(
+                    h, w, height_img, width_img, pad_xs[i], pad_ys[i])
+            height_sm, width_sm = segmaps[i].arr.shape[0:2]
+
+            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results
+            #      in paddings of 1 on each side (assuming
+            #      position=(0.5, 0.5)) giving 17x17 heatmaps when they should
+            #      be 16x16. Error is due to each side getting projected 0.5
+            #      padding which is rounded to 1. This doesn't seem right.
+            if (height_img, width_img) != (height_sm, width_sm):
+                pad_top = _int_r(height_sm * (pad_img_t/height_img))
+                pad_right = _int_r(width_sm * (pad_img_r/width_img))
+                pad_bottom = _int_r(height_sm * (pad_img_b/height_img))
+                pad_left = _int_r(width_sm * (pad_img_l/width_img))
             else:
-                pad_top = pad_image_top
-                pad_right = pad_image_right
-                pad_bottom = pad_image_bottom
-                pad_left = pad_image_left
+                pad_top = pad_img_t
+                pad_right = pad_img_r
+                pad_bottom = pad_img_b
+                pad_left = pad_img_l
 
             segmaps[i].arr = ia.pad(
                 segmaps[i].arr,
@@ -1717,8 +1928,8 @@ class PadToFixedSize(meta.Augmenter):
                 mode="constant", cval=0
             )
             segmaps[i].shape = (
-                height_image + pad_image_top + pad_image_bottom,
-                width_image + pad_image_left + pad_image_right
+                height_img + pad_img_t + pad_img_b,
+                width_img + pad_img_l + pad_img_r
             ) + segmaps[i].shape[2:]
 
         return segmaps
@@ -1732,15 +1943,20 @@ class PadToFixedSize(meta.Augmenter):
         rngs = random_state.duplicate(4)
 
         if isinstance(self.position, tuple):
-            pad_xs = self.position[0].draw_samples(nb_images, random_state=rngs[0])
-            pad_ys = self.position[1].draw_samples(nb_images, random_state=rngs[1])
+            pad_xs = self.position[0].draw_samples(nb_images,
+                                                   random_state=rngs[0])
+            pad_ys = self.position[1].draw_samples(nb_images,
+                                                   random_state=rngs[1])
         else:
-            pads = self.position.draw_samples((nb_images, 2), random_state=rngs[0])
+            pads = self.position.draw_samples((nb_images, 2),
+                                              random_state=rngs[0])
             pad_xs = pads[:, 0]
             pad_ys = pads[:, 1]
 
-        pad_modes = self.pad_mode.draw_samples(nb_images, random_state=rngs[2])
-        pad_cvals = self.pad_cval.draw_samples(nb_images, random_state=rngs[3])
+        pad_modes = self.pad_mode.draw_samples(nb_images,
+                                               random_state=rngs[2])
+        pad_cvals = self.pad_cval.draw_samples(nb_images,
+                                               random_state=rngs[3])
         pad_cvals = np.clip(np.round(pad_cvals), 0, 255).astype(np.uint8)
 
         return pad_xs, pad_ys, pad_modes, pad_cvals
@@ -1764,12 +1980,11 @@ class PadToFixedSize(meta.Augmenter):
 
 
 # TODO maybe rename this to CropToMaximumSize ?
-# TODO this is very similar to CropAndPad, maybe add a way to generate crop values imagewise via a callback in
-#      in CropAndPad?
+# TODO this is very similar to CropAndPad, maybe add a way to generate crop
+#      values imagewise via a callback in in CropAndPad?
 # TODO add crop() function in imgaug, similar to pad
 class CropToFixedSize(meta.Augmenter):
-    """
-    Crop images down to a fixed maximum width/height.
+    """Crop images down to a predefined  maximum width and/or height.
 
     If images are already at the maximum width/height or are smaller, they
     will not be cropped. Note that this also means that images will not be
@@ -1801,37 +2016,50 @@ class CropToFixedSize(meta.Augmenter):
     Parameters
     ----------
     width : int
-        Fixed width of new images.
+        Crop images down to this maximum width.
 
     height : int
-        Fixed height of new images.
+        Crop images down to this maximum height.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
-         Sets the center point of the cropping, which determines how the required cropping amounts are distributed
-         to each side. For a tuple ``(a, b)``, both ``a`` and ``b`` are expected to be in range ``[0.0, 1.0]``
-         and describe the fraction of cropping applied to the left/right (low/high values for ``a``) and the fraction
-         of cropping applied to the top/bottom (low/high values for ``b``). A cropping position at ``(0.5, 0.5)``
-         would be the center of the image and distribute the cropping equally over all sides. A cropping position
-         at ``(1.0, 0.0)`` would be the right-top and would apply 100% of the required cropping to the right and
-         top sides of the image.
+         Sets the center point of the cropping, which determines how the
+         required cropping amounts are distributed to each side. For a
+         ``tuple`` ``(a, b)``, both ``a`` and ``b`` are expected to be in
+         range ``[0.0, 1.0]`` and describe the fraction of cropping applied
+         to the left/right (low/high values for ``a``) and the fraction
+         of cropping applied to the top/bottom (low/high values for ``b``).
+         A cropping position at ``(0.5, 0.5)`` would be the center of the
+         image and distribute the cropping equally over all sides. A cropping
+         position at ``(1.0, 0.0)`` would be the right-top and would apply
+         100% of the required cropping to the right and top sides of the image.
 
-            * If string ``uniform`` then the share of cropping is randomly and uniformly distributed over each side.
+            * If string ``uniform`` then the share of cropping is randomly
+              and uniformly distributed over each side.
               Equivalent to ``(Uniform(0.0, 1.0), Uniform(0.0, 1.0))``.
-            * If string ``normal`` then the share of cropping is distributed based on a normal distribution,
-              leading to a focus on the center of the images.
-              Equivalent to ``(Clip(Normal(0.5, 0.45/2), 0, 1), Clip(Normal(0.5, 0.45/2), 0, 1))``.
-            * If string ``center`` then center point of the cropping is identical to the image center.
+            * If string ``normal`` then the share of cropping is distributed
+              based on a normal distribution, leading to a focus on the center
+              of the images.
+              Equivalent to
+              ``(Clip(Normal(0.5, 0.45/2), 0, 1),
+              Clip(Normal(0.5, 0.45/2), 0, 1))``.
+            * If string ``center`` then center point of the cropping is
+              identical to the image center.
               Equivalent to ``(0.5, 0.5)``.
-            * If a string matching regex ``^(left|center|right)-(top|center|bottom)$``, e.g. ``left-top`` or
-              ``center-bottom`` then sets the center point of the cropping to the X-Y position matching that
-              description.
-            * If a tuple of float, then expected to have exactly two entries between ``0.0`` and ``1.0``, which will
-              always be used as the combination the position matching (x, y) form.
-            * If a StochasticParameter, then that parameter will be queries once per call to ``augment_*()`` to get
-              ``Nx2`` center positions matching (x, y) form.
-            * If a tuple of StochasticParameter, then expected to have exactly two entries that will both be queries
-              per call to ``augment_*()``, each for ``(N,)`` values, to get the center positions. First parameter is
-              used for x, second for y.
+            * If a string matching regex
+              ``^(left|center|right)-(top|center|bottom)$``, e.g.
+              ``left-top`` or ``center-bottom`` then sets the center point of
+              the cropping to the X-Y position matching that description.
+            * If a tuple of float, then expected to have exactly two entries
+              between ``0.0`` and ``1.0``, which will always be used as the
+              combination the position matching (x, y) form.
+            * If a ``StochasticParameter``, then that parameter will be queried
+              once per call to ``augment_*()`` to get ``Nx2`` center positions
+              in ``(x, y)`` form (with ``N`` the number of images).
+            * If a ``tuple`` of ``StochasticParameter``, then expected to have
+              exactly two entries that will both be queried per call to
+              ``augment_*()``, each for ``(N,)`` values, to get the center
+              positions. First parameter is used for ``x`` coordinates,
+              second for ``y`` coordinates.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1868,16 +2096,19 @@ class CropToFixedSize(meta.Augmenter):
 
     """
 
-    def __init__(self, width, height, position="uniform", name=None, deterministic=False, random_state=None):
-        super(CropToFixedSize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+    def __init__(self, width, height, position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(CropToFixedSize, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
         self.size = width, height
 
-        # Position of where to crop. The further to the top left this is, the larger the share of
-        # pixels that will be cropped from the top and left sides. I.e. set to
-        # (Deterministic(0.0), Deterministic(0.0)) to only crop at the top and left,
-        # (Deterministic(1.0), Deterministic(1.0)) to only crop at the bottom right.
-        # Analogously (0.5, 0.5) crops equally on both axis, (0.0, 1.0) crops left and bottom,
-        # (1.0, 0.0) crops right and top.
+        # Position of where to crop. The further to the top left this is,
+        # the larger the share of pixels that will be cropped from the top
+        # and left sides. I.e. set to (Deterministic(0.0), Deterministic(0.0))
+        # to only crop at the top and left,
+        # (Deterministic(1.0), Deterministic(1.0)) to only crop at the bottom
+        # right. Analogously (0.5, 0.5) crops equally on both axis,
+        # (0.0, 1.0) crops left and bottom, (1.0, 0.0) crops right and top.
         self.position = _handle_position_parameter(position)
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -1910,7 +2141,8 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = []
         nb_images = len(keypoints_on_images)
         w, h = self.size
@@ -1930,7 +2162,8 @@ class CropToFixedSize(meta.Augmenter):
                 crop_image_left = int(offset_xs[i] * (width_image - w))
                 crop_image_right = width_image - w - crop_image_left
 
-            keypoints_cropped = keypoints_on_image.shift(x=-crop_image_left, y=-crop_image_top)
+            keypoints_cropped = keypoints_on_image.shift(x=-crop_image_left,
+                                                         y=-crop_image_top)
             keypoints_cropped.shape = (
                 height_image - crop_image_top - crop_image_bottom,
                 width_image - crop_image_left - crop_image_right
@@ -1950,42 +2183,45 @@ class CropToFixedSize(meta.Augmenter):
         w, h = self.size
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
-            height_image, width_image = heatmaps[i].shape[0:2]
-            height_heatmaps, width_heatmaps = heatmaps[i].arr_0to1.shape[0:2]
+            height_img, width_img = heatmaps[i].shape[0:2]
+            height_hm, width_hm = heatmaps[i].arr_0to1.shape[0:2]
 
-            crop_image_top, crop_image_bottom = 0, 0
-            crop_image_left, crop_image_right = 0, 0
+            crop_img_t, crop_img_b = 0, 0
+            crop_img_l, crop_img_r = 0, 0
 
-            if height_image > h:
-                crop_image_top = int(offset_ys[i] * (height_image - h))
-                crop_image_bottom = height_image - h - crop_image_top
+            if height_img > h:
+                crop_img_t = int(offset_ys[i] * (height_img - h))
+                crop_img_b = height_img - h - crop_img_t
 
-            if width_image > w:
-                crop_image_left = int(offset_xs[i] * (width_image - w))
-                crop_image_right = width_image - w - crop_image_left
+            if width_img > w:
+                crop_img_l = int(offset_xs[i] * (width_img - w))
+                crop_img_r = width_img - w - crop_img_l
 
-            if (height_image, width_image) != (height_heatmaps, width_heatmaps):
-                crop_top = int(np.round(height_heatmaps * (crop_image_top/height_image)))
-                crop_right = int(np.round(width_heatmaps * (crop_image_right/width_image)))
-                crop_bottom = int(np.round(height_heatmaps * (crop_image_bottom/height_image)))
-                crop_left = int(np.round(width_heatmaps * (crop_image_left/width_image)))
+            if (height_img, width_img) != (height_hm, width_hm):
+                crop_top = _int_r(height_hm * (crop_img_t/height_img))
+                crop_right = _int_r(width_hm * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_hm * (crop_img_b/height_img))
+                crop_left = _int_r(width_hm * (crop_img_l/width_img))
 
                 # TODO add test for zero-size prevention
-                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
-                    height_heatmaps, width_heatmaps, crop_top, crop_right, crop_bottom, crop_left)
+                crop_top, crop_right, crop_bottom, crop_left = \
+                    _crop_prevent_zero_size(
+                        height_hm, width_hm,
+                        crop_top, crop_right, crop_bottom, crop_left)
             else:
-                crop_top = crop_image_top
-                crop_right = crop_image_right
-                crop_bottom = crop_image_bottom
-                crop_left = crop_image_left
+                crop_top = crop_img_t
+                crop_right = crop_img_r
+                crop_bottom = crop_img_b
+                crop_left = crop_img_l
 
-            heatmaps[i].arr_0to1 = heatmaps[i].arr_0to1[crop_top:height_heatmaps-crop_bottom,
-                                                        crop_left:width_heatmaps-crop_right,
-                                                        :]
+            heatmaps[i].arr_0to1 = \
+                heatmaps[i].arr_0to1[crop_top:height_hm-crop_bottom,
+                                     crop_left:width_hm-crop_right,
+                                     :]
 
             heatmaps[i].shape = (
-                heatmaps[i].shape[0] - crop_image_top - crop_image_bottom,
-                heatmaps[i].shape[1] - crop_image_left - crop_image_right
+                heatmaps[i].shape[0] - crop_img_t - crop_img_b,
+                heatmaps[i].shape[1] - crop_img_l - crop_img_r
             ) + heatmaps[i].shape[2:]
 
         return heatmaps
@@ -1995,42 +2231,44 @@ class CropToFixedSize(meta.Augmenter):
         w, h = self.size
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
-            height_image, width_image = segmaps[i].shape[0:2]
-            height_segmaps, width_segmaps = segmaps[i].arr.shape[0:2]
+            height_img, width_img = segmaps[i].shape[0:2]
+            height_sm, width_sm = segmaps[i].arr.shape[0:2]
 
-            crop_image_top, crop_image_bottom = 0, 0
-            crop_image_left, crop_image_right = 0, 0
+            crop_img_t, crop_img_b = 0, 0
+            crop_img_l, crop_img_r = 0, 0
 
-            if height_image > h:
-                crop_image_top = int(offset_ys[i] * (height_image - h))
-                crop_image_bottom = height_image - h - crop_image_top
+            if height_img > h:
+                crop_img_t = int(offset_ys[i] * (height_img - h))
+                crop_img_b = height_img - h - crop_img_t
 
-            if width_image > w:
-                crop_image_left = int(offset_xs[i] * (width_image - w))
-                crop_image_right = width_image - w - crop_image_left
+            if width_img > w:
+                crop_img_l = int(offset_xs[i] * (width_img - w))
+                crop_img_r = width_img - w - crop_img_l
 
-            if (height_image, width_image) != (height_segmaps, width_segmaps):
-                crop_top = int(np.round(height_segmaps * (crop_image_top/height_image)))
-                crop_right = int(np.round(width_segmaps * (crop_image_right/width_image)))
-                crop_bottom = int(np.round(height_segmaps * (crop_image_bottom/height_image)))
-                crop_left = int(np.round(width_segmaps * (crop_image_left/width_image)))
+            if (height_img, width_img) != (height_sm, width_sm):
+                crop_top = _int_r(height_sm * (crop_img_t/height_img))
+                crop_right = _int_r(width_sm * (crop_img_r/width_img))
+                crop_bottom = _int_r(height_sm * (crop_img_b/height_img))
+                crop_left = _int_r(width_sm * (crop_img_l/width_img))
 
                 # TODO add test for zero-size prevention
-                crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
-                    height_segmaps, width_segmaps, crop_top, crop_right, crop_bottom, crop_left)
+                crop_top, crop_right, crop_bottom, crop_left = \
+                    _crop_prevent_zero_size(
+                        height_sm, width_sm,
+                        crop_top, crop_right, crop_bottom, crop_left)
             else:
-                crop_top = crop_image_top
-                crop_right = crop_image_right
-                crop_bottom = crop_image_bottom
-                crop_left = crop_image_left
+                crop_top = crop_img_t
+                crop_right = crop_img_r
+                crop_bottom = crop_img_b
+                crop_left = crop_img_l
 
-            segmaps[i].arr = segmaps[i].arr[crop_top:height_segmaps - crop_bottom,
-                                            crop_left:width_segmaps-crop_right,
+            segmaps[i].arr = segmaps[i].arr[crop_top:height_sm - crop_bottom,
+                                            crop_left:width_sm-crop_right,
                                             :]
 
             segmaps[i].shape = (
-                segmaps[i].shape[0] - crop_image_top - crop_image_bottom,
-                segmaps[i].shape[1] - crop_image_left - crop_image_right
+                segmaps[i].shape[0] - crop_img_t - crop_img_b,
+                segmaps[i].shape[1] - crop_img_l - crop_img_r
             ) + segmaps[i].shape[2:]
 
         return segmaps
@@ -2039,10 +2277,13 @@ class CropToFixedSize(meta.Augmenter):
         rngs = random_state.duplicate(2)
 
         if isinstance(self.position, tuple):
-            offset_xs = self.position[0].draw_samples(nb_images, random_state=rngs[0])
-            offset_ys = self.position[1].draw_samples(nb_images, random_state=rngs[1])
+            offset_xs = self.position[0].draw_samples(nb_images,
+                                                      random_state=rngs[0])
+            offset_ys = self.position[1].draw_samples(nb_images,
+                                                      random_state=rngs[1])
         else:
-            offsets = self.position.draw_samples((nb_images, 2), random_state=rngs[0])
+            offsets = self.position.draw_samples((nb_images, 2),
+                                                 random_state=rngs[0])
             offset_xs = offsets[:, 0]
             offset_ys = offsets[:, 1]
 
@@ -2056,8 +2297,7 @@ class CropToFixedSize(meta.Augmenter):
 
 
 class KeepSizeByResize(meta.Augmenter):
-    """
-    Resize images back to their input sizes after applying child augmenters.
+    """Resize images back to their input sizes after applying child augmenters.
 
     Combining this with e.g. a cropping augmenter as the child will lead to
     images being resized back to the input size after the crop operation was
@@ -2073,34 +2313,44 @@ class KeepSizeByResize(meta.Augmenter):
     Parameters
     ----------
     children : Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
-        One or more augmenters to apply to images. These augmenters may change the image size.
+        One or more augmenters to apply to images. These augmenters may change
+        the image size.
 
     interpolation : KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing images.
-        Can take any value that :func:`imgaug.imgaug.imresize_single_image` accepts, e.g. ``cubic``.
+        Can take any value that :func:`imgaug.imgaug.imresize_single_image`
+        accepts, e.g. ``cubic``.
 
-            * If this is KeepSizeByResize.NO_RESIZE then images will not be resized.
-            * If this is a single string, it is expected to have one of the following values: ``nearest``, ``linear``,
-              ``area``, ``cubic``.
-            * If this is a single integer, it is expected to have a value identical to one of: ``cv2.INTER_NEAREST``,
+            * If this is ``KeepSizeByResize.NO_RESIZE`` then images will not
+              be resized.
+            * If this is a single ``str``, it is expected to have one of the
+              following values: ``nearest``, ``linear``, ``area``, ``cubic``.
+            * If this is a single integer, it is expected to have a value
+              identical to one of: ``cv2.INTER_NEAREST``,
               ``cv2.INTER_LINEAR``, ``cv2.INTER_AREA``, ``cv2.INTER_CUBIC``.
-            * If this is a list of strings or ints, it is expected that each string/int is one of the above mentioned
-              valid ones. A random one of these values will be sampled per image.
-            * If this is a StochasticParameter, it will be queried once per call to ``_augment_images()`` and must
-              return ``N`` strings or ints (matching the above mentioned ones) for ``N`` images.
+            * If this is a ``list`` of ``str`` or ``int``, it is expected that
+              each ``str``/``int`` is one of the above mentioned valid ones.
+              A random one of these values will be sampled per image.
+            * If this is a ``StochasticParameter``, it will be queried once per
+              call to ``_augment_images()`` and must return ``N`` ``str`` s or
+              ``int`` s (matching the above mentioned ones) for ``N`` images.
 
     interpolation_heatmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing heatmaps.
-        Meaning and valid values are similar to `interpolation`. This parameter may also take the value
-        ``KeepSizeByResize.SAME_AS_IMAGES``, which will lead to copying the interpolation modes used for the
-        corresponding images. The value may also be returned on a per-image basis if `interpolation_heatmaps` is
-        provided as a StochasticParameter or may be one possible value if it is provided as a list of strings.
+        Meaning and valid values are similar to `interpolation`. This
+        parameter may also take the value ``KeepSizeByResize.SAME_AS_IMAGES``,
+        which will lead to copying the interpolation modes used for the
+        corresponding images. The value may also be returned on a per-image
+        basis if `interpolation_heatmaps` is provided as a
+        ``StochasticParameter`` or may be one possible value if it is
+        provided as a ``list`` of ``str``.
 
     interpolation_segmaps : KeepSizeByResize.SAME_AS_IMAGES or KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing segmentation maps.
         Similar to `interpolation_heatmaps`.
-        NOTE: Only ``NO_RESIZE`` or nearest neighbour interpolation make sense
-        in the vast majority of all cases.
+        **Note**: For segmentation maps, only ``NO_RESIZE`` or nearest
+        neighbour interpolation (i.e. ``nearest``) make sense in the vast
+        majority of all cases.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2153,42 +2403,49 @@ class KeepSizeByResize(meta.Augmenter):
                  interpolation_heatmaps=SAME_AS_IMAGES,
                  interpolation_segmaps="nearest",
                  name=None, deterministic=False, random_state=None):
-        super(KeepSizeByResize, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(KeepSizeByResize, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
         self.children = children
 
         def _validate_param(val, allow_same_as_images):
+            valid_ips_and_resize = ia.IMRESIZE_VALID_INTERPOLATIONS \
+                                  + [KeepSizeByResize.NO_RESIZE]
             if allow_same_as_images and val == self.SAME_AS_IMAGES:
                 return self.SAME_AS_IMAGES
-            elif val in ia.IMRESIZE_VALID_INTERPOLATIONS + [KeepSizeByResize.NO_RESIZE]:
+            elif val in valid_ips_and_resize:
                 return iap.Deterministic(val)
             elif isinstance(val, list):
                 assert len(val) > 0, (
                     "Expected a list of at least one interpolation method. "
                     "Got an empty list.")
-                valid_ips = ia.IMRESIZE_VALID_INTERPOLATIONS + [KeepSizeByResize.NO_RESIZE]
+                valid_ips_here = valid_ips_and_resize
                 if allow_same_as_images:
-                    valid_ips = valid_ips + [KeepSizeByResize.SAME_AS_IMAGES]
-                only_valid_ips = all([ip in valid_ips for ip in val])
+                    valid_ips_here = valid_ips_here \
+                                     + [KeepSizeByResize.SAME_AS_IMAGES]
+                only_valid_ips = all([ip in valid_ips_here for ip in val])
                 assert only_valid_ips, (
                     "Expected each interpolations to be one of '%s', got "
-                    "'%s'." % (str(valid_ips), str(val)))
+                    "'%s'." % (str(valid_ips_here), str(val)))
                 return iap.Choice(val)
             elif isinstance(val, iap.StochasticParameter):
                 return val
             else:
                 raise Exception(
-                    ("Expected interpolation to be one of '%s' or a list of these values or a StochasticParameter. "
-                     + "Got type %s.") % (
+                    "Expected interpolation to be one of '%s' or a list of "
+                    "these values or a StochasticParameter. Got type %s." % (
                         str(ia.IMRESIZE_VALID_INTERPOLATIONS), type(val)))
 
         self.children = meta.handle_children_list(children, self.name, "then")
         self.interpolation = _validate_param(interpolation, False)
-        self.interpolation_heatmaps = _validate_param(interpolation_heatmaps, True)
-        self.interpolation_segmaps = _validate_param(interpolation_segmaps, True)
+        self.interpolation_heatmaps = _validate_param(interpolation_heatmaps,
+                                                      True)
+        self.interpolation_segmaps = _validate_param(interpolation_segmaps,
+                                                     True)
 
     def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(3)
-        interpolations = self.interpolation.draw_samples((nb_images,), random_state=rngs[0])
+        interpolations = self.interpolation.draw_samples((nb_images,),
+                                                         random_state=rngs[0])
 
         if self.interpolation_heatmaps == KeepSizeByResize.SAME_AS_IMAGES:
             interpolations_heatmaps = np.copy(interpolations)
@@ -2205,7 +2462,8 @@ class KeepSizeByResize(meta.Augmenter):
             same_as_imgs_idx = [ip == self.SAME_AS_IMAGES
                                 for ip in interpolations_heatmaps]
 
-            interpolations_heatmaps[same_as_imgs_idx] = interpolations[same_as_imgs_idx]
+            interpolations_heatmaps[same_as_imgs_idx] = \
+                interpolations[same_as_imgs_idx]
 
         if self.interpolation_segmaps == KeepSizeByResize.SAME_AS_IMAGES:
             interpolations_segmaps = np.copy(interpolations)
@@ -2225,14 +2483,23 @@ class KeepSizeByResize(meta.Augmenter):
             same_as_imgs_idx = [ip == self.SAME_AS_IMAGES
                                 for ip in interpolations_segmaps]
 
-            interpolations_segmaps[same_as_imgs_idx] = interpolations[same_as_imgs_idx]
+            interpolations_segmaps[same_as_imgs_idx] = \
+                interpolations[same_as_imgs_idx]
 
         return interpolations, interpolations_heatmaps, interpolations_segmaps
 
+    def _is_propagating(self, augmentables, parents, hooks):
+        return (
+            hooks is None
+            or hooks.is_propagating(
+                augmentables, augmenter=self, parents=parents, default=True)
+        )
+
     def _augment_images(self, images, random_state, parents, hooks):
         input_was_array = ia.is_np_array(images)
-        if hooks is None or hooks.is_propagating(images, augmenter=self, parents=parents, default=True):
-            interpolations, _, _ = self._draw_samples(len(images), random_state)
+        if self._is_propagating(images, parents, hooks):
+            interpolations, _, _ = self._draw_samples(len(images),
+                                                      random_state)
             input_shapes = [image.shape[0:2] for image in images]
 
             images_aug = self.children.augment_images(
@@ -2241,12 +2508,15 @@ class KeepSizeByResize(meta.Augmenter):
                 hooks=hooks
             )
 
+            gen = zip(images_aug, interpolations, input_shapes)
             result = []
-            for image_aug, interpolation, input_shape in zip(images_aug, interpolations, input_shapes):
+            for image_aug, interpolation, input_shape in gen:
                 if interpolation == KeepSizeByResize.NO_RESIZE:
                     result.append(image_aug)
                 else:
-                    result.append(ia.imresize_single_image(image_aug, input_shape[0:2], interpolation))
+                    result.append(
+                        ia.imresize_single_image(image_aug, input_shape[0:2],
+                                                 interpolation))
 
             if input_was_array:
                 # note here that NO_RESIZE can have led to different shapes
@@ -2259,10 +2529,12 @@ class KeepSizeByResize(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self, parents=parents, default=True):
+        if self._is_propagating(heatmaps, parents, hooks):
             nb_heatmaps = len(heatmaps)
-            _, interpolations_heatmaps, _ = self._draw_samples(nb_heatmaps, random_state)
-            input_arr_shapes = [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps]
+            _, interpolations_heatmaps, _ = self._draw_samples(
+                nb_heatmaps, random_state)
+            input_arr_shapes = [heatmaps_i.arr_0to1.shape
+                                for heatmaps_i in heatmaps]
 
             # augment according to if and else list
             heatmaps_aug = self.children.augment_heatmaps(
@@ -2272,12 +2544,14 @@ class KeepSizeByResize(meta.Augmenter):
             )
 
             result = []
-            gen = zip(heatmaps, heatmaps_aug, interpolations_heatmaps, input_arr_shapes)
+            gen = zip(heatmaps, heatmaps_aug, interpolations_heatmaps,
+                      input_arr_shapes)
             for heatmap, heatmap_aug, interpolation, input_arr_shape in gen:
                 if interpolation == "NO_RESIZE":
                     result.append(heatmap_aug)
                 else:
-                    heatmap_aug = heatmap_aug.resize(input_arr_shape[0:2], interpolation=interpolation)
+                    heatmap_aug = heatmap_aug.resize(
+                        input_arr_shape[0:2], interpolation=interpolation)
                     heatmap_aug.shape = heatmap.shape
                     result.append(heatmap_aug)
         else:
@@ -2286,9 +2560,10 @@ class KeepSizeByResize(meta.Augmenter):
         return result
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
+        if self._is_propagating(segmaps, parents, hooks):
             nb_segmaps = len(segmaps)
-            _, _, interpolations_segmaps = self._draw_samples(nb_segmaps, random_state)
+            _, _, interpolations_segmaps = self._draw_samples(nb_segmaps,
+                                                              random_state)
             input_arr_shapes = [segmaps_i.arr.shape for segmaps_i in segmaps]
 
             # augment according to if and else list
@@ -2299,12 +2574,14 @@ class KeepSizeByResize(meta.Augmenter):
             )
 
             result = []
-            gen = zip(segmaps, segmaps_aug, interpolations_segmaps, input_arr_shapes)
+            gen = zip(segmaps, segmaps_aug, interpolations_segmaps,
+                      input_arr_shapes)
             for segmaps, segmaps_aug, interpolation, input_arr_shape in gen:
                 if interpolation == "NO_RESIZE":
                     result.append(segmaps_aug)
                 else:
-                    segmaps_aug = segmaps_aug.resize(input_arr_shape[0:2], interpolation=interpolation)
+                    segmaps_aug = segmaps_aug.resize(
+                        input_arr_shape[0:2], interpolation=interpolation)
                     segmaps_aug.shape = segmaps.shape
                     result.append(segmaps_aug)
         else:
@@ -2312,9 +2589,11 @@ class KeepSizeByResize(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
-        if hooks is None or hooks.is_propagating(keypoints_on_images, augmenter=self, parents=parents, default=True):
-            interpolations, _, _ = self._draw_samples(len(keypoints_on_images), random_state)
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
+        if self._is_propagating(keypoints_on_images, parents, hooks):
+            interpolations, _, _ = self._draw_samples(
+                len(keypoints_on_images), random_state)
             input_shapes = [kpsoi_i.shape for kpsoi_i in keypoints_on_images]
 
             # augment according to if and else list
@@ -2325,7 +2604,8 @@ class KeepSizeByResize(meta.Augmenter):
             )
 
             result = []
-            gen = zip(keypoints_on_images, kps_aug, interpolations, input_shapes)
+            gen = zip(keypoints_on_images, kps_aug, interpolations,
+                      input_shapes)
             for kps, kps_aug, interpolation, input_shape in gen:
                 if interpolation == KeepSizeByResize.NO_RESIZE:
                     result.append(kps_aug)
@@ -2355,6 +2635,15 @@ class KeepSizeByResize(meta.Augmenter):
         return [self.children]
 
     def __str__(self):
-        return ("KeepSizeByResize(interpolation=%s, interpolation_heatmaps=%s, name=%s, children=%s, "
-                + "deterministic=%s)") % (
-                    self.interpolation, self.interpolation_heatmaps, self.name, self.children, self.deterministic)
+        pattern = (
+            "%s("
+            "interpolation=%s, "
+            "interpolation_heatmaps=%s, "
+            "name=%s, "
+            "children=%s, "
+            "deterministic=%s"
+            ")")
+        return pattern % (
+            self.__class__.__name__, self.interpolation,
+            self.interpolation_heatmaps, self.name, self.children,
+            self.deterministic)

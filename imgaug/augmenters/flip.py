@@ -37,9 +37,8 @@ def VerticalFlip(*args, **kwargs):
     return Flipud(*args, **kwargs)
 
 
-class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
-    """
-    Flip/mirror input images horizontally.
+class Fliplr(meta.Augmenter):
+    """Flip/mirror input images horizontally.
 
     .. note ::
 
@@ -79,19 +78,21 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Fliplr(0.5)
 
-    would horizontally flip/mirror 50 percent of all input images.
+    Flip ``50`` percent of all images horizontally.
 
 
     >>> aug = iaa.Fliplr(1.0)
 
-    would horizontally flip/mirror all input images.
+    Flip all images horizontally.
 
     """
 
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
-        super(Fliplr, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(Fliplr, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -124,7 +125,8 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             segmaps_i.arr = arr_flipped
         return segmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         nb_images = len(keypoints_on_images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
@@ -138,7 +140,8 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
-        # TODO maybe reverse the order of points afterwards? the flip probably inverts them
+        # TODO maybe reverse the order of points afterwards? the flip probably
+        #      inverts them
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
@@ -147,9 +150,8 @@ class Fliplr(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 
 
 # TODO merge with Fliplr
-class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variable, line-too-long
-    """
-    Flip/mirror input images vertically.
+class Flipud(meta.Augmenter):
+    """Flip/mirror input images vertically.
 
     .. note ::
 
@@ -189,18 +191,20 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
 
     Examples
     --------
+    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.Flipud(0.5)
 
-    would vertically flip/mirror 50 percent of all input images.
+    Flip ``50`` percent of all images vertically.
 
     >>> aug = iaa.Flipud(1.0)
 
-    would vertically flip/mirror all input images.
+    Flip all images vertically.
 
     """
 
     def __init__(self, p=0, name=None, deterministic=False, random_state=None):
-        super(Flipud, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+        super(Flipud, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -233,7 +237,8 @@ class Flipud(meta.Augmenter):  # pylint: disable=locally-disabled, unused-variab
             segmaps_i.arr = arr_flipped
         return segmaps
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         nb_images = len(keypoints_on_images)
         samples = self.p.draw_samples((nb_images,), random_state=random_state)
         for i, keypoints_on_image in enumerate(keypoints_on_images):
