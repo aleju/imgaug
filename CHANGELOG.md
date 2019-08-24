@@ -512,6 +512,9 @@ Changes:
 * Fixed  `Fliplr` and `Flipud` using for coordinate-based inputs and image-like
   inputs slightly different conditions for when to actually apply
   augmentations. #385
+* Fixed `Convolve` using an overly restrictive check when validating inputs
+  for `matrix` w.r.t. whether they are callables. The check should now also
+  support class methods (and possibly various other callables).
 
 
 # 0.2.9

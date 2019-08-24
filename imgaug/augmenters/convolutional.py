@@ -138,7 +138,7 @@ class Convolve(meta.Augmenter):
                 "got %d (shape %s)." % (matrix.ndim, matrix.shape))
             self.matrix = matrix
             self.matrix_type = "constant"
-        elif isinstance(matrix, types.FunctionType):
+        elif ia.is_callable(matrix):
             self.matrix = matrix
             self.matrix_type = "function"
         else:
