@@ -2411,7 +2411,6 @@ class TestAugmenter_augment_batches(unittest.TestCase):
             iaa.Dropout((0.3, 0.5)),
             iaa.CoarseDropout((0.3, 0.5), size_percent=(0.05, 0.2)),
             iaa.Invert(0.5),
-            iaa.ContrastNormalization((0.6, 1.4)),
             iaa.Affine(
                 scale=(0.7, 1.3),
                 translate_percent=(-0.1, 0.1),

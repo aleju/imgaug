@@ -446,8 +446,7 @@ class AddElementwise(meta.Augmenter):
 #      the scale from the uniform dist. per image, but is that still the case?
 #      AddElementwise seems to now sample once for all images, which should
 #      lead to a single scale value.
-def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False,
-                          name=None, deterministic=False, random_state=None):
+class AdditiveGaussianNoise(AddElementwise):
     """
     Add noise sampled from gaussian distributions elementwise to images.
 
@@ -531,27 +530,24 @@ def AdditiveGaussianNoise(loc=0, scale=0, per_channel=False,
     active for 50 percent of all images.
 
     """
-    loc2 = iap.handle_continuous_param(
-        loc, "loc", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)
-    scale2 = iap.handle_continuous_param(
-        scale, "scale", value_range=(0, None), tuple_to_uniform=True,
-        list_to_choice=True)
+    def __init__(self, loc=0, scale=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        loc2 = iap.handle_continuous_param(
+            loc, "loc", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        scale2 = iap.handle_continuous_param(
+            scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        value = iap.Normal(loc=loc2, scale=scale2)
 
-    return AddElementwise(
-        iap.Normal(loc=loc2, scale=scale2),
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(AdditiveGaussianNoise, self).__init__(
+            value, per_channel=per_channel, name=name,
+            deterministic=deterministic, random_state=random_state)
 
 
 # TODO rename to AddLaplaceNoise?
-def AdditiveLaplaceNoise(loc=0, scale=0, per_channel=False,
-                         name=None, deterministic=False, random_state=None):
+class AdditiveLaplaceNoise(AddElementwise):
     """
     Add noise sampled from laplace distributions elementwise to images.
 
@@ -646,27 +642,27 @@ def AdditiveLaplaceNoise(loc=0, scale=0, per_channel=False,
     active for 50 percent of all images.
 
     """
-    loc2 = iap.handle_continuous_param(
-        loc, "loc", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)
-    scale2 = iap.handle_continuous_param(
-        scale, "scale", value_range=(0, None), tuple_to_uniform=True,
-        list_to_choice=True)
+    def __init__(self, loc=0, scale=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        loc2 = iap.handle_continuous_param(
+            loc, "loc", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        scale2 = iap.handle_continuous_param(
+            scale, "scale", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        value = iap.Laplace(loc=loc2, scale=scale2)
 
-    return AddElementwise(
-        iap.Laplace(loc=loc2, scale=scale2),
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(AdditiveLaplaceNoise, self).__init__(
+            value,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 # TODO rename to AddPoissonNoise?
-def AdditivePoissonNoise(lam=0, per_channel=False,
-                         name=None, deterministic=False, random_state=None):
+class AdditivePoissonNoise(AddElementwise):
     """
     Add noise sampled from poisson distributions elementwise to images.
 
@@ -753,19 +749,20 @@ def AdditivePoissonNoise(lam=0, per_channel=False,
     active for 50 percent of all images.
 
     """
-    lam2 = iap.handle_continuous_param(
-        lam, "lam",
-        value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
+    def __init__(self, lam=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        lam2 = iap.handle_continuous_param(
+            lam, "lam",
+            value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        value = iap.RandomSign(iap.Poisson(lam=lam2))
 
-    return AddElementwise(
-        iap.RandomSign(iap.Poisson(lam=lam2)),
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(AdditivePoissonNoise, self).__init__(
+            value,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 class Multiply(meta.Augmenter):
@@ -1212,8 +1209,7 @@ class MultiplyElementwise(meta.Augmenter):
 
 # TODO verify that (a, b) still leads to a p being sampled per image and not
 #      per batch
-def Dropout(p=0, per_channel=False,
-            name=None, deterministic=False, random_state=None):
+class Dropout(MultiplyElementwise):
     """
     Set a fraction of pixels in images to zero.
 
@@ -1283,45 +1279,42 @@ def Dropout(p=0, per_channel=False,
     active for ``50`` percent of all images.
 
     """
-    # TODO add list as an option
-    if ia.is_single_number(p):
-        p2 = iap.Binomial(1 - p)
-    elif ia.is_iterable(p):
-        assert len(p) == 2, (
-            "Expected 'p' given as an iterable to contain exactly 2 values, "
-            "got %d." % (len(p),))
-        assert p[0] < p[1], (
-            "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
-            "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
-        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
-            "Expected 'p' given as iterable to only contain values in the "
-            "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
+    def __init__(self, p=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        # TODO add list as an option
+        if ia.is_single_number(p):
+            p2 = iap.Binomial(1 - p)
+        elif ia.is_iterable(p):
+            assert len(p) == 2, (
+                "Expected 'p' given as an iterable to contain exactly 2 values, "
+                "got %d." % (len(p),))
+            assert p[0] < p[1], (
+                "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
+                "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
+            assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+                "Expected 'p' given as iterable to only contain values in the "
+                "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
 
-        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
-    elif isinstance(p, iap.StochasticParameter):
-        p2 = p
-    else:
-        raise Exception(
-            "Expected p to be float or int or StochasticParameter, got %s." % (
-                type(p),))
+            p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+        elif isinstance(p, iap.StochasticParameter):
+            p2 = p
+        else:
+            raise Exception(
+                "Expected p to be float or int or StochasticParameter, got %s." % (
+                    type(p),))
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return MultiplyElementwise(
-        p2,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(Dropout, self).__init__(
+            p2,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 # TODO add similar cutout augmenter
 # TODO invert size_p and size_percent so that larger values denote larger
 #      areas being dropped instead of the opposite way around
-def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False,
-                  min_size=4,
-                  name=None, deterministic=False, random_state=None):
+class CoarseDropout(MultiplyElementwise):
     """
     Set rectangular areas within images to zero.
 
@@ -1461,44 +1454,44 @@ def CoarseDropout(p=0, size_px=None, size_percent=None, per_channel=False,
     for ``50`` percent of all images.
 
     """
-    if ia.is_single_number(p):
-        p2 = iap.Binomial(1 - p)
-    elif ia.is_iterable(p):
-        assert len(p) == 2, (
-            "Expected 'p' given as an iterable to contain exactly 2 values, "
-            "got %d." % (len(p),))
-        assert p[0] < p[1], (
-            "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
-            "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
-        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
-            "Expected 'p' given as iterable to only contain values in the "
-            "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
+    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
+                 min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        if ia.is_single_number(p):
+            p2 = iap.Binomial(1 - p)
+        elif ia.is_iterable(p):
+            assert len(p) == 2, (
+                "Expected 'p' given as an iterable to contain exactly 2 values, "
+                "got %d." % (len(p),))
+            assert p[0] < p[1], (
+                "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
+                "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
+            assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+                "Expected 'p' given as iterable to only contain values in the "
+                "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
 
-        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
-    elif isinstance(p, iap.StochasticParameter):
-        p2 = p
-    else:
-        raise Exception("Expected p to be float or int or StochasticParameter, "
-                        "got %s." % (type(p),))
+            p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+        elif isinstance(p, iap.StochasticParameter):
+            p2 = p
+        else:
+            raise Exception("Expected p to be float or int or StochasticParameter, "
+                            "got %s." % (type(p),))
 
-    if size_px is not None:
-        p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px,
-                                     min_size=min_size)
-    elif size_percent is not None:
-        p3 = iap.FromLowerResolution(other_param=p2, size_percent=size_percent,
-                                     min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+        if size_px is not None:
+            p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px,
+                                         min_size=min_size)
+        elif size_percent is not None:
+            p3 = iap.FromLowerResolution(other_param=p2, size_percent=size_percent,
+                                         min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return MultiplyElementwise(
-        p3,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(CoarseDropout, self).__init__(
+            p3,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
 class ReplaceElementwise(meta.Augmenter):
@@ -1724,59 +1717,7 @@ class ReplaceElementwise(meta.Augmenter):
         return [self.mask, self.replacement, self.per_channel]
 
 
-def ImpulseNoise(p=0, name=None, deterministic=False, random_state=None):
-    """
-    Add impulse noise to images.
-
-    This is identical to ``SaltAndPepper``, except that `per_channel` is
-    always set to ``True``.
-
-    dtype support::
-
-        See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
-
-    Parameters
-    ----------
-    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
-        Probability of replacing a pixel to impulse noise.
-
-            * If a float, then that value will always be used as the
-              probability.
-            * If a tuple ``(a, b)``, then a probability will be sampled
-              uniformly per image from the interval ``[a, b]``.
-            * If a list, then a random value will be sampled from that list
-              per image.
-            * If a ``StochasticParameter``, then a image-sized mask will be
-              sampled from that parameter per image. Any value ``>0.5`` in
-              that mask will be replaced with impulse noise noise.
-
-    name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
-
-    Examples
-    --------
-    >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.ImpulseNoise(0.1)
-
-    Replace ``10%`` of all pixels with impulse noise.
-
-    """
-    return SaltAndPepper(
-        p=p,
-        per_channel=True,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
-
-
-def SaltAndPepper(p=0, per_channel=False,
-                  name=None, deterministic=False, random_state=None):
+class SaltAndPepper(ReplaceElementwise):
     """
     Replace pixels in images with salt/pepper noise (white/black-ish colors).
 
@@ -1833,22 +1774,71 @@ def SaltAndPepper(p=0, per_channel=False,
     noise.
 
     """
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+    def __init__(self, p=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        super(SaltAndPepper, self).__init__(
+            mask=p,
+            replacement=iap.Beta(0.5, 0.5) * 255,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
-    return ReplaceElementwise(
-        mask=p,
-        replacement=iap.Beta(0.5, 0.5) * 255,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+
+class ImpulseNoise(SaltAndPepper):
+    """
+    Add impulse noise to images.
+
+    This is identical to ``SaltAndPepper``, except that `per_channel` is
+    always set to ``True``.
+
+    dtype support::
+
+        See ``imgaug.augmenters.arithmetic.SaltAndPepper``.
+
+    Parameters
+    ----------
+    p : float or tuple of float or list of float or imgaug.parameters.StochasticParameter, optional
+        Probability of replacing a pixel to impulse noise.
+
+            * If a float, then that value will always be used as the
+              probability.
+            * If a tuple ``(a, b)``, then a probability will be sampled
+              uniformly per image from the interval ``[a, b]``.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a image-sized mask will be
+              sampled from that parameter per image. Any value ``>0.5`` in
+              that mask will be replaced with impulse noise noise.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ImpulseNoise(0.1)
+
+    Replace ``10%`` of all pixels with impulse noise.
+
+    """
+    def __init__(self, p=0, name=None, deterministic=False, random_state=None):
+        super(ImpulseNoise, self).__init__(
+            p=p,
+            per_channel=True,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
-def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
-                        per_channel=False, min_size=4,
-                        name=None, deterministic=False, random_state=None):
+class CoarseSaltAndPepper(ReplaceElementwise):
     """
     Replace rectangular areas in images with white/black-ish pixel noise.
 
@@ -1969,35 +1959,34 @@ def CoarseSaltAndPepper(p=0, size_px=None, size_percent=None,
     independently per image channel.
 
     """
-    mask = iap.handle_probability_param(
-        p, "p", tuple_to_uniform=True, list_to_choice=True)
+    def __init__(self, p=0, size_px=None, size_percent=None,
+                 per_channel=False, min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        mask = iap.handle_probability_param(
+            p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    if size_px is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_px=size_px, min_size=min_size)
-    elif size_percent is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_percent=size_percent, min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+        if size_px is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=size_px, min_size=min_size)
+        elif size_percent is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_percent=size_percent, min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    replacement = iap.Beta(0.5, 0.5) * 255
+        replacement = iap.Beta(0.5, 0.5) * 255
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+        super(CoarseSaltAndPepper, self).__init__(
+            mask=mask_low,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
-def Salt(p=0, per_channel=False,
-         name=None, deterministic=False, random_state=None):
+class Salt(ReplaceElementwise):
     """
     Replace pixels in images with salt noise, i.e. white-ish pixels.
 
@@ -2052,29 +2041,26 @@ def Salt(p=0, per_channel=False,
 
     """
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=True,
-        mode="invert"
-    ) + 0.5
-    # FIXME max replacement seems to essentially never exceed 254
-    replacement = replacement01 * 255
+    def __init__(self, p=0, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=True,
+            mode="invert"
+        ) + 0.5
+        # FIXME max replacement seems to essentially never exceed 254
+        replacement = replacement01 * 255
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return ReplaceElementwise(
-        mask=p,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(Salt, self).__init__(
+            mask=p,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
-def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
-               min_size=4,
-               name=None, deterministic=False, random_state=None):
+class CoarseSalt(ReplaceElementwise):
     """
     Replace rectangular areas in images with white-ish pixel noise.
 
@@ -2175,39 +2161,39 @@ def CoarseSalt(p=0, size_px=None, size_percent=None, per_channel=False,
     replaced in the input image by salt noise.
 
     """
-    mask = iap.handle_probability_param(
-        p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    if size_px is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_px=size_px, min_size=min_size)
-    elif size_percent is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_percent=size_percent, min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
+                 min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        mask = iap.handle_probability_param(
+            p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=True,
-        mode="invert"
-    ) + 0.5
-    replacement = replacement01 * 255
+        if size_px is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=size_px, min_size=min_size)
+        elif size_percent is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_percent=size_percent, min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=True,
+            mode="invert"
+        ) + 0.5
+        replacement = replacement01 * 255
 
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state)
+        super(CoarseSalt, self).__init__(
+            mask=mask_low,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state)
 
 
-def Pepper(p=0, per_channel=False,
-           name=None, deterministic=False, random_state=None):
+class Pepper(ReplaceElementwise):
     """
     Replace pixels in images with pepper noise, i.e. black-ish pixels.
 
@@ -2265,29 +2251,26 @@ def Pepper(p=0, per_channel=False,
 
     """
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=False,
-        mode="invert"
-    ) + 0.5
-    replacement = replacement01 * 255
-
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    return ReplaceElementwise(
-        mask=p,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
-
-
-def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
+    def __init__(self, p=0, per_channel=False,
                  name=None, deterministic=False, random_state=None):
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=False,
+            mode="invert"
+        ) + 0.5
+        replacement = replacement01 * 255
+
+        super(Pepper, self).__init__(
+            mask=p,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class CoarsePepper(ReplaceElementwise):
     """
     Replace rectangular areas in images with black-ish pixel noise.
 
@@ -2386,36 +2369,37 @@ def CoarsePepper(p=0, size_px=None, size_percent=None, per_channel=False,
     replaced in the input image by pepper noise.
 
     """
-    mask = iap.handle_probability_param(
-        p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    if size_px is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_px=size_px, min_size=min_size)
-    elif size_percent is not None:
-        mask_low = iap.FromLowerResolution(
-            other_param=mask, size_percent=size_percent, min_size=min_size)
-    else:
-        raise Exception("Either size_px or size_percent must be set.")
+    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
+                 min_size=4,
+                 name=None, deterministic=False, random_state=None):
+        mask = iap.handle_probability_param(
+            p, "p", tuple_to_uniform=True, list_to_choice=True)
 
-    replacement01 = iap.ForceSign(
-        iap.Beta(0.5, 0.5) - 0.5,
-        positive=False,
-        mode="invert"
-    ) + 0.5
-    replacement = replacement01 * 255
+        if size_px is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=size_px, min_size=min_size)
+        elif size_percent is not None:
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_percent=size_percent, min_size=min_size)
+        else:
+            raise Exception("Either size_px or size_percent must be set.")
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        replacement01 = iap.ForceSign(
+            iap.Beta(0.5, 0.5) - 0.5,
+            positive=False,
+            mode="invert"
+        ) + 0.5
+        replacement = replacement01 * 255
 
-    return ReplaceElementwise(
-        mask=mask_low,
-        replacement=replacement,
-        per_channel=per_channel,
-        name=name,
-        deterministic=deterministic,
-        random_state=random_state
-    )
+        super(CoarsePepper, self).__init__(
+            mask=mask_low,
+            replacement=replacement,
+            per_channel=per_channel,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 class Invert(meta.Augmenter):
@@ -2711,7 +2695,8 @@ class Invert(meta.Augmenter):
         return [self.p, self.per_channel, self.min_value, self.max_value]
 
 
-# TODO remove from examples and mark as deprecated
+# TODO remove from examples
+@ia.deprecated("imgaug.contrast.LinearContrast")
 def ContrastNormalization(alpha=1.0, per_channel=False,
                           name=None, deterministic=False, random_state=None):
     """

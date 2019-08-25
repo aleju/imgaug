@@ -445,6 +445,7 @@ def flatten(nested_iterable):
                 yield i
 
 
+# TODO no longer used anywhere. deprecate?
 def caller_name():
     """Return the name of the caller, e.g. a function.
 

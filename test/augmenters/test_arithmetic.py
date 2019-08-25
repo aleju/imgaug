@@ -1,8 +1,8 @@
 from __future__ import print_function, division, absolute_import
 
-import time
 import functools
 import sys
+import warnings
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
     import unittest2 as unittest
@@ -24,6 +24,8 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
+import imgaug.augmenters.arithmetic as arithmetic_lib
+import imgaug.augmenters.contrast as contrast_lib
 
 
 class TestAdd(unittest.TestCase):
@@ -3177,6 +3179,24 @@ class TestInvert(unittest.TestCase):
                 assert np.allclose(image_max_aug, image_min)
 
 
+class TestContrastNormalization(unittest.TestCase):
+    @unittest.skipIf(sys.version_info[0] <= 2,
+                     "Warning is not generated in 2.7 on travis, but locally "
+                     "in 2.7 it is?!")
+    def test_deprecation_warning(self):
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+            aug = arithmetic_lib.ContrastNormalization((0.9, 1.1))
+            assert isinstance(aug, contrast_lib._ContrastFuncWrapper)
+
+        assert len(caught_warnings) == 1
+        assert (
+            "deprecated"
+            in str(caught_warnings[-1].message)
+        )
+
+
+# TODO use this in test_contrast.py or remove it?
 """
 def deactivated_test_ContrastNormalization():
     reseed()

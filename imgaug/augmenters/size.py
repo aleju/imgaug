@@ -1268,9 +1268,7 @@ class CropAndPad(meta.Augmenter):
                 self.pad_mode, self.pad_cval]
 
 
-def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True,
-        sample_independently=True,
-        name=None, deterministic=False, random_state=None):
+class Pad(CropAndPad):
     """Pad images, i.e. adds columns/rows of pixels to them.
 
     dtype support::
@@ -1458,40 +1456,43 @@ def Pad(px=None, percent=None, pad_mode="constant", pad_cval=0, keep_size=True,
 
     """
 
-    def recursive_validate(v):
-        if v is None:
-            return v
-        elif ia.is_single_number(v):
-            assert v >= 0, "Expected value >0, got %.4f" % (v,)
-            return v
-        elif isinstance(v, iap.StochasticParameter):
-            return v
-        elif isinstance(v, tuple):
-            return tuple([recursive_validate(v_) for v_ in v])
-        elif isinstance(v, list):
-            return [recursive_validate(v_) for v_ in v]
-        else:
-            raise Exception(
-                "Expected None or int or float or StochasticParameter or "
-                "list or tuple, got %s." % (type(v),))
+    def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0,
+                 keep_size=True, sample_independently=True,
+                 name=None, deterministic=False, random_state=None):
+        def recursive_validate(v):
+            if v is None:
+                return v
+            elif ia.is_single_number(v):
+                assert v >= 0, "Expected value >0, got %.4f" % (v,)
+                return v
+            elif isinstance(v, iap.StochasticParameter):
+                return v
+            elif isinstance(v, tuple):
+                return tuple([recursive_validate(v_) for v_ in v])
+            elif isinstance(v, list):
+                return [recursive_validate(v_) for v_ in v]
+            else:
+                raise Exception(
+                    "Expected None or int or float or StochasticParameter or "
+                    "list or tuple, got %s." % (type(v),))
 
-    px = recursive_validate(px)
-    percent = recursive_validate(percent)
+        px = recursive_validate(px)
+        percent = recursive_validate(percent)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
+        super(Pad, self).__init__(
+            px=px,
+            percent=percent,
+            pad_mode=pad_mode,
+            pad_cval=pad_cval,
+            keep_size=keep_size,
+            sample_independently=sample_independently,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
-    aug = CropAndPad(
-        px=px, percent=percent,
-        pad_mode=pad_mode, pad_cval=pad_cval,
-        keep_size=keep_size, sample_independently=sample_independently,
-        name=name, deterministic=deterministic, random_state=random_state
-    )
-    return aug
 
-
-def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
-         name=None, deterministic=False, random_state=None):
+class Crop(CropAndPad):
     """Crop images, i.e. remove columns/rows of pixels at the sides of images.
 
     This augmenter allows to extract smaller-sized subimages from given
@@ -1632,35 +1633,38 @@ def Crop(px=None, percent=None, keep_size=True, sample_independently=True,
 
     """
 
-    def recursive_negate(v):
-        if v is None:
-            return v
-        elif ia.is_single_number(v):
-            assert v >= 0, "Expected value >0, got %.4f." % (v,)
-            return -v
-        elif isinstance(v, iap.StochasticParameter):
-            return iap.Multiply(v, -1)
-        elif isinstance(v, tuple):
-            return tuple([recursive_negate(v_) for v_ in v])
-        elif isinstance(v, list):
-            return [recursive_negate(v_) for v_ in v]
-        else:
-            raise Exception(
-                "Expected None or int or float or StochasticParameter or "
-                "list or tuple, got %s." % (type(v),))
+    def __init__(self, px=None, percent=None, keep_size=True,
+                 sample_independently=True,
+                 name=None, deterministic=False, random_state=None):
+        def recursive_negate(v):
+            if v is None:
+                return v
+            elif ia.is_single_number(v):
+                assert v >= 0, "Expected value >0, got %.4f." % (v,)
+                return -v
+            elif isinstance(v, iap.StochasticParameter):
+                return iap.Multiply(v, -1)
+            elif isinstance(v, tuple):
+                return tuple([recursive_negate(v_) for v_ in v])
+            elif isinstance(v, list):
+                return [recursive_negate(v_) for v_ in v]
+            else:
+                raise Exception(
+                    "Expected None or int or float or StochasticParameter or "
+                    "list or tuple, got %s." % (type(v),))
 
-    px = recursive_negate(px)
-    percent = recursive_negate(percent)
+        px = recursive_negate(px)
+        percent = recursive_negate(percent)
 
-    if name is None:
-        name = "Unnamed%s" % (ia.caller_name(),)
-
-    aug = CropAndPad(
-        px=px, percent=percent,
-        keep_size=keep_size, sample_independently=sample_independently,
-        name=name, deterministic=deterministic, random_state=random_state
-    )
-    return aug
+        super(Crop, self).__init__(
+            px=px,
+            percent=percent,
+            keep_size=keep_size,
+            sample_independently=sample_independently,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 # TODO maybe rename this to PadToMinimumSize?

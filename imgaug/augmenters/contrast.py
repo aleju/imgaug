@@ -36,6 +36,59 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
+class _ContrastFuncWrapper(meta.Augmenter):
+    def __init__(self, func, params1d, per_channel, dtypes_allowed=None,
+                 dtypes_disallowed=None,
+                 name=None, deterministic=False, random_state=None):
+        super(_ContrastFuncWrapper, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.func = func
+        self.params1d = params1d
+        self.per_channel = iap.handle_probability_param(per_channel,
+                                                        "per_channel")
+        self.dtypes_allowed = dtypes_allowed
+        self.dtypes_disallowed = dtypes_disallowed
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        if self.dtypes_allowed is not None:
+            iadt.gate_dtypes(images,
+                             allowed=self.dtypes_allowed,
+                             disallowed=self.dtypes_disallowed,
+                             augmenter=self)
+
+        nb_images = len(images)
+        rss = random_state.duplicate(1+nb_images)
+        per_channel = self.per_channel.draw_samples((nb_images,),
+                                                    random_state=rss[0])
+
+        result = images
+        gen = enumerate(zip(images, per_channel, rss[1:]))
+        for i, (image, per_channel_i, rs) in gen:
+            nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
+            samples_i = [
+                param.draw_samples((nb_channels,), random_state=rs)
+                for param in self.params1d]
+            if per_channel_i > 0.5:
+                input_dtype = image.dtype
+                image_aug = image.astype(np.float64)
+                for c in sm.xrange(nb_channels):
+                    samples_i_c = [sample_i[c] for sample_i in samples_i]
+                    args = tuple([image[..., c]] + samples_i_c)
+                    image_aug[..., c] = self.func(*args)
+                image_aug = image_aug.astype(input_dtype)
+            else:
+                # don't use something like samples_i[...][0] here, because
+                # that returns python scalars and is slightly less accurate
+                # than keeping the numpy values
+                args = tuple([image] + samples_i)
+                image_aug = self.func(*args)
+            result[i] = image_aug
+        return result
+
+    def get_parameters(self):
+        return self.params1d
+
+
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
 def adjust_contrast_gamma(arr, gamma):
     """
@@ -361,8 +414,7 @@ def adjust_contrast_linear(arr, alpha):
         return image_aug
 
 
-def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False,
-                  random_state=None):
+class GammaContrast(_ContrastFuncWrapper):
     """
     Adjust image contrast by scaling pixel values to ``255*((v/255)**gamma)``.
 
@@ -400,11 +452,6 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False,
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform gamma contrast adjustment.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -420,24 +467,26 @@ def GammaContrast(gamma=1, per_channel=False, name=None, deterministic=False,
     *and* channel.
 
     """
-    params1d = [iap.handle_continuous_param(
-        gamma, "gamma", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)]
-    func = adjust_contrast_gamma
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
-                        "int8", "int16", "int32", "int64",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+
+    def __init__(self, gamma=1, per_channel=False, name=None, deterministic=False,
+                 random_state=None):
+        params1d = [iap.handle_continuous_param(
+            gamma, "gamma", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)]
+        func = adjust_contrast_gamma
+        super(GammaContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
+                            "int8", "int16", "int32", "int64",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["float96", "float128", "float256", "bool"],
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
-def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
-                    name=None, deterministic=False, random_state=None):
+class SigmoidContrast(_ContrastFuncWrapper):
     """
     Adjust image contrast to ``255*1/(1+exp(gain*(cutoff-I_ij/255)))``.
 
@@ -490,11 +539,6 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform sigmoid contrast adjustment.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -513,30 +557,32 @@ def SigmoidContrast(gain=10, cutoff=0.5, per_channel=False,
     sampled once per image *and* channel.
 
     """
-    # TODO add inv parameter?
-    params1d = [
-        iap.handle_continuous_param(
-            gain, "gain", value_range=(0, None), tuple_to_uniform=True,
-            list_to_choice=True),
-        iap.handle_continuous_param(
-            cutoff, "cutoff", value_range=(0, 1.0), tuple_to_uniform=True,
-            list_to_choice=True)
-    ]
-    func = adjust_contrast_sigmoid
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
-                        "int8", "int16", "int32", "int64",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    def __init__(self, gain=10, cutoff=0.5, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        # TODO add inv parameter?
+        params1d = [
+            iap.handle_continuous_param(
+                gain, "gain", value_range=(0, None), tuple_to_uniform=True,
+                list_to_choice=True),
+            iap.handle_continuous_param(
+                cutoff, "cutoff", value_range=(0, 1.0), tuple_to_uniform=True,
+                list_to_choice=True)
+        ]
+        func = adjust_contrast_sigmoid
+
+        super(SigmoidContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
+                            "int8", "int16", "int32", "int64",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["float96", "float128", "float256", "bool"],
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
-def LogContrast(gain=1, per_channel=False,
-                name=None, deterministic=False, random_state=None):
+class LogContrast(_ContrastFuncWrapper):
     """Adjust image contrast by scaling pixels to ``255*gain*log_2(1+v/255)``.
 
     This augmenter is fairly similar to
@@ -576,11 +622,6 @@ def LogContrast(gain=1, per_channel=False,
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform logarithmic contrast adjustment.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -596,23 +637,27 @@ def LogContrast(gain=1, per_channel=False,
     *and* channel.
 
     """
-    # TODO add inv parameter?
-    params1d = [iap.handle_continuous_param(gain, "gain", value_range=(0, None), tuple_to_uniform=True,
-                                            list_to_choice=True)]
-    func = adjust_contrast_log
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
-                        "int8", "int16", "int32", "int64",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["float96", "float128", "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    def __init__(self, gain=1, per_channel=False,
+                name=None, deterministic=False, random_state=None):
+        # TODO add inv parameter?
+        params1d = [iap.handle_continuous_param(
+            gain, "gain", value_range=(0, None), tuple_to_uniform=True,
+            list_to_choice=True)]
+        func = adjust_contrast_log
+
+        super(LogContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32", "uint64",
+                            "int8", "int16", "int32", "int64",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["float96", "float128", "float256", "bool"],
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
-def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, random_state=None):
+class LinearContrast(_ContrastFuncWrapper):
     """Adjust contrast by scaling each pixel to ``127 + alpha*(v-127)``.
 
     dtype support::
@@ -649,11 +694,6 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    Returns
-    -------
-    _ContrastFuncWrapper
-        Augmenter to perform contrast adjustment by linearly scaling the distance to 128.
-
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -669,23 +709,26 @@ def LinearContrast(alpha=1, per_channel=False, name=None, deterministic=False, r
     *and* channel.
 
     """
-    params1d = [
-        iap.handle_continuous_param(
-            alpha, "alpha", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
-    ]
-    func = adjust_contrast_linear
-    return _ContrastFuncWrapper(
-        func, params1d, per_channel,
-        dtypes_allowed=["uint8", "uint16", "uint32",
-                        "int8", "int16", "int32",
-                        "float16", "float32", "float64"],
-        dtypes_disallowed=["uint64", "int64", "float96", "float128",
-                           "float256", "bool"],
-        name=name if name is not None else ia.caller_name(),
-        deterministic=deterministic,
-        random_state=random_state
-    )
+    def __init__(self, alpha=1, per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        params1d = [
+            iap.handle_continuous_param(
+                alpha, "alpha", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True)
+        ]
+        func = adjust_contrast_linear
+
+        super(LinearContrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8", "uint16", "uint32",
+                            "int8", "int16", "int32",
+                            "float16", "float32", "float64"],
+            dtypes_disallowed=["uint64", "int64", "float96", "float128",
+                               "float256", "bool"],
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar
@@ -1418,59 +1461,6 @@ class HistogramEqualization(meta.Augmenter):
             icb_applier.change_colorspace.from_colorspace,  # always str
             icb_applier.change_colorspace.to_colorspace.value
         ]
-
-
-class _ContrastFuncWrapper(meta.Augmenter):
-    def __init__(self, func, params1d, per_channel, dtypes_allowed=None,
-                 dtypes_disallowed=None,
-                 name=None, deterministic=False, random_state=None):
-        super(_ContrastFuncWrapper, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
-        self.func = func
-        self.params1d = params1d
-        self.per_channel = iap.handle_probability_param(per_channel,
-                                                        "per_channel")
-        self.dtypes_allowed = dtypes_allowed
-        self.dtypes_disallowed = dtypes_disallowed
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        if self.dtypes_allowed is not None:
-            iadt.gate_dtypes(images,
-                             allowed=self.dtypes_allowed,
-                             disallowed=self.dtypes_disallowed,
-                             augmenter=self)
-
-        nb_images = len(images)
-        rss = random_state.duplicate(1+nb_images)
-        per_channel = self.per_channel.draw_samples((nb_images,),
-                                                    random_state=rss[0])
-
-        result = images
-        gen = enumerate(zip(images, per_channel, rss[1:]))
-        for i, (image, per_channel_i, rs) in gen:
-            nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
-            samples_i = [
-                param.draw_samples((nb_channels,), random_state=rs)
-                for param in self.params1d]
-            if per_channel_i > 0.5:
-                input_dtype = image.dtype
-                image_aug = image.astype(np.float64)
-                for c in sm.xrange(nb_channels):
-                    samples_i_c = [sample_i[c] for sample_i in samples_i]
-                    args = tuple([image[..., c]] + samples_i_c)
-                    image_aug[..., c] = self.func(*args)
-                image_aug = image_aug.astype(input_dtype)
-            else:
-                # don't use something like samples_i[...][0] here, because
-                # that returns python scalars and is slightly less accurate
-                # than keeping the numpy values
-                args = tuple([image] + samples_i)
-                image_aug = self.func(*args)
-            result[i] = image_aug
-        return result
-
-    def get_parameters(self):
-        return self.params1d
 
 
 # TODO delete this or maybe move it somewhere else
