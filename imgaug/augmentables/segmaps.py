@@ -29,10 +29,15 @@ class SegmentationMapsOnImage(object):
         int or uint.
 
     shape : tuple of int
-        Shape of the corresponding image (NOT of the segmentation map array).
+        Shape of the image on which the segmentation map(s) is/are placed.
+        **Not** the shape of the segmentation map(s) array, unless it is
+        identical to the image shape (note the likely difference between the
+        arrays in the number of channels).
         This is expected to be ``(H, W)`` or ``(H, W, C)`` with ``C`` usually
-        being 3. If there is no corresponding image, then use the segmentation
-        map's shape instead.
+        being ``3``.
+        If there is no corresponding image, use ``(H_arr, W_arr)`` instead,
+        where ``H_arr`` is the height of the segmentation map(s) array
+        (analogous ``W_arr``).
 
     nb_classes : None or int, optional
         Deprecated.
@@ -157,14 +162,26 @@ class SegmentationMapsOnImage(object):
                 "and can be safely removed.")
 
     def get_arr(self):
-        """
-        Return the segmentation map array similar to its input dtype and shape.
+        """Return the seg.map array, with original dtype and shape ndim.
+
+        Here, "original" denotes the dtype and number of shape dimensions that
+        was used when the :class:`SegmentationMapsOnImage` instance was
+        created, i.e. upon the call of
+        :func:`SegmentationMapsOnImage.__init__`.
+        Internally, this class may use a different dtype and shape to simplify
+        computations.
+
+        .. note ::
+
+            The height and width may have changed compared to the original
+            input due to e.g. pooling operations.
 
         Returns
         -------
         ndarray
-            Segmentation map array. Same dtype and number of dimensions as was
-            originally used when the instance was created.
+            Segmentation map array.
+            Same dtype and number of dimensions as was originally used when
+            the :class:`SegmentationMapsOnImage` instance was created.
 
         """
         input_dtype, input_ndim = self._input_was
@@ -192,10 +209,12 @@ class SegmentationMapsOnImage(object):
         size : None or float or iterable of int or iterable of float, optional
             Size of the rendered RGB image as ``(height, width)``.
             See :func:`imgaug.imgaug.imresize_single_image` for details.
-            If set to None, no resizing is performed and the size of the segmentation map array is used.
+            If set to ``None``, no resizing is performed and the size of the
+            segmentation map array is used.
 
         colors : None or list of tuple of int, optional
-            Colors to use. One for each class to draw. If None, then default colors will be used.
+            Colors to use. One for each class to draw.
+            If ``None``, then default colors will be used.
 
         Returns
         -------
@@ -235,46 +254,50 @@ class SegmentationMapsOnImage(object):
     def draw_on_image(self, image, alpha=0.75, resize="segmentation_map",
                       colors=None, draw_background=False,
                       background_class_id=0, background_threshold=None):
-        """
-        Draw the segmentation map as an overlay over an image.
+        """Draw the segmentation map as an overlay over an image.
 
         Parameters
         ----------
         image : (H,W,3) ndarray
-            Image onto which to draw the segmentation map. Dtype is expected to be uint8.
+            Image onto which to draw the segmentation map. Expected dtype
+            is ``uint8``.
 
         alpha : float, optional
-            Alpha/opacity value to use for the mixing of image and segmentation map.
-            Higher values mean that the segmentation map will be more visible and the image less visible.
+            Alpha/opacity value to use for the mixing of image and
+            segmentation map. Larger values mean that the segmentation map
+            will be more visible and the image less visible.
 
         resize : {'segmentation_map', 'image'}, optional
-            In case of size differences between the image and segmentation map, either the image or
-            the segmentation map can be resized. This parameter controls which of the two will be
-            resized to the other's size.
+            In case of size differences between the image and segmentation
+            map, either the image or the segmentation map can be resized.
+            This parameter controls which of the two will be resized to the
+            other's size.
 
         colors : None or list of tuple of int, optional
-            Colors to use. One for each class to draw. If None, then default colors will be used.
+            Colors to use. One for each class to draw.
+            If ``None``, then default colors will be used.
 
         draw_background : bool, optional
-            If True, the background will be drawn like any other class.
-            If False, the background will not be drawn, i.e. the respective background pixels
-            will be identical with the image's RGB color at the corresponding spatial location
-            and no color overlay will be applied.
+            If ``True``, the background will be drawn like any other class.
+            If ``False``, the background will not be drawn, i.e. the respective
+            background pixels will be identical with the image's RGB color at
+            the corresponding spatial location and no color overlay will be
+            applied.
 
         background_class_id : int, optional
-            Class id to interpret as the background class. See
-            `draw_background`.
+            Class id to interpret as the background class.
+            See `draw_background`.
 
         background_threshold : None, optional
             Deprecated.
-            This value is ignored. Setting it will produce a deprecation
-            warning.
+            This parameter is ignored.
 
         Returns
         -------
         list of (H,W,3) ndarray
-            Rendered segmentation maps (``uint8``). One per channel of the
-            segmentation map array.
+            Rendered overlays as ``uint8`` arrays.
+            Always a **list** containing one RGB image per segmentation map
+            array channel.
 
         """
         if background_threshold is not None:
@@ -349,38 +372,37 @@ class SegmentationMapsOnImage(object):
         return segmaps_drawn
 
     def pad(self, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
-        """
-        Pad the segmentation map on its top/right/bottom/left side.
+        """Pad the segmentation maps at their top/right/bottom/left side.
 
         Parameters
         ----------
         top : int, optional
             Amount of pixels to add at the top side of the segmentation map.
-            Must be 0 or greater.
+            Must be ``0`` or greater.
 
         right : int, optional
             Amount of pixels to add at the right side of the segmentation map.
-            Must be 0 or greater.
+            Must be ``0`` or greater.
 
         bottom : int, optional
             Amount of pixels to add at the bottom side of the segmentation map.
-            Must be 0 or greater.
+            Must be ``0`` or greater.
 
         left : int, optional
             Amount of pixels to add at the left side of the segmentation map.
-            Must be 0 or greater.
+            Must be ``0`` or greater.
 
         mode : str, optional
-            Padding mode to use. See :func:`numpy.pad` for details.
+            Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
 
         cval : number, optional
             Value to use for padding if `mode` is ``constant``.
-            See :func:`numpy.pad` for details.
+            See :func:`imgaug.imgaug.pad` for details.
 
         Returns
         -------
-        imgaug.SegmentationMapsOnImage
-            Padded segmentation map of height ``H'=H+top+bottom`` and
+        imgaug.augmentables.segmaps.SegmentationMapsOnImage
+            Padded segmentation map with height ``H'=H+top+bottom`` and
             width ``W'=W+left+right``.
 
         """
@@ -388,45 +410,55 @@ class SegmentationMapsOnImage(object):
                             left=left, mode=mode, cval=cval)
         return self.deepcopy(arr=arr_padded)
 
-    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0, return_pad_amounts=False):
-        """
-        Pad the segmentation map on its sides so that its matches a target aspect ratio.
+    def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0,
+                            return_pad_amounts=False):
+        """Pad the segmentation maps until they match a target aspect ratio.
 
-        Depending on which dimension is smaller (height or width), only the corresponding
-        sides (left/right or top/bottom) will be padded. In each case, both of the sides will
-        be padded equally.
+        Depending on which dimension is smaller (height or width), only the
+        corresponding sides (left/right or top/bottom) will be padded. In
+        each case, both of the sides will be padded equally.
 
         Parameters
         ----------
         aspect_ratio : float
-            Target aspect ratio, given as width/height. E.g. 2.0 denotes the image having twice
-            as much width as height.
+            Target aspect ratio, given as width/height. E.g. ``2.0`` denotes
+            the image having twice as much width as height.
 
         mode : str, optional
-            Padding mode to use. See :func:`numpy.pad` for details.
+            Padding mode to use.
+            See :func:`imgaug.imgaug.pad` for details.
 
         cval : number, optional
-            Value to use for padding if `mode` is ``constant``. See :func:`numpy.pad` for details.
+            Value to use for padding if `mode` is ``constant``.
+            See :func:`imgaug.imgaug.pad` for details.
 
         return_pad_amounts : bool, optional
-            If False, then only the padded image will be returned. If True, a tuple with two
-            entries will be returned, where the first entry is the padded image and the second
-            entry are the amounts by which each image side was padded. These amounts are again a
-            tuple of the form (top, right, bottom, left), with each value being an integer.
+            If ``False``, then only the padded instance will be returned.
+            If ``True``, a tuple with two entries will be returned, where
+            the first entry is the padded instance and the second entry are
+            the amounts by which each array side was padded. These amounts are
+            again a tuple of the form ``(top, right, bottom, left)``, with
+            each value being an integer.
 
         Returns
         -------
-        imgaug.SegmentationMapsOnImage
-            Padded segmentation map as SegmentationMapsOnImage object.
+        imgaug.augmentables.segmaps.SegmentationMapsOnImage
+            Padded segmentation map as :class:`SegmentationMapsOnImage`
+            instance.
 
         tuple of int
-            Amounts by which the segmentation map was padded on each side, given as a
-            tuple ``(top, right, bottom, left)``.
-            This tuple is only returned if `return_pad_amounts` was set to True.
+            Amounts by which the instance's array was padded on each side,
+            given as a tuple ``(top, right, bottom, left)``.
+            This tuple is only returned if `return_pad_amounts` was set to
+            ``True``.
 
         """
-        arr_padded, pad_amounts = ia.pad_to_aspect_ratio(self.arr, aspect_ratio=aspect_ratio, mode=mode, cval=cval,
-                                                         return_pad_amounts=True)
+        arr_padded, pad_amounts = ia.pad_to_aspect_ratio(
+            self.arr,
+            aspect_ratio=aspect_ratio,
+            mode=mode,
+            cval=cval,
+            return_pad_amounts=True)
         segmap = self.deepcopy(arr=arr_padded)
         if return_pad_amounts:
             return segmap, pad_amounts
@@ -438,8 +470,7 @@ class SegmentationMapsOnImage(object):
         return self.resize(*args, **kwargs)
 
     def resize(self, sizes, interpolation="nearest"):
-        """
-        Resize the segmentation map array to the provided size given the provided interpolation.
+        """Resize the seg.map(s) array given a target size and interpolation.
 
         Parameters
         ----------
@@ -455,7 +486,7 @@ class SegmentationMapsOnImage(object):
 
         Returns
         -------
-        imgaug.SegmentationMapsOnImage
+        imgaug.augmentables.segmaps.SegmentationMapsOnImage
             Resized segmentation map object.
 
         """
@@ -465,26 +496,27 @@ class SegmentationMapsOnImage(object):
 
     # TODO how best to handle changes to _input_was due to changed 'arr'?
     def copy(self, arr=None, shape=None):
-        """
-        Create a shallow copy of the segmentation map object.
+        """Create a shallow copy of the segmentation map object.
 
         Parameters
         ----------
         arr : None or (H,W) ndarray or (H,W,C) ndarray, optional
             Optionally the `arr` attribute to use for the new segmentation map
             instance. Will be copied from the old instance if not provided.
-            See :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            See
+            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         shape : None or tuple of int, optional
             Optionally the shape attribute to use for the the new segmentation
             map instance. Will be copied from the old instance if not provided.
-            See :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            See
+            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         Returns
         -------
-        imgaug.SegmentationMapsOnImage
+        imgaug.augmentables.segmaps.SegmentationMapsOnImage
             Shallow copy.
 
         """
@@ -495,26 +527,27 @@ class SegmentationMapsOnImage(object):
         return segmap
 
     def deepcopy(self, arr=None, shape=None):
-        """
-        Create a deep copy of the segmentation map object.
+        """Create a deep copy of the segmentation map object.
 
         Parameters
         ----------
         arr : None or (H,W) ndarray or (H,W,C) ndarray, optional
             Optionally the `arr` attribute to use for the new segmentation map
             instance. Will be copied from the old instance if not provided.
-            See :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            See
+            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         shape : None or tuple of int, optional
             Optionally the shape attribute to use for the the new segmentation
             map instance. Will be copied from the old instance if not provided.
-            See :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            See
+            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         Returns
         -------
-        imgaug.SegmentationMapsOnImage
+        imgaug.augmentables.segmaps.SegmentationMapsOnImage
             Deep copy.
 
         """
