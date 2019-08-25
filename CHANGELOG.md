@@ -239,7 +239,14 @@
   statements. This is a bit less secure, but should overall improve
   performance. #387
 * Added error messages to `assert` statements throughout the library. #387
-* Improved code style and documentation of (#389):
+* Improved code style and documentation of (#389, #402):
+    * `imgaug.augmentables.bbs`.
+    * `imgaug.augmentables.heatmaps`.
+    * `imgaug.augmentables.kps`.
+    * `imgaug.augmentables.lines`.
+    * `imgaug.augmentables.normalization`.
+    * `imgaug.augmentables.polys`.
+    * `imgaug.augmentables.segmaps`.
     * `imgaug.augmentables.utils`.
     * `imgaug.imgaug`.
     * `imgaug.parameters`.
@@ -321,6 +328,8 @@
     * `imgaug.augmenters.weather.Snowflakes`
 * Marked `imgaug.augmenters.arithmetic.ContrastNormalization` as deprecated.
   Use `imgaug.augmenters.contrast.LinearContrast` instead. #396
+* Renamed argument `X` of `imgaug.augmentables.kps.compute_geometric_median()`
+  to `points`. The old argument is still accepted, but now deprecated. #402
 
 ## Improved Segmentation Map Augmentation #302
 
