@@ -266,6 +266,11 @@
   all augmenters. #380
 * Increased minimum version requirement for `scikit-image` to
   `0.14.2`. #377, #399
+* Marked the following functions as deprecated (#398):
+  * `imgaug.augmenters.meta.clip_augmented_image_`
+  * `imgaug.augmenters.meta.clip_augmented_image`
+  * `imgaug.augmenters.meta.clip_augmented_images_`
+  * `imgaug.augmenters.meta.clip_augmented_images`
 
 ## Improved Segmentation Map Augmentation #302
 

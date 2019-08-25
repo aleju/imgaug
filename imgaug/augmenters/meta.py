@@ -47,17 +47,17 @@ from .. import random as iarandom
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
-# TODO deprecate
+@ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_image_(image, min_value, max_value):
     return clip_augmented_images_(image, min_value, max_value)
 
 
-# TODO deprecate
+@ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_image(image, min_value, max_value):
     return clip_augmented_images(image, min_value, max_value)
 
 
-# TODO deprecate
+@ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_images_(images, min_value, max_value):
     if ia.is_np_array(images):
         return np.clip(images, min_value, max_value, out=images)
@@ -66,7 +66,7 @@ def clip_augmented_images_(images, min_value, max_value):
                 for image in images]
 
 
-# TODO deprecate
+@ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_images(images, min_value, max_value):
     if ia.is_np_array(images):
         images = np.copy(images)
