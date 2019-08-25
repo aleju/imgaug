@@ -133,7 +133,7 @@ class LineString(object):
 
     @property
     def height(self):
-        """Get the height of a bounding box encapsulating the line.
+        """Compute the height of a bounding box encapsulating the line.
 
         The height is computed based on the two points with lowest and
         largest y-coordinates.
@@ -150,9 +150,9 @@ class LineString(object):
 
     @property
     def width(self):
-        """Get the width of a bounding box encapsulating the line.
+        """Compute the width of a bounding box encapsulating the line.
 
-        The height is computed based on the two points with lowest and
+        The width is computed based on the two points with lowest and
         largest x-coordinates.
 
         Returns
@@ -1742,8 +1742,8 @@ class LineStringsOnImage(object):
         Returns
         -------
         imgaug.augmentables.lines.LineStringsOnImage
-            Reduced set of line strings, with those that were fully/partially
-            outside of the image removed.
+            Reduced set of line strings. Those that are fully/partially
+            outside of the given image plane are removed.
 
         """
         lss_clean = [ls for ls in self.line_strings
@@ -1755,10 +1755,24 @@ class LineStringsOnImage(object):
         """
         Clip off all parts of the line strings that are outside of an image.
 
+        .. note ::
+
+            The result can contain fewer line strings than the input did. That
+            happens when a polygon is fully outside of the image plane.
+
+        .. note ::
+
+            The result can also contain *more* line strings than the input
+            did. That happens when distinct parts of a line string are only
+            connected by line segments that are outside of the image plane and
+            hence will be clipped off, resulting in two or more unconnected
+            line string parts that are left in the image plane.
+
         Returns
         -------
         imgaug.augmentables.lines.LineStringsOnImage
             Line strings, clipped to fall within the image dimensions.
+            The count of output line strings may differ from the input count.
 
         """
         lss_cut = [ls_clipped
@@ -1798,7 +1812,7 @@ class LineStringsOnImage(object):
         return LineStringsOnImage(lss_new, shape=self.shape)
 
     def copy(self, line_strings=None, shape=None):
-        """Create a shallow copy of this ``LineStringsOnImage`` object.
+        """Create a shallow copy of this object.
 
         Parameters
         ----------
@@ -1825,8 +1839,7 @@ class LineStringsOnImage(object):
         return LineStringsOnImage(line_strings=lss, shape=shape)
 
     def deepcopy(self, line_strings=None, shape=None):
-        """
-        Create a deep copy of the LineStringsOnImage object.
+        """Create a deep copy of the object.
 
         Parameters
         ----------
