@@ -264,6 +264,8 @@
   `_augment_heatmaps()` in augmenters. The methods now default to doing
   nothing. Also removed all such noop-implementations of these methods from
   all augmenters. #380
+* Increased minimum version requirement for `scikit-image` to
+  `0.14.2`. #377, #399
 
 ## Improved Segmentation Map Augmentation #302
 
