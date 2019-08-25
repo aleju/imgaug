@@ -22,8 +22,11 @@ class HeatmapsOnImage(object):
         **Not** the shape of the heatmap(s) array, unless it is identical
         to the image shape (note the likely difference between the arrays
         in the number of channels).
-        If there is not a corresponding image, use the shape of the
-        heatmaps array.
+        This is expected to be ``(H, W)`` or ``(H, W, C)`` with ``C`` usually
+        being ``3``.
+        If there is no corresponding image, use ``(H_arr, W_arr)`` instead,
+        where ``H_arr`` is the height of the heatmap(s) array
+        (analogous ``W_arr``).
 
     min_value : float, optional
         Minimum value for the heatmaps that `arr` represents. This will
@@ -352,21 +355,21 @@ class HeatmapsOnImage(object):
             See :func:`imgaug.imgaug.pad` for details.
 
         return_pad_amounts : bool, optional
-            If ``False``, then only the padded image will be returned.
+            If ``False``, then only the padded instance will be returned.
             If ``True``, a tuple with two entries will be returned, where
-            the first entry is the padded image and the second entry are the
-            amounts by which each image side was padded. These amounts are
+            the first entry is the padded instance and the second entry are
+            the amounts by which each array side was padded. These amounts are
             again a tuple of the form ``(top, right, bottom, left)``, with
             each value being an integer.
 
         Returns
         -------
         imgaug.augmentables.heatmaps.HeatmapsOnImage
-            Padded heatmaps as HeatmapsOnImage object.
+            Padded heatmaps as :class:`HeatmapsOnImage` instance.
 
         tuple of int
-            Amounts by which the heatmaps were padded on each side, given
-            as a tuple ``(top, right, bottom, left)``.
+            Amounts by which the instance's array was padded on each side,
+            given as a tuple ``(top, right, bottom, left)``.
             This tuple is only returned if `return_pad_amounts` was set to
             ``True``.
 
