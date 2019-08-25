@@ -1,6 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import time
 import itertools
 import sys
 # unittest only added in 3.4 self.subTest()
@@ -25,17 +24,6 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug.augmenters.meta as meta
 from imgaug.testutils import reseed
-
-
-def main():
-    time_start = time.time()
-
-    # TODO WithColorspace
-    # TODO ChangeColorspace
-    test_Grayscale()
-
-    time_end = time.time()
-    print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
 
 
 class TestWithHueAndSaturation(unittest.TestCase):
@@ -923,57 +911,72 @@ class TestAddToSaturation(unittest.TestCase):
         assert aug.value_saturation.b.value == 20
 
 
-def test_Grayscale():
-    reseed()
+class TestGrayscale(unittest.TestCase):
+    def setUp(self):
+        reseed()
 
-    def _compute_luminosity(r, g, b):
+    @property
+    def base_img(self):
+        base_img = np.zeros((4, 4, 3), dtype=np.uint8)
+        base_img[..., 0] += 10
+        base_img[..., 1] += 20
+        base_img[..., 2] += 30
+        return base_img
+
+    @classmethod
+    def _compute_luminosity(cls, r, g, b):
         return 0.21 * r + 0.72 * g + 0.07 * b
 
-    base_img = np.zeros((4, 4, 3), dtype=np.uint8)
-    base_img[..., 0] += 10
-    base_img[..., 1] += 20
-    base_img[..., 2] += 30
+    def test_alpha_is_0(self):
+        aug = iaa.Grayscale(0.0)
+        observed = aug.augment_image(self.base_img)
+        expected = np.copy(self.base_img)
+        assert np.allclose(observed, expected)
 
-    aug = iaa.Grayscale(0.0)
-    observed = aug.augment_image(base_img)
-    expected = np.copy(base_img)
-    assert np.allclose(observed, expected)
+    def test_alpha_is_1(self):
+        aug = iaa.Grayscale(1.0)
+        observed = aug.augment_image(self.base_img)
+        luminosity = self._compute_luminosity(10, 20, 30)
+        expected = np.zeros_like(self.base_img) + luminosity
+        assert np.allclose(observed, expected.astype(np.uint8))
 
-    aug = iaa.Grayscale(1.0)
-    observed = aug.augment_image(base_img)
-    luminosity = _compute_luminosity(10, 20, 30)
-    expected = np.zeros_like(base_img) + luminosity
-    assert np.allclose(observed, expected.astype(np.uint8))
+    def test_alpha_is_050(self):
+        aug = iaa.Grayscale(0.5)
+        observed = aug.augment_image(self.base_img)
+        luminosity = self._compute_luminosity(10, 20, 30)
+        expected = 0.5 * self.base_img + 0.5 * luminosity
+        assert np.allclose(observed, expected.astype(np.uint8))
 
-    aug = iaa.Grayscale(0.5)
-    observed = aug.augment_image(base_img)
-    luminosity = _compute_luminosity(10, 20, 30)
-    expected = 0.5 * base_img + 0.5 * luminosity
-    assert np.allclose(observed, expected.astype(np.uint8))
+    def test_alpha_is_tuple(self):
+        aug = iaa.Grayscale((0.0, 1.0))
+        base_img = np.uint8([255, 0, 0]).reshape((1, 1, 3))
+        base_img_float = base_img.astype(np.float64) / 255.0
+        base_img_gray = iaa.Grayscale(1.0)\
+            .augment_image(base_img)\
+            .astype(np.float64) / 255.0
+        distance_max = np.linalg.norm(base_img_gray.flatten()
+                                      - base_img_float.flatten())
+        nb_iterations = 1000
+        distances = []
+        for _ in sm.xrange(nb_iterations):
+            observed = aug.augment_image(base_img).astype(np.float64) / 255.0
+            distance = np.linalg.norm(
+                observed.flatten() - base_img_float.flatten()) / distance_max
+            distances.append(distance)
 
-    aug = iaa.Grayscale((0.0, 1.0))
-    base_img = np.uint8([255, 0, 0]).reshape((1, 1, 3))
-    base_img_float = base_img.astype(np.float64) / 255.0
-    base_img_gray = iaa.Grayscale(1.0).augment_image(base_img).astype(np.float64) / 255.0
-    distance_max = np.linalg.norm(base_img_gray.flatten() - base_img_float.flatten())
-    nb_iterations = 1000
-    distances = []
-    for _ in sm.xrange(nb_iterations):
-        observed = aug.augment_image(base_img).astype(np.float64) / 255.0
-        distance = np.linalg.norm(observed.flatten() - base_img_float.flatten()) / distance_max
-        distances.append(distance)
+        assert 0 - 1e-4 < min(distances) < 0.1
+        assert 0.4 < np.average(distances) < 0.6
+        assert 0.9 < max(distances) < 1.0 + 1e-4
 
-    assert 0 - 1e-4 < min(distances) < 0.1
-    assert 0.4 < np.average(distances) < 0.6
-    assert 0.9 < max(distances) < 1.0 + 1e-4
-
-    nb_bins = 5
-    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=False)
-    density_expected = 1.0/nb_bins
-    density_tolerance = 0.05
-    for nb_samples in hist:
-        density = nb_samples / nb_iterations
-        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+        nb_bins = 5
+        hist, _ = np.histogram(
+            distances, bins=nb_bins, range=(0.0, 1.0), density=False)
+        density_expected = 1.0/nb_bins
+        density_tolerance = 0.05
+        for nb_samples in hist:
+            density = nb_samples / nb_iterations
+            assert np.isclose(density, density_expected,
+                              rtol=0, atol=density_tolerance)
 
 
 # Note that TestUniformColorQuantization inherits from this class,
