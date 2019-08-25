@@ -16,8 +16,7 @@ from .utils import normalize_shape, project_coords, interpolate_points
 #      find_self_intersections(), is_self_intersecting(),
 #      remove_self_intersections()
 class LineString(object):
-    """
-    Class representing line strings.
+    """Class representing line strings.
 
     A line string is a collection of connected line segments, each
     having a start and end point. Each point is given as its ``(x, y)``
@@ -63,13 +62,13 @@ class LineString(object):
 
     @property
     def length(self):
-        """
-        Get the total euclidean length of the line string.
+        """Compute the total euclidean length of the line string.
 
         Returns
         -------
         float
-            The length based on euclidean distance.
+            The length based on euclidean distance, i.e. the sum of the
+            lengths of each line segment.
 
         """
         if len(self.coords) == 0:
@@ -78,53 +77,109 @@ class LineString(object):
 
     @property
     def xx(self):
-        """Get an array of x-coordinates of all points of the line string."""
+        """Get an array of x-coordinates of all points of the line string.
+
+        Returns
+        -------
+        ndarray
+            ``float32`` x-coordinates of the line string points.
+
+        """
         return self.coords[:, 0]
 
     @property
     def yy(self):
-        """Get an array of y-coordinates of all points of the line string."""
+        """Get an array of y-coordinates of all points of the line string.
+
+        Returns
+        -------
+        ndarray
+            ``float32`` y-coordinates of the line string points.
+
+        """
         return self.coords[:, 1]
 
     @property
     def xx_int(self):
-        """Get an array of discrete x-coordinates of all points."""
+        """Get an array of discrete x-coordinates of all points.
+
+        The conversion from ``float32`` coordinates to ``int32`` is done
+        by first rounding the coordinates to the closest integer and then
+        removing everything after the decimal point.
+
+        Returns
+        -------
+        ndarray
+            ``int32`` x-coordinates of the line string points.
+
+        """
         return np.round(self.xx).astype(np.int32)
 
     @property
     def yy_int(self):
-        """Get an array of discrete y-coordinates of all points."""
+        """Get an array of discrete y-coordinates of all points.
+
+        The conversion from ``float32`` coordinates to ``int32`` is done
+        by first rounding the coordinates to the closest integer and then
+        removing everything after the decimal point.
+
+        Returns
+        -------
+        ndarray
+            ``int32`` y-coordinates of the line string points.
+
+        """
         return np.round(self.yy).astype(np.int32)
 
     @property
     def height(self):
-        """Get the height of a bounding box encapsulating the line."""
+        """Get the height of a bounding box encapsulating the line.
+
+        The height is computed based on the two points with lowest and
+        largest y-coordinates.
+
+        Returns
+        -------
+        float
+            The height of the line string.
+
+        """
         if len(self.coords) <= 1:
             return 0
         return np.max(self.yy) - np.min(self.yy)
 
     @property
     def width(self):
-        """Get the width of a bounding box encapsulating the line."""
+        """Get the width of a bounding box encapsulating the line.
+
+        The height is computed based on the two points with lowest and
+        largest x-coordinates.
+
+        Returns
+        -------
+        float
+            The width of the line string.
+
+        """
         if len(self.coords) <= 1:
             return 0
         return np.max(self.xx) - np.min(self.xx)
 
     def get_pointwise_inside_image_mask(self, image):
-        """
-        Get for each point whether it is inside of the given image plane.
+        """Determine per point whether it is inside of a given image plane.
 
         Parameters
         ----------
         image : ndarray or tuple of int
-            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
             such an image shape.
 
         Returns
         -------
         ndarray
-            Boolean array with one value per point indicating whether it is
-            inside of the provided image plane (``True``) or not (``False``).
+            ``(N,) ``bool`` array with one value for each of the ``N`` points
+            indicating whether it is inside of the provided image
+            plane (``True``) or not (``False``).
 
         """
         if len(self.coords) == 0:
@@ -137,15 +192,13 @@ class LineString(object):
 
     # TODO add closed=False/True?
     def compute_neighbour_distances(self):
-        """
-        Get the euclidean distance between each two consecutive points.
+        """Compute the euclidean distance between each two consecutive points.
 
         Returns
         -------
         ndarray
-            Euclidean distances between point pairs.
-            Same order as in `coords`. For ``N`` points, ``N-1`` distances
-            are returned.
+            ``(N-1,)`` ``float32`` array of euclidean distances between point
+            pairs. Same order as in `coords`.
 
         """
         if len(self.coords) <= 1:
@@ -157,22 +210,24 @@ class LineString(object):
             )
         )
 
+    # TODO change output to array
     def compute_pointwise_distances(self, other, default=None):
-        """
-        Compute the minimal distance between each point on self and other.
+        """Compute min distances between points of this and another line string.
 
         Parameters
         ----------
         other : tuple of number or imgaug.augmentables.kps.Keypoint or imgaug.augmentables.LineString
             Other object to which to compute the distances.
 
-        default
+        default : any
             Value to return if `other` contains no points.
 
         Returns
         -------
-        list of float
-            Distances to `other` or `default` if not distance could be computed.
+        list of float or any
+            For each coordinate of this line string, the distance to any
+            closest location on `other`.
+            `default` if no distance could be computed.
 
         """
         import shapely.geometry
@@ -194,28 +249,28 @@ class LineString(object):
             other = shapely.geometry.Point(other)
         else:
             raise ValueError(
-                ("Expected Keypoint or LineString or tuple (x,y), "
-                 + "got type %s.") % (type(other),))
+                "Expected Keypoint or LineString or tuple (x,y), "
+                "got type %s." % (type(other),))
 
         return [shapely.geometry.Point(point).distance(other)
                 for point in self.coords]
 
     def compute_distance(self, other, default=None):
-        """
-        Compute the minimal distance between the line string and `other`.
+        """Compute the minimal distance between the line string and `other`.
 
         Parameters
         ----------
         other : tuple of number or imgaug.augmentables.kps.Keypoint or imgaug.augmentables.LineString
             Other object to which to compute the distance.
 
-        default
+        default : any
             Value to return if this line string or `other` contain no points.
 
         Returns
         -------
-        float
-            Distance to `other` or `default` if not distance could be computed.
+        float or any
+            Minimal distance to `other` or `default` if no distance could be
+            computed.
 
         """
         # FIXME this computes distance pointwise, does not have to be identical
@@ -227,8 +282,10 @@ class LineString(object):
 
     # TODO update BB's contains(), which can only accept Keypoint currently
     def contains(self, other, max_distance=1e-4):
-        """
-        Estimate whether the bounding box contains a point.
+        """Estimate whether a point is on this line string.
+
+        This method uses a maximum distance to estimate whether a point is
+        on a line string.
 
         Parameters
         ----------
@@ -238,21 +295,18 @@ class LineString(object):
         max_distance : float
             Maximum allowed euclidean distance between the point and the
             closest point on the line. If the threshold is exceeded, the point
-            is not considered to be contained in the line.
+            is not considered to fall on the line.
 
         Returns
         -------
         bool
-            True if the point is contained in the line string, False otherwise.
-            It is contained if its distance to the line or any of its points
-            is below a threshold.
+            ``True`` if the point is on the line string, ``False`` otherwise.
 
         """
         return self.compute_distance(other, default=np.inf) < max_distance
 
     def project(self, from_shape, to_shape):
-        """
-        Project the line string onto a differently shaped image.
+        """Project the line string onto a differently shaped image.
 
         E.g. if a point of the line string is on its original image at
         ``x=(10 of 100 pixels)`` and ``y=(20 of 100 pixels)`` and is projected
@@ -272,7 +326,7 @@ class LineString(object):
 
         Returns
         -------
-        out : imgaug.augmentables.lines.LineString
+        imgaug.augmentables.lines.LineString
             Line string with new coordinates.
 
         """
@@ -280,23 +334,23 @@ class LineString(object):
         return self.copy(coords=coords_proj)
 
     def is_fully_within_image(self, image, default=False):
-        """
-        Estimate whether the line string is fully inside the image area.
+        """Estimate whether the line string is fully inside an image plane.
 
         Parameters
         ----------
         image : ndarray or tuple of int
-            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
             such an image shape.
 
-        default
+        default : any
             Default value to return if the line string contains no points.
 
         Returns
         -------
-        bool
-            True if the line string is fully inside the image area.
-            False otherwise.
+        bool or any
+            ``True`` if the line string is fully inside the image area.
+            ``False`` otherwise.
+            Will return `default` if this line string contains no points.
 
         """
         if len(self.coords) == 0:
@@ -310,17 +364,18 @@ class LineString(object):
         Parameters
         ----------
         image : ndarray or tuple of int
-            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
             such an image shape.
 
-        default
+        default : any
             Default value to return if the line string contains no points.
 
         Returns
         -------
-        bool
-            True if the line string is at least partially inside the image area.
-            False otherwise.
+        bool or any
+            ``True`` if the line string is at least partially inside the image
+            area. ``False`` otherwise.
+            Will return `default` if this line string contains no points.
 
         """
         if len(self.coords) == 0:
@@ -343,23 +398,23 @@ class LineString(object):
             such an image shape.
 
         fully : bool, optional
-            Whether to return True if the bounding box is fully outside fo the
-            image area.
+            Whether to return ``True`` if the line string is fully outside
+            of the image area.
 
         partly : bool, optional
-            Whether to return True if the bounding box is at least partially
+            Whether to return ``True`` if the line string is at least partially
             outside fo the image area.
 
-        default
+        default : any
             Default value to return if the line string contains no points.
 
         Returns
         -------
-        bool
-            `default` if the line string has no points.
-            True if the line string is partially/fully outside of the image
+        bool or any
+            ``True`` if the line string is partially/fully outside of the image
             area, depending on defined parameters.
-            False otherwise.
+            ``False`` otherwise.
+            Will return `default` if this line string contains no points.
 
         """
         if len(self.coords) == 0:
@@ -373,13 +428,12 @@ class LineString(object):
             return fully
 
     def clip_out_of_image(self, image):
-        """
-        Clip off all parts of the line_string that are outside of the image.
+        """Clip off all parts of the line string that are outside of the image.
 
         Parameters
         ----------
         image : ndarray or tuple of int
-            Either an image with shape ``(H,W,[C])`` or a tuple denoting
+            Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
             such an image shape.
 
         Returns
@@ -486,9 +540,9 @@ class LineString(object):
         return [self.deepcopy(coords=line) for line in lines]
 
     # TODO add tests for this
+    # TODO extend this to non line string geometries
     def find_intersections_with(self, other):
-        """
-        Find all intersection points between the line string and `other`.
+        """Find all intersection points between this line string and `other`.
 
         Parameters
         ----------
@@ -538,26 +592,25 @@ class LineString(object):
 
     # TODO convert this to x/y params?
     def shift(self, top=None, right=None, bottom=None, left=None):
-        """
-        Shift/move the line string from one or more image sides.
+        """Move this line string along the x/y-axis.
 
         Parameters
         ----------
         top : None or int, optional
-            Amount of pixels by which to shift the bounding box from the
-            top.
+            Amount of pixels by which to shift this object *from* the
+            top (towards the bottom).
 
         right : None or int, optional
-            Amount of pixels by which to shift the bounding box from the
-            right.
+            Amount of pixels by which to shift this object *from* the
+            right (towards the left).
 
         bottom : None or int, optional
-            Amount of pixels by which to shift the bounding box from the
-            bottom.
+            Amount of pixels by which to shift this object *from* the
+            bottom (towards the top).
 
         left : None or int, optional
-            Amount of pixels by which to shift the bounding box from the
-            left.
+            Amount of pixels by which to shift this object *from* the
+            left (towards the right).
 
         Returns
         -------
@@ -576,8 +629,7 @@ class LineString(object):
 
     def draw_mask(self, image_shape, size_lines=1, size_points=0,
                   raise_if_out_of_image=False):
-        """
-        Draw this line segment as a binary image mask.
+        """Draw this line segment as a binary image mask.
 
         Parameters
         ----------
@@ -592,8 +644,8 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -612,8 +664,7 @@ class LineString(object):
     def draw_lines_heatmap_array(self, image_shape, alpha=1.0,
                                  size=1, antialiased=True,
                                  raise_if_out_of_image=False):
-        """
-        Draw the line segments of the line string as a heatmap array.
+        """Draw the line segments of this line string as a heatmap array.
 
         Parameters
         ----------
@@ -632,14 +683,14 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
         ndarray
-            Float array of shape `image_shape` (no channel axis) with drawn
-            line string. All values are in the interval ``[0.0, 1.0]``.
+            ``float32`` array of shape `image_shape` (no channel axis) with
+            drawn line string. All values are in the interval ``[0.0, 1.0]``.
 
         """
         assert len(image_shape) == 2 or (
@@ -657,8 +708,7 @@ class LineString(object):
 
     def draw_points_heatmap_array(self, image_shape, alpha=1.0,
                                   size=1, raise_if_out_of_image=False):
-        """
-        Draw the points of the line string as a heatmap array.
+        """Draw the points of this line string as a heatmap array.
 
         Parameters
         ----------
@@ -674,14 +724,15 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
         ndarray
-            Float array of shape `image_shape` (no channel axis) with drawn
-            line string points. All values are in the interval ``[0.0, 1.0]``.
+            ``float32`` array of shape `image_shape` (no channel axis) with
+            drawn line string points. All values are in the
+            interval ``[0.0, 1.0]``.
 
         """
         assert len(image_shape) == 2 or (
@@ -726,14 +777,14 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
         ndarray
-            Float array of shape `image_shape` (no channel axis) with drawn
-            line segments and points. All values are in the
+            ``float32`` array of shape `image_shape` (no channel axis) with
+            drawn line segments and points. All values are in the
             interval ``[0.0, 1.0]``.
 
         """
@@ -761,8 +812,7 @@ class LineString(object):
                             alpha=1.0, size=3,
                             antialiased=True,
                             raise_if_out_of_image=False):
-        """
-        Draw the line segments of the line string on a given image.
+        """Draw the line segments of this line string on a given image.
 
         Parameters
         ----------
@@ -788,8 +838,8 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -845,7 +895,8 @@ class LineString(object):
         # size == 0 is already covered above
         # Note here that we have to be careful not to draw lines two times
         # at their intersection points, e.g. for (p0, p1), (p1, 2) we could
-        # end up drawing at p1 twice, leading to higher values if alpha is used.
+        # end up drawing at p1 twice, leading to higher values if alpha is
+        # used.
         color = np.float32(color)
         heatmap = np.zeros(image.shape[0:2], dtype=np.float32)
         for line in lines:
@@ -886,8 +937,7 @@ class LineString(object):
     def draw_points_on_image(self, image, color=(0, 128, 0),
                              alpha=1.0, size=3,
                              copy=True, raise_if_out_of_image=False):
-        """
-        Draw the points of the line string on a given image.
+        """Draw the points of this line string onto a given image.
 
         Parameters
         ----------
@@ -916,14 +966,15 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
         ndarray
-            Float array of shape `image_shape` (no channel axis) with drawn
-            line string points. All values are in the interval ``[0.0, 1.0]``.
+            ``float32`` array of shape `image_shape` (no channel axis) with
+            drawn line string points. All values are in the
+            interval ``[0.0, 1.0]``.
 
         """
         from .kps import KeypointsOnImage
@@ -941,8 +992,7 @@ class LineString(object):
                       size=1, size_lines=None, size_points=None,
                       antialiased=True,
                       raise_if_out_of_image=False):
-        """
-        Draw the line string on an image.
+        """Draw this line string onto an image.
 
         Parameters
         ----------
@@ -997,8 +1047,8 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -1044,14 +1094,15 @@ class LineString(object):
 
     def extract_from_image(self, image, size=1, pad=True, pad_max=None,
                            antialiased=True, prevent_zero_size=True):
-        """
-        Extract the image pixels covered by the line string.
+        """Extract all image pixels covered by the line string.
 
-        It will only extract pixels overlapped by the line string.
+        This will only extract pixels overlapping with the line string.
+        As a rectangular image array has to be returned, non-overlapping
+        pixels will be set to zero.
 
         This function will by default zero-pad the image if the line string is
         partially/fully outside of the image. This is for consistency with
-        the same implementations for bounding boxes and polygons.
+        the same methods for bounding boxes and polygons.
 
         Parameters
         ----------
@@ -1078,16 +1129,16 @@ class LineString(object):
 
         prevent_zero_size : bool, optional
             Whether to prevent height or width of the extracted image from
-            becoming zero. If this is set to True and height or width of the
-            line string is below 1, the height/width will be increased to 1.
-            This can be useful to prevent problems, e.g. with image saving or
-            plotting. If it is set to False, images will be returned as
-            ``(H', W')`` or ``(H', W', 3)`` with ``H`` or ``W`` potentially
-            being 0.
+            becoming zero. If this is set to ``True`` and height or width of
+            the line string is below ``1``, the height/width will be increased
+            to ``1``. This can be useful to prevent problems, e.g. with image
+            saving or plotting. If it is set to ``False``, images will be
+            returned as ``(H', W')`` or ``(H', W', 3)`` with ``H`` or ``W``
+            potentially being ``0``.
 
         Returns
         -------
-        image : (H',W') ndarray or (H',W',C) ndarray
+        (H',W') ndarray or (H',W',C) ndarray
             Pixels overlapping with the line string. Zero-padded if the
             line string is partially/fully outside of the image and
             ``pad=True``. If `prevent_zero_size` is activated, it is
@@ -1137,8 +1188,7 @@ class LineString(object):
         return np.clip(np.round(extract), 0, 255).astype(np.uint8)
 
     def concatenate(self, other):
-        """
-        Concatenate this line string with another one.
+        """Concatenate this line string with another one.
 
         This will add a line segment between the end point of this line string
         and the start point of `other`.
@@ -1162,8 +1212,10 @@ class LineString(object):
 
     # TODO add tests
     def subdivide(self, points_per_edge):
-        """
-        Adds ``N`` interpolated points with uniform spacing to each edge.
+        """Derive a new line string with ``N`` interpolated points per edge.
+
+        The interpolated points have (per edge) regular distances to each
+        other.
 
         For each edge between points ``A`` and ``B`` this adds points
         at ``A + (i/(1+N)) * (B - A)``, where ``i`` is the index of the added
@@ -1180,7 +1232,7 @@ class LineString(object):
 
         Returns
         -------
-        LineString
+        imgaug.augmentables.lines.LineString
             Line string with subdivided edges.
 
         """
@@ -1191,8 +1243,7 @@ class LineString(object):
         return self.deepcopy(coords=coords)
 
     def to_keypoints(self):
-        """
-        Convert the line string points to keypoints.
+        """Convert the line string points to keypoints.
 
         Returns
         -------
@@ -1205,8 +1256,7 @@ class LineString(object):
         return [Keypoint(x=x, y=y) for (x, y) in self.coords]
 
     def to_bounding_box(self):
-        """
-        Generate a bounding box encapsulating the line string.
+        """Generate a bounding box encapsulating the line string.
 
         Returns
         -------
@@ -1225,15 +1275,14 @@ class LineString(object):
                            label=self.label)
 
     def to_polygon(self):
-        """
-        Generate a polygon from the line string points.
+        """Generate a polygon from the line string points.
 
         Returns
         -------
         imgaug.augmentables.polys.Polygon
             Polygon with the same corner points as the line string.
-            Note that the polygon might be invalid, e.g. contain less than 3
-            points or have self-intersections.
+            Note that the polygon might be invalid, e.g. contain less
+            than ``3`` points or have self-intersections.
 
         """
         from .polys import Polygon
@@ -1241,14 +1290,13 @@ class LineString(object):
 
     def to_heatmap(self, image_shape, size_lines=1, size_points=0,
                    antialiased=True, raise_if_out_of_image=False):
-        """
-        Generate a heatmap object from the line string.
+        """Generate a heatmap object from the line string.
 
         This is similar to
-        :func:`imgaug.augmentables.lines.LineString.draw_lines_heatmap_array`
+        :func:`imgaug.augmentables.lines.LineString.draw_lines_heatmap_array`,
         executed with ``alpha=1.0``. The result is wrapped in a
-        ``HeatmapsOnImage`` object instead of just an array.
-        No points are drawn.
+        :class:`imgaug.augmentables.heatmaps.HeatmapsOnImage` object instead
+        of just an array. No points are drawn.
 
         Parameters
         ----------
@@ -1266,12 +1314,12 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
-        imgaug.augmentables.heatmaps.HeatmapOnImage
+        imgaug.augmentables.heatmaps.HeatmapsOnImage
             Heatmap object containing drawn line string.
 
         """
@@ -1286,8 +1334,7 @@ class LineString(object):
 
     def to_segmentation_map(self, image_shape, size_lines=1, size_points=0,
                             raise_if_out_of_image=False):
-        """
-        Generate a segmentation map object from the line string.
+        """Generate a segmentation map object from the line string.
 
         This is similar to
         :func:`imgaug.augmentables.lines.LineString.draw_mask`.
@@ -1307,8 +1354,8 @@ class LineString(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if the line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -1326,8 +1373,7 @@ class LineString(object):
 
     # TODO make this non-approximate
     def coords_almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
-        """
-        Compare this and another LineString's coordinates.
+        """Compare this and another LineString's coordinates.
 
         This is an approximate method based on pointwise distances and can
         in rare corner cases produce wrong outputs.
@@ -1376,8 +1422,7 @@ class LineString(object):
         return dist < max_distance
 
     def almost_equals(self, other, max_distance=1e-4, points_per_edge=8):
-        """
-        Compare this and another LineString.
+        """Compare this and another line string.
 
         Parameters
         ----------
@@ -1396,7 +1441,7 @@ class LineString(object):
         bool
             ``True`` if the coordinates are almost equal according to
             :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`
-            and additionally the labels are identical. Otherwise ``False``.
+            and additionally the labels are equal. Otherwise ``False``.
 
         """
         if self.label != other.label:
@@ -1405,8 +1450,7 @@ class LineString(object):
             other, max_distance=max_distance, points_per_edge=points_per_edge)
 
     def copy(self, coords=None, label=None):
-        """
-        Create a shallow copy of the LineString object.
+        """Create a shallow copy of this line string.
 
         Parameters
         ----------
@@ -1428,8 +1472,7 @@ class LineString(object):
                           label=self.label if label is None else label)
 
     def deepcopy(self, coords=None, label=None):
-        """
-        Create a deep copy of the BoundingBox object.
+        """Create a deep copy of this line string.
 
         Parameters
         ----------
@@ -1475,8 +1518,7 @@ class LineString(object):
 # is_self_intersecting()
 # remove_self_intersections()
 class LineStringsOnImage(object):
-    """
-    Object that represents all line strings on a single image.
+    """Object that represents all line strings on a single image.
 
     Parameters
     ----------
@@ -1485,18 +1527,20 @@ class LineStringsOnImage(object):
 
     shape : tuple of int or ndarray
         The shape of the image on which the objects are placed.
-        Either an image with shape ``(H,W,[C])`` or a tuple denoting
+        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
         such an image shape.
 
     Examples
     --------
-    >>> import imgaug.augmentables.lines as lines
+    >>> import numpy as np
+    >>> from imgaug.augmentables.lines import LineString, LineStringsOnImage
+    >>>
     >>> image = np.zeros((100, 100))
     >>> lss = [
-    >>>     lines.LineString([(0, 0), (10, 0)]),
-    >>>     lines.LineString([(10, 20), (30, 30), (50, 70)])
+    >>>     LineString([(0, 0), (10, 0)]),
+    >>>     LineString([(10, 20), (30, 30), (50, 70)])
     >>> ]
-    >>> lsoi = lines.LineStringsOnImage(lss, shape=image.shape)
+    >>> lsoi = LineStringsOnImage(lss, shape=image.shape)
 
     """
 
@@ -1513,20 +1557,18 @@ class LineStringsOnImage(object):
 
     @property
     def empty(self):
-        """
-        Returns whether this object contains zero line strings.
+        """Estimate whether this object contains zero line strings.
 
         Returns
         -------
         bool
-            True if this object contains zero line strings.
+            ``True`` if this object contains zero line strings.
 
         """
         return len(self.line_strings) == 0
 
     def on(self, image):
-        """
-        Project bounding boxes from one image to a new one.
+        """Project the line strings from one image shape to a new one.
 
         Parameters
         ----------
@@ -1537,7 +1579,7 @@ class LineStringsOnImage(object):
 
         Returns
         -------
-        line_strings : imgaug.augmentables.lines.LineStrings
+        imgaug.augmentables.lines.LineStrings
             Object containing all projected line strings.
 
         """
@@ -1550,8 +1592,7 @@ class LineStringsOnImage(object):
 
     @classmethod
     def from_xy_arrays(cls, xy, shape):
-        """
-        Convert an `(N,M,2)` ndarray to a LineStringsOnImage object.
+        """Convert an ``(N,M,2)`` ndarray to a ``LineStringsOnImage`` object.
 
         This is the inverse of
         :func:`imgaug.augmentables.lines.LineStringsOnImage.to_xy_array`.
@@ -1581,8 +1622,7 @@ class LineStringsOnImage(object):
         return cls(lss, shape)
 
     def to_xy_arrays(self, dtype=np.float32):
-        """
-        Convert this object to an iterable of ``(M,2)`` arrays of points.
+        """Convert this object to an iterable of ``(M,2)`` arrays of points.
 
         This is the inverse of
         :func:`imgaug.augmentables.lines.LineStringsOnImage.from_xy_array`.
@@ -1608,13 +1648,13 @@ class LineStringsOnImage(object):
                       size=1, size_lines=None, size_points=None,
                       antialiased=True,
                       raise_if_out_of_image=False):
-        """
-        Draw all line strings onto a given image.
+        """Draw all line strings onto a given image.
 
         Parameters
         ----------
         image : ndarray
-            The `(H,W,C)` `uint8` image onto which to draw the line strings.
+            The ``(H,W,C)`` ``uint8`` image onto which to draw the line
+            strings.
 
         color : iterable of int, optional
             Color to use as RGB, i.e. three values.
@@ -1664,8 +1704,8 @@ class LineStringsOnImage(object):
 
         raise_if_out_of_image : bool, optional
             Whether to raise an error if a line string is fully
-            outside of the image. If set to False, no error will be raised and
-            only the parts inside the image will be drawn.
+            outside of the image. If set to ``False``, no error will be
+            raised and only the parts inside the image will be drawn.
 
         Returns
         -------
@@ -1688,7 +1728,7 @@ class LineStringsOnImage(object):
 
     def remove_out_of_image(self, fully=True, partly=False):
         """
-        Remove all line strings that are fully/partially outside of the image.
+        Remove all line strings that are fully/partially outside of an image.
 
         Parameters
         ----------
@@ -1713,7 +1753,7 @@ class LineStringsOnImage(object):
 
     def clip_out_of_image(self):
         """
-        Clip off all parts of the line strings that are outside of the image.
+        Clip off all parts of the line strings that are outside of an image.
 
         Returns
         -------
@@ -1727,26 +1767,25 @@ class LineStringsOnImage(object):
         return LineStringsOnImage(lss_cut, shape=self.shape)
 
     def shift(self, top=None, right=None, bottom=None, left=None):
-        """
-        Shift/move the line strings from one or more image sides.
+        """Move the line strings along the x/y-axis.
 
         Parameters
         ----------
         top : None or int, optional
-            Amount of pixels by which to shift all bounding boxes from the
-            top.
+            Amount of pixels by which to shift all objects *from* the
+            top (towards the bottom).
 
         right : None or int, optional
-            Amount of pixels by which to shift all bounding boxes from the
-            right.
+            Amount of pixels by which to shift all objects *from* the
+            right (towads the left).
 
         bottom : None or int, optional
-            Amount of pixels by which to shift all bounding boxes from the
-            bottom.
+            Amount of pixels by which to shift all objects *from* the
+            bottom (towards the top).
 
         left : None or int, optional
-            Amount of pixels by which to shift all bounding boxes from the
-            left.
+            Amount of pixels by which to shift all objects *from* the
+            left (towards the right).
 
         Returns
         -------
@@ -1759,8 +1798,7 @@ class LineStringsOnImage(object):
         return LineStringsOnImage(lss_new, shape=self.shape)
 
     def copy(self, line_strings=None, shape=None):
-        """
-        Create a shallow copy of the LineStringsOnImage object.
+        """Create a shallow copy of this ``LineStringsOnImage`` object.
 
         Parameters
         ----------

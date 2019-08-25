@@ -12,8 +12,7 @@ from .utils import normalize_shape, project_coords
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
 class BoundingBox(object):
-    """
-    Class representing bounding boxes.
+    """Class representing bounding boxes.
 
     Each bounding box is parameterized by its top left and bottom right
     corners. Both are given as x and y-coordinates. The corners are intended
@@ -484,24 +483,24 @@ class BoundingBox(object):
 
     # TODO convert this to x/y params?
     def shift(self, top=None, right=None, bottom=None, left=None):
-        """Move a BB along the x/y-axis.
+        """Move this bounding box along the x/y-axis.
 
         Parameters
         ----------
         top : None or int, optional
-            Amount of pixels by which to shift the bounding box *from* the
+            Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            Amount of pixels by which to shift the bounding box *from* the
+            Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            Amount of pixels by which to shift the bounding box *from* the
+            Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            Amount of pixels by which to shift the bounding box *from* the
+            Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
         Returns
@@ -1103,19 +1102,19 @@ class BoundingBoxesOnImage(object):
         Parameters
         ----------
         top : None or int, optional
-            Amount of pixels by which to shift all bounding boxes *from* the
+            Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            Amount of pixels by which to shift all bounding boxes *from* the
+            Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            Amount of pixels by which to shift all bounding boxes *from* the
+            Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            Amount of pixels by which to shift all bounding boxes *from* the
+            Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
         Returns
