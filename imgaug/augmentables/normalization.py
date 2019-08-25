@@ -317,7 +317,8 @@ def normalize_bounding_boxes(inputs, shapes=None):
         return None
     elif ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_single_array_ndim(inputs, 3, "(N,B,4)", "BoundingBoxesOnImage")
-        _assert_single_array_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
+        _assert_single_array_last_dim_exactly(
+            inputs, 4, "BoundingBoxesOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             BoundingBoxesOnImage.from_xyxy_array(attr_i, shape=shape)
@@ -1265,7 +1266,8 @@ def _nonempty_info_to_type_str(nonempty, success, parents):
     elif ia.is_np_array(nonempty):
         kind = nonempty.dtype.kind
         kind_map = {"f": "float", "u": "uint", "i": "int", "b": "bool"}
-        return "%sarray[%s]" % (parent_iters, kind_map[kind] if kind in kind_map else kind)
+        return "%sarray[%s]" % (
+            parent_iters, kind_map[kind] if kind in kind_map else kind)
 
     # even int, str etc. are objects in python, so anything left should
     # offer a __class__ attribute
