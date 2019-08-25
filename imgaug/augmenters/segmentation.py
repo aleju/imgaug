@@ -1605,10 +1605,9 @@ class SubsamplingPointsSampler(PointsSamplerIf):
         self.other_points_sampler = other_points_sampler
         self.n_points_max = np.clip(n_points_max, -1, None)
         if self.n_points_max == 0:
-            import warnings
-            warnings.warn("Got n_points_max=0 in SubsamplingPointsSampler. "
-                          "This will result in no points ever getting "
-                          "returned.")
+            ia.warn("Got n_points_max=0 in SubsamplingPointsSampler. "
+                    "This will result in no points ever getting "
+                    "returned.")
 
     def sample_points(self, images, random_state):
         random_state = iarandom.RNG(random_state)

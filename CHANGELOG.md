@@ -271,6 +271,8 @@
   * `imgaug.augmenters.meta.clip_augmented_image`
   * `imgaug.augmenters.meta.clip_augmented_images_`
   * `imgaug.augmenters.meta.clip_augmented_images`
+* Refactored all calls of `warnings.warn()` to use `imgaug.imgaug.warn()
+  instead. #401
 
 ## Improved Segmentation Map Augmentation #302
 

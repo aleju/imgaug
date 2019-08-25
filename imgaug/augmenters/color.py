@@ -1457,16 +1457,14 @@ class ChangeColorspace(meta.Augmenter):
                 # results in errors, ie uint8 is expected
 
                 if image.ndim != 3:
-                    import warnings
-                    warnings.warn(
+                    ia.warn(
                         "Received an image with %d dimensions in "
                         "ChangeColorspace._augment_image(), but expected 3 "
                         "dimensions, i.e. shape "
                         "(height, width, channels)." % (image.ndim,)
                     )
                 elif image.shape[2] != 3:
-                    import warnings
-                    warnings.warn(
+                    ia.warn(
                         "Received an image with shape (H, W, C) and C=%d in "
                         "ChangeColorspace._augment_image(). Expected C to "
                         "usually be 3 -- any other value will likely result in "

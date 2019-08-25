@@ -24,8 +24,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
-import warnings
-
 import numpy as np
 from scipy import ndimage
 import cv2
@@ -207,7 +205,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
             # TODO it does have a truncate argument that truncates at x
             #      standard deviations -- maybe can be used similarly to ksize
             if ksize is not None:
-                warnings.warn(
+                ia.warn(
                     "Requested 'scipy' backend or picked it automatically by "
                     "backend='auto' n blur_gaussian_(), but also provided "
                     "'ksize' argument, which is not understood by that "

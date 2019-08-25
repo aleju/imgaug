@@ -55,8 +55,7 @@ class HeatmapsOnImage(object):
 
         if np.min(arr.flat[0:50]) < min_value - np.finfo(arr.dtype).eps \
                 or np.max(arr.flat[0:50]) > max_value + np.finfo(arr.dtype).eps:
-            import warnings
-            warnings.warn(
+            ia.warn(
                 ("Value range of heatmap was chosen to be (%.8f, %.8f), but "
                  "found actual min/max of (%.8f, %.8f). Array will be "
                  "clipped to chosen value range.") % (

@@ -28,7 +28,6 @@ import numpy as np
 import six.moves as sm
 import skimage.exposure as ski_exposure
 import cv2
-import warnings
 
 from . import meta
 from . import color as color_lib
@@ -758,7 +757,7 @@ class _IntensityChannelBasedApplier(object):
                 images_change_cs.append(image[..., 0:3])
                 images_change_cs_indices.append(i)
             else:
-                warnings.warn(
+                ia.warn(
                     "Got image with %d channels in "
                     "_IntensityChannelBasedApplier (parents: %s), "
                     "expected 0, 1, 3 or 4 channels." % (
