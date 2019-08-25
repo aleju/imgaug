@@ -67,9 +67,9 @@ class HeatmapsOnImage(object):
         beyond_max = np.max(components) > max_value + eps
         if beyond_min or beyond_max:
             ia.warn(
-                ("Value range of heatmap was chosen to be (%.8f, %.8f), but "
-                 "found actual min/max of (%.8f, %.8f). Array will be "
-                 "clipped to chosen value range.") % (
+                "Value range of heatmap was chosen to be (%.8f, %.8f), but "
+                "found actual min/max of (%.8f, %.8f). Array will be "
+                "clipped to chosen value range." % (
                     min_value, max_value, np.min(arr), np.max(arr)))
             arr = np.clip(arr, min_value, max_value)
 
