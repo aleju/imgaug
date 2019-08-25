@@ -28,7 +28,6 @@ import numpy as np
 import six.moves as sm
 import skimage.exposure as ski_exposure
 import cv2
-import warnings
 
 from . import meta
 from . import color as color_lib

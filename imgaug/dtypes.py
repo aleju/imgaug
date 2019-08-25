@@ -1,7 +1,8 @@
 from __future__ import print_function, division
-import warnings
+
 import numpy as np
 import six.moves as sm
+
 import imgaug as ia
 
 KIND_TO_DTYPES = {

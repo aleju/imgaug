@@ -24,8 +24,6 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
-import warnings
-
 import numpy as np
 from scipy import ndimage
 import cv2
