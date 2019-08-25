@@ -483,7 +483,7 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        image : (H,W,3) ndarray
+        (H,W,3) ndarray
             Image with drawn keypoints.
 
         """
@@ -507,7 +507,7 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        out : KeypointsOnImage
+        imgaug.augmentables.kps.KeypointsOnImage
             Keypoints after moving them.
 
         """
@@ -561,7 +561,7 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        KeypointsOnImage
+        imgaug.augmentables.kps.KeypointsOnImage
             :class:`KeypointsOnImage` object containing the array's keypoints.
 
         """
@@ -583,7 +583,7 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        KeypointsOnImage
+        imgaug.augmentables.kps.KeypointsOnImage
             :class:`KeypointsOnImage` object containing the array's keypoints.
 
         """
