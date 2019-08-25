@@ -10,7 +10,7 @@ from .. import imgaug as ia
 from .utils import normalize_shape, project_coords
 
 
-def compute_geometric_median(X, eps=1e-5):
+def compute_geometric_median(points=None, eps=1e-5, X=None):
     """
     Estimate the geometric median of points in 2D.
 
@@ -18,11 +18,14 @@ def compute_geometric_median(X, eps=1e-5):
 
     Parameters
     ----------
-    X : (N,2) ndarray
+    points : (N,2) ndarray
         Points in 2D. Second axis must be given in xy-form.
 
     eps : float, optional
         Distance threshold when to return the median.
+
+    X : None or (N,2) ndarray, optional
+        Deprecated.
 
     Returns
     -------
@@ -30,21 +33,26 @@ def compute_geometric_median(X, eps=1e-5):
         Geometric median as xy-coordinate.
 
     """
-    y = np.mean(X, 0)
+    if X is not None:
+        assert points is None
+        ia.warn_deprecated("Using 'X' is deprecated, use 'points' instead.")
+        points = X
+
+    y = np.mean(points, 0)
 
     while True:
-        D = scipy.spatial.distance.cdist(X, [y])
+        D = scipy.spatial.distance.cdist(points, [y])
         nonzeros = (D != 0)[:, 0]
 
         Dinv = 1 / D[nonzeros]
         Dinvs = np.sum(Dinv)
         W = Dinv / Dinvs
-        T = np.sum(W * X[nonzeros], 0)
+        T = np.sum(W * points[nonzeros], 0)
 
-        num_zeros = len(X) - np.sum(nonzeros)
+        num_zeros = len(points) - np.sum(nonzeros)
         if num_zeros == 0:
             y1 = T
-        elif num_zeros == len(X):
+        elif num_zeros == len(points):
             return y
         else:
             R = (T - y) * Dinvs
