@@ -1332,7 +1332,3 @@ class TestAlphaElementwise(unittest.TestCase):
         observed = aug.augment_polygons([self.psoi], hooks=hooks)[0]
         assert observed.polygons[0].exterior_almost_equals(
             self.psoi.polygons[0])
-
-
-if __name__ == "__main__":
-    main()

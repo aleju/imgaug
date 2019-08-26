@@ -1544,7 +1544,3 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             assert "[2..256]" in str(exc)
             got_exception = True
         assert got_exception
-
-
-if __name__ == "__main__":
-    main()
