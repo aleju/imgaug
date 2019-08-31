@@ -22,6 +22,8 @@ import imgaug.augmentables.normalization as normalization
 from imgaug.testutils import reseed
 
 
+# TODO split up tests here
+
 class TestNormalization(unittest.TestCase):
     def setUp(self):
         reseed()
