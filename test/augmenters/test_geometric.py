@@ -29,1302 +29,2009 @@ from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 
-def test_Affine():
-    reseed()
-
-    base_img = np.array([[0, 0, 0],
-                         [0, 255, 0],
-                         [0, 0, 0]], dtype=np.uint8)
-    base_img = base_img[:, :, np.newaxis]
-
-    images = np.array([base_img])
-    images_list = [base_img]
-    outer_pixels = ([], [])
-    for i in sm.xrange(base_img.shape[0]):
-        for j in sm.xrange(base_img.shape[1]):
-            if i != j:
-                outer_pixels[0].append(i)
-                outer_pixels[1].append(j)
-
-    kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=2)]
-    keypoints = [ia.KeypointsOnImage(kps, shape=base_img.shape)]
-
-    # no translation/scale/rotate/shear, shouldnt change nothing
-    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-
-    observed = aug.augment_images(images)
-    expected = images
-    assert np.array_equal(observed, expected)
-
-    observed = aug_det.augment_images(images)
-    expected = images
-    assert np.array_equal(observed, expected)
-
-    observed = aug.augment_images(images_list)
-    expected = images_list
-    assert array_equal_lists(observed, expected)
-
-    observed = aug_det.augment_images(images_list)
-    expected = images_list
-    assert array_equal_lists(observed, expected)
-
-    observed = aug.augment_keypoints(keypoints)
-    expected = keypoints
-    assert keypoints_equal(observed, expected)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    expected = keypoints
-    assert keypoints_equal(observed, expected)
-
-    # ---------------------
-    # scale
-    # ---------------------
-    # zoom in
-    aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-
-    observed = aug.augment_images(images)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
-
-    observed = aug_det.augment_images(images)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
-
-    observed = aug.augment_images(images_list)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
-
-    observed = aug_det.augment_images(images_list)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
-    assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
-
-    observed = aug.augment_keypoints(keypoints)
-    assert observed[0].keypoints[0].x < 0
-    assert observed[0].keypoints[0].y < 0
-    assert observed[0].keypoints[1].x == 1
-    assert observed[0].keypoints[1].y == 1
-    assert observed[0].keypoints[2].x > 2
-    assert observed[0].keypoints[2].y > 2
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert observed[0].keypoints[0].x < 0
-    assert observed[0].keypoints[0].y < 0
-    assert observed[0].keypoints[1].x == 1
-    assert observed[0].keypoints[1].y == 1
-    assert observed[0].keypoints[2].x > 2
-    assert observed[0].keypoints[2].y > 2
-
-    # zoom in only on x axis
-    aug = iaa.Affine(scale={"x": 1.75, "y": 1.0}, translate_px=0, rotate=0,
-                     shear=0)
-    aug_det = aug.to_deterministic()
-
-    observed = aug.augment_images(images)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[1, 1], [0, 2]] > 20).all()
-    assert (observed[0][[1, 1], [0, 2]] < 150).all()
-    assert (observed[0][0, :] < 5).all()
-    assert (observed[0][2, :] < 5).all()
-
-    observed = aug_det.augment_images(images)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[1, 1], [0, 2]] > 20).all()
-    assert (observed[0][[1, 1], [0, 2]] < 150).all()
-    assert (observed[0][0, :] < 5).all()
-    assert (observed[0][2, :] < 5).all()
-
-    observed = aug.augment_images(images_list)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[1, 1], [0, 2]] > 20).all()
-    assert (observed[0][[1, 1], [0, 2]] < 150).all()
-    assert (observed[0][0, :] < 5).all()
-    assert (observed[0][2, :] < 5).all()
-
-    observed = aug_det.augment_images(images_list)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[1, 1], [0, 2]] > 20).all()
-    assert (observed[0][[1, 1], [0, 2]] < 150).all()
-    assert (observed[0][0, :] < 5).all()
-    assert (observed[0][2, :] < 5).all()
-
-    observed = aug.augment_keypoints(keypoints)
-    assert observed[0].keypoints[0].x < 0
-    assert observed[0].keypoints[0].y == 0
-    assert observed[0].keypoints[1].x == 1
-    assert observed[0].keypoints[1].y == 1
-    assert observed[0].keypoints[2].x > 2
-    assert observed[0].keypoints[2].y == 2
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert observed[0].keypoints[0].x < 0
-    assert observed[0].keypoints[0].y == 0
-    assert observed[0].keypoints[1].x == 1
-    assert observed[0].keypoints[1].y == 1
-    assert observed[0].keypoints[2].x > 2
-    assert observed[0].keypoints[2].y == 2
-
-    # zoom in only on y axis
-    aug = iaa.Affine(scale={"x": 1.0, "y": 1.75}, translate_px=0, rotate=0,
-                     shear=0)
-    aug_det = aug.to_deterministic()
-
-    observed = aug.augment_images(images)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[0, 2], [1, 1]] > 20).all()
-    assert (observed[0][[0, 2], [1, 1]] < 150).all()
-    assert (observed[0][:, 0] < 5).all()
-    assert (observed[0][:, 2] < 5).all()
-
-    observed = aug_det.augment_images(images)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[0, 2], [1, 1]] > 20).all()
-    assert (observed[0][[0, 2], [1, 1]] < 150).all()
-    assert (observed[0][:, 0] < 5).all()
-    assert (observed[0][:, 2] < 5).all()
-
-    observed = aug.augment_images(images_list)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[0, 2], [1, 1]] > 20).all()
-    assert (observed[0][[0, 2], [1, 1]] < 150).all()
-    assert (observed[0][:, 0] < 5).all()
-    assert (observed[0][:, 2] < 5).all()
-
-    observed = aug_det.augment_images(images_list)
-    assert observed[0][1, 1] > 250
-    assert (observed[0][[0, 2], [1, 1]] > 20).all()
-    assert (observed[0][[0, 2], [1, 1]] < 150).all()
-    assert (observed[0][:, 0] < 5).all()
-    assert (observed[0][:, 2] < 5).all()
-
-    observed = aug.augment_keypoints(keypoints)
-    assert observed[0].keypoints[0].x == 0
-    assert observed[0].keypoints[0].y < 0
-    assert observed[0].keypoints[1].x == 1
-    assert observed[0].keypoints[1].y == 1
-    assert observed[0].keypoints[2].x == 2
-    assert observed[0].keypoints[2].y > 2
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert observed[0].keypoints[0].x == 0
-    assert observed[0].keypoints[0].y < 0
-    assert observed[0].keypoints[1].x == 1
-    assert observed[0].keypoints[1].y == 1
-    assert observed[0].keypoints[2].x == 2
-    assert observed[0].keypoints[2].y > 2
-
-    # zoom out
-    # this one uses a 4x4 area of all 255, which is zoomed out to a 4x4 area
-    # in which the center 2x2 area is 255
-    # zoom in should probably be adapted to this style
-    # no separate tests here for x/y axis, should work fine if zoom in works
-    # with that
-    aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.ones((4, 4, 1), dtype=np.uint8) * 255
-    images = np.array([image])
-    images_list = [image]
-    outer_pixels = ([], [])
-    for y in sm.xrange(4):
-        xs = sm.xrange(4) if y in [0, 3] else [0, 3]
-        for x in xs:
-            outer_pixels[0].append(y)
-            outer_pixels[1].append(x)
-    inner_pixels = ([1, 1, 2, 2], [1, 2, 1, 2])
-
-    kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=0),
-           ia.Keypoint(x=0, y=3), ia.Keypoint(x=3, y=3)]
-    keypoints = [ia.KeypointsOnImage(kps, shape=image.shape)]
-    kps_aug = [ia.Keypoint(x=0.765, y=0.765), ia.Keypoint(x=2.235, y=0.765),
-               ia.Keypoint(x=0.765, y=2.235), ia.Keypoint(x=2.235, y=2.235)]
-    keypoints_aug = [ia.KeypointsOnImage(kps_aug, shape=image.shape)]
-
-    observed = aug.augment_images(images)
-    assert (observed[0][outer_pixels] < 25).all()
-    assert (observed[0][inner_pixels] > 200).all()
-
-    observed = aug_det.augment_images(images)
-    assert (observed[0][outer_pixels] < 25).all()
-    assert (observed[0][inner_pixels] > 200).all()
-
-    observed = aug.augment_images(images_list)
-    assert (observed[0][outer_pixels] < 25).all()
-    assert (observed[0][inner_pixels] > 200).all()
-
-    observed = aug_det.augment_images(images_list)
-    assert (observed[0][outer_pixels] < 25).all()
-    assert (observed[0][inner_pixels] > 200).all()
-
-    observed = aug.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    # varying scales
-    aug = iaa.Affine(scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, translate_px=0,
-                     rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.array([[0, 0, 0, 0, 0],
-                      [0, 1, 1, 1, 0],
-                      [0, 1, 2, 1, 0],
-                      [0, 1, 1, 1, 0],
-                      [0, 0, 0, 0, 0]], dtype=np.uint8) * 100
-    image = image[:, :, np.newaxis]
-    images = np.array([image])
-
-    last_aug = None
-    last_aug_det = None
-    nb_changed_aug = 0
-    nb_changed_aug_det = 0
-    nb_iterations = 1000
-    for i in sm.xrange(nb_iterations):
-        observed_aug = aug.augment_images(images)
-        observed_aug_det = aug_det.augment_images(images)
-        if i == 0:
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-        else:
-            if not np.array_equal(observed_aug, last_aug):
-                nb_changed_aug += 1
-            if not np.array_equal(observed_aug_det, last_aug_det):
-                nb_changed_aug_det += 1
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-    assert nb_changed_aug >= int(nb_iterations * 0.8)
-    assert nb_changed_aug_det == 0
-
-    aug = iaa.Affine(scale=iap.Uniform(0.7, 0.9))
-    assert isinstance(aug.scale, iap.Uniform)
-    assert isinstance(aug.scale.a, iap.Deterministic)
-    assert isinstance(aug.scale.b, iap.Deterministic)
-    assert 0.7 - 1e-8 < aug.scale.a.value < 0.7 + 1e-8
-    assert 0.9 - 1e-8 < aug.scale.b.value < 0.9 + 1e-8
-
-    # ---------------------
-    # translate
-    # ---------------------
-    # move one pixel to the right
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.zeros((3, 3, 1), dtype=np.uint8)
-    image_aug = np.copy(image)
-    image[1, 1] = 255
-    image_aug[1, 2] = 255
-    images = np.array([image])
-    images_aug = np.array([image_aug])
-    images_list = [image]
-    images_aug_list = [image_aug]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)],
-                                     shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=1)],
-                                         shape=base_img.shape)]
-
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug_det.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug_det.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    # move one pixel to the right
-    # with backend = skimage
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0, backend="skimage")
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    # move one pixel to the right
-    # with backend = skimage
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0, backend="skimage")
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    # move one pixel to the right
-    # with backend = skimage, order=ALL
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0, backend="skimage", order=ia.ALL)
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    # move one pixel to the right
-    # with backend = skimage, order=list
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0, backend="skimage", order=[0, 1, 3])
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    # move one pixel to the right
-    # with backend = cv2, order=list
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0, backend="cv2", order=[0, 1, 3])
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    # move one pixel to the right
-    # with backend = cv2, order=StochasticParameter
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                     shear=0, backend="cv2", order=iap.Choice([0, 1, 3]))
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    # move one pixel to the bottom
-    aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
-                     shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.zeros((3, 3, 1), dtype=np.uint8)
-    image_aug = np.copy(image)
-    image[1, 1] = 255
-    image_aug[2, 1] = 255
-    images = np.array([image])
-    images_aug = np.array([image_aug])
-    images_list = [image]
-    images_aug_list = [image_aug]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)],
-                                     shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)],
-                                         shape=base_img.shape)]
-
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug_det.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug_det.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    # move 33% (one pixel) to the right
-    aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
-                     rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.zeros((3, 3, 1), dtype=np.uint8)
-    image_aug = np.copy(image)
-    image[1, 1] = 255
-    image_aug[1, 2] = 255
-    images = np.array([image])
-    images_aug = np.array([image_aug])
-    images_list = [image]
-    images_aug_list = [image_aug]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)],
-                                     shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=2, y=1)],
-                                         shape=base_img.shape)]
-
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug_det.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug_det.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    # move 33% (one pixel) to the bottom
-    aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
-                     rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.zeros((3, 3, 1), dtype=np.uint8)
-    image_aug = np.copy(image)
-    image[1, 1] = 255
-    image_aug[2, 1] = 255
-    images = np.array([image])
-    images_aug = np.array([image_aug])
-    images_list = [image]
-    images_aug_list = [image_aug]
-    keypoints = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)],
-                                     shape=base_img.shape)]
-    keypoints_aug = [ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)],
-                                         shape=base_img.shape)]
-
-    observed = aug.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug_det.augment_images(images)
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug_det.augment_images(images_list)
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    # 0-1px to left/right and 0-1px to top/bottom
-    aug = iaa.Affine(scale=1.0, translate_px={"x": (-1, 1), "y": (-1, 1)},
-                     rotate=0, shear=0)
-    aug_det = aug.to_deterministic()
-    last_aug = None
-    last_aug_det = None
-    nb_changed_aug = 0
-    nb_changed_aug_det = 0
-    nb_iterations = 1000
-    centers_aug = np.copy(image).astype(np.int32) * 0
-    centers_aug_det = np.copy(image).astype(np.int32) * 0
-    for i in sm.xrange(nb_iterations):
-        observed_aug = aug.augment_images(images)
-        observed_aug_det = aug_det.augment_images(images)
-        if i == 0:
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-        else:
-            if not np.array_equal(observed_aug, last_aug):
-                nb_changed_aug += 1
-            if not np.array_equal(observed_aug_det, last_aug_det):
-                nb_changed_aug_det += 1
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-
-        assert len(observed_aug[0].nonzero()[0]) == 1
-        assert len(observed_aug_det[0].nonzero()[0]) == 1
-        centers_aug += (observed_aug[0] > 0)
-        centers_aug_det += (observed_aug_det[0] > 0)
-
-    assert nb_changed_aug >= int(nb_iterations * 0.7)
-    assert nb_changed_aug_det == 0
-    assert (centers_aug > int(nb_iterations * (1/9 * 0.6))).all()
-    assert (centers_aug < int(nb_iterations * (1/9 * 1.4))).all()
-
-    aug = iaa.Affine(translate_percent=iap.Uniform(0.7, 0.9))
-    assert isinstance(aug.translate, iap.Uniform)
-    assert isinstance(aug.translate.a, iap.Deterministic)
-    assert isinstance(aug.translate.b, iap.Deterministic)
-    assert 0.7 - 1e-8 < aug.translate.a.value < 0.7 + 1e-8
-    assert 0.9 - 1e-8 < aug.translate.b.value < 0.9 + 1e-8
-
-    aug = iaa.Affine(translate_px=iap.DiscreteUniform(1, 10))
-    assert isinstance(aug.translate, iap.DiscreteUniform)
-    assert isinstance(aug.translate.a, iap.Deterministic)
-    assert isinstance(aug.translate.b, iap.Deterministic)
-    assert aug.translate.a.value == 1
-    assert aug.translate.b.value == 10
-
-    # ---------------------
-    # translate heatmaps
-    # ---------------------
-    heatmaps = ia.HeatmapsOnImage(
-        np.float32([
-            [0.0, 0.5, 0.75],
-            [0.0, 0.5, 0.75],
-            [0.75, 0.75, 0.75],
-        ]),
-        shape=(3, 3, 3)
-    )
-    arr_expected_1px_right = np.float32([
-        [0.0, 0.0, 0.5],
-        [0.0, 0.0, 0.5],
-        [0.0, 0.75, 0.75],
-    ])
-    aug = iaa.Affine(translate_px={"x": 1})
-    observed = aug.augment_heatmaps([heatmaps])[0]
-    assert observed.shape == heatmaps.shape
-    assert np.isclose(observed.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
-
-    # should still use mode=constant cval=0 even when other settings chosen
-    aug = iaa.Affine(translate_px={"x": 1}, cval=255)
-    observed = aug.augment_heatmaps([heatmaps])[0]
-    assert observed.shape == heatmaps.shape
-    assert np.isclose(observed.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
-
-    aug = iaa.Affine(translate_px={"x": 1}, mode="edge", cval=255)
-    observed = aug.augment_heatmaps([heatmaps])[0]
-    assert observed.shape == heatmaps.shape
-    assert np.isclose(observed.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
-
-    # ---------------------
-    # translate segmaps
-    # ---------------------
-    segmaps = SegmentationMapsOnImage(
-        np.int32([
-            [0, 1, 2],
-            [0, 1, 2],
-            [2, 2, 2],
-        ]),
-        shape=(3, 3, 3)
-    )
-    arr_expected_1px_right = np.int32([
-        [0, 0, 1],
-        [0, 0, 1],
-        [0, 2, 2],
-    ])
-    aug = iaa.Affine(translate_px={"x": 1})
-    observed = aug.augment_segmentation_maps([segmaps])[0]
-    assert observed.shape == segmaps.shape
-    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
-
-    # should still use mode=constant cval=0 even when other settings chosen
-    aug = iaa.Affine(translate_px={"x": 1}, cval=255)
-    observed = aug.augment_segmentation_maps([segmaps])[0]
-    assert observed.shape == segmaps.shape
-    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
-
-    aug = iaa.Affine(translate_px={"x": 1}, mode="edge", cval=255)
-    observed = aug.augment_segmentation_maps([segmaps])[0]
-    assert observed.shape == segmaps.shape
-    assert np.array_equal(observed.get_arr(), arr_expected_1px_right)
-
-    # ---------------------
-    # rotate
-    # ---------------------
-    # rotate by 90 degrees
-    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
-    aug_det = aug.to_deterministic()
-
-    image = np.zeros((3, 3, 1), dtype=np.uint8)
-    image_aug = np.copy(image)
-    image[1, :] = 255
-    image_aug[0, 1] = 255
-    image_aug[1, 1] = 255
-    image_aug[2, 1] = 255
-    images = np.array([image])
-    images_aug = np.array([image_aug])
-    images_list = [image]
-    images_aug_list = [image_aug]
-    kps = [ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1), ia.Keypoint(x=2, y=1)]
-    keypoints = [ia.KeypointsOnImage(kps, shape=base_img.shape)]
-    kps_aug = [ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1),
-               ia.Keypoint(x=1, y=2)]
-    keypoints_aug = [ia.KeypointsOnImage(kps_aug, shape=base_img.shape)]
-
-    observed = aug.augment_images(images)
-    observed[observed >= 100] = 255
-    observed[observed < 100] = 0
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug_det.augment_images(images)
-    observed[observed >= 100] = 255
-    observed[observed < 100] = 0
-    assert np.array_equal(observed, images_aug)
-
-    observed = aug.augment_images(images_list)
-    observed[0][observed[0] >= 100] = 255
-    observed[0][observed[0] < 100] = 0
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug_det.augment_images(images_list)
-    observed[0][observed[0] >= 100] = 255
-    observed[0][observed[0] < 100] = 0
-    assert array_equal_lists(observed, images_aug_list)
-
-    observed = aug.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    observed = aug_det.augment_keypoints(keypoints)
-    assert keypoints_equal(observed, keypoints_aug)
-
-    # rotate by StochasticParameter
-    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=iap.Uniform(10, 20),
-                     shear=0)
-    assert isinstance(aug.rotate, iap.Uniform)
-    assert isinstance(aug.rotate.a, iap.Deterministic)
-    assert aug.rotate.a.value == 10
-    assert isinstance(aug.rotate.b, iap.Deterministic)
-    assert aug.rotate.b.value == 20
-
-    # random rotation 0-364 degrees
-    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=(0, 364), shear=0)
-    aug_det = aug.to_deterministic()
-    last_aug = None
-    last_aug_det = None
-    nb_changed_aug = 0
-    nb_changed_aug_det = 0
-    nb_iterations = 1000
-    pixels_sums_aug = np.copy(image).astype(np.int32) * 0
-    pixels_sums_aug_det = np.copy(image).astype(np.int32) * 0
-    for i in sm.xrange(nb_iterations):
-        observed_aug = aug.augment_images(images)
-        observed_aug_det = aug_det.augment_images(images)
-        if i == 0:
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-        else:
-            if not np.array_equal(observed_aug, last_aug):
-                nb_changed_aug += 1
-            if not np.array_equal(observed_aug_det, last_aug_det):
-                nb_changed_aug_det += 1
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-
-        pixels_sums_aug += (observed_aug[0] > 100)
-        pixels_sums_aug_det += (observed_aug_det[0] > 100)
-
-    assert nb_changed_aug >= int(nb_iterations * 0.9)
-    assert nb_changed_aug_det == 0
-    # center pixel, should always be white when rotating line around center
-    assert pixels_sums_aug[1, 1] > (nb_iterations * 0.98)
-    assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
-
-    # outer pixels, should sometimes be white
-    # the values here had to be set quite tolerant, the middle pixels at
-    # top/left/bottom/right get more activation than expected
-    outer_pixels = ([0, 0, 0, 1, 1, 2, 2, 2], [0, 1, 2, 0, 2, 0, 1, 2])
-    assert (
-        pixels_sums_aug[outer_pixels] > int(nb_iterations * (2/8 * 0.4))
-    ).all()
-    assert (
-        pixels_sums_aug[outer_pixels] < int(nb_iterations * (2/8 * 2.0))
-    ).all()
-
-    for backend in ["auto", "cv2", "skimage"]:
-        # measure alignment between images and heatmaps when rotating
-        aug = iaa.Affine(rotate=45, backend=backend)
-        image = np.zeros((7, 6), dtype=np.uint8)
-        image[:, 2:3+1] = 255
-        hm = ia.HeatmapsOnImage(image.astype(np.float32)/255, shape=(7, 6))
-        img_aug = aug.augment_image(image)
-        hm_aug = aug.augment_heatmaps([hm])[0]
-        assert hm_aug.shape == (7, 6)
-        assert hm_aug.arr_0to1.shape == (7, 6, 1)
-        img_aug_mask = img_aug > 255*0.1
-        hm_aug_mask = hm_aug.arr_0to1 > 0.1
-        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-        assert (same / img_aug_mask.size) >= 0.95
-
-        # measure alignment between images and heatmaps when rotating
-        # here with smaller heatmaps
-        aug = iaa.Affine(rotate=45, backend=backend)
-        image = np.zeros((56, 48), dtype=np.uint8)
-        image[:, 16:24+1] = 255
-        hm = ia.HeatmapsOnImage(
-            ia.imresize_single_image(
-                image, (28, 24), interpolation="cubic"
-            ).astype(np.float32)/255,
-            shape=(56, 48)
-        )
-        img_aug = aug.augment_image(image)
-        hm_aug = aug.augment_heatmaps([hm])[0]
-        assert hm_aug.shape == (56, 48)
-        assert hm_aug.arr_0to1.shape == (28, 24, 1)
-        img_aug_mask = img_aug > 255*0.1
-        hm_aug_mask = ia.imresize_single_image(
-            hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic"
-        ) > 0.1
-        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-        assert (same / img_aug_mask.size) >= 0.9
-
-    # ---------------------
-    # shear
-    # ---------------------
-    # TODO
-
-    # shear by StochasticParameter
-    aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0,
-                     shear=iap.Uniform(10, 20))
-    assert isinstance(aug.shear, iap.Uniform)
-    assert isinstance(aug.shear.a, iap.Deterministic)
-    assert aug.shear.a.value == 10
-    assert isinstance(aug.shear.b, iap.Deterministic)
-    assert aug.shear.b.value == 20
-
-    # ---------------------
-    # cval
-    # ---------------------
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=128)
-    aug_det = aug.to_deterministic()
-
-    image = np.ones((3, 3, 1), dtype=np.uint8) * 255
-    images = np.array([image])
-    images_list = [image]
-
-    observed = aug.augment_images(images)
-    assert (observed[0] > 128 - 30).all()
-    assert (observed[0] < 128 + 30).all()
-
-    observed = aug_det.augment_images(images)
-    assert (observed[0] > 128 - 30).all()
-    assert (observed[0] < 128 + 30).all()
-
-    observed = aug.augment_images(images_list)
-    assert (observed[0] > 128 - 30).all()
-    assert (observed[0] < 128 + 30).all()
-
-    observed = aug_det.augment_images(images_list)
-    assert (observed[0] > 128 - 30).all()
-    assert (observed[0] < 128 + 30).all()
-
-    # random cvals
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
-                     cval=(0, 255))
-    aug_det = aug.to_deterministic()
-    last_aug = None
-    last_aug_det = None
-    nb_changed_aug = 0
-    nb_changed_aug_det = 0
-    nb_iterations = 1000
-    averages = []
-    for i in sm.xrange(nb_iterations):
-        observed_aug = aug.augment_images(images)
-        observed_aug_det = aug_det.augment_images(images)
-        if i == 0:
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-        else:
-            if not np.array_equal(observed_aug, last_aug):
-                nb_changed_aug += 1
-            if not np.array_equal(observed_aug_det, last_aug_det):
-                nb_changed_aug_det += 1
-            last_aug = observed_aug
-            last_aug_det = observed_aug_det
-
-        averages.append(int(np.average(observed_aug)))
-
-    assert nb_changed_aug >= int(nb_iterations * 0.9)
-    assert nb_changed_aug_det == 0
-    # center pixel, should always be white when rotating line around center
-    assert pixels_sums_aug[1, 1] > (nb_iterations * 0.98)
-    assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
-    assert len(set(averages)) > 200
-
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
-                     cval=ia.ALL)
-    assert isinstance(aug.cval, iap.Uniform)
-    assert isinstance(aug.cval.a, iap.Deterministic)
-    assert isinstance(aug.cval.b, iap.Deterministic)
-    assert aug.cval.a.value == 0
-    assert aug.cval.b.value == 255
-
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
-                     cval=iap.DiscreteUniform(1, 5))
-    assert isinstance(aug.cval, iap.DiscreteUniform)
-    assert isinstance(aug.cval.a, iap.Deterministic)
-    assert isinstance(aug.cval.b, iap.Deterministic)
-    assert aug.cval.a.value == 1
-    assert aug.cval.b.value == 5
-
-    # ------------
-    # mode
-    # ------------
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0,
-                     mode=ia.ALL)
-    assert isinstance(aug.mode, iap.Choice)
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0,
-                     mode="edge")
-    assert isinstance(aug.mode, iap.Deterministic)
-    assert aug.mode.value == "edge"
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0,
-                     mode=["constant", "edge"])
-    assert isinstance(aug.mode, iap.Choice)
-    assert (
-        len(aug.mode.a) == 2
-        and "constant" in aug.mode.a
-        and "edge" in aug.mode.a)
-    aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0, cval=0,
-                     mode=iap.Choice(["constant", "edge"]))
-    assert isinstance(aug.mode, iap.Choice)
-    assert (
-        len(aug.mode.a) == 2
-        and "constant" in aug.mode.a
-        and "edge" in aug.mode.a)
-
-    # ------------
-    # fit_output
-    # ------------
-    for backend in ["auto", "cv2", "skimage"]:
-        aug = iaa.Affine(scale=1.0, translate_px=100, fit_output=True,
-                         backend=backend)
+# TODO add more tests for Affine .mode
+# TODO add more tests for Affine shear
+
+class TestAffine(unittest.TestCase):
+    def test_get_parameters(self):
+        aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4,
+                         order=1, cval=0, mode="constant", backend="cv2",
+                         fit_output=True)
+
+        params = aug.get_parameters()
+
+        assert isinstance(params[0], iap.Deterministic)  # scale
+        assert isinstance(params[1], iap.Deterministic)  # translate
+        assert isinstance(params[2], iap.Deterministic)  # rotate
+        assert isinstance(params[3], iap.Deterministic)  # shear
+        assert params[0].value == 1  # scale
+        assert params[1].value == 2  # translate
+        assert params[2].value == 3  # rotate
+        assert params[3].value == 4  # shear
+        assert params[4].value == 1  # order
+        assert params[5].value == 0  # cval
+        assert params[6].value == "constant"  # mode
+        assert params[7] == "cv2"  # backend
+        assert params[8] is True  # fit_output
+
+
+class TestAffine___init__(unittest.TestCase):
+    def test___init___scale_is_stochastic_parameter(self):
+        aug = iaa.Affine(scale=iap.Uniform(0.7, 0.9))
+
+        assert isinstance(aug.scale, iap.Uniform)
+        assert isinstance(aug.scale.a, iap.Deterministic)
+        assert isinstance(aug.scale.b, iap.Deterministic)
+        assert 0.7 - 1e-8 < aug.scale.a.value < 0.7 + 1e-8
+        assert 0.9 - 1e-8 < aug.scale.b.value < 0.9 + 1e-8
+
+    def test___init___translate_percent_is_stochastic_parameter(self):
+        aug = iaa.Affine(translate_percent=iap.Uniform(0.7, 0.9))
+
+        assert isinstance(aug.translate, iap.Uniform)
+        assert isinstance(aug.translate.a, iap.Deterministic)
+        assert isinstance(aug.translate.b, iap.Deterministic)
+        assert 0.7 - 1e-8 < aug.translate.a.value < 0.7 + 1e-8
+        assert 0.9 - 1e-8 < aug.translate.b.value < 0.9 + 1e-8
+
+    def test___init___translate_px_is_stochastic_parameter(self):
+        aug = iaa.Affine(translate_px=iap.DiscreteUniform(1, 10))
+
+        assert isinstance(aug.translate, iap.DiscreteUniform)
+        assert isinstance(aug.translate.a, iap.Deterministic)
+        assert isinstance(aug.translate.b, iap.Deterministic)
+        assert aug.translate.a.value == 1
+        assert aug.translate.b.value == 10
+
+    def test___init___rotate_is_stochastic_parameter(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=iap.Uniform(10, 20),
+                         shear=0)
+
+        assert isinstance(aug.rotate, iap.Uniform)
+        assert isinstance(aug.rotate.a, iap.Deterministic)
+        assert aug.rotate.a.value == 10
+        assert isinstance(aug.rotate.b, iap.Deterministic)
+        assert aug.rotate.b.value == 20
+
+    def test___init___shear_is_stochastic_parameter(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0,
+                         shear=iap.Uniform(10, 20))
+
+        assert isinstance(aug.shear, iap.Uniform)
+        assert isinstance(aug.shear.a, iap.Deterministic)
+        assert aug.shear.a.value == 10
+        assert isinstance(aug.shear.b, iap.Deterministic)
+        assert aug.shear.b.value == 20
+
+    def test___init___cval_is_all(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=ia.ALL)
+
+        assert isinstance(aug.cval, iap.Uniform)
+        assert isinstance(aug.cval.a, iap.Deterministic)
+        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert aug.cval.a.value == 0
+        assert aug.cval.b.value == 255
+
+    def test___init___cval_is_stochastic_parameter(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=iap.DiscreteUniform(1, 5))
+
+        assert isinstance(aug.cval, iap.DiscreteUniform)
+        assert isinstance(aug.cval.a, iap.Deterministic)
+        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert aug.cval.a.value == 1
+        assert aug.cval.b.value == 5
+
+    def test___init___mode_is_all(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=0, mode=ia.ALL)
+        assert isinstance(aug.mode, iap.Choice)
+
+    def test___init___mode_is_string(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=0, mode="edge")
+        assert isinstance(aug.mode, iap.Deterministic)
+        assert aug.mode.value == "edge"
+
+    def test___init___mode_is_list(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=0, mode=["constant", "edge"])
+        assert isinstance(aug.mode, iap.Choice)
+        assert (
+            len(aug.mode.a) == 2
+            and "constant" in aug.mode.a
+            and "edge" in aug.mode.a)
+
+    def test___init___mode_is_stochastic_parameter(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=0, mode=iap.Choice(["constant", "edge"]))
+        assert isinstance(aug.mode, iap.Choice)
+        assert (
+            len(aug.mode.a) == 2
+            and "constant" in aug.mode.a
+            and "edge" in aug.mode.a)
+
+    def test___init___fit_output_is_true(self):
+        aug = iaa.Affine(fit_output=True)
         assert aug.fit_output is True
-        observed = aug.augment_images(images)
-        expected = images
-        assert np.array_equal(observed, expected)
-        observed = aug.augment_keypoints(keypoints)
-        expected = keypoints
-        assert keypoints_equal(observed, expected)
-        observed = aug.augment_heatmaps([heatmaps])[0]
-        expected = heatmaps
-        assert np.allclose(observed.arr_0to1, expected.arr_0to1)
-
-        # fit_output with rotation
-        aug = iaa.Affine(rotate=45, fit_output=True, backend=backend)
-        img = np.zeros((10, 10), dtype=np.uint8)
-        img[0:2, 0:2] = 255
-        img[-2:, 0:2] = 255
-        img[0:2, -2:] = 255
-        img[-2:, -2:] = 255
-        hm = ia.HeatmapsOnImage(img.astype(np.float32)/255, shape=(10, 10))
-        img_aug = aug.augment_image(img)
-        hm_aug = aug.augment_heatmaps([hm])[0]
-        _labels, nb_labels = skimage.morphology.label(
-            img_aug > 240, return_num=True, connectivity=2)
-        assert nb_labels == 4
-        _labels, nb_labels = skimage.morphology.label(
-            hm_aug.arr_0to1 > 240/255, return_num=True, connectivity=2)
-        assert nb_labels == 4
-
-        # fit_output with differently sized heatmaps
-        aug = iaa.Affine(rotate=45, fit_output=True, backend=backend)
-        img = np.zeros((80, 80), dtype=np.uint8)
-        img[0:5, 0:5] = 255
-        img[-5:, 0:5] = 255
-        img[0:5, -5:] = 255
-        img[-5:, -5:] = 255
-        hm = HeatmapsOnImage(
-            ia.imresize_single_image(
-                img, (40, 40), interpolation="cubic"
-            ).astype(np.float32)/255,
-            shape=(80, 80)
-        )
-        img_aug = aug.augment_image(img)
-        hm_aug = aug.augment_heatmaps([hm])[0]
-        # these asserts are deactivated because the image size can change
-        # under fit_output=True
-        # assert hm_aug.shape == (80, 80)
-        # assert hm_aug.arr_0to1.shape == (40, 40, 1)
-        _labels, nb_labels = skimage.morphology.label(
-            img_aug > 240, return_num=True, connectivity=2)
-        assert nb_labels == 4
-        _labels, nb_labels = skimage.morphology.label(
-            hm_aug.arr_0to1 > 200/255, return_num=True, connectivity=2)
-        assert nb_labels == 4
-
-        img_aug_mask = img_aug > 255*0.1
-        hm_aug_mask = ia.imresize_single_image(
-            hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic"
-        ) > 0.1
-        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-        assert (same / img_aug_mask.size) >= 0.95
-
-        # fit_output with differently sized segmaps
-        aug = iaa.Affine(rotate=45, fit_output=True, backend=backend)
-        img = np.zeros((80, 80), dtype=np.uint8)
-        img[0:5, 0:5] = 255
-        img[-5:, 0:5] = 255
-        img[0:5, -5:] = 255
-        img[-5:, -5:] = 255
-        segmap = SegmentationMapsOnImage(
-            (ia.imresize_single_image(
-                img, (40, 40), interpolation="cubic") > 100).astype(np.int32),
-            shape=(80, 80)
-        )
-        img_aug = aug.augment_image(img)
-        segmap_aug = aug.augment_segmentation_maps([segmap])[0]
-        # these asserts are deactivated because the image size can change
-        # under fit_output=True
-        # assert segmap_aug.shape == (80, 80)
-        # assert segmap_aug.arr_0to1.shape == (40, 40, 1)
-        _labels, nb_labels = skimage.morphology.label(
-            img_aug > 100, return_num=True, connectivity=2)
-        assert nb_labels == 4
-        _labels, nb_labels = skimage.morphology.label(
-            segmap_aug.arr > 0, return_num=True, connectivity=2)
-        assert nb_labels == 4
-
-        img_aug_mask = img_aug > 100
-        segmap_aug_mask = ia.imresize_single_image(
-            segmap_aug.arr, img_aug.shape[0:2], interpolation="nearest") > 0
-        same = np.sum(img_aug_mask == segmap_aug_mask[:, :, 0])
-        assert (same / img_aug_mask.size) >= 0.95
-
-        # verify that shape in KeypointsOnImages changes
-        aug = iaa.Affine(rotate=90, backend=backend)
-        kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(100, 200, 3))
-        kps_aug = aug.augment_keypoints(kps)
-        assert kps_aug.shape == (100, 200, 3)
-        assert not np.allclose([kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
-                               [kps.keypoints[0].x, kps.keypoints[0].y],
-                               atol=1e-1, rtol=0)
-
-        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
-        kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(100, 200, 3))
-        kps_aug = aug.augment_keypoints(kps)
-        assert kps_aug.shape == (200, 100, 3)
-        assert not np.allclose([kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
-                               [kps.keypoints[0].x, kps.keypoints[0].y],
-                               atol=1e-1, rtol=0)
-
-        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
-        kps = ia.KeypointsOnImage([], shape=(100, 200, 3))
-        kps_aug = aug.augment_keypoints(kps)
-        assert kps_aug.shape == (200, 100, 3)
-        assert len(kps_aug.keypoints) == 0
-
-        # verify that shape in PolygonsOnImages changes
-        aug = iaa.Affine(rotate=90, backend=backend)
-        psoi = ia.PolygonsOnImage([
-            ia.Polygon([(10, 10), (20, 10), (20, 20)])], shape=(100, 200, 3))
-        psoi_aug = aug.augment_polygons([psoi, psoi])
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (100, 200, 3)
-            assert not psoi_aug_i.polygons[0].exterior_almost_equals(
-                psoi.polygons[0].exterior, max_distance=1e-1)
-            assert psoi_aug_i.polygons[0].is_valid
-
-        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
-        psoi = ia.PolygonsOnImage([
-            ia.Polygon([(10, 10), (20, 10), (20, 20)])], shape=(100, 200, 3))
-        psoi_aug = aug.augment_polygons([psoi, psoi])
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (200, 100, 3)
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(100-10-1, 10), (100-10-1, 20), (100-20-1, 20)])
-            )
-            assert psoi_aug_i.polygons[0].is_valid
-
-        aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
-        psoi = ia.PolygonsOnImage([], shape=(100, 200, 3))
-        psoi_aug = aug.augment_polygons(psoi)
-        assert psoi_aug.shape == (200, 100, 3)
-        assert len(psoi_aug.polygons) == 0
-
-    # ------------
-    # image-keypoint alignment
-    # ------------
-    aug = iaa.Affine(rotate=[0, 180], order=0)
-    img = np.zeros((10, 10), dtype=np.uint8)
-    img[0:5, 5] = 255
-    img[2, 4:6] = 255
-    img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
-    kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=2)], shape=img.shape)
-    kpsoi_rot = [(5, 2), (5-1, 10-2-1)]
-    img_aug_indices = []
-    kpsois_aug_indices = []
-    for _ in sm.xrange(40):
-        aug_det = aug.to_deterministic()
-        imgs_aug = aug_det.augment_images([img, img])
-        kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
-        assert kpsois_aug[0].shape == img.shape
-        assert kpsois_aug[1].shape == img.shape
-
-        for img_aug in imgs_aug:
-            if np.array_equal(img_aug, img_rot[0]):
-                img_aug_indices.append(0)
-            elif np.array_equal(img_aug, img_rot[1]):
-                img_aug_indices.append(1)
-            else:
-                assert False
-        for kpsoi_aug in kpsois_aug:
-            similar_to_rot_0 = np.allclose(
-                [kpsoi_aug.keypoints[0].x, kpsoi_aug.keypoints[0].y],
-                kpsoi_rot[0])
-            similar_to_rot_180 = np.allclose(
-                [kpsoi_aug.keypoints[0].x, kpsoi_aug.keypoints[0].y],
-                kpsoi_rot[1])
-            if similar_to_rot_0:
-                kpsois_aug_indices.append(0)
-            elif similar_to_rot_180:
-                kpsois_aug_indices.append(1)
-            else:
-                assert False
-    assert np.array_equal(img_aug_indices, kpsois_aug_indices)
-    assert len(set(img_aug_indices)) == 2
-    assert len(set(kpsois_aug_indices)) == 2
-
-    # ------------
-    # image-polygon alignment
-    # ------------
-    aug = iaa.Affine(rotate=[0, 180], order=0)
-    img = np.zeros((10, 10), dtype=np.uint8)
-    img[0:5, 5] = 255
-    img[2, 4:6] = 255
-    img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
-    psoi = ia.PolygonsOnImage([ia.Polygon([(1, 1), (9, 1), (5, 5)])],
-                              shape=img.shape)
-    psoi_rot = [
-        psoi.polygons[0].deepcopy(),
-        ia.Polygon([(10-1-1, 10-1-1), (10-9-1, 10-1-1), (10-5-1, 10-5-1)])
-    ]
-    img_aug_indices = []
-    psois_aug_indices = []
-    for _ in sm.xrange(40):
-        aug_det = aug.to_deterministic()
-        imgs_aug = aug_det.augment_images([img, img])
-        psois_aug = aug_det.augment_polygons([psoi, psoi])
-        assert psois_aug[0].shape == img.shape
-        assert psois_aug[1].shape == img.shape
-        assert psois_aug[0].polygons[0].is_valid
-        assert psois_aug[1].polygons[0].is_valid
-
-        for img_aug in imgs_aug:
-            if np.array_equal(img_aug, img_rot[0]):
-                img_aug_indices.append(0)
-            elif np.array_equal(img_aug, img_rot[1]):
-                img_aug_indices.append(1)
-            else:
-                assert False
-        for psoi_aug in psois_aug:
-            if psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[0]):
-                psois_aug_indices.append(0)
-            elif psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[1]):
-                psois_aug_indices.append(1)
-            else:
-                assert False
-    assert np.array_equal(img_aug_indices, psois_aug_indices)
-    assert len(set(img_aug_indices)) == 2
-    assert len(set(psois_aug_indices)) == 2
-
-    # ------------
-    # make sure that polygons stay valid upon extreme scaling
-    # ------------
-    scales = [1e-4, 1e-2, 1e2, 1e4]
-    backends = ["auto", "cv2", "skimage"]
-    orders = [0, 1, 3]
-    for scale, backend, order in zip(scales, backends, orders):
-        aug = iaa.Affine(scale=scale, order=order)
-        psoi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (10, 0), (5, 5)])],
-                                  shape=(10, 10))
-        psoi_aug = aug.augment_polygons(psoi)
-        poly = psoi_aug.polygons[0]
-        ext = poly.exterior
-        assert poly.is_valid
-        assert ext[0][0] < ext[2][0] < ext[1][0]
-        assert ext[0][1] < ext[2][1]
-        assert np.allclose(ext[0][1], ext[1][1])
 
     # ------------
     # exceptions for bad inputs
     # ------------
-    # scale
-    got_exception = False
-    try:
-        _ = iaa.Affine(scale=False)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_scale_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(scale=False)
 
-    # translate_px
-    got_exception = False
-    try:
-        _ = iaa.Affine(translate_px=False)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_translate_px_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(translate_px=False)
 
-    # translate_percent
-    got_exception = False
-    try:
-        _ = iaa.Affine(translate_percent=False)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_translate_percent_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(translate_percent=False)
 
-    # rotate
-    got_exception = False
-    try:
-        _ = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0,
-                       cval=0)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_rotate_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(scale=1.0, translate_px=0, rotate=False, shear=0,
+                           cval=0)
 
-    # shear
-    got_exception = False
-    try:
-        _ = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False,
-                       cval=0)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_shear_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=False,
+                           cval=0)
 
-    # cval
-    got_exception = False
-    try:
-        _ = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
-                       cval=None)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_cval_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                           cval=None)
 
-    # mode
-    got_exception = False
-    try:
-        _ = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
-                       cval=0, mode=False)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_mode_fails(self):
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                           cval=0, mode=False)
 
-    # non-existent order in case of backend=cv2
-    got_exception = False
-    try:
-        _ = iaa.Affine(backend="cv2", order=-1)
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___bad_datatype_for_order_fails(self):
+        # bad order datatype in case of backend=cv2
+        with self.assertRaises(Exception):
+            _ = iaa.Affine(backend="cv2", order="test")
 
-    # bad order datatype in case of backend=cv2
-    got_exception = False
-    try:
-        _ = iaa.Affine(backend="cv2", order="test")
-    except Exception:
-        got_exception = True
-    assert got_exception
+    def test___init___nonexistent_order_for_cv2_fails(self):
+        # non-existent order in case of backend=cv2
+        with self.assertRaises(AssertionError):
+            _ = iaa.Affine(backend="cv2", order=-1)
 
-    # ----------
-    # get_parameters
-    # ----------
-    aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4, order=1,
-                     cval=0, mode="constant", backend="cv2", fit_output=True)
-    params = aug.get_parameters()
-    assert isinstance(params[0], iap.Deterministic)  # scale
-    assert isinstance(params[1], iap.Deterministic)  # translate
-    assert isinstance(params[2], iap.Deterministic)  # rotate
-    assert isinstance(params[3], iap.Deterministic)  # shear
-    assert params[0].value == 1  # scale
-    assert params[1].value == 2  # translate
-    assert params[2].value == 3  # rotate
-    assert params[3].value == 4  # shear
-    assert params[4].value == 1  # order
-    assert params[5].value == 0  # cval
-    assert params[6].value == "constant"  # mode
-    assert params[7] == "cv2"  # backend
-    assert params[8] is True  # fit_output
 
-    ###################
-    # test other dtypes
-    ###################
-    # skimage
-    aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
-                     backend="skimage")
-    mask = np.zeros((3, 3), dtype=bool)
-    mask[1, 2] = True
+class TestAffine_noop(unittest.TestCase):
+    def setUp(self):
+        reseed()
 
-    # bool
-    image = np.zeros((3, 3), dtype=bool)
-    image[1, 1] = True
-    image_aug = aug.augment_image(image)
-    assert image_aug.dtype.name == image.dtype.name
-    assert np.all(image_aug[~mask] == 0)
-    assert np.all(image_aug[mask] == 1)
+    @property
+    def base_img(self):
+        base_img = np.array([[0, 0, 0],
+                             [0, 255, 0],
+                             [0, 0, 0]], dtype=np.uint8)
+        return base_img[:, :, np.newaxis]
 
-    # uint, int
-    dtypes = ["uint8", "uint16", "uint32", "int8", "int16", "int32"]
-    for dtype in dtypes:
-        min_value, center_value, max_value = \
-            iadt.get_value_range_of_dtype(dtype)
+    @property
+    def images(self):
+        return np.array([self.base_img])
 
-        if np.dtype(dtype).kind == "i":
-            values = [1, 5, 10, 100, int(0.1 * max_value),
-                      int(0.2 * max_value), int(0.5 * max_value),
-                      max_value - 100, max_value]
-            values = values + [(-1) * value for value in values]
-        else:
-            values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value),
-                      int(0.2 * max_value), int(0.5 * max_value),
-                      max_value - 100, max_value]
+    @property
+    def kpsoi(self):
+        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+               ia.Keypoint(x=2, y=2)]
+        return [ia.KeypointsOnImage(kps, shape=self.base_img.shape)]
 
-        for value in values:
-            image = np.zeros((3, 3), dtype=dtype)
-            image[1, 1] = value
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.name == dtype
-            assert np.all(image_aug[~mask] == 0)
-            assert np.all(image_aug[mask] == value)
+    def test_image_noop(self):
+        # no translation/scale/rotate/shear, shouldnt change nothing
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
 
-    # float
-    dtypes = ["float16", "float32", "float64"]
-    for dtype in dtypes:
-        min_value, center_value, max_value = \
-            iadt.get_value_range_of_dtype(dtype)
+        observed = aug.augment_images(self.images)
 
-        def _isclose(a, b):
-            atol = 1e-4 if dtype == "float16" else 1e-8
-            return np.isclose(a, b, atol=atol, rtol=0)
+        expected = self.images
+        assert np.array_equal(observed, expected)
 
-        isize = np.dtype(dtype).itemsize
-        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                  1000 ** (isize - 1)]
-        values = values + [(-1) * value for value in values]
-        values = values + [min_value, max_value]
-        for value in values:
-            image = np.zeros((3, 3), dtype=dtype)
-            image[1, 1] = value
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.name == dtype
-            assert np.all(_isclose(image_aug[~mask], 0))
-            assert np.all(_isclose(image_aug[mask], np.float128(value)))
+    def test_image_noop__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
 
-    #
-    # skimage, order!=0 and rotate=180
-    #
-    for order in [1, 3, 4, 5]:
-        aug = iaa.Affine(rotate=180, order=order, mode="constant",
+        observed = aug_det.augment_images(self.images)
+
+        expected = self.images
+        assert np.array_equal(observed, expected)
+
+    def test_image_noop__list(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images([self.base_img])
+
+        expected = [self.base_img]
+        assert array_equal_lists(observed, expected)
+
+    def test_image_noop__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.base_img])
+
+        expected = [self.base_img]
+        assert array_equal_lists(observed, expected)
+
+    def test_keypoints_noop(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        expected = self.kpsoi
+        assert keypoints_equal(observed, expected)
+
+    def test_keypoints_noop__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        expected = self.kpsoi
+        assert keypoints_equal(observed, expected)
+
+
+class TestAffine_scale(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    # ---------------------
+    # scale: zoom in
+    # ---------------------
+
+    @property
+    def base_img(self):
+        base_img = np.array([[0, 0, 0],
+                             [0, 255, 0],
+                             [0, 0, 0]], dtype=np.uint8)
+        return base_img[:, :, np.newaxis]
+
+    @property
+    def images(self):
+        return np.array([self.base_img])
+
+    @property
+    def kpsoi(self):
+        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
+               ia.Keypoint(x=2, y=2)]
+        return [ia.KeypointsOnImage(kps, shape=self.base_img.shape)]
+
+    @property
+    def scale_zoom_in_outer_pixels(self):
+        base_img = self.base_img
+        outer_pixels = ([], [])
+        for i in sm.xrange(base_img.shape[0]):
+            for j in sm.xrange(base_img.shape[1]):
+                if i != j:
+                    outer_pixels[0].append(i)
+                    outer_pixels[1].append(j)
+        return outer_pixels
+
+    def test_image_scale_zoom_in(self):
+        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        outer_pixels = self.scale_zoom_in_outer_pixels
+        assert observed[0][1, 1] > 250
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    def test_image_scale_zoom_in__deterministic(self):
+        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        outer_pixels = self.scale_zoom_in_outer_pixels
+        assert observed[0][1, 1] > 250
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    def test_image_scale_zoom_in__list(self):
+        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images([self.base_img])
+
+        outer_pixels = self.scale_zoom_in_outer_pixels
+        assert observed[0][1, 1] > 250
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    def test_image_scale_zoom_in__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.base_img])
+
+        outer_pixels = self.scale_zoom_in_outer_pixels
+        assert observed[0][1, 1] > 250
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] > 20).all()
+        assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
+
+    def test_keypoints_scale_zoom_in(self):
+        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert observed[0].keypoints[0].x < 0
+        assert observed[0].keypoints[0].y < 0
+        assert observed[0].keypoints[1].x == 1
+        assert observed[0].keypoints[1].y == 1
+        assert observed[0].keypoints[2].x > 2
+        assert observed[0].keypoints[2].y > 2
+
+    def test_keypoints_scale_zoom_in__deterministic(self):
+        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert observed[0].keypoints[0].x < 0
+        assert observed[0].keypoints[0].y < 0
+        assert observed[0].keypoints[1].x == 1
+        assert observed[0].keypoints[1].y == 1
+        assert observed[0].keypoints[2].x > 2
+        assert observed[0].keypoints[2].y > 2
+
+    # ---------------------
+    # scale: zoom in only on x axis
+    # ---------------------
+    def test_image_scale_zoom_in_only_x_axis(self):
+        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
+                         translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[1, 1], [0, 2]] > 20).all()
+        assert (observed[0][[1, 1], [0, 2]] < 150).all()
+        assert (observed[0][0, :] < 5).all()
+        assert (observed[0][2, :] < 5).all()
+
+    def test_image_scale_zoom_in_only_x_axis__deterministic(self):
+        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[1, 1], [0, 2]] > 20).all()
+        assert (observed[0][[1, 1], [0, 2]] < 150).all()
+        assert (observed[0][0, :] < 5).all()
+        assert (observed[0][2, :] < 5).all()
+
+    def test_image_scale_zoom_in_only_x_axis__list(self):
+        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
+                         translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images([self.base_img])
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[1, 1], [0, 2]] > 20).all()
+        assert (observed[0][[1, 1], [0, 2]] < 150).all()
+        assert (observed[0][0, :] < 5).all()
+        assert (observed[0][2, :] < 5).all()
+
+    def test_image_scale_zoom_in_only_x_axis__deterministic_and_list(self):
+        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.base_img])
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[1, 1], [0, 2]] > 20).all()
+        assert (observed[0][[1, 1], [0, 2]] < 150).all()
+        assert (observed[0][0, :] < 5).all()
+        assert (observed[0][2, :] < 5).all()
+
+    def test_keypoints_scale_zoom_in_only_x_axis(self):
+        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
+                         translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert observed[0].keypoints[0].x < 0
+        assert observed[0].keypoints[0].y == 0
+        assert observed[0].keypoints[1].x == 1
+        assert observed[0].keypoints[1].y == 1
+        assert observed[0].keypoints[2].x > 2
+        assert observed[0].keypoints[2].y == 2
+
+    def test_keypoints_scale_zoom_in_only_x_axis__deterministic(self):
+        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert observed[0].keypoints[0].x < 0
+        assert observed[0].keypoints[0].y == 0
+        assert observed[0].keypoints[1].x == 1
+        assert observed[0].keypoints[1].y == 1
+        assert observed[0].keypoints[2].x > 2
+        assert observed[0].keypoints[2].y == 2
+
+    # ---------------------
+    # scale: zoom in only on y axis
+    # ---------------------
+    def test_image_scale_zoom_in_only_y_axis(self):
+        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
+                         translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[0, 2], [1, 1]] > 20).all()
+        assert (observed[0][[0, 2], [1, 1]] < 150).all()
+        assert (observed[0][:, 0] < 5).all()
+        assert (observed[0][:, 2] < 5).all()
+
+    def test_image_scale_zoom_in_only_y_axis__deterministic(self):
+        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[0, 2], [1, 1]] > 20).all()
+        assert (observed[0][[0, 2], [1, 1]] < 150).all()
+        assert (observed[0][:, 0] < 5).all()
+        assert (observed[0][:, 2] < 5).all()
+
+    def test_image_scale_zoom_in_only_y_axis__list(self):
+        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
+                         translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images([self.base_img])
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[0, 2], [1, 1]] > 20).all()
+        assert (observed[0][[0, 2], [1, 1]] < 150).all()
+        assert (observed[0][:, 0] < 5).all()
+        assert (observed[0][:, 2] < 5).all()
+
+    def test_image_scale_zoom_in_only_y_axis__deterministic_and_list(self):
+        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.base_img])
+
+        assert observed[0][1, 1] > 250
+        assert (observed[0][[0, 2], [1, 1]] > 20).all()
+        assert (observed[0][[0, 2], [1, 1]] < 150).all()
+        assert (observed[0][:, 0] < 5).all()
+        assert (observed[0][:, 2] < 5).all()
+
+    def test_keypoints_scale_zoom_in_only_y_axis(self):
+        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
+                         translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert observed[0].keypoints[0].x == 0
+        assert observed[0].keypoints[0].y < 0
+        assert observed[0].keypoints[1].x == 1
+        assert observed[0].keypoints[1].y == 1
+        assert observed[0].keypoints[2].x == 2
+        assert observed[0].keypoints[2].y > 2
+
+    def test_keypoints_scale_zoom_in_only_y_axis__deterministic(self):
+        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert observed[0].keypoints[0].x == 0
+        assert observed[0].keypoints[0].y < 0
+        assert observed[0].keypoints[1].x == 1
+        assert observed[0].keypoints[1].y == 1
+        assert observed[0].keypoints[2].x == 2
+        assert observed[0].keypoints[2].y > 2
+
+    # ---------------------
+    # scale: zoom out
+    # ---------------------
+    # these tests use a 4x4 area of all 255, which is zoomed out to a 4x4 area
+    # in which the center 2x2 area is 255
+    # zoom in should probably be adapted to this style
+    # no separate tests here for x/y axis, should work fine if zoom in works
+    # with that
+
+    @property
+    def scale_zoom_out_base_img(self):
+        return np.ones((4, 4, 1), dtype=np.uint8) * 255
+
+    @property
+    def scale_zoom_out_images(self):
+        return np.array([self.scale_zoom_out_base_img])
+
+    @property
+    def scale_zoom_out_outer_pixels(self):
+        outer_pixels = ([], [])
+        for y in sm.xrange(4):
+            xs = sm.xrange(4) if y in [0, 3] else [0, 3]
+            for x in xs:
+                outer_pixels[0].append(y)
+                outer_pixels[1].append(x)
+        return outer_pixels
+
+    @property
+    def scale_zoom_out_inner_pixels(self):
+        return [1, 1, 2, 2], [1, 2, 1, 2]
+
+    @property
+    def scale_zoom_out_kpsoi(self):
+        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=0),
+               ia.Keypoint(x=0, y=3), ia.Keypoint(x=3, y=3)]
+        return [ia.KeypointsOnImage(kps,
+                                    shape=self.scale_zoom_out_base_img.shape)]
+
+    @property
+    def scale_zoom_out_kpsoi_aug(self):
+        kps_aug = [ia.Keypoint(x=0.765, y=0.765),
+                   ia.Keypoint(x=2.235, y=0.765),
+                   ia.Keypoint(x=0.765, y=2.235),
+                   ia.Keypoint(x=2.235, y=2.235)]
+        return [ia.KeypointsOnImage(kps_aug,
+                                    shape=self.scale_zoom_out_base_img.shape)]
+
+    def test_image_scale_zoom_out(self):
+        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images(self.scale_zoom_out_images)
+
+        outer_pixels = self.scale_zoom_out_outer_pixels
+        inner_pixels = self.scale_zoom_out_inner_pixels
+        assert (observed[0][outer_pixels] < 25).all()
+        assert (observed[0][inner_pixels] > 200).all()
+
+    def test_image_scale_zoom_out__deterministic(self):
+        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.scale_zoom_out_images)
+
+        outer_pixels = self.scale_zoom_out_outer_pixels
+        inner_pixels = self.scale_zoom_out_inner_pixels
+        assert (observed[0][outer_pixels] < 25).all()
+        assert (observed[0][inner_pixels] > 200).all()
+
+    def test_image_scale_zoom_out__list(self):
+        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_images([self.scale_zoom_out_base_img])
+
+        outer_pixels = self.scale_zoom_out_outer_pixels
+        inner_pixels = self.scale_zoom_out_inner_pixels
+        assert (observed[0][outer_pixels] < 25).all()
+        assert (observed[0][inner_pixels] > 200).all()
+
+    def test_image_scale_zoom_out__list_and_deterministic(self):
+        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.scale_zoom_out_base_img])
+
+        outer_pixels = self.scale_zoom_out_outer_pixels
+        inner_pixels = self.scale_zoom_out_inner_pixels
+        assert (observed[0][outer_pixels] < 25).all()
+        assert (observed[0][inner_pixels] > 200).all()
+
+    def test_keypoints_scale_zoom_out(self):
+        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.scale_zoom_out_kpsoi)
+
+        assert keypoints_equal(observed, self.scale_zoom_out_kpsoi_aug)
+
+    def test_keypoints_scale_zoom_out__deterministic(self):
+        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.scale_zoom_out_kpsoi)
+
+        assert keypoints_equal(observed, self.scale_zoom_out_kpsoi_aug)
+
+    # ---------------------
+    # scale: x and y axis are both tuples
+    # ---------------------
+    def test_image_x_and_y_axis_are_tuples(self):
+        aug = iaa.Affine(scale={"x": (0.5, 1.5), "y": (0.5, 1.5)},
+                         translate_px=0, rotate=0, shear=0)
+
+        image = np.array([[0, 0, 0, 0, 0],
+                          [0, 1, 1, 1, 0],
+                          [0, 1, 2, 1, 0],
+                          [0, 1, 1, 1, 0],
+                          [0, 0, 0, 0, 0]], dtype=np.uint8) * 100
+        image = image[:, :, np.newaxis]
+        images = np.array([image])
+
+        last_aug = None
+        nb_changed_aug = 0
+        nb_iterations = 1000
+        for i in sm.xrange(nb_iterations):
+            observed_aug = aug.augment_images(images)
+            if i == 0:
+                last_aug = observed_aug
+            else:
+                if not np.array_equal(observed_aug, last_aug):
+                    nb_changed_aug += 1
+                last_aug = observed_aug
+        assert nb_changed_aug >= int(nb_iterations * 0.8)
+
+    def test_image_x_and_y_axis_are_tuples__deterministic(self):
+        aug = iaa.Affine(scale={"x": (0.5, 1.5), "y": (0.5, 1.5)},
+                         translate_px=0, rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        image = np.array([[0, 0, 0, 0, 0],
+                          [0, 1, 1, 1, 0],
+                          [0, 1, 2, 1, 0],
+                          [0, 1, 1, 1, 0],
+                          [0, 0, 0, 0, 0]], dtype=np.uint8) * 100
+        image = image[:, :, np.newaxis]
+        images = np.array([image])
+
+        last_aug_det = None
+        nb_changed_aug_det = 0
+        nb_iterations = 10
+        for i in sm.xrange(nb_iterations):
+            observed_aug_det = aug_det.augment_images(images)
+            if i == 0:
+                last_aug_det = observed_aug_det
+            else:
+                if not np.array_equal(observed_aug_det, last_aug_det):
+                    nb_changed_aug_det += 1
+                last_aug_det = observed_aug_det
+        assert nb_changed_aug_det == 0
+
+    # ------------
+    # make sure that polygons stay valid upon extreme scaling
+    # ------------
+    def test_polygons_stay_valid_when_using_extreme_scalings(self):
+        scales = [1e-4, 1e-2, 1e2, 1e4]
+        backends = ["auto", "cv2", "skimage"]
+        orders = [0, 1, 3]
+
+        gen = itertools.product(scales, backends, orders)
+        for scale, backend, order in gen:
+            with self.subTest(scale=scale, backend=backend, order=order):
+                aug = iaa.Affine(scale=scale, order=order)
+                psoi = ia.PolygonsOnImage([
+                    ia.Polygon([(0, 0), (10, 0), (5, 5)])],
+                    shape=(10, 10))
+
+                psoi_aug = aug.augment_polygons(psoi)
+
+                poly = psoi_aug.polygons[0]
+                ext = poly.exterior
+                assert poly.is_valid
+                assert ext[0][0] < ext[2][0] < ext[1][0]
+                assert ext[0][1] < ext[2][1]
+                assert np.allclose(ext[0][1], ext[1][1])
+
+
+class TestAffine_translate(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def image(self):
+        return np.uint8([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ])[:, :, np.newaxis]
+
+    @property
+    def image_1px_right(self):
+        return np.uint8([
+            [0, 0, 0],
+            [0, 0, 1],
+            [0, 0, 0]
+        ])[:, :, np.newaxis]
+
+    @property
+    def image_1px_bottom(self):
+        return np.uint8([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 1, 0]
+        ])[:, :, np.newaxis]
+
+    @property
+    def images(self):
+        return np.array([self.image])
+
+    @property
+    def images_1px_right(self):
+        return np.array([self.image_1px_right])
+
+    @property
+    def images_1px_bottom(self):
+        return np.array([self.image_1px_bottom])
+
+    @property
+    def kpsoi(self):
+        kps = [ia.Keypoint(x=1, y=1)]
+        return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+
+    @property
+    def kpsoi_1px_right(self):
+        kps = [ia.Keypoint(x=2, y=1)]
+        return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+
+    @property
+    def kpsoi_1px_bottom(self):
+        kps = [ia.Keypoint(x=1, y=2)]
+        return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+
+    # ---------------------
+    # translate: move one pixel to the right
+    # ---------------------
+    def test_image_translate_1px_right(self):
+        # move one pixel to the right
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_1px_right__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_1px_right__list(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0)
+
+        observed = aug.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_right])
+
+    def test_image_translate_1px_right__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_right])
+
+    def test_keypoints_translate_1px_right(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_right)
+
+    def test_keypoints_translate_1px_right__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_right)
+
+    def test_image_translate_1px_right_skimage(self):
+        # move one pixel to the right
+        # with backend = skimage
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0, backend="skimage")
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_1px_right_skimage_order_all(self):
+        # move one pixel to the right
+        # with backend = skimage, order=ALL
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0, backend="skimage", order=ia.ALL)
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_1px_right_skimage_order_is_list(self):
+        # move one pixel to the right
+        # with backend = skimage, order=list
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0, backend="skimage", order=[0, 1, 3])
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_1px_right_cv2_order_is_list(self):
+        # move one pixel to the right
+        # with backend = cv2, order=list
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0, backend="cv2", order=[0, 1, 3])
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_1px_right_cv2_order_is_stoch_param(self):
+        # move one pixel to the right
+        # with backend = cv2, order=StochasticParameter
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
+                         shear=0, backend="cv2", order=iap.Choice([0, 1, 3]))
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    # ---------------------
+    # translate: move one pixel to the bottom
+    # ---------------------
+    def test_image_translate_1px_bottom(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
+                         shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_bottom)
+
+    def test_image_translate_1px_bottom__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
+                         shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_bottom)
+
+    def test_image_translate_1px_bottom__list(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
+                         shear=0)
+
+        observed = aug.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_bottom])
+
+    def test_image_translate_1px_bottom__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
+                         shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_bottom])
+
+    def test_keypoints_translate_1px_bottom(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
+                         shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+
+    def test_keypoints_translate_1px_bottom__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
+                         shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+
+    # ---------------------
+    # translate: fraction of the image size (towards the right)
+    # ---------------------
+    def test_image_translate_33percent_right(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
+                         rotate=0, shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_33percent_right__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_right)
+
+    def test_image_translate_33percent_right__list(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
+                         rotate=0, shear=0)
+
+        observed = aug.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_right])
+
+    def test_image_translate_33percent_right__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_right])
+
+    def test_keypoints_translate_33percent_right(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
+                         rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_right)
+
+    def test_keypoints_translate_33percent_right__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_right)
+
+    # ---------------------
+    # translate: fraction of the image size (towards the bottom)
+    # ---------------------
+    def test_image_translate_33percent_bottom(self):
+        # move 33% (one pixel) to the bottom
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
+                         rotate=0, shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_bottom)
+
+    def test_image_translate_33percent_bottom__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert np.array_equal(observed, self.images_1px_bottom)
+
+    def test_image_translate_33percent_bottom__list(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
+                         rotate=0, shear=0)
+
+        observed = aug.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_bottom])
+
+    def test_image_translate_33percent_bottom__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.image])
+
+        assert array_equal_lists(observed, [self.image_1px_bottom])
+
+    def test_keypoints_translate_33percent_bottom(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
+                         rotate=0, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+
+    def test_keypoints_translate_33percent_bottom__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+
+    # ---------------------
+    # translate: axiswise uniform distributions
+    # ---------------------
+    def test_image_translate_by_axiswise_uniform_distributions(self):
+        # 0-1px to left/right and 0-1px to top/bottom
+        aug = iaa.Affine(scale=1.0, translate_px={"x": (-1, 1), "y": (-1, 1)},
+                         rotate=0, shear=0)
+        last_aug = None
+        nb_changed_aug = 0
+        nb_iterations = 1000
+        centers_aug = self.image.astype(np.int32) * 0
+        for i in sm.xrange(nb_iterations):
+            observed_aug = aug.augment_images(self.images)
+            if i == 0:
+                last_aug = observed_aug
+            else:
+                if not np.array_equal(observed_aug, last_aug):
+                    nb_changed_aug += 1
+                last_aug = observed_aug
+
+            assert len(observed_aug[0].nonzero()[0]) == 1
+            centers_aug += (observed_aug[0] > 0)
+
+        assert nb_changed_aug >= int(nb_iterations * 0.7)
+        assert (centers_aug > int(nb_iterations * (1/9 * 0.6))).all()
+        assert (centers_aug < int(nb_iterations * (1/9 * 1.4))).all()
+
+    def test_image_translate_by_axiswise_uniform_distributions__det(self):
+        # 0-1px to left/right and 0-1px to top/bottom
+        aug = iaa.Affine(scale=1.0, translate_px={"x": (-1, 1), "y": (-1, 1)},
+                         rotate=0, shear=0)
+        aug_det = aug.to_deterministic()
+        last_aug_det = None
+        nb_changed_aug_det = 0
+        nb_iterations = 10
+        centers_aug_det = self.image.astype(np.int32) * 0
+        for i in sm.xrange(nb_iterations):
+            observed_aug_det = aug_det.augment_images(self.images)
+            if i == 0:
+                last_aug_det = observed_aug_det
+            else:
+                if not np.array_equal(observed_aug_det, last_aug_det):
+                    nb_changed_aug_det += 1
+                last_aug_det = observed_aug_det
+
+            assert len(observed_aug_det[0].nonzero()[0]) == 1
+            centers_aug_det += (observed_aug_det[0] > 0)
+
+        assert nb_changed_aug_det == 0
+
+    # ---------------------
+    # translate heatmaps
+    # ---------------------
+    @property
+    def heatmaps(self):
+        return ia.HeatmapsOnImage(
+            np.float32([
+                [0.0, 0.5, 0.75],
+                [0.0, 0.5, 0.75],
+                [0.75, 0.75, 0.75],
+            ]),
+            shape=(3, 3, 3)
+        )
+
+    @property
+    def heatmaps_1px_right(self):
+        return ia.HeatmapsOnImage(
+            np.float32([
+                [0.0, 0.0, 0.5],
+                [0.0, 0.0, 0.5],
+                [0.0, 0.75, 0.75],
+            ]),
+            shape=(3, 3, 3)
+        )
+
+    @classmethod
+    def _assert_same_shape(cls, observed, actual):
+        assert observed.shape == actual.shape
+
+    @classmethod
+    def _assert_same_min_max(cls, observed, actual):
+        assert np.isclose(observed.min_value, actual.min_value,
+                          rtol=0, atol=1e-6)
+        assert np.isclose(observed.max_value, actual.max_value,
+                          rtol=0, atol=1e-6)
+
+    def test_heatmaps_translate_1px_right(self):
+        aug = iaa.Affine(translate_px={"x": 1})
+
+        observed = aug.augment_heatmaps([self.heatmaps])[0]
+
+        self._assert_same_shape(observed, self.heatmaps)
+        self._assert_same_min_max(observed, self.heatmaps)
+        assert np.array_equal(observed.get_arr(),
+                              self.heatmaps_1px_right.get_arr())
+
+    def test_heatmaps_translate_1px_right_should_ignore_cval(self):
+        # should still use mode=constant cval=0 even when other settings chosen
+        aug = iaa.Affine(translate_px={"x": 1}, cval=255)
+
+        observed = aug.augment_heatmaps([self.heatmaps])[0]
+
+        self._assert_same_shape(observed, self.heatmaps)
+        self._assert_same_min_max(observed, self.heatmaps)
+        assert np.array_equal(observed.get_arr(),
+                              self.heatmaps_1px_right.get_arr())
+
+    def test_heatmaps_translate_1px_right_should_ignore_mode(self):
+        aug = iaa.Affine(translate_px={"x": 1}, mode="edge", cval=255)
+
+        observed = aug.augment_heatmaps([self.heatmaps])[0]
+
+        self._assert_same_shape(observed, self.heatmaps)
+        self._assert_same_min_max(observed, self.heatmaps)
+        assert np.array_equal(observed.get_arr(),
+                              self.heatmaps_1px_right.get_arr())
+
+    # ---------------------
+    # translate segmaps
+    # ---------------------
+    @property
+    def segmaps(self):
+        return SegmentationMapsOnImage(
+            np.int32([
+                [0, 1, 2],
+                [0, 1, 2],
+                [2, 2, 2],
+            ]),
+            shape=(3, 3, 3)
+        )
+
+    @property
+    def segmaps_1px_right(self):
+        return SegmentationMapsOnImage(
+            np.int32([
+                [0, 0, 1],
+                [0, 0, 1],
+                [0, 2, 2],
+            ]),
+            shape=(3, 3, 3)
+        )
+
+    def test_segmaps_translate_1px_right(self):
+        aug = iaa.Affine(translate_px={"x": 1})
+
+        observed = aug.augment_segmentation_maps([self.segmaps])[0]
+
+        self._assert_same_shape(observed, self.segmaps)
+        assert np.array_equal(observed.get_arr(),
+                              self.segmaps_1px_right.get_arr())
+
+    def test_segmaps_translate_1px_right_should_ignore_cval(self):
+        # should still use mode=constant cval=0 even when other settings chosen
+        aug = iaa.Affine(translate_px={"x": 1}, cval=255)
+
+        observed = aug.augment_segmentation_maps([self.segmaps])[0]
+
+        self._assert_same_shape(observed, self.segmaps)
+        assert np.array_equal(observed.get_arr(),
+                              self.segmaps_1px_right.get_arr())
+
+    def test_segmaps_translate_1px_right_should_ignore_mode(self):
+        aug = iaa.Affine(translate_px={"x": 1}, mode="edge", cval=255)
+
+        observed = aug.augment_segmentation_maps([self.segmaps])[0]
+
+        self._assert_same_shape(observed, self.segmaps)
+        assert np.array_equal(observed.get_arr(),
+                              self.segmaps_1px_right.get_arr())
+
+
+class TestAffine_rotate(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def image(self):
+        return np.uint8([
+            [0, 0, 0],
+            [255, 255, 255],
+            [0, 0, 0]
+        ])[:, :, np.newaxis]
+
+    @property
+    def image_rot90(self):
+        return np.uint8([
+            [0, 255, 0],
+            [0, 255, 0],
+            [0, 255, 0]
+        ])[:, :, np.newaxis]
+
+    @property
+    def images(self):
+        return np.array([self.image])
+
+    @property
+    def images_rot90(self):
+        return np.array([self.image_rot90])
+
+    @property
+    def kpsoi(self):
+        kps = [ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1),
+               ia.Keypoint(x=2, y=1)]
+        return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+
+    @property
+    def kpsoi_rot90(self):
+        kps = [ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1),
+                   ia.Keypoint(x=1, y=2)]
+        return [ia.KeypointsOnImage(kps, shape=self.image_rot90.shape)]
+
+    def test_image_rot90(self):
+        # rotate by 90 degrees
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+
+        observed = aug.augment_images(self.images)
+
+        observed[observed >= 100] = 255
+        observed[observed < 100] = 0
+        assert np.array_equal(observed, self.images_rot90)
+
+    def test_image_rot90__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        observed[observed >= 100] = 255
+        observed[observed < 100] = 0
+        assert np.array_equal(observed, self.images_rot90)
+
+    def test_image_rot90__list(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+
+        observed = aug.augment_images([self.image])
+
+        observed[0][observed[0] >= 100] = 255
+        observed[0][observed[0] < 100] = 0
+        assert array_equal_lists(observed, [self.image_rot90])
+
+    def test_image_rot90__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.image])
+
+        observed[0][observed[0] >= 100] = 255
+        observed[0][observed[0] < 100] = 0
+        assert array_equal_lists(observed, [self.image_rot90])
+
+    def test_keypoints_rot90(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+
+        observed = aug.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_rot90)
+
+    def test_keypoints_rot90__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_keypoints(self.kpsoi)
+
+        assert keypoints_equal(observed, self.kpsoi_rot90)
+
+    def test_image_rotate_is_tuple_0_to_364_deg(self):
+        # random rotation 0-364 degrees
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=(0, 364), shear=0)
+        last_aug = None
+        nb_changed_aug = 0
+        nb_iterations = 1000
+        pixels_sums_aug = self.image.astype(np.int32) * 0
+        for i in sm.xrange(nb_iterations):
+            observed_aug = aug.augment_images(self.images)
+            if i == 0:
+                last_aug = observed_aug
+            else:
+                if not np.array_equal(observed_aug, last_aug):
+                    nb_changed_aug += 1
+                last_aug = observed_aug
+
+            pixels_sums_aug += (observed_aug[0] > 100)
+
+        assert nb_changed_aug >= int(nb_iterations * 0.9)
+        # center pixel, should always be white when rotating line around center
+        assert pixels_sums_aug[1, 1] > (nb_iterations * 0.98)
+        assert pixels_sums_aug[1, 1] < (nb_iterations * 1.02)
+
+        # outer pixels, should sometimes be white
+        # the values here had to be set quite tolerant, the middle pixels at
+        # top/left/bottom/right get more activation than expected
+        outer_pixels = ([0, 0, 0, 1, 1, 2, 2, 2],
+                        [0, 1, 2, 0, 2, 0, 1, 2])
+        assert (
+            pixels_sums_aug[outer_pixels] > int(nb_iterations * (2/8 * 0.4))
+        ).all()
+        assert (
+            pixels_sums_aug[outer_pixels] < int(nb_iterations * (2/8 * 2.0))
+        ).all()
+
+    def test_image_rotate_is_tuple_0_to_364_deg__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=(0, 364), shear=0)
+        aug_det = aug.to_deterministic()
+        last_aug_det = None
+        nb_changed_aug_det = 0
+        nb_iterations = 10
+        pixels_sums_aug_det = self.image.astype(np.int32) * 0
+        for i in sm.xrange(nb_iterations):
+            observed_aug_det = aug_det.augment_images(self.images)
+            if i == 0:
+                last_aug_det = observed_aug_det
+            else:
+                if not np.array_equal(observed_aug_det, last_aug_det):
+                    nb_changed_aug_det += 1
+                last_aug_det = observed_aug_det
+
+            pixels_sums_aug_det += (observed_aug_det[0] > 100)
+
+        assert nb_changed_aug_det == 0
+        # center pixel, should always be white when rotating line around center
+        assert pixels_sums_aug_det[1, 1] > (nb_iterations * 0.98)
+        assert pixels_sums_aug_det[1, 1] < (nb_iterations * 1.02)
+
+    def test_alignment_between_images_and_heatmaps_for_fixed_rot(self):
+        # measure alignment between images and heatmaps when rotating
+        for backend in ["auto", "cv2", "skimage"]:
+            aug = iaa.Affine(rotate=45, backend=backend)
+            image = np.zeros((7, 6), dtype=np.uint8)
+            image[:, 2:3+1] = 255
+            hm = ia.HeatmapsOnImage(image.astype(np.float32)/255, shape=(7, 6))
+
+            img_aug = aug.augment_image(image)
+            hm_aug = aug.augment_heatmaps([hm])[0]
+
+            img_aug_mask = img_aug > 255*0.1
+            hm_aug_mask = hm_aug.arr_0to1 > 0.1
+            same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+            assert hm_aug.shape == (7, 6)
+            assert hm_aug.arr_0to1.shape == (7, 6, 1)
+            assert (same / img_aug_mask.size) >= 0.95
+
+    def test_alignment_between_images_and_smaller_heatmaps_for_fixed_rot(self):
+        # measure alignment between images and heatmaps when rotating
+        # here with smaller heatmaps
+        for backend in ["auto", "cv2", "skimage"]:
+            aug = iaa.Affine(rotate=45, backend=backend)
+
+            image = np.zeros((56, 48), dtype=np.uint8)
+            image[:, 16:24+1] = 255
+            hm = ia.HeatmapsOnImage(
+                ia.imresize_single_image(
+                    image, (28, 24), interpolation="cubic"
+                ).astype(np.float32)/255,
+                shape=(56, 48)
+            )
+
+            img_aug = aug.augment_image(image)
+            hm_aug = aug.augment_heatmaps([hm])[0]
+
+            img_aug_mask = img_aug > 255*0.1
+            hm_aug_mask = ia.imresize_single_image(
+                hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic"
+            ) > 0.1
+            same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+            assert hm_aug.shape == (56, 48)
+            assert hm_aug.arr_0to1.shape == (28, 24, 1)
+            assert (same / img_aug_mask.size) >= 0.9
+
+
+class TestAffine_cval(unittest.TestCase):
+    @property
+    def image(self):
+        return np.ones((3, 3, 1), dtype=np.uint8) * 255
+
+    @property
+    def images(self):
+        return np.array([self.image])
+
+    def test_image_fixed_cval(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=128)
+
+        observed = aug.augment_images(self.images)
+
+        assert (observed[0] > 128 - 30).all()
+        assert (observed[0] < 128 + 30).all()
+
+    def test_image_fixed_cval__deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=128)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images(self.images)
+
+        assert (observed[0] > 128 - 30).all()
+        assert (observed[0] < 128 + 30).all()
+
+    def test_image_fixed_cval__list(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=128)
+
+        observed = aug.augment_images([self.image])
+
+        assert (observed[0] > 128 - 30).all()
+        assert (observed[0] < 128 + 30).all()
+
+    def test_image_fixed_cval__list_and_deterministic(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=128)
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_images([self.image])
+
+        assert (observed[0] > 128 - 30).all()
+        assert (observed[0] < 128 + 30).all()
+
+    def test_image_cval_is_tuple(self):
+        # random cvals
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=(0, 255))
+        last_aug = None
+        nb_changed_aug = 0
+        nb_iterations = 1000
+        for i in sm.xrange(nb_iterations):
+            observed_aug = aug.augment_images(self.images)
+
+            if i == 0:
+                last_aug = observed_aug
+            else:
+                if not np.array_equal(observed_aug, last_aug):
+                    nb_changed_aug += 1
+                last_aug = observed_aug
+
+        assert nb_changed_aug >= int(nb_iterations * 0.9)
+
+    def test_image_cval_is_tuple__deterministic(self):
+        # random cvals
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=(0, 255))
+        aug_det = aug.to_deterministic()
+        last_aug_det = None
+        nb_changed_aug_det = 0
+        nb_iterations = 10
+        for i in sm.xrange(nb_iterations):
+            observed_aug_det = aug_det.augment_images(self.images)
+
+            if i == 0:
+                last_aug_det = observed_aug_det
+            else:
+                if not np.array_equal(observed_aug_det, last_aug_det):
+                    nb_changed_aug_det += 1
+                last_aug_det = observed_aug_det
+
+        assert nb_changed_aug_det == 0
+
+
+class TestAffine_fit_output(unittest.TestCase):
+    @property
+    def image(self):
+        return np.ones((3, 3, 1), dtype=np.uint8) * 255
+
+    @property
+    def images(self):
+        return np.array([self.image])
+
+    @property
+    def heatmaps(self):
+        return ia.HeatmapsOnImage(
+            np.float32([
+                [0.0, 0.5, 0.75],
+                [0.0, 0.5, 0.75],
+                [0.75, 0.75, 0.75],
+            ]),
+            shape=(3, 3, 3)
+        )
+
+    @property
+    def kpsoi(self):
+        kps = [ia.Keypoint(x=0, y=1), ia.Keypoint(x=1, y=1),
+               ia.Keypoint(x=2, y=1)]
+        return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+
+    def test_image_translate(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(translate_px=100, fit_output=True,
+                                 backend=backend)
+
+                observed = aug.augment_images(self.images)
+
+                expected = self.images
+                assert np.array_equal(observed, expected)
+
+    def test_keypoints_translate(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(translate_px=100, fit_output=True,
+                                 backend=backend)
+
+                observed = aug.augment_keypoints(self.kpsoi)
+
+                expected = self.kpsoi
+                assert keypoints_equal(observed, expected)
+
+    def test_heatmaps_translate(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(translate_px=100, fit_output=True,
+                                 backend=backend)
+
+                observed = aug.augment_heatmaps([self.heatmaps])[0]
+
+                expected = self.heatmaps
+                assert np.allclose(observed.arr_0to1, expected.arr_0to1)
+
+    def test_image_rot45(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=45, fit_output=True,
+                                 backend=backend)
+                img = np.zeros((10, 10), dtype=np.uint8)
+                img[0:2, 0:2] = 255
+                img[-2:, 0:2] = 255
+                img[0:2, -2:] = 255
+                img[-2:, -2:] = 255
+
+                img_aug = aug.augment_image(img)
+
+                _labels, nb_labels = skimage.morphology.label(
+                    img_aug > 240, return_num=True, connectivity=2)
+                assert nb_labels == 4
+
+    def test_heatmaps_rot45(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=45, fit_output=True,
+                                 backend=backend)
+                img = np.zeros((10, 10), dtype=np.uint8)
+                img[0:2, 0:2] = 255
+                img[-2:, 0:2] = 255
+                img[0:2, -2:] = 255
+                img[-2:, -2:] = 255
+                hm = ia.HeatmapsOnImage(img.astype(np.float32)/255,
+                                        shape=(10, 10))
+
+                hm_aug = aug.augment_heatmaps([hm])[0]
+
+                _labels, nb_labels = skimage.morphology.label(
+                    hm_aug.arr_0to1 > 240/255, return_num=True, connectivity=2)
+                assert nb_labels == 4
+
+    def test_heatmaps_rot45__heatmaps_smaller_than_image(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=45, fit_output=True,
+                                 backend=backend)
+                img = np.zeros((80, 80), dtype=np.uint8)
+                img[0:5, 0:5] = 255
+                img[-5:, 0:5] = 255
+                img[0:5, -5:] = 255
+                img[-5:, -5:] = 255
+                hm = HeatmapsOnImage(
+                    ia.imresize_single_image(
+                        img, (40, 40), interpolation="cubic"
+                    ).astype(np.float32)/255,
+                    shape=(80, 80)
+                )
+
+                hm_aug = aug.augment_heatmaps([hm])[0]
+
+                # these asserts are deactivated because the image size can
+                # change under fit_output=True
+                # assert hm_aug.shape == (80, 80)
+                # assert hm_aug.arr_0to1.shape == (40, 40, 1)
+                _labels, nb_labels = skimage.morphology.label(
+                    hm_aug.arr_0to1 > 200/255, return_num=True, connectivity=2)
+                assert nb_labels == 4
+
+    def test_image_heatmap_alignment_random_rots(self):
+        nb_iterations = 50
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                for _ in sm.xrange(nb_iterations):
+                    aug = iaa.Affine(rotate=(0, 364), fit_output=True,
+                                     backend=backend)
+                    img = np.zeros((80, 80), dtype=np.uint8)
+                    img[0:5, 0:5] = 255
+                    img[-5:, 0:5] = 255
+                    img[0:5, -5:] = 255
+                    img[-5:, -5:] = 255
+                    hm = HeatmapsOnImage(
+                        img.astype(np.float32)/255,
+                        shape=(80, 80)
+                    )
+
+                    img_aug = aug.augment_image(img)
+                    hm_aug = aug.augment_heatmaps([hm])[0]
+
+                    img_aug_mask = img_aug > 255*0.1
+                    hm_aug_mask = ia.imresize_single_image(
+                        hm_aug.arr_0to1, img_aug.shape[0:2],
+                        interpolation="cubic"
+                    ) > 0.1
+                    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+                    assert (same / img_aug_mask.size) >= 0.95
+
+    def test_image_heatmap_alignment_random_rots__hms_smaller_than_img(self):
+        nb_iterations = 50
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                for _ in sm.xrange(nb_iterations):
+                    aug = iaa.Affine(rotate=(0, 364), fit_output=True,
+                                     backend=backend)
+                    img = np.zeros((80, 80), dtype=np.uint8)
+                    img[0:5, 0:5] = 255
+                    img[-5:, 0:5] = 255
+                    img[0:5, -5:] = 255
+                    img[-5:, -5:] = 255
+                    hm = HeatmapsOnImage(
+                        ia.imresize_single_image(
+                            img, (40, 40), interpolation="cubic"
+                        ).astype(np.float32)/255,
+                        shape=(80, 80)
+                    )
+
+                    img_aug = aug.augment_image(img)
+                    hm_aug = aug.augment_heatmaps([hm])[0]
+
+                    img_aug_mask = img_aug > 255*0.1
+                    hm_aug_mask = ia.imresize_single_image(
+                        hm_aug.arr_0to1, img_aug.shape[0:2],
+                        interpolation="cubic"
+                    ) > 0.1
+                    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+                    assert (same / img_aug_mask.size) >= 0.95
+
+    def test_segmaps_rot45(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=45, fit_output=True,
+                                 backend=backend)
+                img = np.zeros((80, 80), dtype=np.uint8)
+                img[0:5, 0:5] = 255
+                img[-5:, 0:5] = 255
+                img[0:5, -5:] = 255
+                img[-5:, -5:] = 255
+                segmap = SegmentationMapsOnImage(
+                    (img > 100).astype(np.int32),
+                    shape=(80, 80)
+                )
+
+                segmap_aug = aug.augment_segmentation_maps([segmap])[0]
+
+                # these asserts are deactivated because the image size can
+                # change under fit_output=True
+                # assert segmap_aug.shape == (80, 80)
+                # assert segmap_aug.arr_0to1.shape == (40, 40, 1)
+                _labels, nb_labels = skimage.morphology.label(
+                    segmap_aug.arr > 0, return_num=True, connectivity=2)
+                assert nb_labels == 4
+
+    def test_segmaps_rot45__segmaps_smaller_than_img(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=45, fit_output=True,
+                                 backend=backend)
+                img = np.zeros((80, 80), dtype=np.uint8)
+                img[0:5, 0:5] = 255
+                img[-5:, 0:5] = 255
+                img[0:5, -5:] = 255
+                img[-5:, -5:] = 255
+                segmap = SegmentationMapsOnImage(
+                    (
+                        ia.imresize_single_image(
+                            img, (40, 40), interpolation="cubic"
+                        ) > 100
+                     ).astype(np.int32),
+                    shape=(80, 80)
+                )
+
+                segmap_aug = aug.augment_segmentation_maps([segmap])[0]
+
+                # these asserts are deactivated because the image size can
+                # change under fit_output=True
+                # assert segmap_aug.shape == (80, 80)
+                # assert segmap_aug.arr_0to1.shape == (40, 40, 1)
+                _labels, nb_labels = skimage.morphology.label(
+                    segmap_aug.arr > 0, return_num=True, connectivity=2)
+                assert nb_labels == 4
+
+    def test_image_segmap_alignment_random_rots(self):
+        nb_iterations = 50
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                for _ in sm.xrange(nb_iterations):
+                    aug = iaa.Affine(rotate=(0, 364), fit_output=True,
+                                     backend=backend)
+                    img = np.zeros((80, 80), dtype=np.uint8)
+                    img[0:5, 0:5] = 255
+                    img[-5:, 0:5] = 255
+                    img[0:5, -5:] = 255
+                    img[-5:, -5:] = 255
+                    segmap = SegmentationMapsOnImage(
+                        (img > 100).astype(np.int32),
+                        shape=(80, 80)
+                    )
+
+                    img_aug = aug.augment_image(img)
+                    segmap_aug = aug.augment_segmentation_maps([segmap])[0]
+
+                    img_aug_mask = img_aug > 100
+                    segmap_aug_mask = ia.imresize_single_image(
+                        segmap_aug.arr,
+                        img_aug.shape[0:2],
+                        interpolation="nearest"
+                    ) > 0
+                    same = np.sum(img_aug_mask == segmap_aug_mask[:, :, 0])
+                    assert (same / img_aug_mask.size) >= 0.95
+
+    def test_image_segmap_alignment_random_rots__sms_smaller_than_img(self):
+        nb_iterations = 50
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                for _ in sm.xrange(nb_iterations):
+                    aug = iaa.Affine(rotate=(0, 364), fit_output=True,
+                                     backend=backend)
+                    img = np.zeros((80, 80), dtype=np.uint8)
+                    img[0:5, 0:5] = 255
+                    img[-5:, 0:5] = 255
+                    img[0:5, -5:] = 255
+                    img[-5:, -5:] = 255
+                    segmap = SegmentationMapsOnImage(
+                        (
+                            ia.imresize_single_image(
+                                img, (40, 40), interpolation="cubic"
+                            ) > 100
+                         ).astype(np.int32),
+                        shape=(80, 80)
+                    )
+
+                    img_aug = aug.augment_image(img)
+                    segmap_aug = aug.augment_segmentation_maps([segmap])[0]
+
+                    img_aug_mask = img_aug > 100
+                    segmap_aug_mask = ia.imresize_single_image(
+                        segmap_aug.arr,
+                        img_aug.shape[0:2],
+                        interpolation="nearest"
+                    ) > 0
+                    same = np.sum(img_aug_mask == segmap_aug_mask[:, :, 0])
+                    assert (same / img_aug_mask.size) >= 0.95
+
+    def test_keypoints_rot90_without_fit_output(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=90, backend=backend)
+                kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)],
+                                          shape=(100, 200, 3))
+                kps_aug = aug.augment_keypoints(kps)
+                assert kps_aug.shape == (100, 200, 3)
+                assert not np.allclose(
+                    [kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
+                    [kps.keypoints[0].x, kps.keypoints[0].y],
+                    atol=1e-2, rtol=0)
+
+    def test_keypoints_rot90(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+                kps = ia.KeypointsOnImage([ia.Keypoint(10, 10)],
+                                          shape=(100, 200, 3))
+
+                kps_aug = aug.augment_keypoints(kps)
+
+                assert kps_aug.shape == (200, 100, 3)
+                assert not np.allclose(
+                    [kps_aug.keypoints[0].x, kps_aug.keypoints[0].y],
+                    [kps.keypoints[0].x, kps.keypoints[0].y],
+                    atol=1e-2, rtol=0)
+
+    def test_empty_keypoints_rot90(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+                kps = ia.KeypointsOnImage([], shape=(100, 200, 3))
+
+                kps_aug = aug.augment_keypoints(kps)
+
+                assert kps_aug.shape == (200, 100, 3)
+                assert len(kps_aug.keypoints) == 0
+
+    def test_polygons_rot90_without_fit_output(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                # verify that shape in PolygonsOnImages changes
+                aug = iaa.Affine(rotate=90, backend=backend)
+                psoi = ia.PolygonsOnImage([
+                    ia.Polygon([(10, 10), (20, 10), (20, 20)])
+                ], shape=(100, 200, 3))
+
+                psoi_aug = aug.augment_polygons([psoi, psoi])
+
+                assert len(psoi_aug) == 2
+                for psoi_aug_i in psoi_aug:
+                    assert psoi_aug_i.shape == (100, 200, 3)
+                    assert not psoi_aug_i.polygons[0].exterior_almost_equals(
+                        psoi.polygons[0].exterior, max_distance=1e-2)
+                    assert psoi_aug_i.polygons[0].is_valid
+
+    def test_polygons_rot90(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+                psoi = ia.PolygonsOnImage([
+                    ia.Polygon([(10, 10), (20, 10), (20, 20)])
+                ], shape=(100, 200, 3))
+
+                psoi_aug = aug.augment_polygons([psoi, psoi])
+
+                assert len(psoi_aug) == 2
+                for psoi_aug_i in psoi_aug:
+                    assert psoi_aug_i.shape == (200, 100, 3)
+                    assert psoi_aug_i.polygons[0].exterior_almost_equals(
+                        ia.Polygon([(100-10-1, 10), (100-10-1, 20),
+                                    (100-20-1, 20)])
+                    )
+                    assert psoi_aug_i.polygons[0].is_valid
+
+    def test_empty_polygons_rot90(self):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+                psoi = ia.PolygonsOnImage([], shape=(100, 200, 3))
+                psoi_aug = aug.augment_polygons(psoi)
+                assert psoi_aug.shape == (200, 100, 3)
+                assert len(psoi_aug.polygons) == 0
+
+
+# TODO merge these into TestAffine_rotate since they are rotations?
+#      or extend to contain other affine params too?
+class TestAffine_alignment(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_image_keypoint_alignment(self):
+        aug = iaa.Affine(rotate=[0, 180], order=0)
+        img = np.zeros((10, 10), dtype=np.uint8)
+        img[0:5, 5] = 255
+        img[2, 4:6] = 255
+        img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
+        kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=2)], shape=img.shape)
+        kpsoi_rot = [(5, 2), (5-1, 10-2-1)]
+        img_aug_indices = []
+        kpsois_aug_indices = []
+        for _ in sm.xrange(40):
+            aug_det = aug.to_deterministic()
+            imgs_aug = aug_det.augment_images([img, img])
+            kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
+
+            assert kpsois_aug[0].shape == img.shape
+            assert kpsois_aug[1].shape == img.shape
+
+            for img_aug in imgs_aug:
+                if np.array_equal(img_aug, img_rot[0]):
+                    img_aug_indices.append(0)
+                elif np.array_equal(img_aug, img_rot[1]):
+                    img_aug_indices.append(1)
+                else:
+                    assert False
+            for kpsoi_aug in kpsois_aug:
+                similar_to_rot_0 = np.allclose(
+                    [kpsoi_aug.keypoints[0].x, kpsoi_aug.keypoints[0].y],
+                    kpsoi_rot[0])
+                similar_to_rot_180 = np.allclose(
+                    [kpsoi_aug.keypoints[0].x, kpsoi_aug.keypoints[0].y],
+                    kpsoi_rot[1])
+                if similar_to_rot_0:
+                    kpsois_aug_indices.append(0)
+                elif similar_to_rot_180:
+                    kpsois_aug_indices.append(1)
+                else:
+                    assert False
+        assert np.array_equal(img_aug_indices, kpsois_aug_indices)
+        assert len(set(img_aug_indices)) == 2
+        assert len(set(kpsois_aug_indices)) == 2
+
+    def test_image_polygon_alignment(self):
+        aug = iaa.Affine(rotate=[0, 180], order=0)
+        img = np.zeros((10, 10), dtype=np.uint8)
+        img[0:5, 5] = 255
+        img[2, 4:6] = 255
+        img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
+        psoi = ia.PolygonsOnImage([ia.Polygon([(1, 1), (9, 1), (5, 5)])],
+                                  shape=img.shape)
+        psoi_rot = [
+            psoi.polygons[0].deepcopy(),
+            ia.Polygon([(10-1-1, 10-1-1), (10-9-1, 10-1-1), (10-5-1, 10-5-1)])
+        ]
+        img_aug_indices = []
+        psois_aug_indices = []
+        for _ in sm.xrange(40):
+            aug_det = aug.to_deterministic()
+            imgs_aug = aug_det.augment_images([img, img])
+            psois_aug = aug_det.augment_polygons([psoi, psoi])
+
+            assert psois_aug[0].shape == img.shape
+            assert psois_aug[1].shape == img.shape
+            assert psois_aug[0].polygons[0].is_valid
+            assert psois_aug[1].polygons[0].is_valid
+
+            for img_aug in imgs_aug:
+                if np.array_equal(img_aug, img_rot[0]):
+                    img_aug_indices.append(0)
+                elif np.array_equal(img_aug, img_rot[1]):
+                    img_aug_indices.append(1)
+                else:
+                    assert False
+            for psoi_aug in psois_aug:
+                if psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[0]):
+                    psois_aug_indices.append(0)
+                elif psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[1]):
+                    psois_aug_indices.append(1)
+                else:
+                    assert False
+        assert np.array_equal(img_aug_indices, psois_aug_indices)
+        assert len(set(img_aug_indices)) == 2
+        assert len(set(psois_aug_indices)) == 2
+
+
+class TestAffine_other_dtypes(unittest.TestCase):
+    @property
+    def translate_mask(self):
+        mask = np.zeros((3, 3), dtype=bool)
+        mask[1, 2] = True
+        return mask
+
+    @property
+    def image(self):
+        image = np.zeros((17, 17), dtype=bool)
+        image[2:15, 5:13] = True
+        return image
+
+    @property
+    def rot_mask_inner(self):
+        img_flipped = iaa.Fliplr(1.0)(image=self.image)
+        return img_flipped == 1
+
+    @property
+    def rot_mask_outer(self):
+        img_flipped = iaa.Fliplr(1.0)(image=self.image)
+        return img_flipped == 0
+
+    @property
+    def rot_thresh_inner(self):
+        return 0.9
+
+    @property
+    def rot_thresh_outer(self):
+        return 0.9
+
+    def rot_thresh_inner_float(self, order):
+        return 0.85 if order == 1 else 0.7
+
+    def rot_thresh_outer_float(self, order):
+        return 0.85 if order == 1 else 0.4
+
+    def test_translate_skimage_order_0_bool(self):
+        aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
                          backend="skimage")
-        aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+        image = np.zeros((3, 3), dtype=bool)
+        image[1, 1] = True
 
-        image = np.zeros((17, 17), dtype=bool)
-        image[2:15, 5:13] = True
-        mask_inner = aug_flip.augment_image(image) == 1
-        mask_outer = aug_flip.augment_image(image) == 0
-        assert np.any(mask_inner) and np.any(mask_outer)
-
-        thresh_inner = 0.9
-        thresh_outer = 0.9
-        thresh_inner_float = 0.85 if order == 1 else 0.7
-        thresh_outer_float = 0.85 if order == 1 else 0.4
-
-        # bool
-        image = np.zeros((17, 17), dtype=bool)
-        image[2:15, 5:13] = True
         image_aug = aug.augment_image(image)
-        image_exp = aug_flip.augment_image(image)
-        assert image_aug.dtype.name == image.dtype.name
-        assert (np.sum(image_aug == image_exp)/image.size) > thresh_inner
 
-        # uint, int
+        assert image_aug.dtype.name == image.dtype.name
+        assert np.all(image_aug[~self.translate_mask] == 0)
+        assert np.all(image_aug[self.translate_mask] == 1)
+
+    def test_translate_skimage_order_0_uint_int(self):
         dtypes = ["uint8", "uint16", "uint32", "int8", "int16", "int32"]
         for dtype in dtypes:
+            aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
+                             backend="skimage")
+
             min_value, center_value, max_value = \
                 iadt.get_value_range_of_dtype(dtype)
-
-            def _compute_matching(image_aug, image_exp, mask):
-                return np.sum(
-                    np.isclose(image_aug[mask], image_exp[mask], rtol=0,
-                               atol=1.001)
-                ) / np.sum(mask)
 
             if np.dtype(dtype).kind == "i":
                 values = [1, 5, 10, 100, int(0.1 * max_value),
@@ -1337,137 +2044,173 @@ def test_Affine():
                           int(0.5 * max_value), max_value - 100, max_value]
 
             for value in values:
-                image = np.zeros((17, 17), dtype=dtype)
-                image[2:15, 5:13] = value
-                image_aug = aug.augment_image(image)
-                image_exp = aug_flip.augment_image(image)
-                assert image_aug.dtype.name == dtype
-                assert _compute_matching(
-                    image_aug, image_exp, mask_inner
-                ) > thresh_inner
-                assert _compute_matching(
-                    image_aug, image_exp, mask_outer
-                ) > thresh_outer
+                image = np.zeros((3, 3), dtype=dtype)
+                image[1, 1] = value
 
+                image_aug = aug.augment_image(image)
+
+                assert image_aug.dtype.name == dtype
+                assert np.all(image_aug[~self.translate_mask] == 0)
+                assert np.all(image_aug[self.translate_mask] == value)
+
+    def test_translate_skimage_order_0_float(self):
         # float
         dtypes = ["float16", "float32", "float64"]
-        if order == 5:
-            # float64 caused too many interpolation inaccuracies for order=5,
-            # not wrong but harder to test
-            dtypes = ["float16", "float32"]
         for dtype in dtypes:
+            aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
+                             backend="skimage")
+
             min_value, center_value, max_value = \
                 iadt.get_value_range_of_dtype(dtype)
 
             def _isclose(a, b):
                 atol = 1e-4 if dtype == "float16" else 1e-8
-                if order not in [0, 1]:
-                    atol = 1e-2
                 return np.isclose(a, b, atol=atol, rtol=0)
-
-            def _compute_matching(image_aug, image_exp, mask):
-                return np.sum(
-                    _isclose(image_aug[mask], image_exp[mask])
-                ) / np.sum(mask)
 
             isize = np.dtype(dtype).itemsize
             values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
                       1000 ** (isize - 1)]
             values = values + [(-1) * value for value in values]
-            if order not in [3, 4]:  # results in NaNs otherwise
-                values = values + [min_value, max_value]
+            values = values + [min_value, max_value]
             for value in values:
-                image = np.zeros((17, 17), dtype=dtype)
-                image[2:15, 5:13] = value
-                image_aug = aug.augment_image(image)
-                image_exp = aug_flip.augment_image(image)
-                assert image_aug.dtype.name == dtype
-                assert _compute_matching(
-                    image_aug, image_exp, mask_inner
-                ) > thresh_inner_float
-                assert _compute_matching(
-                    image_aug, image_exp, mask_outer
-                ) > thresh_outer_float
+                with self.subTest(dtype=dtype, value=value):
+                    image = np.zeros((3, 3), dtype=dtype)
+                    image[1, 1] = value
 
-    # cv2
-    aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
-                     backend="cv2")
-    mask = np.zeros((3, 3), dtype=bool)
-    mask[1, 2] = True
+                    image_aug = aug.augment_image(image)
 
-    # bool
-    image = np.zeros((3, 3), dtype=bool)
-    image[1, 1] = True
-    image_aug = aug.augment_image(image)
-    assert image_aug.dtype.name == image.dtype.name
-    assert np.all(image_aug[~mask] == 0)
-    assert np.all(image_aug[mask] == 1)
+                    assert image_aug.dtype.name == dtype
+                    assert np.all(_isclose(image_aug[~self.translate_mask], 0))
+                    assert np.all(_isclose(image_aug[self.translate_mask],
+                                           np.float128(value)))
 
-    # uint, int
-    dtypes = ["uint8", "uint16", "int8", "int16", "int32"]
-    for dtype in dtypes:
-        min_value, center_value, max_value = \
-            iadt.get_value_range_of_dtype(dtype)
+    def test_rotate_skimage_order_not_0_bool(self):
+        # skimage, order!=0 and rotate=180
+        for order in [1, 3, 4, 5]:
+            aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                             backend="skimage")
+            aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
 
-        if np.dtype(dtype).kind == "i":
-            values = [1, 5, 10, 100, int(0.1 * max_value),
-                      int(0.2 * max_value), int(0.5 * max_value),
-                      max_value - 100, max_value]
-            values = values + [(-1) * value for value in values]
-        else:
-            values = [1, 5, 10, 100, int(center_value), int(0.1 * max_value),
-                      int(0.2 * max_value), int(0.5 * max_value),
-                      max_value - 100, max_value]
+            image = np.zeros((17, 17), dtype=bool)
+            image[2:15, 5:13] = True
 
-        for value in values:
-            image = np.zeros((3, 3), dtype=dtype)
-            image[1, 1] = value
             image_aug = aug.augment_image(image)
-            assert image_aug.dtype.name == dtype
-            assert np.all(image_aug[~mask] == 0)
-            assert np.all(image_aug[mask] == value)
+            image_exp = aug_flip.augment_image(image)
 
-    # float
-    dtypes = ["float16", "float32", "float64"]
-    for dtype in dtypes:
-        min_value, center_value, max_value = \
-            iadt.get_value_range_of_dtype(dtype)
+            assert image_aug.dtype.name == image.dtype.name
+            assert (
+                np.sum(image_aug == image_exp)/image.size
+            ) > self.rot_thresh_inner
 
-        def _isclose(a, b):
-            atol = 1e-4 if dtype == "float16" else 1e-8
-            return np.isclose(a, b, atol=atol, rtol=0)
+    def test_rotate_skimage_order_not_0_uint_int(self):
+        def _compute_matching(image_aug, image_exp, mask):
+            return np.sum(
+                np.isclose(image_aug[mask], image_exp[mask], rtol=0,
+                           atol=1.001)
+            ) / np.sum(mask)
 
-        isize = np.dtype(dtype).itemsize
-        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                  1000 ** (isize - 1)]
-        values = values + [(-1) * value for value in values]
-        values = values + [min_value, max_value]
-        for value in values:
-            image = np.zeros((3, 3), dtype=dtype)
-            image[1, 1] = value
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.name == dtype
-            assert np.all(_isclose(image_aug[~mask], 0))
-            assert np.all(_isclose(image_aug[mask], np.float128(value)))
+        dtypes = ["uint8", "uint16", "uint32", "int8", "int16", "int32"]
+        for dtype in dtypes:
+            for order in [1, 3, 4, 5]:
+                aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                                 backend="skimage")
+                aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
 
-    #
-    # cv2, order=1 and rotate=180
-    #
-    for order in [1, 3]:
-        aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+
+                if np.dtype(dtype).kind == "i":
+                    values = [1, 5, 10, 100, int(0.1 * max_value),
+                              int(0.2 * max_value), int(0.5 * max_value),
+                              max_value - 100, max_value]
+                    values = values + [(-1) * value for value in values]
+                else:
+                    values = [1, 5, 10, 100, int(center_value),
+                              int(0.1 * max_value), int(0.2 * max_value),
+                              int(0.5 * max_value), max_value - 100, max_value]
+
+                for value in values:
+                    with self.subTest(dtype=dtype, order=order, value=value):
+                        image = np.zeros((17, 17), dtype=dtype)
+                        image[2:15, 5:13] = value
+
+                        image_aug = aug.augment_image(image)
+                        image_exp = aug_flip.augment_image(image)
+
+                        assert image_aug.dtype.name == dtype
+                        assert _compute_matching(
+                            image_aug, image_exp, self.rot_mask_inner
+                        ) > self.rot_thresh_inner
+                        assert _compute_matching(
+                            image_aug, image_exp, self.rot_mask_outer
+                        ) > self.rot_thresh_outer
+
+    def test_rotate_skimage_order_not_0_float(self):
+        def _compute_matching(image_aug, image_exp, mask):
+            return np.sum(
+                _isclose(image_aug[mask], image_exp[mask])
+            ) / np.sum(mask)
+
+        for order in [1, 3, 4, 5]:
+            dtypes = ["float16", "float32", "float64"]
+            if order == 5:
+                # float64 caused too many interpolation inaccuracies for
+                # order=5, not wrong but harder to test
+                dtypes = ["float16", "float32"]
+            for dtype in dtypes:
+                aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                                 backend="skimage")
+                aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+
+                def _isclose(a, b):
+                    atol = 1e-4 if dtype == "float16" else 1e-8
+                    if order not in [0, 1]:
+                        atol = 1e-2
+                    return np.isclose(a, b, atol=atol, rtol=0)
+
+                isize = np.dtype(dtype).itemsize
+                values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
+                          1000 ** (isize - 1)]
+                values = values + [(-1) * value for value in values]
+                if order not in [3, 4]:  # results in NaNs otherwise
+                    values = values + [min_value, max_value]
+                for value in values:
+                    with self.subTest(order=order, dtype=dtype, value=value):
+                        image = np.zeros((17, 17), dtype=dtype)
+                        image[2:15, 5:13] = value
+
+                        image_aug = aug.augment_image(image)
+                        image_exp = aug_flip.augment_image(image)
+
+                        assert image_aug.dtype.name == dtype
+                        assert _compute_matching(
+                            image_aug, image_exp, self.rot_mask_inner
+                        ) > self.rot_thresh_inner_float(order)
+                        assert _compute_matching(
+                            image_aug, image_exp, self.rot_mask_outer
+                        ) > self.rot_thresh_outer_float(order)
+
+    def test_translate_cv2_order_0_bool(self):
+        aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
                          backend="cv2")
-        aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
 
-        # bool
-        image = np.zeros((17, 17), dtype=bool)
-        image[2:15, 5:13] = True
+        image = np.zeros((3, 3), dtype=bool)
+        image[1, 1] = True
+
         image_aug = aug.augment_image(image)
-        image_exp = aug_flip.augment_image(image)
-        assert image_aug.dtype.name == image.dtype.name
-        assert (np.sum(image_aug == image_exp) / image.size) > 0.9
 
-        # uint, int
-        dtypes = ["uint8", "uint16", "int8", "int16"]
+        assert image_aug.dtype.name == image.dtype.name
+        assert np.all(image_aug[~self.translate_mask] == 0)
+        assert np.all(image_aug[self.translate_mask] == 1)
+
+    def test_translate_cv2_order_0_uint_int(self):
+        aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
+                         backend="cv2")
+
+        dtypes = ["uint8", "uint16", "int8", "int16", "int32"]
         for dtype in dtypes:
             min_value, center_value, max_value = \
                 iadt.get_value_range_of_dtype(dtype)
@@ -1483,14 +2226,20 @@ def test_Affine():
                           int(0.5 * max_value), max_value - 100, max_value]
 
             for value in values:
-                image = np.zeros((17, 17), dtype=dtype)
-                image[2:15, 5:13] = value
-                image_aug = aug.augment_image(image)
-                image_exp = aug_flip.augment_image(image)
-                assert image_aug.dtype.name == dtype
-                assert (np.sum(image_aug == image_exp) / image.size) > 0.9
+                with self.subTest(dtype=dtype, value=value):
+                    image = np.zeros((3, 3), dtype=dtype)
+                    image[1, 1] = value
 
-        # float
+                    image_aug = aug.augment_image(image)
+
+                    assert image_aug.dtype.name == dtype
+                    assert np.all(image_aug[~self.translate_mask] == 0)
+                    assert np.all(image_aug[self.translate_mask] == value)
+
+    def test_translate_cv2_order_0_float(self):
+        aug = iaa.Affine(translate_px={"x": 1}, order=0, mode="constant",
+                         backend="cv2")
+
         dtypes = ["float16", "float32", "float64"]
         for dtype in dtypes:
             min_value, center_value, max_value = \
@@ -1506,17 +2255,104 @@ def test_Affine():
             values = values + [(-1) * value for value in values]
             values = values + [min_value, max_value]
             for value in values:
-                image = np.zeros((17, 17), dtype=dtype)
-                image[2:15, 5:13] = value
-                image_aug = aug.augment_image(image)
-                image_exp = aug_flip.augment_image(image)
-                assert image_aug.dtype.name == dtype
-                assert (
-                    np.sum(_isclose(image_aug, image_exp)) / image.size
-                ) > 0.9
+                with self.subTest(dtype=dtype, value=value):
+                    image = np.zeros((3, 3), dtype=dtype)
+                    image[1, 1] = value
+
+                    image_aug = aug.augment_image(image)
+
+                    assert image_aug.dtype.name == dtype
+                    assert np.all(_isclose(image_aug[~self.translate_mask], 0))
+                    assert np.all(_isclose(image_aug[self.translate_mask],
+                                           np.float128(value)))
+
+    def test_rotate_cv2_order_1_and_3_bool(self):
+        # cv2, order=1 and rotate=180
+        for order in [1, 3]:
+            aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                             backend="cv2")
+            aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+
+            image = np.zeros((17, 17), dtype=bool)
+            image[2:15, 5:13] = True
+
+            image_aug = aug.augment_image(image)
+            image_exp = aug_flip.augment_image(image)
+
+            assert image_aug.dtype.name == image.dtype.name
+            assert (np.sum(image_aug == image_exp) / image.size) > 0.9
+
+    def test_rotate_cv2_order_1_and_3_uint_int(self):
+        # cv2, order=1 and rotate=180
+        for order in [1, 3]:
+            aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                             backend="cv2")
+            aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+
+            dtypes = ["uint8", "uint16", "int8", "int16"]
+            for dtype in dtypes:
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+
+                if np.dtype(dtype).kind == "i":
+                    values = [1, 5, 10, 100, int(0.1 * max_value),
+                              int(0.2 * max_value), int(0.5 * max_value),
+                              max_value - 100, max_value]
+                    values = values + [(-1) * value for value in values]
+                else:
+                    values = [1, 5, 10, 100, int(center_value),
+                              int(0.1 * max_value), int(0.2 * max_value),
+                              int(0.5 * max_value), max_value - 100, max_value]
+
+                for value in values:
+                    with self.subTest(order=order, dtype=dtype, value=value):
+                        image = np.zeros((17, 17), dtype=dtype)
+                        image[2:15, 5:13] = value
+
+                        image_aug = aug.augment_image(image)
+                        image_exp = aug_flip.augment_image(image)
+
+                        assert image_aug.dtype.name == dtype
+                        assert (
+                            np.sum(image_aug == image_exp) / image.size
+                        ) > 0.9
+
+    def test_rotate_cv2_order_1_and_3_float(self):
+        # cv2, order=1 and rotate=180
+        for order in [1, 3]:
+            aug = iaa.Affine(rotate=180, order=order, mode="constant",
+                             backend="cv2")
+            aug_flip = iaa.Sequential([iaa.Flipud(1.0), iaa.Fliplr(1.0)])
+
+            dtypes = ["float16", "float32", "float64"]
+            for dtype in dtypes:
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+
+                def _isclose(a, b):
+                    atol = 1e-4 if dtype == "float16" else 1e-8
+                    return np.isclose(a, b, atol=atol, rtol=0)
+
+                isize = np.dtype(dtype).itemsize
+                values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
+                          1000 ** (isize - 1)]
+                values = values + [(-1) * value for value in values]
+                values = values + [min_value, max_value]
+                for value in values:
+                    with self.subTest(order=order, dtype=dtype, value=value):
+                        image = np.zeros((17, 17), dtype=dtype)
+                        image[2:15, 5:13] = value
+
+                        image_aug = aug.augment_image(image)
+                        image_exp = aug_flip.augment_image(image)
+
+                        assert image_aug.dtype.name == dtype
+                        assert (
+                            np.sum(_isclose(image_aug, image_exp)) / image.size
+                        ) > 0.9
 
 
-class TestAffine(unittest.TestCase):
+class TestAffine_other(unittest.TestCase):
     def test_unusual_channel_numbers(self):
         nb_channels_lst = [4, 5]
         orders = [0, 1, 3]
@@ -1548,6 +2384,7 @@ class TestAffine(unittest.TestCase):
                                    atol=0.025)
 
 
+# TODO migrate to unittest and split up tests or remove AffineCv2
 def test_AffineCv2():
     reseed()
 
@@ -2442,6 +3279,7 @@ def test_AffineCv2():
     assert params[6].value == "constant"  # mode
 
 
+# TODO migrate to unittest and split up tests
 def test_PiecewiseAffine():
     reseed()
 
@@ -3215,6 +4053,7 @@ def test_PiecewiseAffine():
             assert np.any(_isclose(image_aug[~mask], np.float128(value)))
 
 
+# TODO migrate to unittest and split up tests
 def test_PerspectiveTransform():
     reseed()
 
@@ -3768,6 +4607,7 @@ def test_PerspectiveTransform():
             ) > 0.7
 
 
+# TODO migrate to unittest and split up tests
 def test_ElasticTransformation():
     reseed()
 
@@ -4570,6 +5410,7 @@ def test_ElasticTransformation():
                     ))
 
 
+# TODO migrate to unittest and split up tests
 def test_Rot90():
     img = np.arange(4*4*3).reshape((4, 4, 3)).astype(np.uint8)
     hms = HeatmapsOnImage(img[..., 0:1].astype(np.float32) / 255,
