@@ -2873,6 +2873,8 @@ class PerspectiveTransform(meta.Augmenter):
             points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
             points = np.mod(np.abs(points), 1)
 
+            # FIXME why are these all 1.0-jitter instead of some being just
+            #       +jitter?
             # top left
             points[0, 1] = 1.0 - points[0, 1]  # h = 1.0 - jitter
 
@@ -2894,6 +2896,7 @@ class PerspectiveTransform(meta.Augmenter):
             points = self._order_points(points)
             (tl, tr, br, bl) = points
 
+            # TODO remove these loops
             # compute the width of the new image, which will be the
             # maximum distance between bottom-right and bottom-left
             # x-coordiates or the top-right and top-left x-coordinates
@@ -2914,8 +2917,8 @@ class PerspectiveTransform(meta.Augmenter):
             # y-coordinates or the top-left and bottom-left y-coordinates
             min_height = None
             while min_height is None or min_height < self.min_height:
-                height_a = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]- br[1])**2))
-                height_b = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]- bl[1])**2))
+                height_a = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]-br[1])**2))
+                height_b = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]-bl[1])**2))
                 max_height = max(int(height_a), int(height_b))
                 min_height = min(int(height_a), int(height_b))
                 if min_height < self.min_height:
