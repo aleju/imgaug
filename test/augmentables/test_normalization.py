@@ -1,7 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import time
-import warnings
 import sys
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
@@ -24,14 +22,7 @@ import imgaug.augmentables.normalization as normalization
 from imgaug.testutils import reseed
 
 
-def main():
-    time_start = time.time()
-
-    # test_Batch()
-
-    time_end = time.time()
-    print("<%s> Finished without errors in %.4fs." % (__file__, time_end - time_start,))
-
+# TODO split up tests here
 
 class TestNormalization(unittest.TestCase):
     def setUp(self):

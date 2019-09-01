@@ -38,7 +38,8 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         assert colorizer.color_false.b.value == 255
 
     def test___init___deterministic_settinga(self):
-        colorizer = iaa.RandomColorsBinaryImageColorizer(color_true=1, color_false=2)
+        colorizer = iaa.RandomColorsBinaryImageColorizer(color_true=1,
+                                                         color_false=2)
         assert isinstance(colorizer.color_true, iap.Deterministic)
         assert isinstance(colorizer.color_false, iap.Deterministic)
         assert colorizer.color_true.value == 1
@@ -397,7 +398,9 @@ class TestCanny(unittest.TestCase):
         ], dtype=bool)
 
         image_aug_expected = np.copy(image)
-        image_aug_expected[image_canny] = int(0.299*254 + 0.587*254 + 0.114*254)
+        image_aug_expected[image_canny] = int(0.299*254
+                                              + 0.587*254
+                                              + 0.114*254)
         image_aug_expected[~image_canny] = int(0.299*1 + 0.587*1 + 0.114*1)
 
         image_aug = aug.augment_image(image)

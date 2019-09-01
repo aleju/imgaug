@@ -270,7 +270,9 @@ class TestConvolve(unittest.TestCase):
             expected[1, 1] = int(np.round(100 * 0.5))
             expected[2, 1] = int(np.round(100 * 0.5 + 100 * 0.5))
 
-            diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+            diff = np.abs(
+                image_aug.astype(np.int64)
+                - expected.astype(np.int64))
             assert image_aug.dtype.type == dtype
             assert np.max(diff) <= 2
 
@@ -322,7 +324,9 @@ class TestConvolve(unittest.TestCase):
             expected[1, 1] = int(np.round(value * 0.5))
             expected[2, 1] = int(np.round(value * 0.5 + value * 0.5))
 
-            diff = np.abs(image_aug.astype(np.int64) - expected.astype(np.int64))
+            diff = np.abs(
+                image_aug.astype(np.int64)
+                - expected.astype(np.int64))
             assert image_aug.dtype.type == dtype
             assert np.max(diff) <= 2
 
@@ -503,20 +507,38 @@ class TestSharpen(unittest.TestCase):
             got_exception = True
         assert got_exception
 
-    # this part doesnt really work so far due to nonlinearities resulting from clipping to uint8
+    # this part doesnt really work so far due to nonlinearities resulting
+    # from clipping to uint8
     """
     # alpha range
     aug = iaa.Sharpen(alpha=(0.0, 1.0), lightness=1)
     base_img = np.copy(base_img)
-    base_img_sharpened_min = _compute_sharpened_base_img(0.0*1, 1.0 * m_noop + 0.0 * m)
-    base_img_sharpened_max = _compute_sharpened_base_img(1.0*1, 0.0 * m_noop + 1.0 * m)
-    #distance_max = np.average(np.abs(base_img_sharpened.astype(np.float32) - base_img.astype(np.float32)))
-    distance_max = np.average(np.abs(base_img_sharpened_max - base_img_sharpened_min))
+    base_img_sharpened_min = _compute_sharpened_base_img(
+        0.0*1, 1.0 * m_noop + 0.0 * m)
+    base_img_sharpened_max = _compute_sharpened_base_img(
+        1.0*1, 0.0 * m_noop + 1.0 * m)
+    #distance_max = np.average(
+        np.abs(
+            base_img_sharpened.astype(np.float32)
+            - base_img.astype(np.float32)
+        )
+    )
+    distance_max = np.average(
+        np.abs(
+            base_img_sharpened_max
+            - base_img_sharpened_min
+        )
+    )
     nb_iterations = 250
     distances = []
     for _ in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
-        distance = np.average(np.abs(observed.astype(np.float32) - base_img_sharpened_max.astype(np.float32))) / distance_max
+        distance = np.average(
+            np.abs(
+                observed.astype(np.float32)
+                - base_img_sharpened_max.astype(np.float32)
+            )
+        ) / distance_max
         distances.append(distance)
 
     print(distances)
@@ -526,23 +548,37 @@ class TestSharpen(unittest.TestCase):
     assert 0.9 < max(distances) < 1.0 + 1e-4
 
     nb_bins = 5
-    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=False)
+    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0),
+                           density=False)
     density_expected = 1.0/nb_bins
     density_tolerance = 0.05
     for nb_samples in hist:
         density = nb_samples / nb_iterations
-        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+        assert (
+            density_expected - density_tolerance
+            < density
+            < density_expected + density_tolerance)
 
     # lightness range
     aug = iaa.Sharpen(alpha=1.0, lightness=(0.5, 2.0))
     base_img = np.copy(base_img)
     base_img_sharpened = _compute_sharpened_base_img(1.0*2.0, m)
-    distance_max = np.average(np.abs(base_img_sharpened.astype(np.int32) - base_img.astype(np.int32)))
+    distance_max = np.average(
+        np.abs(
+            base_img_sharpened.astype(np.int32)
+            - base_img.astype(np.int32)
+        )
+    )
     nb_iterations = 250
     distances = []
     for _ in sm.xrange(nb_iterations):
         observed = aug.augment_image(base_img)
-        distance = np.average(np.abs(observed.astype(np.int32) - base_img.astype(np.int32))) / distance_max
+        distance = np.average(
+            np.abs(
+                observed.astype(np.int32)
+                - base_img.astype(np.int32)
+            )
+        ) / distance_max
         distances.append(distance)
 
     assert 0 - 1e-4 < min(distances) < 0.1
@@ -550,12 +586,16 @@ class TestSharpen(unittest.TestCase):
     assert 0.9 < max(distances) < 1.0 + 1e-4
 
     nb_bins = 5
-    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0), density=False)
+    hist, _ = np.histogram(distances, bins=nb_bins, range=(0.0, 1.0),
+                           density=False)
     density_expected = 1.0/nb_bins
     density_tolerance = 0.05
     for nb_samples in hist:
         density = nb_samples / nb_iterations
-        assert density_expected - density_tolerance < density < density_expected + density_tolerance
+        assert (
+            density_expected - density_tolerance
+            < density
+            < density_expected + density_tolerance)
     """
 
 
