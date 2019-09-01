@@ -5740,443 +5740,753 @@ def test_ElasticTransformation():
                     ))
 
 
-# TODO migrate to unittest and split up tests
-def test_Rot90():
-    img = np.arange(4*4*3).reshape((4, 4, 3)).astype(np.uint8)
-    hms = HeatmapsOnImage(img[..., 0:1].astype(np.float32) / 255,
-                          shape=(4, 4, 3))
-    hms_smaller = HeatmapsOnImage(
-        np.float32([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]), shape=(4, 8, 3))
-    segmaps = SegmentationMapsOnImage(
-        img[..., 0:1].astype(np.int32), shape=(4, 4, 3))
-    segmaps_smaller = SegmentationMapsOnImage(
-        np.int32([[0, 1, 2], [3, 4, 5]]), shape=(4, 8, 3))
-    kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=3)]
-    kpsoi = ia.KeypointsOnImage(kps, shape=(4, 8, 3))
-    psoi = ia.PolygonsOnImage(
-        [ia.Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])],
-        shape=(4, 8, 3)
-    )
+class _TwoValueParam(iap.StochasticParameter):
+    def __init__(self, v1, v2):
+        super(_TwoValueParam, self).__init__()
+        self.v1 = v1
+        self.v2 = v2
 
-    # set this to -1 when using integer-based KP rotation instead of
-    # subpixel/float-based rotation
-    kp_offset = 0
+    def _draw_samples(self, size, random_state):
+        arr = np.full(size, self.v1, dtype=np.int32)
+        arr[1::2] = self.v2
+        return arr
 
-    # k=0, k=4
-    for k in [0, 4]:
-        aug = iaa.Rot90(k, keep_size=False)
+
+class TestRot90(unittest.TestCase):
+    @property
+    def kp_offset(self):
+        # set this to -1 when using integer-based KP rotation instead of
+        # subpixel/float-based rotation
+        return 0
+
+    @property
+    def image(self):
+        return np.arange(4*4*3).reshape((4, 4, 3)).astype(np.uint8)
+
+    @property
+    def heatmaps(self):
+        return HeatmapsOnImage(self.image[..., 0:1].astype(np.float32) / 255,
+                               shape=(4, 4, 3))
+
+    @property
+    def heatmaps_smaller(self):
+        return HeatmapsOnImage(
+            np.float32([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]), shape=(4, 8, 3))
+
+    @property
+    def segmaps(self):
+        return SegmentationMapsOnImage(
+            self.image[..., 0:1].astype(np.int32), shape=(4, 4, 3))
+
+    @property
+    def segmaps_smaller(self):
+        return SegmentationMapsOnImage(
+            np.int32([[0, 1, 2], [3, 4, 5]]), shape=(4, 8, 3))
+
+    @property
+    def kpsoi(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=2, y=3)]
+        return ia.KeypointsOnImage(kps, shape=(4, 8, 3))
+
+    @property
+    def psoi(self):
+        return ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (3, 1), (3, 3), (1, 3)])],
+            shape=(4, 8, 3)
+        )
+
+    @property
+    def kpsoi_k1(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_kps = [(4-2+kp_offset, 1),
+                           (4-3+kp_offset, 2)]
+        kps = [ia.Keypoint(x, y) for x, y in expected_k1_kps]
+        return ia.KeypointsOnImage(kps, shape=(8, 4, 3))
+
+    @property
+    def kpsoi_k2(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_kps = self.kpsoi_k1.to_xy_array()
+        expected_k2_kps = [
+            (8-expected_k1_kps[0][1]+kp_offset, expected_k1_kps[0][0]),
+            (8-expected_k1_kps[1][1]+kp_offset, expected_k1_kps[1][0])]
+        kps = [ia.Keypoint(x, y) for x, y in expected_k2_kps]
+        return ia.KeypointsOnImage(kps, shape=(4, 8, 3))
+
+    @property
+    def kpsoi_k3(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k2_kps = self.kpsoi_k2.to_xy_array()
+        expected_k3_kps = [
+            (4-expected_k2_kps[0][1]+kp_offset, expected_k2_kps[0][0]),
+            (4-expected_k2_kps[1][1]+kp_offset, expected_k2_kps[1][0])]
+        kps = [ia.Keypoint(x, y) for x, y in expected_k3_kps]
+        return ia.KeypointsOnImage(kps, shape=(8, 4, 3))
+
+    @property
+    def psoi_k1(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_polys = [(4-1+kp_offset, 1),
+                             (4-1+kp_offset, 3),
+                             (4-3+kp_offset, 3),
+                             (4-3+kp_offset, 1)]
+        return ia.PolygonsOnImage([ia.Polygon(expected_k1_polys)],
+                                  shape=(8, 4, 3))
+
+    @property
+    def psoi_k2(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_polys = self.psoi_k1.polygons[0].exterior
+        expected_k2_polys = [
+            (8-expected_k1_polys[0][1]+kp_offset, expected_k1_polys[0][0]),
+            (8-expected_k1_polys[1][1]+kp_offset, expected_k1_polys[1][0]),
+            (8-expected_k1_polys[2][1]+kp_offset, expected_k1_polys[2][0]),
+            (8-expected_k1_polys[3][1]+kp_offset, expected_k1_polys[3][0])]
+        return ia.PolygonsOnImage([ia.Polygon(expected_k2_polys)],
+                                  shape=(8, 4, 3))
+
+    @property
+    def psoi_k3(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k2_polys = self.psoi_k2.polygons[0].exterior
+        expected_k3_polys = [
+            (4-expected_k2_polys[0][1]+kp_offset, expected_k2_polys[0][0]),
+            (4-expected_k2_polys[1][1]+kp_offset, expected_k2_polys[1][0]),
+            (4-expected_k2_polys[2][1]+kp_offset, expected_k2_polys[2][0]),
+            (4-expected_k2_polys[3][1]+kp_offset, expected_k2_polys[3][0])]
+        return ia.PolygonsOnImage([ia.Polygon(expected_k3_polys)],
+                                  shape=(4, 8, 3))
+
+    def test___init___k_is_list(self):
+        aug = iaa.Rot90([1, 3])
+        assert isinstance(aug.k, iap.Choice)
+        assert len(aug.k.a) == 2
+        assert aug.k.a[0] == 1
+        assert aug.k.a[1] == 3
+
+    def test_images_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                img_aug = aug.augment_image(self.image)
+
+                assert img_aug.dtype.name == "uint8"
+                assert np.array_equal(img_aug, self.image)
+
+    def test_heatmaps_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                hms_aug = aug.augment_heatmaps([self.heatmaps])[0]
+
+                assert (hms_aug.arr_0to1.dtype.name
+                        == self.heatmaps.arr_0to1.dtype.name)
+                assert np.allclose(hms_aug.arr_0to1, self.heatmaps.arr_0to1)
+                assert hms_aug.shape == self.heatmaps.shape
+
+    def test_segmaps_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                segmaps_aug = aug.augment_segmentation_maps(
+                    [self.segmaps]
+                )[0]
+
+                assert (
+                    segmaps_aug.arr.dtype.name
+                    == self.segmaps.arr.dtype.name)
+                assert np.allclose(segmaps_aug.arr, self.segmaps.arr)
+                assert segmaps_aug.shape == self.segmaps.shape
+
+    def test_keypoints_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
+
+                assert kpsoi_aug.shape == self.kpsoi.shape
+                gen = zip(kpsoi_aug.keypoints, self.kpsoi.keypoints)
+                for kp_aug, kp in gen:
+                    assert np.allclose([kp_aug.x, kp_aug.y], [kp.x, kp.y])
+
+    def test_polygons_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                psoi_aug = aug.augment_polygons(self.psoi)
+
+                assert psoi_aug.shape == self.psoi.shape
+                assert len(psoi_aug.polygons) == 1
+                assert psoi_aug.polygons[0].is_valid
+                gen = zip(psoi_aug.polygons, self.psoi.polygons)
+                for poly_aug, poly in gen:
+                    assert np.allclose(poly_aug.exterior, poly.exterior)
+
+    def test_images_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                img_aug = aug.augment_image(self.image)
+
+                assert img_aug.dtype.name == "uint8"
+                assert np.array_equal(img_aug,
+                                      np.rot90(self.image, 1, axes=(1, 0)))
+
+    def test_heatmaps_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                hms_aug = aug.augment_heatmaps([self.heatmaps])[0]
+
+                assert (hms_aug.arr_0to1.dtype.name
+                        == self.heatmaps.arr_0to1.dtype.name)
+                assert np.allclose(
+                    hms_aug.arr_0to1,
+                    np.rot90(self.heatmaps.arr_0to1, 1, axes=(1, 0)))
+                assert hms_aug.shape == (4, 4, 3)
+
+    def test_heatmaps_smaller_than_image_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                hms_smaller_aug = aug.augment_heatmaps(
+                    [self.heatmaps_smaller]
+                )[0]
+
+                assert (
+                    hms_smaller_aug.arr_0to1.dtype.name
+                    == self.heatmaps_smaller.arr_0to1.dtype.name)
+                assert np.allclose(
+                    hms_smaller_aug.arr_0to1,
+                    np.rot90(self.heatmaps_smaller.arr_0to1, 1, axes=(1, 0)))
+                assert hms_smaller_aug.shape == (8, 4, 3)
+
+    def test_segmaps_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                segmaps_aug = aug.augment_segmentation_maps(
+                    [self.segmaps]
+                )[0]
+
+                assert (
+                    segmaps_aug.arr.dtype.name
+                    == self.segmaps.arr.dtype.name)
+                assert np.allclose(
+                    segmaps_aug.arr,
+                    np.rot90(self.segmaps.arr, 1, axes=(1, 0)))
+                assert segmaps_aug.shape == (4, 4, 3)
+
+    def test_segmaps_smaller_than_image_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                segmaps_smaller_aug = aug.augment_segmentation_maps(
+                    self.segmaps_smaller)
+
+                assert (
+                    segmaps_smaller_aug.arr.dtype.name
+                    == self.segmaps_smaller.arr.dtype.name)
+                assert np.allclose(
+                    segmaps_smaller_aug.arr,
+                    np.rot90(self.segmaps_smaller.arr, 1, axes=(1, 0)))
+                assert segmaps_smaller_aug.shape == (8, 4, 3)
+
+    def test_keypoints_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
+
+                assert kpsoi_aug.shape == (8, 4, 3)
+                expected_k1_kps = self.kpsoi_k1.to_xy_array()
+                for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k1_kps):
+                    assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    def test_polygons_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                psoi_aug = aug.augment_polygons(self.psoi)
+
+                assert psoi_aug.shape == (8, 4, 3)
+                assert len(psoi_aug.polygons) == 1
+                assert psoi_aug.polygons[0].is_valid
+                expected_k1_poly = self.psoi_k1.polygons[0]
+                assert psoi_aug.polygons[0].exterior_almost_equals(
+                    expected_k1_poly)
+
+    def test_images_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+        img = self.image
 
         img_aug = aug.augment_image(img)
+
         assert img_aug.dtype.name == "uint8"
-        assert np.array_equal(img_aug, img)
+        assert np.array_equal(img_aug, np.rot90(img, 2, axes=(1, 0)))
+
+    def test_heatmaps_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+        hms = self.heatmaps
 
         hms_aug = aug.augment_heatmaps([hms])[0]
+
         assert hms_aug.arr_0to1.dtype.name == hms.arr_0to1.dtype.name
-        assert np.allclose(hms_aug.arr_0to1, hms.arr_0to1)
-        assert hms_aug.shape == hms.shape
+        assert np.allclose(
+            hms_aug.arr_0to1,
+            np.rot90(hms.arr_0to1, 2, axes=(1, 0)))
+        assert hms_aug.shape == (4, 4, 3)
+
+    def test_heatmaps_smaller_than_image_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+        hms_smaller = self.heatmaps_smaller
+
+        hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+
+        assert (hms_smaller_aug.arr_0to1.dtype.name
+                == hms_smaller.arr_0to1.dtype.name)
+        assert np.allclose(
+            hms_smaller_aug.arr_0to1,
+            np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
+        assert hms_smaller_aug.shape == (4, 8, 3)
+
+    def test_segmaps_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+        segmaps = self.segmaps
 
         segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+
         assert segmaps_aug.arr.dtype.name == segmaps.arr.dtype.name
-        assert np.allclose(segmaps_aug.arr, segmaps.arr)
-        assert segmaps_aug.shape == segmaps.shape
+        assert np.allclose(
+            segmaps_aug.arr,
+            np.rot90(segmaps.arr, 2, axes=(1, 0)))
+        assert segmaps_aug.shape == (4, 4, 3)
 
-        kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
-        assert kpsoi_aug.shape == kpsoi.shape
-        for kp_aug, kp in zip(kpsoi_aug.keypoints, kpsoi.keypoints):
-            assert np.allclose([kp_aug.x, kp_aug.y], [kp.x, kp.y])
+    def test_segmaps_smaller_than_image_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+        segmaps_smaller = self.segmaps_smaller
 
-        psoi_aug = aug.augment_polygons(psoi)
-        assert psoi_aug.shape == psoi.shape
+        segmaps_smaller_aug = aug.augment_segmentation_maps(segmaps_smaller)
+
+        assert (segmaps_smaller_aug.arr.dtype.name
+                == segmaps_smaller.arr.dtype.name)
+        assert np.allclose(
+            segmaps_smaller_aug.arr,
+            np.rot90(segmaps_smaller.arr, 2, axes=(1, 0)))
+        assert segmaps_smaller_aug.shape == (4, 8, 3)
+
+    def test_keypoints_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+
+        kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
+
+        assert kpsoi_aug.shape == (4, 8, 3)
+        expected_k2_kps = self.kpsoi_k2.to_xy_array()
+        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k2_kps):
+            assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    def test_polygons_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+
+        psoi_aug = aug.augment_polygons(self.psoi)
+
+        assert psoi_aug.shape == (4, 8, 3)
         assert len(psoi_aug.polygons) == 1
         assert psoi_aug.polygons[0].is_valid
-        for poly_aug, poly in zip(psoi_aug.polygons, psoi.polygons):
-            assert np.allclose(poly_aug.exterior, poly.exterior)
+        expected_k2_poly = self.psoi_k2.polygons[0]
+        assert psoi_aug.polygons[0].exterior_almost_equals(expected_k2_poly)
 
-    # k=1, k=5
-    for k in [1, 5]:
-        aug = iaa.Rot90(k, keep_size=False)
+    def test_images_k_is_3_and_minus1(self):
+        img = self.image
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
 
-        img_aug = aug.augment_image(img)
+                img_aug = aug.augment_image(img)
+
+                assert img_aug.dtype.name == "uint8"
+                assert np.array_equal(img_aug, np.rot90(img, 3, axes=(1, 0)))
+
+    def test_heatmaps_k_is_3_and_minus1(self):
+        hms = self.heatmaps
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                hms_aug = aug.augment_heatmaps([hms])[0]
+
+                assert (hms_aug.arr_0to1.dtype.name
+                        == hms.arr_0to1.dtype.name)
+                assert np.allclose(
+                    hms_aug.arr_0to1,
+                    np.rot90(hms.arr_0to1, 3, axes=(1, 0)))
+                assert hms_aug.shape == (4, 4, 3)
+
+    def test_heatmaps_smaller_than_image_k_is_3_and_minus1(self):
+        hms_smaller = self.heatmaps_smaller
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+
+                assert (hms_smaller_aug.arr_0to1.dtype.name
+                        == hms_smaller.arr_0to1.dtype.name)
+                assert np.allclose(
+                    hms_smaller_aug.arr_0to1,
+                    np.rot90(hms_smaller.arr_0to1, 3, axes=(1, 0)))
+                assert hms_smaller_aug.shape == (8, 4, 3)
+
+    def test_segmaps_k_is_3_and_minus1(self):
+        segmaps = self.segmaps
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+
+                assert (segmaps_aug.arr.dtype.name
+                        == segmaps.arr.dtype.name)
+                assert np.allclose(
+                    segmaps_aug.arr,
+                    np.rot90(segmaps.arr, 3, axes=(1, 0)))
+                assert segmaps_aug.shape == (4, 4, 3)
+
+    def test_segmaps_smaller_than_image_k_is_3_and_minus1(self):
+        segmaps_smaller = self.segmaps_smaller
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                segmaps_smaller_aug = aug.augment_segmentation_maps(
+                    segmaps_smaller)
+
+                assert (segmaps_smaller_aug.arr.dtype.name
+                        == segmaps_smaller.arr.dtype.name)
+                assert np.allclose(
+                    segmaps_smaller_aug.arr,
+                    np.rot90(segmaps_smaller.arr, 3, axes=(1, 0)))
+                assert segmaps_smaller_aug.shape == (8, 4, 3)
+
+    def test_keypoints_k_is_3_and_minus1(self):
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
+
+                assert kpsoi_aug.shape == (8, 4, 3)
+                expected_k3_kps = self.kpsoi_k3.to_xy_array()
+                for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k3_kps):
+                    assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+
+    def test_polygons_k_is_3_and_minus1(self):
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                psoi_aug = aug.augment_polygons(self.psoi)
+
+                assert psoi_aug.shape == (8, 4, 3)
+                assert len(psoi_aug.polygons) == 1
+                assert psoi_aug.polygons[0].is_valid
+                expected_k3_poly = self.psoi_k3.polygons[0]
+                assert psoi_aug.polygons[0].exterior_almost_equals(
+                    expected_k3_poly)
+
+    def test_images_k_is_1_verify_without_using_numpy_rot90(self):
+        # verify once without np.rot90
+        aug = iaa.Rot90(k=1, keep_size=False)
+        image = np.uint8([[1, 0, 0],
+                          [0, 2, 0]])
+
+        img_aug = aug.augment_image(image)
+
+        expected = np.uint8([[0, 1], [2, 0], [0, 0]])
+        assert np.array_equal(img_aug, expected)
+
+    def test_images_k_is_1_keep_size_is_true(self):
+        # keep_size=True, k=1
+        aug = iaa.Rot90(1, keep_size=True)
+        img_nonsquare = np.arange(5*4*3).reshape((5, 4, 3)).astype(np.uint8)
+
+        img_aug = aug.augment_image(img_nonsquare)
+
         assert img_aug.dtype.name == "uint8"
-        assert np.array_equal(img_aug, np.rot90(img, 1, axes=(1, 0)))
+        assert np.array_equal(
+            img_aug,
+            ia.imresize_single_image(
+                np.rot90(img_nonsquare, 1, axes=(1, 0)),
+                (5, 4),
+                interpolation="cubic"
+            )
+        )
+
+    def test_heatmaps_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        hms = self.heatmaps
 
         hms_aug = aug.augment_heatmaps([hms])[0]
+
         assert hms_aug.arr_0to1.dtype.name == hms.arr_0to1.dtype.name
         assert np.allclose(
             hms_aug.arr_0to1,
             np.rot90(hms.arr_0to1, 1, axes=(1, 0)))
         assert hms_aug.shape == (4, 4, 3)
 
-        hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
-        assert (
-            hms_smaller_aug.arr_0to1.dtype.name
-            == hms_smaller.arr_0to1.dtype.name)
-        assert np.allclose(
-            hms_smaller_aug.arr_0to1,
-            np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0)))
-        assert hms_smaller_aug.shape == (8, 4, 3)
-
-        segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
-        assert segmaps_aug.arr.dtype.name == segmaps.arr.dtype.name
-        assert np.allclose(
-            segmaps_aug.arr,
-            np.rot90(segmaps.arr, 1, axes=(1, 0)))
-        assert segmaps_aug.shape == (4, 4, 3)
-
-        segmaps_smaller_aug = aug.augment_segmentation_maps(segmaps_smaller)
-        assert (
-            segmaps_smaller_aug.arr.dtype.name
-            == segmaps_smaller.arr.dtype.name)
-        assert np.allclose(
-            segmaps_smaller_aug.arr,
-            np.rot90(segmaps_smaller.arr, 1, axes=(1, 0)))
-        assert segmaps_smaller_aug.shape == (8, 4, 3)
-
-        kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
-        assert kpsoi_aug.shape == (8, 4, 3)
-        expected_k1_kps = [(4-2+kp_offset, 1),
-                           (4-3+kp_offset, 2)]
-        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k1_kps):
-            assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
-
-        psoi_aug = aug.augment_polygons(psoi)
-        assert psoi_aug.shape == (8, 4, 3)
-        assert len(psoi_aug.polygons) == 1
-        assert psoi_aug.polygons[0].is_valid
-        expected_k1_polys = [(4-1+kp_offset, 1),
-                             (4-1+kp_offset, 3),
-                             (4-3+kp_offset, 3),
-                             (4-3+kp_offset, 1)]
-        assert psoi_aug.polygons[0].exterior_almost_equals(expected_k1_polys)
-
-    # k=2
-    aug = iaa.Rot90(2, keep_size=False)
-
-    img_aug = aug.augment_image(img)
-    assert img_aug.dtype.name == "uint8"
-    assert np.array_equal(img_aug, np.rot90(img, 2, axes=(1, 0)))
-
-    hms_aug = aug.augment_heatmaps([hms])[0]
-    assert hms_aug.arr_0to1.dtype.name == hms.arr_0to1.dtype.name
-    assert np.allclose(
-        hms_aug.arr_0to1,
-        np.rot90(hms.arr_0to1, 2, axes=(1, 0)))
-    assert hms_aug.shape == (4, 4, 3)
-
-    hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
-    assert (hms_smaller_aug.arr_0to1.dtype.name
-            == hms_smaller.arr_0to1.dtype.name)
-    assert np.allclose(
-        hms_smaller_aug.arr_0to1,
-        np.rot90(hms_smaller.arr_0to1, 2, axes=(1, 0)))
-    assert hms_smaller_aug.shape == (4, 8, 3)
-
-    segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
-    assert segmaps_aug.arr.dtype == segmaps.arr.dtype
-    assert np.allclose(
-        segmaps_aug.arr,
-        np.rot90(segmaps.arr, 2, axes=(1, 0)))
-    assert segmaps_aug.shape == (4, 4, 3)
-
-    segmaps_smaller_aug = aug.augment_segmentation_maps(segmaps_smaller)
-    assert (segmaps_smaller_aug.arr.dtype.name
-            == segmaps_smaller.arr.dtype.name)
-    assert np.allclose(
-        segmaps_smaller_aug.arr,
-        np.rot90(segmaps_smaller.arr, 2, axes=(1, 0)))
-    assert segmaps_smaller_aug.shape == (4, 8, 3)
-
-    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
-    assert kpsoi_aug.shape == (4, 8, 3)
-    expected_k2_kps = [
-        (8-expected_k1_kps[0][1]+kp_offset, expected_k1_kps[0][0]),
-        (8-expected_k1_kps[1][1]+kp_offset, expected_k1_kps[1][0])]
-    for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k2_kps):
-        assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
-
-    psoi_aug = aug.augment_polygons(psoi)
-    assert psoi_aug.shape == (4, 8, 3)
-    assert len(psoi_aug.polygons) == 1
-    assert psoi_aug.polygons[0].is_valid
-    expected_k2_polys = [
-        (8-expected_k1_polys[0][1]+kp_offset, expected_k1_polys[0][0]),
-        (8-expected_k1_polys[1][1]+kp_offset, expected_k1_polys[1][0]),
-        (8-expected_k1_polys[2][1]+kp_offset, expected_k1_polys[2][0]),
-        (8-expected_k1_polys[3][1]+kp_offset, expected_k1_polys[3][0])]
-    assert psoi_aug.polygons[0].exterior_almost_equals(expected_k2_polys)
-
-    # k=3, k=-1
-    for k in [3, -1]:
-        aug = iaa.Rot90(k, keep_size=False)
-
-        img_aug = aug.augment_image(img)
-        assert img_aug.dtype.name == "uint8"
-        assert np.array_equal(img_aug, np.rot90(img, 3, axes=(1, 0)))
-
-        hms_aug = aug.augment_heatmaps([hms])[0]
-        assert (hms_aug.arr_0to1.dtype.name
-                == hms.arr_0to1.dtype.name)
-        assert np.allclose(
-            hms_aug.arr_0to1,
-            np.rot90(hms.arr_0to1, 3, axes=(1, 0)))
-        assert hms_aug.shape == (4, 4, 3)
+    def test_heatmaps_smaller_than_image_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        hms_smaller = self.heatmaps_smaller
 
         hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
+
+        hms_smaller_rot = np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0))
+        hms_smaller_rot = np.clip(
+            ia.imresize_single_image(
+                hms_smaller_rot, (2, 3), interpolation="cubic"
+            ),
+            0.0, 1.0)
         assert (hms_smaller_aug.arr_0to1.dtype.name
                 == hms_smaller.arr_0to1.dtype.name)
-        assert np.allclose(
-            hms_smaller_aug.arr_0to1,
-            np.rot90(hms_smaller.arr_0to1, 3, axes=(1, 0)))
-        assert hms_smaller_aug.shape == (8, 4, 3)
+        assert np.allclose(hms_smaller_aug.arr_0to1, hms_smaller_rot)
+        assert hms_smaller_aug.shape == (4, 8, 3)
+
+    def test_segmaps_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        segmaps = self.segmaps
 
         segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
+
         assert (segmaps_aug.arr.dtype.name
                 == segmaps.arr.dtype.name)
-        assert np.allclose(
-            segmaps_aug.arr,
-            np.rot90(segmaps.arr, 3, axes=(1, 0)))
+        assert np.allclose(segmaps_aug.arr,
+                           np.rot90(segmaps.arr, 1, axes=(1, 0)))
         assert segmaps_aug.shape == (4, 4, 3)
 
+    def test_segmaps_smaller_than_image_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        segmaps_smaller = self.segmaps_smaller
+
         segmaps_smaller_aug = aug.augment_segmentation_maps(segmaps_smaller)
+
+        segmaps_smaller_rot = np.rot90(segmaps_smaller.arr, 1, axes=(1, 0))
+        segmaps_smaller_rot = ia.imresize_single_image(
+            segmaps_smaller_rot, (2, 3), interpolation="nearest")
         assert (segmaps_smaller_aug.arr.dtype.name
                 == segmaps_smaller.arr.dtype.name)
-        assert np.allclose(
-            segmaps_smaller_aug.arr,
-            np.rot90(segmaps_smaller.arr, 3, axes=(1, 0)))
-        assert segmaps_smaller_aug.shape == (8, 4, 3)
+        assert np.allclose(segmaps_smaller_aug.arr, segmaps_smaller_rot)
+        assert segmaps_smaller_aug.shape == (4, 8, 3)
+
+    def test_keypoints_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        kp_offset = self.kp_offset
+        kpsoi = self.kpsoi
 
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
-        assert kpsoi_aug.shape == (8, 4, 3)
-        expected_k3_kps = [
-            (4-expected_k2_kps[0][1]+kp_offset, expected_k2_kps[0][0]),
-            (4-expected_k2_kps[1][1]+kp_offset, expected_k2_kps[1][0])]
-        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k3_kps):
+
+        expected = [(4-2+kp_offset, 1), (4-3+kp_offset, 2)]
+        expected = [(8*x/4, 4*y/8) for x, y in expected]
+        assert kpsoi_aug.shape == (4, 8, 3)
+        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
             assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
 
+    def test_polygons_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        psoi = self.psoi
+        kp_offset = self.kp_offset
+
         psoi_aug = aug.augment_polygons(psoi)
-        assert psoi_aug.shape == (8, 4, 3)
+
+        expected = [(4-1+kp_offset, 1), (4-1+kp_offset, 3),
+                    (4-3+kp_offset, 3), (4-3+kp_offset, 1)]
+        expected = [(8*x/4, 4*y/8) for x, y in expected]
+        assert psoi_aug.shape == (4, 8, 3)
         assert len(psoi_aug.polygons) == 1
         assert psoi_aug.polygons[0].is_valid
-        expected_k3_polys = [
-            (4-expected_k2_polys[0][1]+kp_offset, expected_k2_polys[0][0]),
-            (4-expected_k2_polys[1][1]+kp_offset, expected_k2_polys[1][0]),
-            (4-expected_k2_polys[2][1]+kp_offset, expected_k2_polys[2][0]),
-            (4-expected_k2_polys[3][1]+kp_offset, expected_k2_polys[3][0])]
-        assert psoi_aug.polygons[0].exterior_almost_equals(expected_k3_polys)
+        assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
-    # verify once without np.rot90
-    img_aug = iaa.Rot90(k=1, keep_size=False).augment_image(
-        np.uint8([[1, 0, 0],
-                  [0, 2, 0]])
-    )
-    expected = np.uint8([[0, 1], [2, 0], [0, 0]])
-    assert np.array_equal(img_aug, expected)
+    def test_images_k_is_list(self):
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        img = self.image
 
-    # keep_size=True, k=1
-    aug = iaa.Rot90(1, keep_size=True)
+        imgs_aug = aug.augment_images([img] * 4)
 
-    img_nonsquare = np.arange(5*4*3).reshape((5, 4, 3)).astype(np.uint8)
-    img_aug = aug.augment_image(img_nonsquare)
-    assert img_aug.dtype.name == "uint8"
-    assert np.array_equal(
-        img_aug,
-        ia.imresize_single_image(
-            np.rot90(img_nonsquare, 1, axes=(1, 0)),
-            (5, 4),
-            interpolation="cubic"
-        )
-    )
+        assert np.array_equal(imgs_aug[0], np.rot90(img, 1, axes=(1, 0)))
+        assert np.array_equal(imgs_aug[1], np.rot90(img, 2, axes=(1, 0)))
+        assert np.array_equal(imgs_aug[2], np.rot90(img, 1, axes=(1, 0)))
+        assert np.array_equal(imgs_aug[3], np.rot90(img, 2, axes=(1, 0)))
 
-    hms_aug = aug.augment_heatmaps([hms])[0]
-    assert hms_aug.arr_0to1.dtype.name == hms.arr_0to1.dtype.name
-    assert np.allclose(
-        hms_aug.arr_0to1,
-        np.rot90(hms.arr_0to1, 1, axes=(1, 0)))
-    assert hms_aug.shape == (4, 4, 3)
+    def test_heatmaps_smaller_than_image_k_is_list(self):
+        def _rot_hm(hm, k):
+            return np.rot90(hm.arr_0to1, k, axes=(1, 0))
 
-    hms_smaller_aug = aug.augment_heatmaps([hms_smaller])[0]
-    assert (hms_smaller_aug.arr_0to1.dtype.name
-            == hms_smaller.arr_0to1.dtype.name)
-    hms_smaller_rot = np.rot90(hms_smaller.arr_0to1, 1, axes=(1, 0))
-    hms_smaller_rot = np.clip(
-        ia.imresize_single_image(
-            hms_smaller_rot, (2, 3), interpolation="cubic"
-        ),
-        0.0, 1.0)
-    assert np.allclose(hms_smaller_aug.arr_0to1, hms_smaller_rot)
-    assert hms_smaller_aug.shape == (4, 8, 3)
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        hms_smaller = self.heatmaps_smaller
 
-    segmaps_aug = aug.augment_segmentation_maps([segmaps])[0]
-    assert (segmaps_aug.arr.dtype.name
-            == segmaps.arr.dtype.name)
-    assert np.allclose(segmaps_aug.arr,
-                       np.rot90(segmaps.arr, 1, axes=(1, 0)))
-    assert segmaps_aug.shape == (4, 4, 3)
+        hms_aug = aug.augment_heatmaps([hms_smaller] * 4)
 
-    segmaps_smaller_aug = aug.augment_segmentation_maps(segmaps_smaller)
-    assert (segmaps_smaller_aug.arr.dtype.name
-            == segmaps_smaller.arr.dtype.name)
-    segmaps_smaller_rot = np.rot90(segmaps_smaller.arr, 1, axes=(1, 0))
-    segmaps_smaller_rot = ia.imresize_single_image(
-        segmaps_smaller_rot, (2, 3), interpolation="nearest")
-    assert np.allclose(segmaps_smaller_aug.arr, segmaps_smaller_rot)
-    assert segmaps_smaller_aug.shape == (4, 8, 3)
+        assert hms_aug[0].shape == (8, 4, 3)
+        assert hms_aug[1].shape == (4, 8, 3)
+        assert hms_aug[2].shape == (8, 4, 3)
+        assert hms_aug[3].shape == (4, 8, 3)
+        assert np.allclose(hms_aug[0].arr_0to1, _rot_hm(hms_smaller, 1))
+        assert np.allclose(hms_aug[1].arr_0to1, _rot_hm(hms_smaller, 2))
+        assert np.allclose(hms_aug[2].arr_0to1, _rot_hm(hms_smaller, 1))
+        assert np.allclose(hms_aug[3].arr_0to1, _rot_hm(hms_smaller, 2))
 
-    kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
-    assert kpsoi_aug.shape == (4, 8, 3)
-    expected = [(4-2+kp_offset, 1), (4-3+kp_offset, 2)]
-    expected = [(8*x/4, 4*y/8) for x, y in expected]
-    for kp_aug, kp in zip(kpsoi_aug.keypoints, expected):
-        assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+    def test_segmaps_smaller_than_image_k_is_list(self):
+        def _rot_sm(segmap, k):
+            return np.rot90(segmap.arr, k, axes=(1, 0))
 
-    psoi_aug = aug.augment_polygons(psoi)
-    assert psoi_aug.shape == (4, 8, 3)
-    assert len(psoi_aug.polygons) == 1
-    assert psoi_aug.polygons[0].is_valid
-    expected = [(4-1+kp_offset, 1), (4-1+kp_offset, 3),
-                (4-3+kp_offset, 3), (4-3+kp_offset, 1)]
-    expected = [(8*x/4, 4*y/8) for x, y in expected]
-    assert psoi_aug.polygons[0].exterior_almost_equals(expected)
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        segmaps_smaller = self.segmaps_smaller
 
-    # test parameter stochasticity
-    aug = iaa.Rot90([1, 3])
-    assert isinstance(aug.k, iap.Choice)
-    assert len(aug.k.a) == 2
-    assert aug.k.a[0] == 1
-    assert aug.k.a[1] == 3
+        segmaps_aug = aug.augment_segmentation_maps([segmaps_smaller] * 4)
 
-    class _TwoValueParam(iap.StochasticParameter):
-        def __init__(self, v1, v2):
-            super(_TwoValueParam, self).__init__()
-            self.v1 = v1
-            self.v2 = v2
+        assert segmaps_aug[0].shape == (8, 4, 3)
+        assert segmaps_aug[1].shape == (4, 8, 3)
+        assert segmaps_aug[2].shape == (8, 4, 3)
+        assert segmaps_aug[3].shape == (4, 8, 3)
+        assert np.allclose(segmaps_aug[0].arr, _rot_sm(segmaps_smaller, 1))
+        assert np.allclose(segmaps_aug[1].arr, _rot_sm(segmaps_smaller, 2))
+        assert np.allclose(segmaps_aug[2].arr, _rot_sm(segmaps_smaller, 1))
+        assert np.allclose(segmaps_aug[3].arr, _rot_sm(segmaps_smaller, 2))
 
-        def _draw_samples(self, size, random_state):
-            arr = np.full(size, self.v1, dtype=np.int32)
-            arr[1::2] = self.v2
-            return arr
+    def test_keypoints_k_is_list(self):
+        def kpxy_aug(kpsoi_aug, i, j):
+            return [
+                kpsoi_aug[i].keypoints[j].x,
+                kpsoi_aug[i].keypoints[j].y
+            ]
 
-    aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
-    imgs_aug = aug.augment_images([img] * 4)
-    assert np.array_equal(imgs_aug[0], np.rot90(img, 1, axes=(1, 0)))
-    assert np.array_equal(imgs_aug[1], np.rot90(img, 2, axes=(1, 0)))
-    assert np.array_equal(imgs_aug[2], np.rot90(img, 1, axes=(1, 0)))
-    assert np.array_equal(imgs_aug[3], np.rot90(img, 2, axes=(1, 0)))
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        kpsoi = self.kpsoi
 
-    def _rot_hm(hm, k):
-        return np.rot90(hm.arr_0to1, k, axes=(1, 0))
+        kpsoi_aug = aug.augment_keypoints([kpsoi] * 4)
 
-    hms_aug = aug.augment_heatmaps([hms_smaller] * 4)
-    assert hms_aug[0].shape == (8, 4, 3)
-    assert hms_aug[1].shape == (4, 8, 3)
-    assert hms_aug[2].shape == (8, 4, 3)
-    assert hms_aug[3].shape == (4, 8, 3)
-    assert np.allclose(hms_aug[0].arr_0to1, _rot_hm(hms_smaller, 1))
-    assert np.allclose(hms_aug[1].arr_0to1, _rot_hm(hms_smaller, 2))
-    assert np.allclose(hms_aug[2].arr_0to1, _rot_hm(hms_smaller, 1))
-    assert np.allclose(hms_aug[3].arr_0to1, _rot_hm(hms_smaller, 2))
+        assert kpsoi_aug[0].shape == (8, 4, 3)
+        assert kpsoi_aug[1].shape == (4, 8, 3)
+        assert kpsoi_aug[2].shape == (8, 4, 3)
+        assert kpsoi_aug[3].shape == (4, 8, 3)
+        expected_k1_kps = self.kpsoi_k1.to_xy_array()
+        expected_k2_kps = self.kpsoi_k2.to_xy_array()
+        assert np.allclose(kpxy_aug(kpsoi_aug, 0, 0), expected_k1_kps[0])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 0, 1), expected_k1_kps[1])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 1, 0), expected_k2_kps[0])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 1, 1), expected_k2_kps[1])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 2, 0), expected_k1_kps[0])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 2, 1), expected_k1_kps[1])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 3, 0), expected_k2_kps[0])
+        assert np.allclose(kpxy_aug(kpsoi_aug, 3, 1), expected_k2_kps[1])
 
-    def _rot_sm(segmap, k):
-        return np.rot90(segmap.arr, k, axes=(1, 0))
+    def test_polygons_k_is_list(self):
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        psoi = self.psoi
 
-    segmaps_aug = aug.augment_segmentation_maps([segmaps_smaller] * 4)
-    assert segmaps_aug[0].shape == (8, 4, 3)
-    assert segmaps_aug[1].shape == (4, 8, 3)
-    assert segmaps_aug[2].shape == (8, 4, 3)
-    assert segmaps_aug[3].shape == (4, 8, 3)
-    assert np.allclose(segmaps_aug[0].arr, _rot_sm(segmaps_smaller, 1))
-    assert np.allclose(segmaps_aug[1].arr, _rot_sm(segmaps_smaller, 2))
-    assert np.allclose(segmaps_aug[2].arr, _rot_sm(segmaps_smaller, 1))
-    assert np.allclose(segmaps_aug[3].arr, _rot_sm(segmaps_smaller, 2))
+        psoi_aug = aug.augment_polygons([psoi] * 4)
 
-    def kpxy_aug(kpsoi_aug, i, j):
-        return [
-            kpsoi_aug[i].keypoints[j].x,
-            kpsoi_aug[i].keypoints[j].y
-        ]
+        assert psoi_aug[0].shape == (8, 4, 3)
+        assert psoi_aug[1].shape == (4, 8, 3)
+        assert psoi_aug[2].shape == (8, 4, 3)
+        assert psoi_aug[3].shape == (4, 8, 3)
+        expected_k1_poly = self.psoi_k1.polygons[0]
+        expected_k2_poly = self.psoi_k2.polygons[0]
+        assert psoi_aug[0].polygons[0].exterior_almost_equals(expected_k1_poly)
+        assert psoi_aug[1].polygons[0].exterior_almost_equals(expected_k2_poly)
+        assert psoi_aug[2].polygons[0].exterior_almost_equals(expected_k1_poly)
+        assert psoi_aug[3].polygons[0].exterior_almost_equals(expected_k2_poly)
 
-    kpsoi_aug = aug.augment_keypoints([kpsoi] * 4)
-    assert kpsoi_aug[0].shape == (8, 4, 3)
-    assert kpsoi_aug[1].shape == (4, 8, 3)
-    assert kpsoi_aug[2].shape == (8, 4, 3)
-    assert kpsoi_aug[3].shape == (4, 8, 3)
-    assert np.allclose(kpxy_aug(kpsoi_aug, 0, 0), expected_k1_kps[0])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 0, 1), expected_k1_kps[1])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 1, 0), expected_k2_kps[0])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 1, 1), expected_k2_kps[1])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 2, 0), expected_k1_kps[0])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 2, 1), expected_k1_kps[1])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 3, 0), expected_k2_kps[0])
-    assert np.allclose(kpxy_aug(kpsoi_aug, 3, 1), expected_k2_kps[1])
+    def test_empty_keypoints(self):
+        aug = iaa.Rot90(k=1, keep_size=False)
+        kpsoi = ia.KeypointsOnImage([], shape=(4, 8, 3))
 
-    psoi_aug = aug.augment_polygons([psoi] * 4)
-    assert psoi_aug[0].shape == (8, 4, 3)
-    assert psoi_aug[1].shape == (4, 8, 3)
-    assert psoi_aug[2].shape == (8, 4, 3)
-    assert psoi_aug[3].shape == (4, 8, 3)
-    assert psoi_aug[0].polygons[0].exterior_almost_equals(expected_k1_polys)
-    assert psoi_aug[1].polygons[0].exterior_almost_equals(expected_k2_polys)
-    assert psoi_aug[2].polygons[0].exterior_almost_equals(expected_k1_polys)
-    assert psoi_aug[3].polygons[0].exterior_almost_equals(expected_k2_polys)
+        kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-    # test empty keypoints
-    aug = iaa.Rot90(k=1, keep_size=False)
-    kpsoi_aug = aug.augment_keypoints(ia.KeypointsOnImage([], shape=(4, 8, 3)))
-    assert len(kpsoi_aug.keypoints) == 0
-    assert kpsoi_aug.shape == (8, 4, 3)
+        assert len(kpsoi_aug.keypoints) == 0
+        assert kpsoi_aug.shape == (8, 4, 3)
 
-    # test empty polygons
-    aug = iaa.Rot90(k=1, keep_size=False)
-    psoi_aug = aug.augment_polygons(ia.PolygonsOnImage([], shape=(4, 8, 3)))
-    assert len(psoi_aug.polygons) == 0
-    assert psoi_aug.shape == (8, 4, 3)
+    def test_empty_polygons(self):
+        aug = iaa.Rot90(k=1, keep_size=False)
+        psoi = ia.PolygonsOnImage([], shape=(4, 8, 3))
 
-    # get_parameters()
-    aug = iaa.Rot90([1, 3], keep_size=False)
-    assert aug.get_parameters()[0] == aug.k
-    assert aug.get_parameters()[1] is False
+        psoi_aug = aug.augment_polygons(psoi)
 
-    ###################
-    # test other dtypes
-    ###################
-    aug = iaa.Rot90(2)
+        assert len(psoi_aug.polygons) == 0
+        assert psoi_aug.shape == (8, 4, 3)
 
-    # bool
-    image = np.zeros((3, 3), dtype=bool)
-    image[0, 0] = True
-    image_aug = aug.augment_image(image)
-    assert image_aug.dtype.name == image.dtype.name
-    assert np.all(image_aug[0, 0] == 0)
-    assert np.all(image_aug[2, 2] == 1)
+    def test_get_parameters(self):
+        aug = iaa.Rot90([1, 3], keep_size=False)
+        assert aug.get_parameters()[0] == aug.k
+        assert aug.get_parameters()[1] is False
 
-    # uint, int
-    dtypes = ["uint8", "uint16", "uint32", "uint64",
-              "int8", "int16", "int32", "int64"]
-    for dtype in dtypes:
-        min_value, center_value, max_value = \
-            iadt.get_value_range_of_dtype(dtype)
+    def test_other_dtypes_bool(self):
+        aug = iaa.Rot90(2)
 
-        image = np.zeros((3, 3), dtype=dtype)
-        image[0, 0] = max_value
+        image = np.zeros((3, 3), dtype=bool)
+        image[0, 0] = True
+
         image_aug = aug.augment_image(image)
-        assert image_aug.dtype.name == dtype
+
+        assert image_aug.dtype.name == image.dtype.name
         assert np.all(image_aug[0, 0] == 0)
-        assert np.all(image_aug[2, 2] == max_value)
+        assert np.all(image_aug[2, 2] == 1)
 
-    # float
-    dtypes = ["float16", "float32", "float64", "float128"]
-    for dtype in dtypes:
-        def _allclose(a, b):
-            atol = 1e-4 if dtype == "float16" else 1e-8
-            return np.allclose(a, b, atol=atol, rtol=0)
+    def test_other_dtypes_uint_int(self):
+        aug = iaa.Rot90(2)
 
-        isize = np.dtype(dtype).itemsize
-        values = [0, 1.0, 10.0, 100.0, 500 ** (isize-1), 1000 ** (isize-1)]
-        values = values + [(-1) * value for value in values]
-        for value in values:
-            image = np.zeros((3, 3), dtype=dtype)
-            image[0, 0] = value
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.name == dtype
-            assert _allclose(image_aug[0, 0], 0)
-            assert _allclose(image_aug[2, 2], np.float128(value))
+        dtypes = ["uint8", "uint16", "uint32", "uint64",
+                  "int8", "int16", "int32", "int64"]
+        for dtype in dtypes:
+            with self.subTest(dtype=dtype):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+
+                image = np.zeros((3, 3), dtype=dtype)
+                image[0, 0] = max_value
+
+                image_aug = aug.augment_image(image)
+
+                assert image_aug.dtype.name == dtype
+                assert np.all(image_aug[0, 0] == 0)
+                assert np.all(image_aug[2, 2] == max_value)
+
+    def test_other_dtypes_float(self):
+        aug = iaa.Rot90(2)
+
+        dtypes = ["float16", "float32", "float64", "float128"]
+        for dtype in dtypes:
+            def _allclose(a, b):
+                atol = 1e-4 if dtype == "float16" else 1e-8
+                return np.allclose(a, b, atol=atol, rtol=0)
+
+            isize = np.dtype(dtype).itemsize
+            values = [0, 1.0, 10.0, 100.0, 500 ** (isize-1), 1000 ** (isize-1)]
+            values = values + [(-1) * value for value in values]
+            for value in values:
+                with self.subTest(dtype=dtype, value=value):
+                    image = np.zeros((3, 3), dtype=dtype)
+                    image[0, 0] = value
+
+                    image_aug = aug.augment_image(image)
+
+                    assert image_aug.dtype.name == dtype
+                    assert _allclose(image_aug[0, 0], 0)
+                    assert _allclose(image_aug[2, 2], np.float128(value))
