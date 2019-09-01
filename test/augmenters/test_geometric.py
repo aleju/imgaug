@@ -23,7 +23,6 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
-import imgaug.random as iarandom
 from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
@@ -34,7 +33,7 @@ def _assert_same_min_max(observed, actual):
     assert np.isclose(observed.max_value, actual.max_value, rtol=0, atol=1e-6)
 
 
-def _assert_same_shape(cls, observed, actual):
+def _assert_same_shape(observed, actual):
     assert observed.shape == actual.shape
 
 # TODO add more tests for Affine .mode
@@ -1192,7 +1191,7 @@ class TestAffine_translate(unittest.TestCase):
 
         observed = aug.augment_segmentation_maps([self.segmaps])[0]
 
-        self._assert_same_shape(observed, self.segmaps)
+        _assert_same_shape(observed, self.segmaps)
         assert np.array_equal(observed.get_arr(),
                               self.segmaps_1px_right.get_arr())
 
@@ -1202,7 +1201,7 @@ class TestAffine_translate(unittest.TestCase):
 
         observed = aug.augment_segmentation_maps([self.segmaps])[0]
 
-        self._assert_same_shape(observed, self.segmaps)
+        _assert_same_shape(observed, self.segmaps)
         assert np.array_equal(observed.get_arr(),
                               self.segmaps_1px_right.get_arr())
 
@@ -1211,7 +1210,7 @@ class TestAffine_translate(unittest.TestCase):
 
         observed = aug.augment_segmentation_maps([self.segmaps])[0]
 
-        self._assert_same_shape(observed, self.segmaps)
+        _assert_same_shape(observed, self.segmaps)
         assert np.array_equal(observed.get_arr(),
                               self.segmaps_1px_right.get_arr())
 
@@ -4936,808 +4935,960 @@ class TestPerspectiveTransform(unittest.TestCase):
                         np.sum(_isclose(image_aug, expected)) / expected.size
                     ) > 0.7
 
+class _elastic_trans_temp_thresholds(object):
+    def __init__(self, alpha, sigma):
+        self.alpha = alpha
+        self.sigma = sigma
+        self.old_alpha = None
+        self.old_sigma = None
 
-# TODO migrate to unittest and split up tests
-def test_ElasticTransformation():
-    reseed()
+    def __enter__(self):
+        self.old_alpha = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
+        self.old_sigma = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
+        iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = self.alpha
+        iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = self.sigma
 
-    img = np.zeros((50, 50), dtype=np.uint8) + 255
-    img = np.pad(img, ((100, 100), (100, 100)), mode="constant",
-                 constant_values=0)
-    mask = img > 0
-    heatmaps = HeatmapsOnImage((img / 255.0).astype(np.float32),
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = self.old_alpha
+        iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = self.old_sigma
+
+
+# TODO add tests for order
+# TODO improve tests for cval
+# TODO add tests for mode
+class TestElasticTransformation(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def image(self):
+        img = np.zeros((50, 50), dtype=np.uint8) + 255
+        img = np.pad(img, ((100, 100), (100, 100)), mode="constant",
+                     constant_values=0)
+        return img
+
+    @property
+    def mask(self):
+        img = self.image
+        mask = img > 0
+        return mask
+
+    @property
+    def heatmaps(self):
+        img = self.image
+        return HeatmapsOnImage(img.astype(np.float32) / 255.0,
                                shape=img.shape)
-    segmaps = SegmentationMapsOnImage((img > 0).astype(np.int32),
-                                      shape=img.shape)
 
-    img_nonsquare = np.zeros((50, 100), dtype=np.uint8) + 255
-    img_nonsquare = np.pad(
-        img_nonsquare, ((100, 100), (100, 100)), mode="constant",
-        constant_values=0)
-    mask_nonsquare = img_nonsquare > 0
+    @property
+    def segmaps(self):
+        img = self.image
+        return SegmentationMapsOnImage((img > 0).astype(np.int32),
+                                       shape=img.shape)
 
-    # test basic funtionality
-    aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
-    observed = aug.augment_image(img)
-    # assume that some white/255 pixels have been moved away from the
-    # center and replaced by black/0 pixels
-    assert np.sum(observed[mask]) < np.sum(img[mask])
-    # assume that some black/0 pixels have been moved away from the outer
-    # area and replaced by white/255 pixels
-    assert np.sum(observed[~mask]) > np.sum(img[~mask])
+    # -----------
+    # __init__
+    # -----------
+    def test___init___bad_datatype_for_alpha_leads_to_failure(self):
+        # test alpha having bad datatype
+        got_exception = False
+        try:
+            _ = iaa.ElasticTransformation(alpha=False, sigma=0.25)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
 
-    # test basic funtionality with non-square images
-    aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
-    observed = aug.augment_image(img_nonsquare)
-    assert (
-        np.sum(observed[mask_nonsquare])
-        < np.sum(img_nonsquare[mask_nonsquare]))
-    assert (
-        np.sum(observed[~mask_nonsquare])
-        > np.sum(img_nonsquare[~mask_nonsquare]))
+    def test___init___alpha_is_tuple(self):
+        # test alpha being tuple
+        aug = iaa.ElasticTransformation(alpha=(1.0, 2.0), sigma=0.25)
+        assert isinstance(aug.alpha, iap.Uniform)
+        assert isinstance(aug.alpha.a, iap.Deterministic)
+        assert isinstance(aug.alpha.b, iap.Deterministic)
+        assert 1.0 - 1e-8 < aug.alpha.a.value < 1.0 + 1e-8
+        assert 2.0 - 1e-8 < aug.alpha.b.value < 2.0 + 1e-8
 
-    # test basic funtionality, heatmaps
-    aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
-    observed = aug.augment_heatmaps([heatmaps])[0]
-    assert observed.shape == heatmaps.shape
-    assert np.isclose(observed.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert (
-        np.sum(observed.get_arr()[mask])
-        < np.sum(heatmaps.get_arr()[mask]))
-    assert (
-        np.sum(observed.get_arr()[~mask])
-        > np.sum(heatmaps.get_arr()[~mask]))
+    def test___init___sigma_is_tuple(self):
+        # test sigma being tuple
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=(1.0, 2.0))
+        assert isinstance(aug.sigma, iap.Uniform)
+        assert isinstance(aug.sigma.a, iap.Deterministic)
+        assert isinstance(aug.sigma.b, iap.Deterministic)
+        assert 1.0 - 1e-8 < aug.sigma.a.value < 1.0 + 1e-8
+        assert 2.0 - 1e-8 < aug.sigma.b.value < 2.0 + 1e-8
 
-    # test basic funtionality, segmaps
-    # alpha=1.5 instead of 0.5 as above here, because otherwise nothing
-    # is moved
-    aug = iaa.ElasticTransformation(alpha=1.5, sigma=0.25)
-    observed = aug.augment_segmentation_maps([segmaps])[0]
-    assert observed.shape == segmaps.shape
-    assert (
-        np.sum(observed.get_arr()[mask])
-        < np.sum(segmaps.get_arr()[mask]))
-    assert (
-        np.sum(observed.get_arr()[~mask])
-        > np.sum(segmaps.get_arr()[~mask]))
+    def test___init___bad_datatype_for_sigma_leads_to_failure(self):
+        # test sigma having bad datatype
+        got_exception = False
+        try:
+            _ = iaa.ElasticTransformation(alpha=0.25, sigma=False)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
 
-    # test effects of increased alpha strength
-    aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
-    aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
-    observed1 = aug1.augment_image(img)
-    observed2 = aug2.augment_image(img)
-    # assume that the inner area has become more black-ish when using high
-    # alphas (more white pixels were moved out of the inner area)
-    assert np.sum(observed1[mask]) > np.sum(observed2[mask])
-    # assume that the outer area has become more white-ish when using high
-    # alphas (more black pixels were moved into the inner area)
-    assert np.sum(observed1[~mask]) < np.sum(observed2[~mask])
+    def test___init___order_is_all(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=ia.ALL)
+        assert isinstance(aug.order, iap.Choice)
+        assert all([order in aug.order.a for order in [0, 1, 2, 3, 4, 5]])
 
-    # test effects of increased alpha strength, heatmaps
-    aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
-    aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
-    observed1 = aug1.augment_heatmaps([heatmaps])[0]
-    observed2 = aug2.augment_heatmaps([heatmaps])[0]
-    assert observed1.shape == heatmaps.shape
-    assert observed2.shape == heatmaps.shape
-    assert np.isclose(observed1.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed1.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed2.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed2.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert (
-        np.sum(observed1.get_arr()[mask])
-        > np.sum(observed2.get_arr()[mask]))
-    assert (
-        np.sum(observed1.get_arr()[~mask])
-        < np.sum(observed2.get_arr()[~mask]))
+    def test___init___order_is_int(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=1)
+        assert isinstance(aug.order, iap.Deterministic)
+        assert aug.order.value == 1
 
-    # test effects of increased alpha strength, segmaps
-    aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
-    aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
-    observed1 = aug1.augment_segmentation_maps([segmaps])[0]
-    observed2 = aug2.augment_segmentation_maps([segmaps])[0]
-    assert observed1.shape == segmaps.shape
-    assert observed2.shape == segmaps.shape
-    assert (
-        np.sum(observed1.get_arr()[mask])
-        > np.sum(observed2.get_arr()[mask]))
-    assert (
-        np.sum(observed1.get_arr()[~mask])
-        < np.sum(observed2.get_arr()[~mask]))
+    def test___init___order_is_list(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=[0, 1, 2])
+        assert isinstance(aug.order, iap.Choice)
+        assert all([order in aug.order.a for order in [0, 1, 2]])
 
-    # test effects of increased sigmas
-    aug1 = iaa.ElasticTransformation(alpha=3.0, sigma=0.1)
-    aug2 = iaa.ElasticTransformation(alpha=3.0, sigma=3.0)
-    observed1 = aug1.augment_image(img)
-    observed2 = aug2.augment_image(img)
-    observed1_std_hori = np.std(
-        observed1.astype(np.float32)[:, 1:]
-        - observed1.astype(np.float32)[:, :-1])
-    observed2_std_hori = np.std(
-        observed2.astype(np.float32)[:, 1:]
-        - observed2.astype(np.float32)[:, :-1])
-    observed1_std_vert = np.std(
-        observed1.astype(np.float32)[1:, :]
-        - observed1.astype(np.float32)[:-1, :])
-    observed2_std_vert = np.std(
-        observed2.astype(np.float32)[1:, :]
-        - observed2.astype(np.float32)[:-1, :])
-    observed1_std = (observed1_std_hori + observed1_std_vert) / 2
-    observed2_std = (observed2_std_hori + observed2_std_vert) / 2
-    assert observed1_std > observed2_std
+    def test___init___order_is_stochastic_parameter(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
+                                        order=iap.Choice([0, 1, 2, 3]))
+        assert isinstance(aug.order, iap.Choice)
+        assert all([order in aug.order.a for order in [0, 1, 2, 3]])
 
-    # test alpha being iap.Choice
-    aug = iaa.ElasticTransformation(alpha=iap.Choice([0.001, 5.0]),
-                                    sigma=0.25)
-    seen = [0, 0]
-    for _ in sm.xrange(100):
-        observed = aug.augment_image(img)
-        diff = np.average(
-            np.abs(
-                img.astype(np.float32) - observed.astype(np.float32)
+    def test___init___bad_datatype_for_order_leads_to_failure(self):
+        got_exception = False
+        try:
+            _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=False)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
+
+    def test___init___cval_is_all(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=ia.ALL)
+        assert isinstance(aug.cval, iap.DiscreteUniform)
+        assert isinstance(aug.cval.a, iap.Deterministic)
+        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert aug.cval.a.value == 0
+        assert aug.cval.b.value == 255
+
+    def test___init___cval_is_int(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=128)
+        assert isinstance(aug.cval, iap.Deterministic)
+        assert aug.cval.value == 128
+
+    def test___init___cval_is_list(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
+                                        cval=[16, 32, 64])
+        assert isinstance(aug.cval, iap.Choice)
+        assert all([cval in aug.cval.a for cval in [16, 32, 64]])
+
+    def test___init___cval_is_stochastic_parameter(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
+                                        cval=iap.Choice([16, 32, 64]))
+        assert isinstance(aug.cval, iap.Choice)
+        assert all([cval in aug.cval.a for cval in [16, 32, 64]])
+
+    def test___init___cval_is_tuple(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=(128, 255))
+        assert isinstance(aug.cval, iap.DiscreteUniform)
+        assert isinstance(aug.cval.a, iap.Deterministic)
+        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert aug.cval.a.value == 128
+        assert aug.cval.b.value == 255
+
+    def test___init___bad_datatype_for_cval_leads_to_failure(self):
+        got_exception = False
+        try:
+            _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=False)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
+
+    def test___init___mode_is_all(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=ia.ALL)
+        assert isinstance(aug.mode, iap.Choice)
+        assert all([
+            mode in aug.mode.a
+            for mode
+            in ["constant", "nearest", "reflect", "wrap"]])
+
+    def test___init___mode_is_string(self):
+        aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode="nearest")
+        assert isinstance(aug.mode, iap.Deterministic)
+        assert aug.mode.value == "nearest"
+
+    def test___init___mode_is_list(self):
+        aug = iaa.ElasticTransformation(
+            alpha=0.25, sigma=1.0, mode=["constant", "nearest"])
+        assert isinstance(aug.mode, iap.Choice)
+        assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
+
+    def test___init___mode_is_stochastic_parameter(self):
+        aug = iaa.ElasticTransformation(
+            alpha=0.25, sigma=1.0, mode=iap.Choice(["constant", "nearest"]))
+        assert isinstance(aug.mode, iap.Choice)
+        assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
+
+    def test___init___bad_datatype_for_mode_leads_to_failure(self):
+        got_exception = False
+        try:
+            _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=False)
+        except Exception as exc:
+            assert "Expected " in str(exc)
+            got_exception = True
+        assert got_exception
+
+    # -----------
+    # alpha, sigma
+    # -----------
+    def test_images(self):
+        # test basic funtionality
+        aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+
+        observed = aug.augment_image(self.image)
+
+        mask = self.mask
+        # assume that some white/255 pixels have been moved away from the
+        # center and replaced by black/0 pixels
+        assert np.sum(observed[mask]) < np.sum(self.image[mask])
+        # assume that some black/0 pixels have been moved away from the outer
+        # area and replaced by white/255 pixels
+        assert np.sum(observed[~mask]) > np.sum(self.image[~mask])
+
+    def test_images_nonsquare(self):
+        # test basic funtionality with non-square images
+        aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+        img_nonsquare = np.zeros((50, 100), dtype=np.uint8) + 255
+        img_nonsquare = np.pad(img_nonsquare, ((100, 100), (100, 100)),
+                               mode="constant", constant_values=0)
+        mask_nonsquare = (img_nonsquare > 0)
+
+        observed = aug.augment_image(img_nonsquare)
+
+        assert (
+            np.sum(observed[mask_nonsquare])
+            < np.sum(img_nonsquare[mask_nonsquare]))
+        assert (
+            np.sum(observed[~mask_nonsquare])
+            > np.sum(img_nonsquare[~mask_nonsquare]))
+
+    def test_images_unusual_channel_numbers(self):
+        # test unusual channels numbers
+        aug = iaa.ElasticTransformation(alpha=5, sigma=0.5)
+        for nb_channels in [1, 2, 4, 5, 7, 10, 11]:
+            img_c = np.tile(self.image[..., np.newaxis], (1, 1, nb_channels))
+            assert img_c.shape == (250, 250, nb_channels)
+
+            observed = aug.augment_image(img_c)
+
+            assert observed.shape == (250, 250, nb_channels)
+            for c in sm.xrange(1, nb_channels):
+                assert np.array_equal(observed[..., c], observed[..., 0])
+
+    def test_heatmaps(self):
+        # test basic funtionality, heatmaps
+        aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+        observed = aug.augment_heatmaps([self.heatmaps])[0]
+
+        mask = self.mask
+        assert observed.shape == self.heatmaps.shape
+        _assert_same_min_max(observed, self.heatmaps)
+        assert (
+            np.sum(observed.get_arr()[mask])
+            < np.sum(self.heatmaps.get_arr()[mask]))
+        assert (
+            np.sum(observed.get_arr()[~mask])
+            > np.sum(self.heatmaps.get_arr()[~mask]))
+
+    def test_segmaps(self):
+        # test basic funtionality, segmaps
+        # alpha=1.5 instead of 0.5 as above here, because otherwise nothing
+        # is moved
+        aug = iaa.ElasticTransformation(alpha=1.5, sigma=0.25)
+
+        observed = aug.augment_segmentation_maps([self.segmaps])[0]
+
+        mask = self.mask
+        assert observed.shape == self.segmaps.shape
+        assert (
+            np.sum(observed.get_arr()[mask])
+            < np.sum(self.segmaps.get_arr()[mask]))
+        assert (
+            np.sum(observed.get_arr()[~mask])
+            > np.sum(self.segmaps.get_arr()[~mask]))
+
+    def test_images_weak_vs_strong_alpha(self):
+        # test effects of increased alpha strength
+        aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
+        aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
+
+        observed1 = aug1.augment_image(self.image)
+        observed2 = aug2.augment_image(self.image)
+
+        mask = self.mask
+        # assume that the inner area has become more black-ish when using high
+        # alphas (more white pixels were moved out of the inner area)
+        assert np.sum(observed1[mask]) > np.sum(observed2[mask])
+        # assume that the outer area has become more white-ish when using high
+        # alphas (more black pixels were moved into the inner area)
+        assert np.sum(observed1[~mask]) < np.sum(observed2[~mask])
+
+    def test_heatmaps_weak_vs_strong_alpha(self):
+        # test effects of increased alpha strength, heatmaps
+        aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
+        aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
+
+        observed1 = aug1.augment_heatmaps([self.heatmaps])[0]
+        observed2 = aug2.augment_heatmaps([self.heatmaps])[0]
+
+        mask = self.mask
+        assert observed1.shape == self.heatmaps.shape
+        assert observed2.shape == self.heatmaps.shape
+        _assert_same_min_max(observed1, self.heatmaps)
+        _assert_same_min_max(observed2, self.heatmaps)
+        assert (
+            np.sum(observed1.get_arr()[mask])
+            > np.sum(observed2.get_arr()[mask]))
+        assert (
+            np.sum(observed1.get_arr()[~mask])
+            < np.sum(observed2.get_arr()[~mask]))
+
+    def test_segmaps_weak_vs_strong_alpha(self):
+        # test effects of increased alpha strength, segmaps
+        aug1 = iaa.ElasticTransformation(alpha=0.1, sigma=0.25)
+        aug2 = iaa.ElasticTransformation(alpha=5.0, sigma=0.25)
+
+        observed1 = aug1.augment_segmentation_maps([self.segmaps])[0]
+        observed2 = aug2.augment_segmentation_maps([self.segmaps])[0]
+
+        mask = self.mask
+        assert observed1.shape == self.segmaps.shape
+        assert observed2.shape == self.segmaps.shape
+        assert (
+            np.sum(observed1.get_arr()[mask])
+            > np.sum(observed2.get_arr()[mask]))
+        assert (
+            np.sum(observed1.get_arr()[~mask])
+            < np.sum(observed2.get_arr()[~mask]))
+
+    def test_images_low_vs_high_sigma(self):
+        # test effects of increased sigmas
+        aug1 = iaa.ElasticTransformation(alpha=3.0, sigma=0.1)
+        aug2 = iaa.ElasticTransformation(alpha=3.0, sigma=3.0)
+
+        observed1 = aug1.augment_image(self.image)
+        observed2 = aug2.augment_image(self.image)
+
+        observed1_std_hori = np.std(
+            observed1.astype(np.float32)[:, 1:]
+            - observed1.astype(np.float32)[:, :-1])
+        observed2_std_hori = np.std(
+            observed2.astype(np.float32)[:, 1:]
+            - observed2.astype(np.float32)[:, :-1])
+        observed1_std_vert = np.std(
+            observed1.astype(np.float32)[1:, :]
+            - observed1.astype(np.float32)[:-1, :])
+        observed2_std_vert = np.std(
+            observed2.astype(np.float32)[1:, :]
+            - observed2.astype(np.float32)[:-1, :])
+        observed1_std = (observed1_std_hori + observed1_std_vert) / 2
+        observed2_std = (observed2_std_hori + observed2_std_vert) / 2
+        assert observed1_std > observed2_std
+
+    def test_images_alpha_is_stochastic_parameter(self):
+        # test alpha being iap.Choice
+        aug = iaa.ElasticTransformation(alpha=iap.Choice([0.001, 5.0]),
+                                        sigma=0.25)
+        seen = [0, 0]
+        for _ in sm.xrange(100):
+            observed = aug.augment_image(self.image)
+            diff = np.average(
+                np.abs(
+                    self.image.astype(np.float32)
+                    - observed.astype(np.float32)
+                )
             )
-        )
-        if diff < 1.0:
-            seen[0] += 1
-        else:
-            seen[1] += 1
-    assert seen[0] > 10
-    assert seen[1] > 10
+            if diff < 1.0:
+                seen[0] += 1
+            else:
+                seen[1] += 1
+        assert seen[0] > 10
+        assert seen[1] > 10
 
-    # test alpha being tuple
-    aug = iaa.ElasticTransformation(alpha=(1.0, 2.0), sigma=0.25)
-    assert isinstance(aug.alpha, iap.Uniform)
-    assert isinstance(aug.alpha.a, iap.Deterministic)
-    assert isinstance(aug.alpha.b, iap.Deterministic)
-    assert 1.0 - 1e-8 < aug.alpha.a.value < 1.0 + 1e-8
-    assert 2.0 - 1e-8 < aug.alpha.b.value < 2.0 + 1e-8
+    def test_sigma_is_stochastic_parameter(self):
+        # test sigma being iap.Choice
+        aug = iaa.ElasticTransformation(alpha=3.0,
+                                        sigma=iap.Choice([0.01, 5.0]))
+        seen = [0, 0]
+        for _ in sm.xrange(100):
+            observed = aug.augment_image(self.image)
 
-    # test unusual channels numbers
-    aug = iaa.ElasticTransformation(alpha=5, sigma=0.5)
-    for nb_channels in [1, 2, 4, 5, 7, 10, 11]:
-        img_c = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
-        assert img_c.shape == (250, 250, nb_channels)
+            observed_std_hori = np.std(
+                observed.astype(np.float32)[:, 1:]
+                - observed.astype(np.float32)[:, :-1])
+            observed_std_vert = np.std(
+                observed.astype(np.float32)[1:, :]
+                - observed.astype(np.float32)[:-1, :])
+            observed_std = (observed_std_hori + observed_std_vert) / 2
 
-        observed = aug.augment_image(img_c)
-        assert observed.shape == (250, 250, nb_channels)
-        for c in sm.xrange(1, nb_channels):
-            assert np.array_equal(observed[..., c], observed[..., 0])
+            if observed_std > 10.0:
+                seen[0] += 1
+            else:
+                seen[1] += 1
+        assert seen[0] > 10
+        assert seen[1] > 10
 
-    # test alpha having bad datatype
-    got_exception = False
-    try:
-        _ = iaa.ElasticTransformation(alpha=False, sigma=0.25)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+    # -----------
+    # cval
+    # -----------
+    def test_images_cval_is_int_and_order_is_0(self):
+        aug = iaa.ElasticTransformation(alpha=30.0, sigma=3.0, mode="constant",
+                                        cval=255, order=0)
+        img = np.zeros((100, 100), dtype=np.uint8)
 
-    # test sigma being iap.Choice
-    aug = iaa.ElasticTransformation(alpha=3.0, sigma=iap.Choice([0.01, 5.0]))
-    seen = [0, 0]
-    for _ in sm.xrange(100):
         observed = aug.augment_image(img)
 
-        observed_std_hori = np.std(
-            observed.astype(np.float32)[:, 1:]
-            - observed.astype(np.float32)[:, :-1])
-        observed_std_vert = np.std(
-            observed.astype(np.float32)[1:, :]
-            - observed.astype(np.float32)[:-1, :])
-        observed_std = (observed_std_hori + observed_std_vert) / 2
+        assert np.sum(observed == 255) > 0
+        assert np.sum(np.logical_and(0 < observed, observed < 255)) == 0
 
-        if observed_std > 10.0:
-            seen[0] += 1
-        else:
-            seen[1] += 1
-    assert seen[0] > 10
-    assert seen[1] > 10
+    def test_images_cval_is_int_and_order_is_0_weak_alpha(self):
+        aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant",
+                                        cval=0, order=0)
+        img = np.zeros((100, 100), dtype=np.uint8)
 
-    # test sigma being tuple
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=(1.0, 2.0))
-    assert isinstance(aug.sigma, iap.Uniform)
-    assert isinstance(aug.sigma.a, iap.Deterministic)
-    assert isinstance(aug.sigma.b, iap.Deterministic)
-    assert 1.0 - 1e-8 < aug.sigma.a.value < 1.0 + 1e-8
-    assert 2.0 - 1e-8 < aug.sigma.b.value < 2.0 + 1e-8
+        observed = aug.augment_image(img)
 
-    # test sigma having bad datatype
-    got_exception = False
-    try:
-        _ = iaa.ElasticTransformation(alpha=0.25, sigma=False)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+        assert np.sum(observed == 255) == 0
 
-    # order
-    # no proper tests here, because unclear how to test
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=ia.ALL)
-    assert isinstance(aug.order, iap.Choice)
-    assert all([order in aug.order.a for order in [0, 1, 2, 3, 4, 5]])
+    def test_images_cval_is_int_and_order_is_2(self):
+        aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant",
+                                        cval=255, order=2)
+        img = np.zeros((100, 100), dtype=np.uint8)
 
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=1)
-    assert isinstance(aug.order, iap.Deterministic)
-    assert aug.order.value == 1
+        observed = aug.augment_image(img)
 
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=[0, 1, 2])
-    assert isinstance(aug.order, iap.Choice)
-    assert all([order in aug.order.a for order in [0, 1, 2]])
+        assert np.sum(np.logical_and(0 < observed, observed < 255)) > 0
 
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
-                                    order=iap.Choice([0, 1, 2, 3]))
-    assert isinstance(aug.order, iap.Choice)
-    assert all([order in aug.order.a for order in [0, 1, 2, 3]])
+    def test_heatmaps_ignore_cval(self):
+        # cval with heatmaps
+        heatmaps = HeatmapsOnImage(
+            np.zeros((32, 32, 1), dtype=np.float32), shape=(32, 32, 3))
+        aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0,
+                                        mode="constant", cval=255)
 
-    got_exception = False
-    try:
-        _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=False)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+        observed = aug.augment_heatmaps([heatmaps])[0]
 
-    # cval
-    # few proper tests here, because unclear how to test
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=ia.ALL)
-    assert isinstance(aug.cval, iap.DiscreteUniform)
-    assert isinstance(aug.cval.a, iap.Deterministic)
-    assert isinstance(aug.cval.b, iap.Deterministic)
-    assert aug.cval.a.value == 0
-    assert aug.cval.b.value == 255
+        assert observed.shape == heatmaps.shape
+        _assert_same_min_max(observed, heatmaps)
+        assert np.sum(observed.get_arr() > 0.01) == 0
 
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=128)
-    assert isinstance(aug.cval, iap.Deterministic)
-    assert aug.cval.value == 128
+    def test_segmaps_ignore_cval(self):
+        # cval with segmaps
+        segmaps = SegmentationMapsOnImage(
+            np.zeros((32, 32, 1), dtype=np.int32), shape=(32, 32, 3))
+        aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant",
+                                        cval=255)
 
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=(128, 255))
-    assert isinstance(aug.cval, iap.DiscreteUniform)
-    assert isinstance(aug.cval.a, iap.Deterministic)
-    assert isinstance(aug.cval.b, iap.Deterministic)
-    assert aug.cval.a.value == 128
-    assert aug.cval.b.value == 255
+        observed = aug.augment_segmentation_maps([segmaps])[0]
 
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
-                                    cval=[16, 32, 64])
-    assert isinstance(aug.cval, iap.Choice)
-    assert all([cval in aug.cval.a for cval in [16, 32, 64]])
-
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
-                                    cval=iap.Choice([16, 32, 64]))
-    assert isinstance(aug.cval, iap.Choice)
-    assert all([cval in aug.cval.a for cval in [16, 32, 64]])
-
-    aug = iaa.ElasticTransformation(alpha=30.0, sigma=3.0, mode="constant",
-                                    cval=255, order=0)
-    img = np.zeros((100, 100), dtype=np.uint8)
-    observed = aug.augment_image(img)
-    assert np.sum(observed == 255) > 0
-    assert np.sum(np.logical_and(0 < observed, observed < 255)) == 0
-
-    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant",
-                                    cval=255, order=2)
-    img = np.zeros((100, 100), dtype=np.uint8)
-    observed = aug.augment_image(img)
-    assert np.sum(np.logical_and(0 < observed, observed < 255)) > 0
-
-    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant",
-                                    cval=0, order=0)
-    img = np.zeros((100, 100), dtype=np.uint8)
-    observed = aug.augment_image(img)
-    assert np.sum(observed == 255) == 0
-
-    got_exception = False
-    try:
-        _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=False)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
-
-    # cval with heatmaps
-    heatmaps = HeatmapsOnImage(
-        np.zeros((32, 32, 1), dtype=np.float32), shape=(32, 32, 3))
-    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0,
-                                    mode="constant", cval=255)
-    observed = aug.augment_heatmaps([heatmaps])[0]
-    assert observed.shape == heatmaps.shape
-    assert np.isclose(observed.min_value, heatmaps.min_value, rtol=0, atol=1e-6)
-    assert np.isclose(observed.max_value, heatmaps.max_value, rtol=0, atol=1e-6)
-    assert np.sum(observed.get_arr() > 0.01) == 0
-
-    # cval with segmaps
-    segmaps = SegmentationMapsOnImage(
-        np.zeros((32, 32, 1), dtype=np.int32), shape=(32, 32, 3))
-    aug = iaa.ElasticTransformation(alpha=3.0, sigma=3.0, mode="constant",
-                                    cval=255)
-    observed = aug.augment_segmentation_maps([segmaps])[0]
-    assert observed.shape == segmaps.shape
-    assert np.sum(observed.get_arr() > 0) == 0
-
-    # mode
-    # no proper tests here, because unclear how to test
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=ia.ALL)
-    assert isinstance(aug.mode, iap.Choice)
-    assert all([
-        mode in aug.mode.a
-        for mode
-        in ["constant", "nearest", "reflect", "wrap"]])
-
-    aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode="nearest")
-    assert isinstance(aug.mode, iap.Deterministic)
-    assert aug.mode.value == "nearest"
-
-    aug = iaa.ElasticTransformation(
-        alpha=0.25, sigma=1.0, mode=["constant", "nearest"])
-    assert isinstance(aug.mode, iap.Choice)
-    assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
-
-    aug = iaa.ElasticTransformation(
-        alpha=0.25, sigma=1.0, mode=iap.Choice(["constant", "nearest"]))
-    assert isinstance(aug.mode, iap.Choice)
-    assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
-
-    got_exception = False
-    try:
-        _ = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=False)
-    except Exception as exc:
-        assert "Expected " in str(exc)
-        got_exception = True
-    assert got_exception
+        assert observed.shape == segmaps.shape
+        assert np.sum(observed.get_arr() > 0) == 0
 
     # -----------
     # keypoints
     # -----------
-    # for small alpha, should not move if below threshold
-    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
-    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 1.0
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
-    kps = [
-        ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25),
-        ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4),
-        ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
-        ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8),
-        ia.Keypoint(x=12, y=21), ia.Keypoint(x=3, y=45),
-        ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
-    kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
-    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
-    observed = aug.augment_keypoints([kpsoi])[0]
-    d = kpsoi.to_xy_array() - observed.to_xy_array()
-    d[:, 0] = d[:, 0] ** 2
-    d[:, 1] = d[:, 1] ** 2
-    d = np.sum(d, axis=1)
-    d = np.average(d, axis=0)
-    assert d < 1e-8
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+    def test_keypoints_no_movement_if_alpha_below_threshold(self):
+        # for small alpha, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=1.0, sigma=0.0):
+            kps = [
+                ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25),
+                ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4),
+                ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
+                ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8),
+                ia.Keypoint(x=12, y=21), ia.Keypoint(x=3, y=45),
+                ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
+            kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+    
+            observed = aug.augment_keypoints([kpsoi])[0]
+    
+            d = kpsoi.to_xy_array() - observed.to_xy_array()
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 1e-8
 
-    # for small sigma, should not move if below threshold
-    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
-    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0.0
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 1.0
-    kps = [
-        ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25),
-        ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4),
-        ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
-        ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8),
-        ia.Keypoint(x=12, y=21), ia.Keypoint(x=3, y=45),
-        ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
-    kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
-    aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
-    observed = aug.augment_keypoints([kpsoi])[0]
-    d = kpsoi.to_xy_array() - observed.to_xy_array()
-    d[:, 0] = d[:, 0] ** 2
-    d[:, 1] = d[:, 1] ** 2
-    d = np.sum(d, axis=1)
-    d = np.average(d, axis=0)
-    assert d < 1e-8
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+    def test_keypoints_no_movement_if_sigma_below_threshold(self):
+        # for small sigma, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=1.0):
+            kps = [
+                ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25),
+                ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4),
+                ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
+                ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8),
+                ia.Keypoint(x=12, y=21), ia.Keypoint(x=3, y=45),
+                ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
+            kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
 
-    # for small alpha (at sigma 1.0), should barely move
-    # if thresholds set to zero
-    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
-    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
-    kps = [
-        ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25),
-        ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4),
-        ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
-        ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8),
-        ia.Keypoint(x=12, y=21), ia.Keypoint(x=3, y=45),
-        ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
-    kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
-    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
-    observed = aug.augment_keypoints([kpsoi])[0]
-    d = kpsoi.to_xy_array() - observed.to_xy_array()
-    d[:, 0] = d[:, 0] ** 2
-    d[:, 1] = d[:, 1] ** 2
-    d = np.sum(d, axis=1)
-    d = np.average(d, axis=0)
-    assert d < 0.5
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+            observed = aug.augment_keypoints([kpsoi])[0]
 
-    # test alignment between between images and keypoints
-    image = np.zeros((120, 70), dtype=np.uint8)
-    s = 3
-    image[:, 35-s:35+s+1] = 255
-    kps = [ia.Keypoint(x=35, y=20),
-           ia.Keypoint(x=35, y=40),
-           ia.Keypoint(x=35, y=60),
-           ia.Keypoint(x=35, y=80),
-           ia.Keypoint(x=35, y=100)]
-    kpsoi = ia.KeypointsOnImage(kps, shape=image.shape)
-    aug = iaa.ElasticTransformation(alpha=70, sigma=5)
-    aug_det = aug.to_deterministic()
-    images_aug = aug_det.augment_images([image, image])
-    kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
-    count_bad = 0
-    for image_aug, kpsoi_aug in zip(images_aug, kpsois_aug):
-        assert kpsoi_aug.shape == (120, 70)
-        assert len(kpsoi_aug.keypoints) == 5
-        for kp_aug in kpsoi_aug.keypoints:
-            x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
-            bb = ia.BoundingBox(x1=x-2, x2=x+2+1, y1=y-2, y2=y+2+1)
-            img_ex = bb.extract_from_image(image_aug)
-            if np.any(img_ex > 10):
-                pass  # close to expected location
-            else:
-                count_bad += 1
-    assert count_bad <= 1
+            d = kpsoi.to_xy_array() - observed.to_xy_array()
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 1e-8
 
-    # test empty keypoints
-    aug = iaa.ElasticTransformation(alpha=10, sigma=10)
-    kpsoi_aug = aug.augment_keypoints(
-        ia.KeypointsOnImage([], shape=(10, 10, 3)))
-    assert len(kpsoi_aug.keypoints) == 0
-    assert kpsoi_aug.shape == (10, 10, 3)
+    def test_keypoints_small_movement_for_weak_alpha_if_threshold_zero(self):
+        # for small alpha (at sigma 1.0), should barely move
+        # if thresholds set to zero
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=0.0):
+            kps = [
+                ia.Keypoint(x=1, y=1), ia.Keypoint(x=15, y=25),
+                ia.Keypoint(x=5, y=5), ia.Keypoint(x=7, y=4),
+                ia.Keypoint(x=48, y=5), ia.Keypoint(x=21, y=37),
+                ia.Keypoint(x=32, y=39), ia.Keypoint(x=6, y=8),
+                ia.Keypoint(x=12, y=21), ia.Keypoint(x=3, y=45),
+                ia.Keypoint(x=45, y=3), ia.Keypoint(x=7, y=48)]
+            kpsoi = ia.KeypointsOnImage(kps, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
 
-    # -----------
-    # polygons
-    # -----------
-    # for small alpha, should not move if below threshold
-    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
-    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 1.0
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
-    poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-    psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
-    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
-    observed = aug.augment_polygons(psoi)
-    assert observed.shape == (50, 50)
-    assert len(observed.polygons) == 1
-    assert observed.polygons[0].exterior_almost_equals(poly)
-    assert observed.polygons[0].is_valid
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+            observed = aug.augment_keypoints([kpsoi])[0]
 
-    # for small sigma, should not move if below threshold
-    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
-    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0.0
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 1.0
-    poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-    psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
-    aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
-    observed = aug.augment_polygons(psoi)
-    assert observed.shape == (50, 50)
-    assert len(observed.polygons) == 1
-    assert observed.polygons[0].exterior_almost_equals(poly)
-    assert observed.polygons[0].is_valid
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+            d = kpsoi.to_xy_array() - observed.to_xy_array()
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 0.5
 
-    # for small alpha (at sigma 1.0), should barely move
-    # if thresholds set to zero
-    alpha_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH
-    sigma_thresh_orig = iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = 0
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = 0
-    poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-    psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
-    aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
-    observed = aug.augment_polygons(psoi)
-    assert observed.shape == (50, 50)
-    assert len(observed.polygons) == 1
-    assert observed.polygons[0].exterior_almost_equals(poly, max_distance=0.5)
-    assert observed.polygons[0].is_valid
-    iaa.ElasticTransformation.KEYPOINT_AUG_ALPHA_THRESH = alpha_thresh_orig
-    iaa.ElasticTransformation.KEYPOINT_AUG_SIGMA_THRESH = sigma_thresh_orig
+    def test_image_keypoint_alignment(self):
+        # test alignment between between images and keypoints
+        image = np.zeros((120, 70), dtype=np.uint8)
+        s = 3
+        image[:, 35-s:35+s+1] = 255
+        kps = [ia.Keypoint(x=35, y=20),
+               ia.Keypoint(x=35, y=40),
+               ia.Keypoint(x=35, y=60),
+               ia.Keypoint(x=35, y=80),
+               ia.Keypoint(x=35, y=100)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=image.shape)
+        aug = iaa.ElasticTransformation(alpha=70, sigma=5)
+        aug_det = aug.to_deterministic()
 
-    # test alignment between between images and polygons
-    height_step_size = 50
-    width_step_size = 30
-    height_steps = 2  # don't set >2, otherwise polygon will be broken
-    width_steps = 10
-    height = (2+height_steps) * height_step_size
-    width = (2+width_steps) * width_step_size
-    s = 3
+        images_aug = aug_det.augment_images([image, image])
+        kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
 
-    image = np.zeros((height, width), dtype=np.uint8)
-
-    exterior = []
-    for w in sm.xrange(0, 2+width_steps):
-        if w not in [0, width_steps+2-1]:
-            x = width_step_size * w
-            y = height_step_size
-            exterior.append((x, y))
-            image[y-s:y+s+1, x-s:x+s+1] = 255
-    for w in sm.xrange(2+width_steps-1, 0, -1):
-        if w not in [0, width_steps+2-1]:
-            x = width_step_size * w
-            y = height_step_size*2
-            exterior.append((x, y))
-            image[y-s:y+s+1, x-s:x+s+1] = 255
-
-    poly = ia.Polygon(exterior)
-    psoi = ia.PolygonsOnImage([poly], shape=image.shape)
-    aug = iaa.ElasticTransformation(alpha=100, sigma=7)
-    aug_det = aug.to_deterministic()
-    images_aug = aug_det.augment_images([image, image])
-    psois_aug = aug_det.augment_polygons([psoi, psoi])
-    count_bad = 0
-    for image_aug, psoi_aug in zip(images_aug, psois_aug):
-        assert psoi_aug.shape == image.shape
-        assert len(psoi_aug.polygons) == 1
-        for poly_aug in psoi_aug.polygons:
-            assert poly_aug.is_valid
-            for point_aug in poly_aug.exterior:
-                x, y = point_aug[0], point_aug[1]
-                bb = ia.BoundingBox(x1=x-2, x2=x+2, y1=y-2, y2=y+2)
+        count_bad = 0
+        for image_aug, kpsoi_aug in zip(images_aug, kpsois_aug):
+            assert kpsoi_aug.shape == (120, 70)
+            assert len(kpsoi_aug.keypoints) == 5
+            for kp_aug in kpsoi_aug.keypoints:
+                x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
+                bb = ia.BoundingBox(x1=x-2, x2=x+2+1, y1=y-2, y2=y+2+1)
                 img_ex = bb.extract_from_image(image_aug)
                 if np.any(img_ex > 10):
                     pass  # close to expected location
                 else:
                     count_bad += 1
-    assert count_bad <= 3
+        assert count_bad <= 1
 
-    # test empty polygons
-    aug = iaa.ElasticTransformation(alpha=10, sigma=10)
-    psoi_aug = aug.augment_polygons(
-        ia.PolygonsOnImage([], shape=(10, 10, 3)))
-    assert len(psoi_aug.polygons) == 0
-    assert psoi_aug.shape == (10, 10, 3)
+    def test_empty_keypoints(self):
+        aug = iaa.ElasticTransformation(alpha=10, sigma=10)
+        kpsoi = ia.KeypointsOnImage([], shape=(10, 10, 3))
 
-    # -----------
-    # heatmaps
-    # -----------
-    # test alignment between images and heatmaps
-    img = np.zeros((80, 80), dtype=np.uint8)
-    img[:, 30:50] = 255
-    img[30:50, :] = 255
-    hm = HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
-    aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant",
-                                    cval=0)
-    aug_det = aug.to_deterministic()
-    img_aug = aug_det.augment_image(img)
-    hm_aug = aug_det.augment_heatmaps([hm])[0]
-    assert hm_aug.shape == (80, 80)
-    assert hm_aug.arr_0to1.shape == (80, 80, 1)
-    img_aug_mask = img_aug > 255*0.1
-    hm_aug_mask = hm_aug.arr_0to1 > 0.1
-    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-    assert (same / img_aug_mask.size) >= 0.99
+        kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-    # test alignment between images and heatmaps
-    # here with heatmaps that are smaller than the image
-    img = np.zeros((80, 80), dtype=np.uint8)
-    img[:, 30:50] = 255
-    img[30:50, :] = 255
-    img_small = ia.imresize_single_image(
-        img, (40, 40), interpolation="nearest")
-    hm = HeatmapsOnImage(img_small.astype(np.float32)/255.0, shape=(80, 80))
-    aug = iaa.ElasticTransformation(
-        alpha=60.0, sigma=4.0, mode="constant", cval=0)
-    aug_det = aug.to_deterministic()
-    img_aug = aug_det.augment_image(img)
-    hm_aug = aug_det.augment_heatmaps([hm])[0]
-    assert hm_aug.shape == (80, 80)
-    assert hm_aug.arr_0to1.shape == (40, 40, 1)
-    img_aug_mask = img_aug > 255*0.1
-    hm_aug_mask = ia.imresize_single_image(
-        hm_aug.arr_0to1, (80, 80), interpolation="nearest"
-    ) > 0.1
-    same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-    assert (same / img_aug_mask.size) >= 0.94
+        assert len(kpsoi_aug.keypoints) == 0
+        assert kpsoi_aug.shape == (10, 10, 3)
 
     # -----------
-    # segmaps
+    # polygons
     # -----------
-    # test alignment between images and segmaps
-    img = np.zeros((80, 80), dtype=np.uint8)
-    img[:, 30:50] = 255
-    img[30:50, :] = 255
-    segmaps = SegmentationMapsOnImage(
-        (img > 0).astype(np.int32), shape=(80, 80))
-    aug = iaa.ElasticTransformation(
-        alpha=60.0, sigma=4.0, mode="constant", cval=0, order=0)
-    aug_det = aug.to_deterministic()
-    img_aug = aug_det.augment_image(img)
-    segmaps_aug = aug_det.augment_segmentation_maps([segmaps])[0]
-    assert segmaps_aug.shape == (80, 80)
-    assert segmaps_aug.arr.shape == (80, 80, 1)
-    img_aug_mask = img_aug > 255*0.1
-    segmaps_aug_mask = segmaps_aug.arr > 0
-    same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
-    assert (same / img_aug_mask.size) >= 0.99
+    def test_polygons_no_movement_if_alpha_below_threshold(self):
+        # for small alpha, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=1.0, sigma=0.0):
+            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
+            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
 
-    # test alignment between images and segmaps
-    # here with segmaps that are smaller than the image
-    img = np.zeros((80, 80), dtype=np.uint8)
-    img[:, 30:50] = 255
-    img[30:50, :] = 255
-    img_small = ia.imresize_single_image(
-        img, (40, 40), interpolation="nearest")
-    segmaps = SegmentationMapsOnImage(
-        (img_small > 0).astype(np.int32), shape=(80, 80))
-    aug = iaa.ElasticTransformation(
-        alpha=60.0, sigma=4.0, mode="constant", cval=0, order=0)
-    aug_det = aug.to_deterministic()
-    img_aug = aug_det.augment_image(img)
-    segmaps_aug = aug_det.augment_segmentation_maps([segmaps])[0]
-    assert segmaps_aug.shape == (80, 80)
-    assert segmaps_aug.arr.shape == (40, 40, 1)
-    img_aug_mask = img_aug > 255*0.1
-    segmaps_aug_mask = ia.imresize_single_image(
-        segmaps_aug.arr, (80, 80), interpolation="nearest") > 0
-    same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
-    assert (same / img_aug_mask.size) >= 0.94
+            observed = aug.augment_polygons(psoi)
+
+            assert observed.shape == (50, 50)
+            assert len(observed.polygons) == 1
+            assert observed.polygons[0].exterior_almost_equals(poly)
+            assert observed.polygons[0].is_valid
+
+    def test_polygons_no_movement_if_sigma_below_threshold(self):
+        # for small sigma, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=1.0):
+            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
+            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
+
+            observed = aug.augment_polygons(psoi)
+
+            assert observed.shape == (50, 50)
+            assert len(observed.polygons) == 1
+            assert observed.polygons[0].exterior_almost_equals(poly)
+            assert observed.polygons[0].is_valid
+
+    def test_polygons_small_movement_for_weak_alpha_if_threshold_zero(self):
+        # for small alpha (at sigma 1.0), should barely move
+        # if thresholds set to zero
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=0.0):
+            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
+            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+
+            observed = aug.augment_polygons(psoi)
+
+            assert observed.shape == (50, 50)
+            assert len(observed.polygons) == 1
+            assert observed.polygons[0].exterior_almost_equals(
+                poly, max_distance=0.5)
+            assert observed.polygons[0].is_valid
+
+    def test_image_polygon_alignment(self):
+        # test alignment between between images and polygons
+        height_step_size = 50
+        width_step_size = 30
+        height_steps = 2  # don't set >2, otherwise polygon will be broken
+        width_steps = 10
+        height = (2+height_steps) * height_step_size
+        width = (2+width_steps) * width_step_size
+        s = 3
+
+        image = np.zeros((height, width), dtype=np.uint8)
+
+        exterior = []
+        for w in sm.xrange(0, 2+width_steps):
+            if w not in [0, width_steps+2-1]:
+                x = width_step_size * w
+                y = height_step_size
+                exterior.append((x, y))
+                image[y-s:y+s+1, x-s:x+s+1] = 255
+        for w in sm.xrange(2+width_steps-1, 0, -1):
+            if w not in [0, width_steps+2-1]:
+                x = width_step_size * w
+                y = height_step_size*2
+                exterior.append((x, y))
+                image[y-s:y+s+1, x-s:x+s+1] = 255
+
+        poly = ia.Polygon(exterior)
+        psoi = ia.PolygonsOnImage([poly], shape=image.shape)
+        aug = iaa.ElasticTransformation(alpha=100, sigma=7)
+        aug_det = aug.to_deterministic()
+
+        images_aug = aug_det.augment_images([image, image])
+        psois_aug = aug_det.augment_polygons([psoi, psoi])
+
+        count_bad = 0
+        for image_aug, psoi_aug in zip(images_aug, psois_aug):
+            assert psoi_aug.shape == image.shape
+            assert len(psoi_aug.polygons) == 1
+            for poly_aug in psoi_aug.polygons:
+                assert poly_aug.is_valid
+                for point_aug in poly_aug.exterior:
+                    x, y = point_aug[0], point_aug[1]
+                    bb = ia.BoundingBox(x1=x-2, x2=x+2, y1=y-2, y2=y+2)
+                    img_ex = bb.extract_from_image(image_aug)
+                    if np.any(img_ex > 10):
+                        pass  # close to expected location
+                    else:
+                        count_bad += 1
+        assert count_bad <= 3
+
+    def test_empty_polygons(self):
+        aug = iaa.ElasticTransformation(alpha=10, sigma=10)
+        psoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
+
+        psoi_aug = aug.augment_polygons(psoi)
+
+        assert len(psoi_aug.polygons) == 0
+        assert psoi_aug.shape == (10, 10, 3)
+
+    # -----------
+    # heatmaps alignment
+    # -----------
+    def test_image_heatmaps_alignment(self):
+        # test alignment between images and heatmaps
+        img = np.zeros((80, 80), dtype=np.uint8)
+        img[:, 30:50] = 255
+        img[30:50, :] = 255
+        hm = HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
+        aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant",
+                                        cval=0)
+        aug_det = aug.to_deterministic()
+
+        img_aug = aug_det.augment_image(img)
+        hm_aug = aug_det.augment_heatmaps([hm])[0]
+
+        img_aug_mask = img_aug > 255*0.1
+        hm_aug_mask = hm_aug.arr_0to1 > 0.1
+        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert hm_aug.shape == (80, 80)
+        assert hm_aug.arr_0to1.shape == (80, 80, 1)
+        assert (same / img_aug_mask.size) >= 0.99
+
+    def test_image_heatmaps_alignment_if_heatmaps_smaller_than_image(self):
+        # test alignment between images and heatmaps
+        # here with heatmaps that are smaller than the image
+        img = np.zeros((80, 80), dtype=np.uint8)
+        img[:, 30:50] = 255
+        img[30:50, :] = 255
+        img_small = ia.imresize_single_image(
+            img, (40, 40), interpolation="nearest")
+        hm = HeatmapsOnImage(
+            img_small.astype(np.float32)/255.0,
+            shape=(80, 80))
+        aug = iaa.ElasticTransformation(
+            alpha=60.0, sigma=4.0, mode="constant", cval=0)
+        aug_det = aug.to_deterministic()
+
+        img_aug = aug_det.augment_image(img)
+        hm_aug = aug_det.augment_heatmaps([hm])[0]
+
+        img_aug_mask = img_aug > 255*0.1
+        hm_aug_mask = ia.imresize_single_image(
+            hm_aug.arr_0to1, (80, 80), interpolation="nearest"
+        ) > 0.1
+        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert hm_aug.shape == (80, 80)
+        assert hm_aug.arr_0to1.shape == (40, 40, 1)
+        assert (same / img_aug_mask.size) >= 0.94
+
+    # -----------
+    # segmaps alignment
+    # -----------
+    def test_image_segmaps_alignment(self):
+        # test alignment between images and segmaps
+        img = np.zeros((80, 80), dtype=np.uint8)
+        img[:, 30:50] = 255
+        img[30:50, :] = 255
+        segmaps = SegmentationMapsOnImage(
+            (img > 0).astype(np.int32),
+            shape=(80, 80))
+        aug = iaa.ElasticTransformation(
+            alpha=60.0, sigma=4.0, mode="constant", cval=0, order=0)
+        aug_det = aug.to_deterministic()
+
+        img_aug = aug_det.augment_image(img)
+        segmaps_aug = aug_det.augment_segmentation_maps([segmaps])[0]
+
+        img_aug_mask = img_aug > 255*0.1
+        segmaps_aug_mask = segmaps_aug.arr > 0
+        same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
+        assert segmaps_aug.shape == (80, 80)
+        assert segmaps_aug.arr.shape == (80, 80, 1)
+        assert (same / img_aug_mask.size) >= 0.99
+
+    def test_image_segmaps_alignment_if_heatmaps_smaller_than_image(self):
+        # test alignment between images and segmaps
+        # here with segmaps that are smaller than the image
+        img = np.zeros((80, 80), dtype=np.uint8)
+        img[:, 30:50] = 255
+        img[30:50, :] = 255
+        img_small = ia.imresize_single_image(
+            img, (40, 40), interpolation="nearest")
+        segmaps = SegmentationMapsOnImage(
+            (img_small > 0).astype(np.int32), shape=(80, 80))
+        aug = iaa.ElasticTransformation(
+            alpha=60.0, sigma=4.0, mode="constant", cval=0, order=0)
+        aug_det = aug.to_deterministic()
+
+        img_aug = aug_det.augment_image(img)
+        segmaps_aug = aug_det.augment_segmentation_maps([segmaps])[0]
+
+        img_aug_mask = img_aug > 255*0.1
+        segmaps_aug_mask = ia.imresize_single_image(
+            segmaps_aug.arr, (80, 80), interpolation="nearest") > 0
+        same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
+        assert segmaps_aug.shape == (80, 80)
+        assert segmaps_aug.arr.shape == (40, 40, 1)
+        assert (same / img_aug_mask.size) >= 0.94
 
     # -----------
     # get_parameters
     # -----------
-    aug = iaa.ElasticTransformation(
-        alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")
-    params = aug.get_parameters()
-    assert isinstance(params[0], iap.Deterministic)
-    assert isinstance(params[1], iap.Deterministic)
-    assert isinstance(params[2], iap.Deterministic)
-    assert isinstance(params[3], iap.Deterministic)
-    assert isinstance(params[4], iap.Deterministic)
-    assert 0.25 - 1e-8 < params[0].value < 0.25 + 1e-8
-    assert 1.0 - 1e-8 < params[1].value < 1.0 + 1e-8
-    assert params[2].value == 2
-    assert params[3].value == 10
-    assert params[4].value == "constant"
+    def test_get_parameters(self):
+        aug = iaa.ElasticTransformation(
+            alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")
+        params = aug.get_parameters()
+        assert isinstance(params[0], iap.Deterministic)
+        assert isinstance(params[1], iap.Deterministic)
+        assert isinstance(params[2], iap.Deterministic)
+        assert isinstance(params[3], iap.Deterministic)
+        assert isinstance(params[4], iap.Deterministic)
+        assert 0.25 - 1e-8 < params[0].value < 0.25 + 1e-8
+        assert 1.0 - 1e-8 < params[1].value < 1.0 + 1e-8
+        assert params[2].value == 2
+        assert params[3].value == 10
+        assert params[4].value == "constant"
 
-    ###################
-    # test other dtypes
-    ###################
-    aug = iaa.ElasticTransformation(sigma=0.5, alpha=5, order=0)
-    mask = np.zeros((21, 21), dtype=bool)
-    mask[7:13, 7:13] = True
+    # -----------
+    # other dtypes
+    # -----------
+    def test_other_dtypes_bool(self):
+        aug = iaa.ElasticTransformation(sigma=0.5, alpha=5, order=0)
+        mask = np.zeros((21, 21), dtype=bool)
+        mask[7:13, 7:13] = True
 
-    # bool
-    image = np.zeros((21, 21), dtype=bool)
-    image[mask] = True
-    image_aug = aug.augment_image(image)
-    assert image_aug.dtype.name == image.dtype.name
-    assert not np.all(image_aug == 1)
-    assert np.any(image_aug[~mask] == 1)
-
-    # uint, int
-    dtypes = ["uint8", "uint16", "uint32", "int8", "int16", "int32"]
-    for dtype in dtypes:
-        min_value, center_value, max_value = \
-            iadt.get_value_range_of_dtype(dtype)
-
-        image = np.zeros((21, 21), dtype=dtype)
-        image[7:13, 7:13] = max_value
-        image_aug = aug.augment_image(image)
-        assert image_aug.dtype.name == dtype
-        assert not np.all(image_aug == max_value)
-        assert np.any(image_aug[~mask] == max_value)
-
-    # float
-    for dtype in ["float16", "float32", "float64"]:
-        def _isclose(a, b):
-            atol = 1e-4 if dtype == "float16" else 1e-8
-            return np.isclose(a, b, atol=atol, rtol=0)
-
-        isize = np.dtype(dtype).itemsize
-        values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                  1000 ** (isize - 1)]
-        values = values + [(-1) * value for value in values]
-        for value in values:
-            image = np.zeros((21, 21), dtype=dtype)
-            image[7:13, 7:13] = value
-            image_aug = aug.augment_image(image)
-            assert image_aug.dtype.name == dtype
-            assert not np.all(_isclose(image_aug, np.float128(value)))
-            assert np.any(_isclose(image_aug[~mask], np.float128(value)))
-
-    #
-    # All orders
-    #
-    for order in [0, 1, 2, 3, 4, 5]:
-        aug = iaa.ElasticTransformation(sigma=1.0, alpha=50, order=order)
-
-        mask = np.zeros((50, 50), dtype=bool)
-        mask[10:40, 20:30] = True
-        mask[20:30, 10:40] = True
-
-        # bool
-        image = np.zeros((50, 50), dtype=bool)
+        image = np.zeros((21, 21), dtype=bool)
         image[mask] = True
+
         image_aug = aug.augment_image(image)
+
         assert image_aug.dtype.name == image.dtype.name
         assert not np.all(image_aug == 1)
         assert np.any(image_aug[~mask] == 1)
 
-        # uint, int
-        dtypes = ["uint8", "uint16", "uint32", "uint64",
-                  "int8", "int16", "int32", "int64"]
-        if order == 0:
-            dtypes = ["uint8", "uint16", "uint32",
-                      "int8", "int16", "int32"]
+    def test_other_dtypes_uint_int(self):
+        aug = iaa.ElasticTransformation(sigma=0.5, alpha=5, order=0)
+        mask = np.zeros((21, 21), dtype=bool)
+        mask[7:13, 7:13] = True
+
+        dtypes = ["uint8", "uint16", "uint32", "int8", "int16", "int32"]
         for dtype in dtypes:
             min_value, center_value, max_value = \
                 iadt.get_value_range_of_dtype(dtype)
-            dynamic_range = max_value - min_value
 
-            image = np.zeros((50, 50), dtype=dtype)
-            image[mask] = max_value
+            image = np.zeros((21, 21), dtype=dtype)
+            image[7:13, 7:13] = max_value
+
             image_aug = aug.augment_image(image)
+
             assert image_aug.dtype.name == dtype
-            if order == 0:
-                assert not np.all(image_aug == max_value)
-                assert np.any(image_aug[~mask] == max_value)
-            else:
-                atol = 0.1 * dynamic_range
-                assert not np.all(
-                    np.isclose(image_aug, max_value, rtol=0, atol=atol)
-                )
-                assert np.any(
-                    np.isclose(image_aug[~mask], max_value, rtol=0, atol=atol)
-                )
+            assert not np.all(image_aug == max_value)
+            assert np.any(image_aug[~mask] == max_value)
 
-        # float
-        dtypes = ["float16", "float32", "float64"]
-        for dtype in dtypes:
-            min_value, center_value, max_value = \
-                iadt.get_value_range_of_dtype(dtype)
+    def test_other_dtypes_float(self):
+        aug = iaa.ElasticTransformation(sigma=0.5, alpha=5, order=0)
+        mask = np.zeros((21, 21), dtype=bool)
+        mask[7:13, 7:13] = True
 
+        for dtype in ["float16", "float32", "float64"]:
             def _isclose(a, b):
                 atol = 1e-4 if dtype == "float16" else 1e-8
                 return np.isclose(a, b, atol=atol, rtol=0)
 
-            value = (
-                0.1 * max_value
-                if dtype != "float64"
-                else 0.0001 * max_value)
-            image = np.zeros((50, 50), dtype=dtype)
-            image[mask] = value
+            isize = np.dtype(dtype).itemsize
+            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
+                      1000 ** (isize - 1)]
+            values = values + [(-1) * value for value in values]
+            for value in values:
+                with self.subTest(dtype=dtype, value=value):
+                    image = np.zeros((21, 21), dtype=dtype)
+                    image[7:13, 7:13] = value
+
+                    image_aug = aug.augment_image(image)
+
+                    assert image_aug.dtype.name == dtype
+                    assert not np.all(_isclose(image_aug, np.float128(value)))
+                    assert np.any(_isclose(image_aug[~mask],
+                                           np.float128(value)))
+
+    def test_other_dtypes_bool_all_orders(self):
+        mask = np.zeros((50, 50), dtype=bool)
+        mask[10:40, 20:30] = True
+        mask[20:30, 10:40] = True
+
+        for order in [0, 1, 2, 3, 4, 5]:
+            aug = iaa.ElasticTransformation(sigma=1.0, alpha=50, order=order)
+
+            image = np.zeros((50, 50), dtype=bool)
+            image[mask] = True
+
             image_aug = aug.augment_image(image)
+
+            assert image_aug.dtype.name == image.dtype.name
+            assert not np.all(image_aug == 1)
+            assert np.any(image_aug[~mask] == 1)
+
+    def test_other_dtypes_uint_int_all_orders(self):
+        mask = np.zeros((50, 50), dtype=bool)
+        mask[10:40, 20:30] = True
+        mask[20:30, 10:40] = True
+
+        for order in [0, 1, 2, 3, 4, 5]:
+            aug = iaa.ElasticTransformation(sigma=1.0, alpha=50, order=order)
+
+            dtypes = ["uint8", "uint16", "uint32", "uint64",
+                      "int8", "int16", "int32", "int64"]
             if order == 0:
-                assert image_aug.dtype.name == dtype
-                assert not np.all(
-                    _isclose(image_aug, np.float128(value))
-                )
-                assert np.any(
-                    _isclose(image_aug[~mask], np.float128(value))
-                )
-            else:
-                atol = (
-                    10
-                    if dtype == "float16"
-                    else 0.00001 * max_value)
-                assert not np.all(
-                    np.isclose(
-                        image_aug,
-                        np.float128(value),
-                        rtol=0, atol=atol
-                    ))
-                assert np.any(
-                    np.isclose(
-                        image_aug[~mask],
-                        np.float128(value),
-                        rtol=0, atol=atol
-                    ))
+                dtypes = ["uint8", "uint16", "uint32",
+                          "int8", "int16", "int32"]
+            for dtype in dtypes:
+                with self.subTest(dtype=dtype):
+                    min_value, center_value, max_value = \
+                        iadt.get_value_range_of_dtype(dtype)
+                    dynamic_range = max_value - min_value
+
+                    image = np.zeros((50, 50), dtype=dtype)
+                    image[mask] = max_value
+                    image_aug = aug.augment_image(image)
+                    assert image_aug.dtype.name == dtype
+                    if order == 0:
+                        assert not np.all(image_aug == max_value)
+                        assert np.any(image_aug[~mask] == max_value)
+                    else:
+                        atol = 0.1 * dynamic_range
+                        assert not np.all(
+                            np.isclose(image_aug,
+                                       max_value,
+                                       rtol=0, atol=atol)
+                        )
+                        assert np.any(
+                            np.isclose(image_aug[~mask],
+                                       max_value,
+                                       rtol=0, atol=atol))
+
+    def test_other_dtypes_float_all_orders(self):
+        mask = np.zeros((50, 50), dtype=bool)
+        mask[10:40, 20:30] = True
+        mask[20:30, 10:40] = True
+
+        for order in [0, 1, 2, 3, 4, 5]:
+            aug = iaa.ElasticTransformation(sigma=1.0, alpha=50, order=order)
+
+            dtypes = ["float16", "float32", "float64"]
+            for dtype in dtypes:
+                with self.subTest(dtype=dtype):
+                    min_value, center_value, max_value = \
+                        iadt.get_value_range_of_dtype(dtype)
+
+                    def _isclose(a, b):
+                        atol = 1e-4 if dtype == "float16" else 1e-8
+                        return np.isclose(a, b, atol=atol, rtol=0)
+
+                    value = (
+                        0.1 * max_value
+                        if dtype != "float64"
+                        else 0.0001 * max_value)
+                    image = np.zeros((50, 50), dtype=dtype)
+                    image[mask] = value
+                    image_aug = aug.augment_image(image)
+                    if order == 0:
+                        assert image_aug.dtype.name == dtype
+                        assert not np.all(
+                            _isclose(image_aug, np.float128(value))
+                        )
+                        assert np.any(
+                            _isclose(image_aug[~mask], np.float128(value))
+                        )
+                    else:
+                        atol = (
+                            10
+                            if dtype == "float16"
+                            else 0.00001 * max_value)
+                        assert not np.all(
+                            np.isclose(
+                                image_aug,
+                                np.float128(value),
+                                rtol=0, atol=atol
+                            ))
+                        assert np.any(
+                            np.isclose(
+                                image_aug[~mask],
+                                np.float128(value),
+                                rtol=0, atol=atol
+                            ))
 
 
 class _TwoValueParam(iap.StochasticParameter):
