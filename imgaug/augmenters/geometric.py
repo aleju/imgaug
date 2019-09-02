@@ -485,11 +485,6 @@ class Affine(meta.Augmenter):
         super(Affine, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        assert backend in ["auto", "skimage", "cv2"], (
-            "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
-            "got %s." % (backend,))
-        self.backend = backend
-
         # skimage | cv2
         # 0       | cv2.INTER_NEAREST
         # 1       | cv2.INTER_LINEAR
@@ -503,58 +498,6 @@ class Affine(meta.Augmenter):
             3: cv2.INTER_CUBIC,
             4: cv2.INTER_CUBIC
         }
-        # Peformance in skimage:
-        #  1.0x order 0
-        #  1.5x order 1
-        #  3.0x order 3
-        # 30.0x order 4
-        # 60.0x order 5
-        # measurement based on 256x256x3 batches, difference is smaller
-        # on smaller images (seems to grow more like exponentially with image
-        # size)
-        if order == ia.ALL:
-            if backend == "auto" or backend == "cv2":
-                self.order = iap.Choice([0, 1, 3])
-            else:
-                # dont use order=2 (bi-quadratic) because that is apparently
-                # currently not recommended (and throws a warning)
-                self.order = iap.Choice([0, 1, 3, 4, 5])
-        elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, (
-                "Expected order's integer value to be in the interval [0, 5], "
-                "got %d." % (order,))
-            if backend == "cv2":
-                assert order in [0, 1, 3], (
-                    "Backend \"cv2\" and order=%d was chosen, but cv2 backend "
-                    "can only handle order 0, 1 or 3." % (order,))
-            self.order = iap.Deterministic(order)
-        elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), (
-                "Expected order list to only contain integers, "
-                "got types %s." % (str([type(val) for val in order]),))
-            assert all([0 <= val <= 5 for val in order]), (
-                "Expected all of order's integer values to be in range "
-                "0 <= x <= 5, got %s." % (str(order),))
-            if backend == "cv2":
-                assert all([val in [0, 1, 3] for val in order]), (
-                    "cv2 backend can only handle order 0, 1 or 3. Got order "
-                    "list of %s." % (order,))
-            self.order = iap.Choice(order)
-        elif isinstance(order, iap.StochasticParameter):
-            self.order = order
-        else:
-            raise Exception(
-                "Expected order to be imgaug.ALL, int, list of int or "
-                "StochasticParameter, got %s." % (type(order),))
-
-        if cval == ia.ALL:
-            # TODO change this so that it is dynamically created per image
-            #      (or once per dtype)
-            self.cval = iap.Uniform(0, 255)  # skimage transform expects float
-        else:
-            self.cval = iap.handle_continuous_param(
-                cval, "cval", value_range=None, tuple_to_uniform=True,
-                list_to_choice=True)
 
         # constant, edge, symmetric, reflect, wrap
         # skimage   | cv2
@@ -570,31 +513,110 @@ class Affine(meta.Augmenter):
             "reflect": cv2.BORDER_REFLECT_101,
             "wrap": cv2.BORDER_WRAP
         }
+
+        assert backend in ["auto", "skimage", "cv2"], (
+            "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
+            "got %s." % (backend,))
+        self.backend = backend
+        self.order = self._handle_order_arg(order, backend)
+        self.cval = self._handle_cval_arg(cval)
+        self.mode = self._handle_mode_arg(mode)
+        self.scale = self._handle_scale_arg(scale)
+        self.translate = self._handle_translate_arg(
+            translate_px, translate_percent)
+        self.rotate = iap.handle_continuous_param(
+            rotate, "rotate", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        self.shear = iap.handle_continuous_param(
+            shear, "shear", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+        self.fit_output = fit_output
+
+    @classmethod
+    def _handle_order_arg(cls, order, backend):
+        # Peformance in skimage:
+        #  1.0x order 0
+        #  1.5x order 1
+        #  3.0x order 3
+        # 30.0x order 4
+        # 60.0x order 5
+        # measurement based on 256x256x3 batches, difference is smaller
+        # on smaller images (seems to grow more like exponentially with image
+        # size)
+        if order == ia.ALL:
+            if backend == "auto" or backend == "cv2":
+                return iap.Choice([0, 1, 3])
+            else:
+                # dont use order=2 (bi-quadratic) because that is apparently
+                # currently not recommended (and throws a warning)
+                return iap.Choice([0, 1, 3, 4, 5])
+        elif ia.is_single_integer(order):
+            assert 0 <= order <= 5, (
+                "Expected order's integer value to be in the interval [0, 5], "
+                "got %d." % (order,))
+            if backend == "cv2":
+                assert order in [0, 1, 3], (
+                    "Backend \"cv2\" and order=%d was chosen, but cv2 backend "
+                    "can only handle order 0, 1 or 3." % (order,))
+            return iap.Deterministic(order)
+        elif isinstance(order, list):
+            assert all([ia.is_single_integer(val) for val in order]), (
+                "Expected order list to only contain integers, "
+                "got types %s." % (str([type(val) for val in order]),))
+            assert all([0 <= val <= 5 for val in order]), (
+                "Expected all of order's integer values to be in range "
+                "0 <= x <= 5, got %s." % (str(order),))
+            if backend == "cv2":
+                assert all([val in [0, 1, 3] for val in order]), (
+                    "cv2 backend can only handle order 0, 1 or 3. Got order "
+                    "list of %s." % (order,))
+            return iap.Choice(order)
+        elif isinstance(order, iap.StochasticParameter):
+            return order
+        else:
+            raise Exception(
+                "Expected order to be imgaug.ALL, int, list of int or "
+                "StochasticParameter, got %s." % (type(order),))
+
+    @classmethod
+    def _handle_cval_arg(cls, cval):
+        if cval == ia.ALL:
+            # TODO change this so that it is dynamically created per image
+            #      (or once per dtype)
+            return iap.Uniform(0, 255)  # skimage transform expects float
+        else:
+            return iap.handle_continuous_param(
+                cval, "cval", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True)
+
+    @classmethod
+    def _handle_mode_arg(cls, mode):
         if mode == ia.ALL:
-            self.mode = iap.Choice(["constant", "edge", "symmetric",
-                                    "reflect", "wrap"])
+            return iap.Choice(["constant", "edge", "symmetric",
+                               "reflect", "wrap"])
         elif ia.is_string(mode):
-            self.mode = iap.Deterministic(mode)
+            return iap.Deterministic(mode)
         elif isinstance(mode, list):
             assert all([ia.is_string(val) for val in mode]), (
                 "Expected list of modes to only contain strings, got "
                 "types %s" % (", ".join([str(type(v)) for v in mode])))
-            self.mode = iap.Choice(mode)
+            return iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
-            self.mode = mode
+            return mode
         else:
             raise Exception(
                 "Expected mode to be imgaug.ALL, a string, a list of strings "
                 "or StochasticParameter, got %s." % (type(mode),))
 
-        # scale
+    @classmethod
+    def _handle_scale_arg(cls, scale):
         if isinstance(scale, dict):
             assert "x" in scale or "y" in scale, (
                 "Expected scale dictionary to contain at least key \"x\" or "
                 "key \"y\". Found neither of them.")
             x = scale.get("x", 1.0)
             y = scale.get("y", 1.0)
-            self.scale = (
+            return (
                 iap.handle_continuous_param(
                     x, "scale['x']", value_range=(0+1e-4, None),
                     tuple_to_uniform=True, list_to_choice=True),
@@ -603,11 +625,12 @@ class Affine(meta.Augmenter):
                     tuple_to_uniform=True, list_to_choice=True)
             )
         else:
-            self.scale = iap.handle_continuous_param(
+            return iap.handle_continuous_param(
                 scale, "scale", value_range=(0+1e-4, None),
                 tuple_to_uniform=True, list_to_choice=True)
 
-        # translate
+    @classmethod
+    def _handle_translate_arg(cls, translate_px, translate_percent):
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
@@ -623,7 +646,7 @@ class Affine(meta.Augmenter):
                     "least key \"x\" or key \"y\". Found neither of them.")
                 x = translate_percent.get("x", 0)
                 y = translate_percent.get("y", 0)
-                self.translate = (
+                return (
                     iap.handle_continuous_param(
                         x, "translate_percent['x']", value_range=None,
                         tuple_to_uniform=True, list_to_choice=True),
@@ -632,7 +655,7 @@ class Affine(meta.Augmenter):
                         tuple_to_uniform=True, list_to_choice=True)
                 )
             else:
-                self.translate = iap.handle_continuous_param(
+                return iap.handle_continuous_param(
                     translate_percent, "translate_percent", value_range=None,
                     tuple_to_uniform=True, list_to_choice=True)
         else:
@@ -643,7 +666,7 @@ class Affine(meta.Augmenter):
                     "least key \"x\" or key \"y\". Found neither of them.")
                 x = translate_px.get("x", 0)
                 y = translate_px.get("y", 0)
-                self.translate = (
+                return (
                     iap.handle_discrete_param(
                         x, "translate_px['x']", value_range=None,
                         tuple_to_uniform=True, list_to_choice=True,
@@ -654,18 +677,10 @@ class Affine(meta.Augmenter):
                         allow_floats=False)
                 )
             else:
-                self.translate = iap.handle_discrete_param(
+                return iap.handle_discrete_param(
                     translate_px, "translate_px", value_range=None,
                     tuple_to_uniform=True, list_to_choice=True,
                     allow_floats=False)
-
-        self.rotate = iap.handle_continuous_param(
-            rotate, "rotate", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
-        self.shear = iap.handle_continuous_param(
-            shear, "shear", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
-        self.fit_output = fit_output
 
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
