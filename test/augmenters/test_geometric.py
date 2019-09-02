@@ -39,6 +39,7 @@ def _assert_same_shape(observed, actual):
 # TODO add more tests for Affine .mode
 # TODO add more tests for Affine shear
 
+
 class TestAffine(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.Affine(scale=1, translate_px=2, rotate=3, shear=4,
@@ -209,6 +210,7 @@ class TestAffine___init__(unittest.TestCase):
             _ = iaa.Affine(backend="cv2", order=-1)
 
 
+# TODO add test with multiple images
 class TestAffine_noop(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -283,6 +285,7 @@ class TestAffine_noop(unittest.TestCase):
         assert keypoints_equal(observed, expected)
 
 
+# TODO add test with multiple images
 class TestAffine_scale(unittest.TestCase):
     def setUp(self):
         reseed()
