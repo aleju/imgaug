@@ -337,129 +337,114 @@ class Resize(meta.Augmenter):
         super(Resize, self).__init__(name=name, deterministic=deterministic,
                                      random_state=random_state)
 
-        def handle(val, allow_dict):
-            if val == "keep":
-                return iap.Deterministic("keep")
-            elif ia.is_single_integer(val):
-                assert val > 0, "Expected only values > 0, got %d" % (val,)
-                return iap.Deterministic(val)
-            elif ia.is_single_float(val):
-                assert val > 0, "Expected only values > 0, got %.4f" % (val,)
-                return iap.Deterministic(val)
-            elif allow_dict and isinstance(val, dict):
-                if len(val.keys()) == 0:
-                    return iap.Deterministic("keep")
-                elif any([key in ["height", "width"] for key in val.keys()]):
-                    hw_keys_exist = all([
-                        key in ["height", "width"] for key in val.keys()])
-                    assert hw_keys_exist, (
-                        "Expected dict to contain height and width keys, "
-                        "found neither of them.")
-                    if "height" in val and "width" in val:
-                        not_both_kaa = (
-                            val["height"] != "keep-aspect-ratio"
-                            or val["width"] != "keep-aspect-ratio")
-                        assert not_both_kaa, (
-                            "Expected height and width to not be both set "
-                            "to \"keep-aspect-ratio\".")
+        self.size, self.size_order = self._handle_size_arg(size, False)
+        self.interpolation = self._handle_interpolation_arg(interpolation)
 
-                    size_tuple = []
-                    for k in ["height", "width"]:
-                        if k in val:
-                            if (val[k] == "keep-aspect-ratio"
-                                    or val[k] == "keep"):
-                                entry = iap.Deterministic(val[k])
-                            else:
-                                entry = handle(val[k], False)
-                        else:
-                            entry = iap.Deterministic("keep")
-                        size_tuple.append(entry)
-                    return tuple(size_tuple)
-                elif any([key in ["shorter-side", "longer-side"]
-                          for key in val.keys()]):
-                    sl_keys_exist = all([
-                        key in ["shorter-side", "longer-side"]
-                        for key in val.keys()])
-                    assert sl_keys_exist, (
-                        "Expected dict to contain shorter-side and "
-                        "longer-side keys, found neither of them.")
-                    if "shorter-side" in val and "longer-side" in val:
-                        not_both_kaa = (
-                            val["shorter-side"] != "keep-aspect-ratio"
-                            or val["longer-side"] != "keep-aspect-ratio")
-                        assert not_both_kaa, (
-                            "Expected shorter-side and longer-side to not be "
-                            "both set to \"keep-aspect-ratio\".")
+    @classmethod
+    def _handle_size_arg(cls, size, subcall):
+        def _dict_to_size_tuple(v1, v2):
+            kaa = "keep-aspect-ratio"
+            not_both_kaa = (v1 != kaa or v2 != kaa)
+            assert not_both_kaa, (
+                "Expected at least one value to not be \"keep-aspect-ratio\", "
+                "but got it two times.")
 
-                    size_tuple = []
-                    for k in ["shorter-side", "longer-side"]:
-                        if k in val:
-                            if (val[k] == "keep-aspect-ratio"
-                                    or val[k] == "keep"):
-                                entry = iap.Deterministic(val[k])
-                            else:
-                                entry = handle(val[k], False)
-                        else:
-                            entry = iap.Deterministic("keep")
-                        size_tuple.append(entry)
-                    return tuple(size_tuple)
-
-            elif isinstance(val, tuple):
-                assert len(val) == 2, (
-                    "Expected size tuple to contain exactly 2 values, "
-                    "got %d." % (len(val),))
-                assert val[0] > 0 and val[1] > 0, (
-                    "Expected size tuple to only contain values >0, "
-                    "got %d and %d." % (val[0], val[1]))
-                if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
-                    return iap.Uniform(val[0], val[1])
+            size_tuple = []
+            for k in [v1, v2]:
+                if k in ["keep-aspect-ratio", "keep"]:
+                    entry = iap.Deterministic(k)
                 else:
-                    return iap.DiscreteUniform(val[0], val[1])
-            elif isinstance(val, list):
-                if len(val) == 0:
-                    return iap.Deterministic("keep")
-                else:
-                    all_int = all([ia.is_single_integer(v) for v in val])
-                    all_float = all([ia.is_single_float(v) for v in val])
-                    assert all_int or all_float, (
-                        "Expected to get only integers or floats.")
-                    assert all([v > 0 for v in val]), (
-                        "Expected all values to be >0.")
-                    return iap.Choice(val)
-            elif isinstance(val, iap.StochasticParameter):
-                return val
+                    entry = cls._handle_size_arg(k, True)
+                size_tuple.append(entry)
+            return tuple(size_tuple)
 
-            raise Exception(
+        def _contains_any_key(dict_, keys):
+            return any([key in dict_ for key in keys])
+
+        # HW = height, width
+        # SL = shorter, longer
+        size_order = "HW"
+
+        if size == "keep":
+            result = iap.Deterministic("keep")
+        elif ia.is_single_number(size):
+            assert size > 0, "Expected only values > 0, got %s" % (size,)
+            result = iap.Deterministic(size)
+        elif not subcall and isinstance(size, dict):
+            if len(size.keys()) == 0:
+                result = iap.Deterministic("keep")
+            elif _contains_any_key(size, ["height", "width"]):
+                height = size.get("height", "keep")
+                width = size.get("width", "keep")
+                result = _dict_to_size_tuple(height, width)
+            elif _contains_any_key(size, ["shorter-side", "longer-side"]):
+                shorter = size.get("shorter-side", "keep")
+                longer = size.get("longer-side", "keep")
+                result = _dict_to_size_tuple(shorter, longer)
+                size_order = "SL"
+            else:
+                raise ValueError(
+                    "Expected dictionary containing no keys, "
+                    "the keys \"height\" and/or \"width\", "
+                    "or the keys \"shorter-side\" and/or \"longer-side\". "
+                    "Got keys: %s." % (str(size.keys()),))
+        elif isinstance(size, tuple):
+            assert len(size) == 2, (
+                "Expected size tuple to contain exactly 2 values, "
+                "got %d." % (len(size),))
+            assert size[0] > 0 and size[1] > 0, (
+                "Expected size tuple to only contain values >0, "
+                "got %d and %d." % (size[0], size[1]))
+            if ia.is_single_float(size[0]) or ia.is_single_float(size[1]):
+                result = iap.Uniform(size[0], size[1])
+            else:
+                result = iap.DiscreteUniform(size[0], size[1])
+        elif isinstance(size, list):
+            if len(size) == 0:
+                result = iap.Deterministic("keep")
+            else:
+                all_int = all([ia.is_single_integer(v) for v in size])
+                all_float = all([ia.is_single_float(v) for v in size])
+                assert all_int or all_float, (
+                    "Expected to get only integers or floats.")
+                assert all([v > 0 for v in size]), (
+                    "Expected all values to be >0.")
+                result = iap.Choice(size)
+        elif isinstance(size, iap.StochasticParameter):
+            result = size
+        else:
+            raise ValueError(
                 "Expected number, tuple of two numbers, list of numbers, "
                 "dictionary of form "
                 "{'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
                 "'width': <analogous>}, dictionary of form "
                 "{'shorter-side': number/tuple/list/'keep-aspect-ratio'/"
                 "'keep', 'longer-side': <analogous>} "
-                " or StochasticParameter, got %s." % (type(val),)
+                "or StochasticParameter, got %s." % (type(size),)
             )
 
-        self.size = handle(size, True)
-        self.size_order = (
-            'SL'
-            if (isinstance(size, dict) and 'shorter-side' in size)
-            else 'HW')
+        if subcall:
+            return result
+        return result, size_order
 
+    @classmethod
+    def _handle_interpolation_arg(cls, interpolation):
         if interpolation == ia.ALL:
-            self.interpolation = iap.Choice(
+            interpolation = iap.Choice(
                 ["nearest", "linear", "area", "cubic"])
         elif ia.is_single_integer(interpolation):
-            self.interpolation = iap.Deterministic(interpolation)
+            interpolation = iap.Deterministic(interpolation)
         elif ia.is_string(interpolation):
-            self.interpolation = iap.Deterministic(interpolation)
+            interpolation = iap.Deterministic(interpolation)
         elif ia.is_iterable(interpolation):
-            self.interpolation = iap.Choice(interpolation)
+            interpolation = iap.Choice(interpolation)
         elif isinstance(interpolation, iap.StochasticParameter):
-            self.interpolation = interpolation
+            interpolation = interpolation
         else:
             raise Exception(
                 "Expected int or string or iterable or StochasticParameter, "
                 "got %s." % (type(interpolation),))
+        return interpolation
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
