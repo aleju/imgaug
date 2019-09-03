@@ -1816,12 +1816,10 @@ class AffineCv2(meta.Augmenter):
             translate_samples = (translate_samples, translate_samples)
 
         valid_dts = ["int32", "int64", "float32", "float64"]
-        assert translate_samples[0].dtype.name in valid_dts, (
-            "Expected translate_samples to have any dtype of %s. "
-            "Got %s." % (str(valid_dts), translate_samples[0].dtype.name,))
-        assert translate_samples[1].dtype.name in valid_dts, (
-            "Expected translate_samples to have any dtype of %s. "
-            "Got %s." % (str(valid_dts), translate_samples[1].dtype.name,))
+        for i in sm.xrange(2):
+            assert translate_samples[i].dtype.name in valid_dts, (
+                "Expected translate_samples to have any dtype of %s. "
+                "Got %s." % (str(valid_dts), translate_samples[i].dtype.name,))
 
         rotate_samples = self.rotate.draw_samples((nb_samples,),
                                                   random_state=rngs[6])
