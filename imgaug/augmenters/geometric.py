@@ -1095,11 +1095,6 @@ class Affine(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
-    def get_parameters(self):
-        return [
-            self.scale, self.translate, self.rotate, self.shear, self.order,
-            self.cval, self.mode, self.backend, self.fit_output]
-
     def _draw_samples(self, nb_samples, random_state):
         rngs = random_state.duplicate(11)
 
@@ -1145,6 +1140,11 @@ class Affine(meta.Augmenter):
             cval=cval_samples,
             mode=mode_samples,
             order=order_samples)
+
+    def get_parameters(self):
+        return [
+            self.scale, self.translate, self.rotate, self.shear, self.order,
+            self.cval, self.mode, self.backend, self.fit_output]
 
 
 class AffineCv2(meta.Augmenter):
