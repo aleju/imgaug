@@ -40,6 +40,208 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
+_VALID_DTYPES_CV2_ORDER_0 = {"uint8", "uint16", "int8", "int16", "int32",
+                             "float16", "float32", "float64",
+                             "bool"}
+_VALID_DTYPES_CV2_ORDER_NOT_0 = {"uint8", "uint16", "int8", "int16",
+                                 "float16", "float32", "float64",
+                                 "bool"}
+
+# skimage | cv2
+# 0       | cv2.INTER_NEAREST
+# 1       | cv2.INTER_LINEAR
+# 2       | -
+# 3       | cv2.INTER_CUBIC
+# 4       | -
+_AFFINE_INTERPOLATION_ORDER_SKIMAGE_TO_CV2 = {
+    0: cv2.INTER_NEAREST,
+    1: cv2.INTER_LINEAR,
+    2: cv2.INTER_CUBIC,
+    3: cv2.INTER_CUBIC,
+    4: cv2.INTER_CUBIC
+}
+
+# constant, edge, symmetric, reflect, wrap
+# skimage   | cv2
+# constant  | cv2.BORDER_CONSTANT
+# edge      | cv2.BORDER_REPLICATE
+# symmetric | cv2.BORDER_REFLECT
+# reflect   | cv2.BORDER_REFLECT_101
+# wrap      | cv2.BORDER_WRAP
+_AFFINE_MODE_SKIMAGE_TO_CV2 = {
+    "constant": cv2.BORDER_CONSTANT,
+    "edge": cv2.BORDER_REPLICATE,
+    "symmetric": cv2.BORDER_REFLECT,
+    "reflect": cv2.BORDER_REFLECT_101,
+    "wrap": cv2.BORDER_WRAP
+}
+
+
+def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
+                     output_shape=None, backend="auto"):
+    if ia.is_single_integer(cval):
+        cval = [cval] * len(arr.shape[2])
+
+    min_value, _center_value, max_value = \
+        iadt.get_value_range_of_dtype(arr.dtype)
+
+    cv2_bad_order = order not in [0, 1, 3]
+    if order == 0:
+        cv2_bad_dtype = (
+                arr.dtype.name
+                not in _VALID_DTYPES_CV2_ORDER_0)
+    else:
+        cv2_bad_dtype = (
+                arr.dtype.name
+                not in _VALID_DTYPES_CV2_ORDER_NOT_0
+        )
+    cv2_impossible = cv2_bad_order or cv2_bad_dtype
+    use_skimage = (
+        backend == "skimage"
+        or (backend == "auto" and cv2_impossible)
+    )
+    if use_skimage:
+        # cval contains 3 values as cv2 can handle 3, but
+        # skimage only 1
+        cval = cval[0]
+        # skimage does not clip automatically
+        cval = max(min(cval, max_value), min_value)
+        image_warped = _warp_affine_arr_skimage(
+            arr,
+            matrix,
+            cval=cval,
+            mode=mode,
+            order=order,
+            output_shape=output_shape
+        )
+    else:
+        assert not cv2_bad_dtype, (
+            not cv2_bad_dtype,
+            "cv2 backend in Affine got a dtype %s, which it "
+            "cannot handle. Try using a different dtype or set "
+            "order=0." % (
+                arr.dtype,))
+        image_warped = _warp_affine_arr_cv2(
+            arr,
+            matrix,
+            cval=tuple([int(v) for v in cval]),
+            mode=mode,
+            order=order,
+            output_shape=output_shape
+        )
+    return image_warped
+
+
+def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
+    iadt.gate_dtypes(
+        arr,
+        allowed=["bool",
+                 "uint8", "uint16", "uint32",
+                 "int8", "int16", "int32",
+                 "float16", "float32", "float64"],
+        disallowed=["uint64", "uint128", "uint256",
+                    "int64", "int128", "int256",
+                    "float96", "float128", "float256"],
+        augmenter=None)
+
+    input_dtype = arr.dtype
+
+    image_warped = tf.warp(
+        arr,
+        matrix.inverse,
+        order=order,
+        mode=mode,
+        cval=cval,
+        preserve_range=True,
+        output_shape=output_shape,
+    )
+
+    # tf.warp changes all dtypes to float64, including uint8
+    if input_dtype == np.bool_:
+        image_warped = image_warped > 0.5
+    else:
+        image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
+
+    return image_warped
+
+
+def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
+    iadt.gate_dtypes(
+        arr,
+        allowed=["bool",
+                 "uint8", "uint16",
+                 "int8", "int16", "int32",
+                 "float16", "float32", "float64"],
+        disallowed=["uint32", "uint64", "uint128", "uint256",
+                    "int64", "int128", "int256",
+                    "float96", "float128", "float256"],
+        augmenter=None)
+
+    if order != 0:
+        assert arr.dtype.name != "int32", (
+            "Affine only supports cv2-based transformations of int32 "
+            "arrays when using order=0, but order was set to %d." % (
+                order,))
+
+    input_dtype = arr.dtype
+    if input_dtype in [np.bool_, np.float16]:
+        arr = arr.astype(np.float32)
+    elif input_dtype == np.int8 and order != 0:
+        arr = arr.astype(np.int16)
+
+    dsize = (
+        int(np.round(output_shape[1])),
+        int(np.round(output_shape[0]))
+    )
+
+    # map key X from skimage to cv2 or fall back to key X
+    mode = _AFFINE_MODE_SKIMAGE_TO_CV2.get(mode, mode)
+    order = _AFFINE_INTERPOLATION_ORDER_SKIMAGE_TO_CV2.get(order, order)
+
+    # TODO this uses always a tuple of 3 values for cval, even if
+    #      #chans != 3, works with 1d but what in other cases?
+    nb_channels = arr.shape[-1]
+    if nb_channels <= 3:
+        # TODO this block can also be when order==0 for any nb_channels,
+        #      but was deactivated for now, because cval would always
+        #      contain 3 values and not nb_channels values
+        image_warped = cv2.warpAffine(
+            arr,
+            matrix.params[:2],
+            dsize=dsize,
+            flags=order,
+            borderMode=mode,
+            borderValue=cval
+        )
+        image_warped = np.atleast_3d(image_warped)
+    else:
+        # warp each channel on its own, re-add channel axis, then stack
+        # the result from a list of [H, W, 1] to (H, W, C).
+        image_warped = [
+            cv2.warpAffine(
+                arr[:, :, c],
+                matrix.params[:2],
+                dsize=dsize,
+                flags=order,
+                borderMode=mode,
+                borderValue=tuple([cval[0]])
+            )
+            for c in sm.xrange(nb_channels)]
+        image_warped = np.dstack([
+            warped_i[..., np.newaxis] for warped_i in image_warped])
+
+    # cv2 warp drops last axis if shape is (H, W, 1)
+    if image_warped.ndim == 2:
+        image_warped = image_warped[..., np.newaxis]
+
+    if input_dtype == np.bool_:
+        image_warped = image_warped > 0.5
+    elif input_dtype.name in ["int8", "float16"]:
+        image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
+
+    return image_warped
+
+
 def _tf_to_fit_output(matrix, input_shape):
     height, width = input_shape[:2]
     # determine shape of output image
@@ -559,48 +761,12 @@ class Affine(meta.Augmenter):
 
     """
 
-    VALID_DTYPES_CV2_ORDER_0 = {"uint8", "uint16", "int8", "int16", "int32",
-                                "float16", "float32", "float64",
-                                "bool"}
-    VALID_DTYPES_CV2_ORDER_NOT_0 = {"uint8", "uint16", "int8", "int16",
-                                    "float16", "float32", "float64",
-                                    "bool"}
-
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  name=None, deterministic=False, random_state=None):
         super(Affine, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
-
-        # skimage | cv2
-        # 0       | cv2.INTER_NEAREST
-        # 1       | cv2.INTER_LINEAR
-        # 2       | -
-        # 3       | cv2.INTER_CUBIC
-        # 4       | -
-        self.order_map_skimage_cv2 = {
-            0: cv2.INTER_NEAREST,
-            1: cv2.INTER_LINEAR,
-            2: cv2.INTER_CUBIC,
-            3: cv2.INTER_CUBIC,
-            4: cv2.INTER_CUBIC
-        }
-
-        # constant, edge, symmetric, reflect, wrap
-        # skimage   | cv2
-        # constant  | cv2.BORDER_CONSTANT
-        # edge      | cv2.BORDER_REPLICATE
-        # symmetric | cv2.BORDER_REFLECT
-        # reflect   | cv2.BORDER_REFLECT_101
-        # wrap      | cv2.BORDER_WRAP
-        self.mode_map_skimage_cv2 = {
-            "constant": cv2.BORDER_CONSTANT,
-            "edge": cv2.BORDER_REPLICATE,
-            "symmetric": cv2.BORDER_REFLECT,
-            "reflect": cv2.BORDER_REFLECT_101,
-            "wrap": cv2.BORDER_WRAP
-        }
 
         assert backend in ["auto", "skimage", "cv2"], (
             "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
@@ -789,63 +955,22 @@ class Affine(meta.Augmenter):
         for i in sm.xrange(nb_images):
             image = images[i]
 
-            min_value, _center_value, max_value = \
-                iadt.get_value_range_of_dtype(image.dtype)
-
             matrix, output_shape = samples.to_matrix(i, image.shape,
                                                      self.fit_output)
+
             cval = samples.cval[i]
             mode = samples.mode[i]
             order = samples.order[i]
 
             if not _is_identity_matrix(matrix):
-                cv2_bad_order = order not in [0, 1, 3]
-                if order == 0:
-                    cv2_bad_dtype = (
-                        image.dtype.name
-                        not in self.VALID_DTYPES_CV2_ORDER_0)
-                else:
-                    cv2_bad_dtype = (
-                        image.dtype.name
-                        not in self.VALID_DTYPES_CV2_ORDER_NOT_0
-                    )
-                cv2_impossible = cv2_bad_order or cv2_bad_dtype
-                use_skimage = (
-                    self.backend == "skimage"
-                    or (self.backend == "auto" and cv2_impossible)
-                )
-                if use_skimage:
-                    # cval contains 3 values as cv2 can handle 3, but
-                    # skimage only 1
-                    cval = cval[0]
-                    # skimage does not clip automatically
-                    cval = max(min(cval, max_value), min_value)
-                    image_warped = self._warp_skimage(
-                        image,
-                        matrix,
-                        cval=cval,
-                        mode=mode,
-                        order=order,
-                        output_shape=output_shape
-                    )
-                else:
-                    assert not cv2_bad_dtype, (
-                        not cv2_bad_dtype,
-                        "cv2 backend in Affine got a dtype %s, which it "
-                        "cannot handle. Try using a different dtype or set "
-                        "order=0." % (
-                            image.dtype,))
-                    image_warped = self._warp_cv2(
-                        image,
-                        matrix,
-                        cval=tuple([int(v) for v in cval]),
-                        mode=mode,
-                        order=order,
-                        output_shape=output_shape
-                    )
+                image_warped = _warp_affine_arr(
+                    image, matrix,
+                    order=order, mode=mode, cval=cval,
+                    output_shape=output_shape, backend=self.backend)
+
                 result.append(image_warped)
             else:
-                result.append(images[i])
+                result.append(image)
 
             if return_matrices:
                 matrices[i] = matrix
@@ -995,115 +1120,6 @@ class Affine(meta.Augmenter):
             cval=cval_samples,
             mode=mode_samples,
             order=order_samples)
-
-    def _warp_skimage(self, image, matrix, cval, mode, order, output_shape):
-        iadt.gate_dtypes(
-            image,
-            allowed=["bool",
-                     "uint8", "uint16", "uint32",
-                     "int8", "int16", "int32",
-                     "float16", "float32", "float64"],
-            disallowed=["uint64", "uint128", "uint256",
-                        "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=self)
-
-        input_dtype = image.dtype
-
-        image_warped = tf.warp(
-            image,
-            matrix.inverse,
-            order=order,
-            mode=mode,
-            cval=cval,
-            preserve_range=True,
-            output_shape=output_shape,
-        )
-
-        # tf.warp changes all dtypes to float64, including uint8
-        if input_dtype == np.bool_:
-            image_warped = image_warped > 0.5
-        else:
-            image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
-
-        return image_warped
-
-    def _warp_cv2(self, image, matrix, cval, mode, order,
-                  output_shape):
-        iadt.gate_dtypes(
-            image,
-            allowed=["bool",
-                     "uint8", "uint16",
-                     "int8", "int16", "int32",
-                     "float16", "float32", "float64"],
-            disallowed=["uint32", "uint64", "uint128", "uint256",
-                        "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=self)
-
-        if order != 0:
-            assert image.dtype.name != "int32", (
-                "Affine only supports cv2-based transformations of int32 "
-                "arrays when using order=0, but order was set to %d." % (
-                    order,))
-
-        input_dtype = image.dtype
-        if input_dtype in [np.bool_, np.float16]:
-            image = image.astype(np.float32)
-        elif input_dtype == np.int8 and order != 0:
-            image = image.astype(np.int16)
-
-        dsize = (
-            int(np.round(output_shape[1])),
-            int(np.round(output_shape[0]))
-        )
-
-        # map key X from skimage to cv2 or fall back to key X
-        mode = self.mode_map_skimage_cv2.get(mode, mode)
-        order = self.order_map_skimage_cv2.get(order, order)
-
-        # TODO this uses always a tuple of 3 values for cval, even if
-        #      #chans != 3, works with 1d but what in other cases?
-        nb_channels = image.shape[-1]
-        if nb_channels <= 3:
-            # TODO this block can also be when order==0 for any nb_channels,
-            #      but was deactivated for now, because cval would always
-            #      contain 3 values and not nb_channels values
-            image_warped = cv2.warpAffine(
-                image,
-                matrix.params[:2],
-                dsize=dsize,
-                flags=order,
-                borderMode=mode,
-                borderValue=cval
-            )
-            image_warped = np.atleast_3d(image_warped)
-        else:
-            # warp each channel on its own, re-add channel axis, then stack
-            # the result from a list of [H, W, 1] to (H, W, C).
-            image_warped = [
-                cv2.warpAffine(
-                    image[:, :, c],
-                    matrix.params[:2],
-                    dsize=dsize,
-                    flags=order,
-                    borderMode=mode,
-                    borderValue=tuple([cval[0]])
-                )
-                for c in sm.xrange(nb_channels)]
-            image_warped = np.dstack([
-                warped_i[..., np.newaxis] for warped_i in image_warped])
-
-        # cv2 warp drops last axis if shape is (H, W, 1)
-        if image_warped.ndim == 2:
-            image_warped = image_warped[..., np.newaxis]
-
-        if input_dtype == np.bool_:
-            image_warped = image_warped > 0.5
-        elif input_dtype in [np.int8, np.float16]:
-            image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
-
-        return image_warped
 
 
 class AffineCv2(meta.Augmenter):
