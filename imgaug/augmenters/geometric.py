@@ -242,7 +242,7 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
     return image_warped
 
 
-def _tf_to_fit_output(matrix, input_shape):
+def _compute_affine_warp_output_shape(matrix, input_shape):
     height, width = input_shape[:2]
     # determine shape of output image
     corners = np.array([
@@ -317,7 +317,7 @@ class _AffineSamplingResult(object):
                   + matrix_transforms
                   + matrix_to_center)
         if fit_output:
-            return _tf_to_fit_output(matrix, arr_shape)
+            return _compute_affine_warp_output_shape(matrix, arr_shape)
         return matrix, arr_shape
 
 
@@ -1008,7 +1008,8 @@ class Affine(meta.Augmenter):
 
             heatmaps_i.arr_0to1 = arr_aug
             if self.fit_output:
-                _, output_shape_i = _tf_to_fit_output(matrix, heatmaps_i.shape)
+                _, output_shape_i = _compute_affine_warp_output_shape(
+                    matrix, heatmaps_i.shape)
             else:
                 output_shape_i = heatmaps_i.shape
             heatmaps_i.shape = output_shape_i
@@ -1037,7 +1038,8 @@ class Affine(meta.Augmenter):
         for segmaps_i, arr_aug, matrix in gen:
             segmaps_i.arr = arr_aug
             if self.fit_output:
-                _, output_shape_i = _tf_to_fit_output(matrix, segmaps_i.shape)
+                _, output_shape_i = _compute_affine_warp_output_shape(
+                    matrix, segmaps_i.shape)
             else:
                 output_shape_i = segmaps_i.shape
             segmaps_i.shape = output_shape_i
