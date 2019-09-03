@@ -469,40 +469,26 @@ class Resize(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = []
-        nb_heatmaps = len(heatmaps)
-        samples_a, samples_b, samples_ip = self._draw_samples(
-            nb_heatmaps, random_state, do_sample_ip=True)
-
-        for i in sm.xrange(nb_heatmaps):
-            heatmaps_i = heatmaps[i]
-            arr_shape = heatmaps_i.arr_0to1.shape
-            img_shape = heatmaps_i.shape
-            sample_a, sample_b, sample_ip = \
-                samples_a[i], samples_b[i], samples_ip[i]
-            h_img, w_img = self._compute_height_width(
-                img_shape, sample_a, sample_b, self.size_order)
-            h = int(np.round(h_img * (arr_shape[0] / img_shape[0])))
-            w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
-            h = max(h, 1)
-            w = max(w, 1)
-            # TODO change this to always have cubic or automatic interpolation?
-            heatmaps_i_resized = heatmaps_i.resize(
-                (h, w), interpolation=sample_ip)
-            heatmaps_i_resized.shape = (h_img, w_img) + img_shape[2:]
-            result.append(heatmaps_i_resized)
-
-        return result
+        return self._augment_heatmaps_segmaps(heatmaps, random_state,
+                                              do_sample_ip=True)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        return self._augment_heatmaps_segmaps(segmaps, random_state,
+                                              do_sample_ip=False)
+
+    def _augment_heatmaps_segmaps(self, augmentables, random_state,
+                                  do_sample_ip):
         result = []
-        nb_segmaps = len(segmaps)
-        samples_h, samples_w, _ = self._draw_samples(
-            nb_segmaps, random_state, do_sample_ip=False)
-        for i in sm.xrange(nb_segmaps):
-            segmaps_i = segmaps[i]
-            arr_shape = segmaps_i.arr.shape
-            img_shape = segmaps_i.shape
+        nb_items = len(augmentables)
+        samples_h, samples_w, samples_ip = self._draw_samples(
+            nb_items, random_state, do_sample_ip=do_sample_ip)
+        for i in sm.xrange(nb_items):
+            augmentable = augmentables[i]
+            arr_shape = (
+                augmentable.arr.shape
+                if hasattr(augmentable, "arr")
+                else augmentable.arr_0to1.shape)
+            img_shape = augmentable.shape
             sample_h, sample_w = samples_h[i], samples_w[i]
             h_img, w_img = self._compute_height_width(
                 img_shape, sample_h, sample_w, self.size_order)
@@ -510,9 +496,15 @@ class Resize(meta.Augmenter):
             w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
             h = max(h, 1)
             w = max(w, 1)
-            heatmaps_i_resized = segmaps_i.resize((h, w))
-            heatmaps_i_resized.shape = (h_img, w_img) + img_shape[2:]
-            result.append(heatmaps_i_resized)
+            if do_sample_ip:
+                # TODO change this for heatmaps to always have cubic or
+                #      automatic interpolation?
+                augmentable_resize = augmentable.resize(
+                    (h, w), interpolation=samples_ip[i])
+            else:
+                augmentable_resize = augmentable.resize((h, w))
+            augmentable_resize.shape = (h_img, w_img) + img_shape[2:]
+            result.append(augmentable_resize)
 
         return result
 
