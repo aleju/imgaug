@@ -786,6 +786,24 @@ class Affine(meta.Augmenter):
             list_to_choice=True)
         self.fit_output = fit_output
 
+        # Special order, mode and cval parameters for heatmaps and
+        # segmentation maps. These may either be None or a fixed value.
+        # Stochastic parameters are currently *not* supported.
+        # If set to None, the same values as for images will be used.
+        # That is really not recommended for the cval parameter.
+        #
+        # Segmentation map augmentation by default always pads with a
+        # constant value of 0 (background class id), and always uses nearest
+        # neighbour interpolation. While other pad modes and BG class ids
+        # could be used, the interpolation mode has to be NN as any other
+        # mode would lead to averaging class ids, which makes no sense to do.
+        self._order_heatmaps = 3
+        self._order_segmentation_maps = 0
+        self._mode_heatmaps = "constant"
+        self._mode_segmentation_maps = "constant"
+        self._cval_heatmaps = 0
+        self._cval_segmentation_maps = 0
+
     @classmethod
     def _handle_order_arg(cls, order, backend):
         # Peformance in skimage:
@@ -990,9 +1008,13 @@ class Affine(meta.Augmenter):
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         nb_heatmaps = len(heatmaps)
         samples = self._draw_samples(nb_heatmaps, random_state)
-        samples.cval = np.zeros((nb_heatmaps, 1), dtype=np.float32)
-        samples.mode = ["constant"] * nb_heatmaps
-        samples.order = [3] * nb_heatmaps
+        if self._cval_heatmaps is not None:
+            samples.cval = np.full(
+                (nb_heatmaps, 1), self._cval_heatmaps, dtype=np.float32)
+        if self._mode_heatmaps is not None:
+            samples.mode = [self._mode_heatmaps] * nb_heatmaps
+        if self._order_heatmaps is not None:
+            samples.order = [self._order_heatmaps] * nb_heatmaps
 
         arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
         arrs_aug, matrices = self._augment_images_by_samples(
@@ -1019,17 +1041,18 @@ class Affine(meta.Augmenter):
         nb_segmaps = len(segmaps)
         samples = self._draw_samples(nb_segmaps, random_state)
 
-        # Segmentation map augmentation always pads with a constant value
-        # of 0 (background class id), and always uses nearest neighbour
-        # interpolation. While different pad modes and BG class ids could
-        # be used, the interpolation mode has to be NN as any other mode would
-        # lead to averaging class ids, which makes no sense to do.
-        samples.cval = np.zeros((nb_segmaps, 1), dtype=np.float32)
-        samples.mode = ["constant"] * nb_segmaps
-        # in contrast to heatmap aug, we don't have to clip augmented
-        # arrays here, as we always use NN interpolation
-        samples.order = [0] * nb_segmaps
+        if self._cval_segmentation_maps is not None:
+            samples.cval = np.full(
+                (nb_segmaps, 1), self._cval_segmentation_maps,
+                dtype=np.int32)
+        if self._mode_segmentation_maps is not None:
+            samples.mode = [self._mode_segmentation_maps] * nb_segmaps
+        if self._order_segmentation_maps is not None:
+            # in contrast to heatmap aug, we don't have to clip augmented
+            # arrays here, as we always use NN interpolation
+            samples.order = [self._order_segmentation_maps] * nb_segmaps
 
+        # noteworthy here that cv2 affine warp does support int32 arrays
         arrs = [segmaps_i.arr for segmaps_i in segmaps]
         arrs_aug, matrices = self._augment_images_by_samples(
             arrs, samples, return_matrices=True)
