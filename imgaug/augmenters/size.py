@@ -828,123 +828,8 @@ class CropAndPad(meta.Augmenter):
         super(CropAndPad, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        self.all_sides = None
-        self.top = None
-        self.right = None
-        self.bottom = None
-        self.left = None
-        if px is None and percent is None:
-            self.mode = "noop"
-        elif px is not None and percent is not None:
-            raise Exception("Can only pad by pixels or percent, not both.")
-        elif px is not None:
-            self.mode = "px"
-            if ia.is_single_integer(px):
-                self.all_sides = iap.Deterministic(px)
-            elif isinstance(px, tuple):
-                assert len(px) in [2, 4], (
-                    "Expected 'px' given as a tuple to contain 2 or 4 "
-                    "entries, got %d." % (len(px),))
-
-                def handle_param(p):
-                    if ia.is_single_integer(p):
-                        return iap.Deterministic(p)
-                    elif isinstance(p, tuple):
-                        assert len(p) == 2, (
-                            "Expected tuple of 2 values, got %d." % (len(p)))
-                        only_ints = (
-                            ia.is_single_integer(p[0])
-                            and ia.is_single_integer(p[1]))
-                        assert only_ints, (
-                            "Expected tuple of integers, got %s and %s." % (
-                                type(p[0]), type(p[1])))
-                        return iap.DiscreteUniform(p[0], p[1])
-                    elif isinstance(p, list):
-                        assert len(p) > 0, (
-                            "Expected non-empty list, but got empty one.")
-                        assert all([ia.is_single_integer(val) for val in p]), (
-                            "Expected list of ints, got types %s." % (
-                                ", ".join([str(type(v)) for v in p])))
-                        return iap.Choice(p)
-                    elif isinstance(p, iap.StochasticParameter):
-                        return p
-                    else:
-                        raise Exception(
-                            "Expected int, tuple of two ints, list of ints or "
-                            "StochasticParameter, got type %s." % (type(p),))
-
-                if len(px) == 2:
-                    self.all_sides = handle_param(px)
-                else:  # len == 4
-                    self.top = handle_param(px[0])
-                    self.right = handle_param(px[1])
-                    self.bottom = handle_param(px[2])
-                    self.left = handle_param(px[3])
-            elif isinstance(px, iap.StochasticParameter):
-                self.top = self.right = self.bottom = self.left = px
-            else:
-                raise Exception(
-                    "Expected int, tuple of 4 "
-                    "ints/tuples/lists/StochasticParameters or "
-                    "StochasticParameter, got type %s." % (type(px),))
-        else:  # = elif percent is not None:
-            self.mode = "percent"
-            if ia.is_single_number(percent):
-                assert percent > -1.0, (
-                    "Expected 'percent' to be >-1.0, got %.4f." % (percent,))
-                self.all_sides = iap.Deterministic(percent)
-            elif isinstance(percent, tuple):
-                assert len(percent) in [2, 4], (
-                    "Expected 'percent' given as a tuple to contain 2 or 4 "
-                    "entries, got %d." % (len(px),))
-
-                def handle_param(p):
-                    if ia.is_single_number(p):
-                        return iap.Deterministic(p)
-                    elif isinstance(p, tuple):
-                        assert len(p) == 2, (
-                            "Expected tuple of 2 values, got %d." % (len(p)))
-                        only_numbers = (
-                            ia.is_single_number(p[0])
-                            and ia.is_single_number(p[1]))
-                        assert only_numbers, (
-                            "Expected tuple of numbers, got %s and %s." % (
-                                type(p[0]), type(p[1])))
-                        assert p[0] > -1.0 and p[1] > -1.0, (
-                            "Expected tuple of values >-1.0, got %.4f and "
-                            "%.4f." % (p[0], p[1]))
-                        return iap.Uniform(p[0], p[1])
-                    elif isinstance(p, list):
-                        assert len(p) > 0, (
-                            "Expected non-empty list, but got empty one.")
-                        assert all([ia.is_single_number(val) for val in p]), (
-                            "Expected list of numbers, got types %s." % (
-                                ", ".join([str(type(v)) for v in p])))
-                        assert all([val > -1.0 for val in p]), (
-                            "Expected list of values >-1.0, got values %s." % (
-                                ", ".join(["%.4f" % (v,) for v in p])))
-                        return iap.Choice(p)
-                    elif isinstance(p, iap.StochasticParameter):
-                        return p
-                    else:
-                        raise Exception(
-                            "Expected int, tuple of two ints, list of ints or "
-                            "StochasticParameter, got type %s." % (type(p),))
-
-                if len(percent) == 2:
-                    self.all_sides = handle_param(percent)
-                else:  # len == 4
-                    self.top = handle_param(percent[0])
-                    self.right = handle_param(percent[1])
-                    self.bottom = handle_param(percent[2])
-                    self.left = handle_param(percent[3])
-            elif isinstance(percent, iap.StochasticParameter):
-                self.top = self.right = self.bottom = self.left = percent
-            else:
-                raise Exception(
-                    "Expected number, tuple of 4 "
-                    "numbers/tuples/lists/StochasticParameters or "
-                    "StochasticParameter, got type %s." % (type(percent),))
+        self.mode, self.all_sides, self.top, self.right, self.bottom, \
+            self.left = self._handle_px_and_percent_args(px, percent)
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
         # TODO enable ALL here, like in e.g. Affine
@@ -954,6 +839,142 @@ class CropAndPad(meta.Augmenter):
 
         self.keep_size = keep_size
         self.sample_independently = sample_independently
+
+    @classmethod
+    def _handle_px_and_percent_args(cls, px, percent):
+        all_sides = None
+        top, right, bottom, left = None, None, None, None
+
+        if px is None and percent is None:
+            mode = "noop"
+        elif px is not None and percent is not None:
+            raise Exception("Can only pad by pixels or percent, not both.")
+        elif px is not None:
+            mode = "px"
+            all_sides, top, right, bottom, left = cls._handle_px_arg(px)
+        else:  # = elif percent is not None:
+            mode = "percent"
+            all_sides, top, right, bottom, left = cls._handle_percent_arg(
+                percent)
+        return mode, all_sides, top, right, bottom, left
+
+    @classmethod
+    def _handle_px_arg(cls, px):
+        all_sides = None
+        top, right, bottom, left = None, None, None, None
+
+        if ia.is_single_integer(px):
+            all_sides = iap.Deterministic(px)
+        elif isinstance(px, tuple):
+            assert len(px) in [2, 4], (
+                "Expected 'px' given as a tuple to contain 2 or 4 "
+                "entries, got %d." % (len(px),))
+
+            def handle_param(p):
+                if ia.is_single_integer(p):
+                    return iap.Deterministic(p)
+                elif isinstance(p, tuple):
+                    assert len(p) == 2, (
+                        "Expected tuple of 2 values, got %d." % (len(p)))
+                    only_ints = (
+                        ia.is_single_integer(p[0])
+                        and ia.is_single_integer(p[1]))
+                    assert only_ints, (
+                        "Expected tuple of integers, got %s and %s." % (
+                            type(p[0]), type(p[1])))
+                    return iap.DiscreteUniform(p[0], p[1])
+                elif isinstance(p, list):
+                    assert len(p) > 0, (
+                        "Expected non-empty list, but got empty one.")
+                    assert all([ia.is_single_integer(val) for val in p]), (
+                        "Expected list of ints, got types %s." % (
+                            ", ".join([str(type(v)) for v in p])))
+                    return iap.Choice(p)
+                elif isinstance(p, iap.StochasticParameter):
+                    return p
+                else:
+                    raise Exception(
+                        "Expected int, tuple of two ints, list of ints or "
+                        "StochasticParameter, got type %s." % (type(p),))
+
+            if len(px) == 2:
+                all_sides = handle_param(px)
+            else:  # len == 4
+                top = handle_param(px[0])
+                right = handle_param(px[1])
+                bottom = handle_param(px[2])
+                left = handle_param(px[3])
+        elif isinstance(px, iap.StochasticParameter):
+            top = right = bottom = left = px
+        else:
+            raise Exception(
+                "Expected int, tuple of 4 "
+                "ints/tuples/lists/StochasticParameters or "
+                "StochasticParameter, got type %s." % (type(px),))
+        return all_sides, top, right, bottom, left
+
+    @classmethod
+    def _handle_percent_arg(cls, percent):
+        all_sides = None
+        top, right, bottom, left = None, None, None, None
+
+        if ia.is_single_number(percent):
+            assert percent > -1.0, (
+                "Expected 'percent' to be >-1.0, got %.4f." % (percent,))
+            all_sides = iap.Deterministic(percent)
+        elif isinstance(percent, tuple):
+            assert len(percent) in [2, 4], (
+                "Expected 'percent' given as a tuple to contain 2 or 4 "
+                "entries, got %d." % (len(percent),))
+
+            def handle_param(p):
+                if ia.is_single_number(p):
+                    return iap.Deterministic(p)
+                elif isinstance(p, tuple):
+                    assert len(p) == 2, (
+                        "Expected tuple of 2 values, got %d." % (len(p)))
+                    only_numbers = (
+                        ia.is_single_number(p[0])
+                        and ia.is_single_number(p[1]))
+                    assert only_numbers, (
+                        "Expected tuple of numbers, got %s and %s." % (
+                            type(p[0]), type(p[1])))
+                    assert p[0] > -1.0 and p[1] > -1.0, (
+                        "Expected tuple of values >-1.0, got %.4f and "
+                        "%.4f." % (p[0], p[1]))
+                    return iap.Uniform(p[0], p[1])
+                elif isinstance(p, list):
+                    assert len(p) > 0, (
+                        "Expected non-empty list, but got empty one.")
+                    assert all([ia.is_single_number(val) for val in p]), (
+                        "Expected list of numbers, got types %s." % (
+                            ", ".join([str(type(v)) for v in p])))
+                    assert all([val > -1.0 for val in p]), (
+                        "Expected list of values >-1.0, got values %s." % (
+                            ", ".join(["%.4f" % (v,) for v in p])))
+                    return iap.Choice(p)
+                elif isinstance(p, iap.StochasticParameter):
+                    return p
+                else:
+                    raise Exception(
+                        "Expected int, tuple of two ints, list of ints or "
+                        "StochasticParameter, got type %s." % (type(p),))
+
+            if len(percent) == 2:
+                all_sides = handle_param(percent)
+            else:  # len == 4
+                top = handle_param(percent[0])
+                right = handle_param(percent[1])
+                bottom = handle_param(percent[2])
+                left = handle_param(percent[3])
+        elif isinstance(percent, iap.StochasticParameter):
+            top = right = bottom = left = percent
+        else:
+            raise Exception(
+                "Expected number, tuple of 4 "
+                "numbers/tuples/lists/StochasticParameters or "
+                "StochasticParameter, got type %s." % (type(percent),))
+        return all_sides, top, right, bottom, left
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
