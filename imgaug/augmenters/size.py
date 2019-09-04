@@ -53,6 +53,89 @@ def _crop_arr_(arr, top, right, bottom, left, prevent_zero_size=True):
     return arr[y1:y2, x1:x2, ...]
 
 
+def _crop_and_pad_arr(arr, croppings, paddings, pad_mode, pad_cval,
+                      keep_size):
+    height, width = arr.shape[0:2]
+
+    image_cr = _crop_arr_(arr, *croppings)
+
+    image_cr_pa = ia.pad(
+        image_cr,
+        top=paddings[0], right=paddings[1],
+        bottom=paddings[2], left=paddings[3],
+        mode=pad_mode, cval=pad_cval)
+
+    if keep_size:
+        image_cr_pa = ia.imresize_single_image(image_cr_pa, (height, width))
+
+    return image_cr_pa
+
+
+def _crop_and_pad_heatmap_(heatmap, croppings_img, paddings_img, pad_mode,
+                           pad_cval, keep_size):
+    return _crop_and_pad_hms_or_segmaps_(heatmap, "arr_0to1", croppings_img,
+                                         paddings_img, pad_mode, pad_cval,
+                                         keep_size)
+
+
+def _crop_and_pad_segmap_(segmap, croppings_img, paddings_img, pad_mode,
+                          pad_cval, keep_size):
+    return _crop_and_pad_hms_or_segmaps_(segmap, "arr", croppings_img,
+                                         paddings_img, pad_mode, pad_cval,
+                                         keep_size)
+
+
+def _crop_and_pad_hms_or_segmaps_(augmentable, arr_attr_name, croppings_img,
+                                  paddings_img, pad_mode, pad_cval, keep_size):
+    arr = getattr(augmentable, arr_attr_name)
+    arr_shape_orig = arr.shape
+    augm_shape = augmentable.shape
+
+    croppings_proj = _project_size_changes(croppings_img, augm_shape, arr.shape)
+    paddings_proj = _project_size_changes(paddings_img, augm_shape, arr.shape)
+
+    croppings_proj = _crop_prevent_zero_size(arr.shape[0], arr.shape[1],
+                                             *croppings_proj)
+
+    arr_cr = _crop_arr_(arr,
+                        croppings_proj[0], croppings_proj[1],
+                        croppings_proj[2], croppings_proj[3])
+    arr_cr_pa = ia.pad(
+        arr_cr,
+        top=paddings_proj[0], right=paddings_proj[1],
+        bottom=paddings_proj[2], left=paddings_proj[3],
+        mode=pad_mode,
+        cval=pad_cval)
+
+    setattr(augmentable, arr_attr_name, arr_cr_pa)
+
+    if keep_size:
+        augmentable = augmentable.resize(arr_shape_orig[0:2])
+    else:
+        augmentable.shape = _compute_shape_after_crop_and_pad(
+            augmentable.shape, croppings_img, paddings_img)
+    return augmentable
+
+
+def _crop_and_pad_kpsoi(kpsoi, croppings_img, paddings_img, keep_size):
+    shifted = kpsoi.shift(
+        x=-croppings_img[3]+paddings_img[3],
+        y=-croppings_img[0]+paddings_img[0])
+    shifted.shape = _compute_shape_after_crop_and_pad(
+            kpsoi.shape, croppings_img, paddings_img)
+    if keep_size:
+        shifted = shifted.on(kpsoi.shape)
+    return shifted
+
+
+def _compute_shape_after_crop_and_pad(old_shape, croppings, paddings):
+    x1, y1, x2, y2 = _crop_trbl_to_xyxy(old_shape, *croppings)
+    new_shape = list(old_shape)
+    new_shape[0] = y2 - y1 + paddings[0] + paddings[2]
+    new_shape[1] = x2 - x1 + paddings[1] + paddings[3]
+    return tuple(new_shape)
+
+
 def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
                             crop_left):
     remaining_height = height - (crop_top + crop_bottom)
@@ -122,6 +205,28 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
         crop_left = crop_left - regain_left
 
     return crop_top, crop_right, crop_bottom, crop_left
+
+
+def _project_size_changes(trbl, from_shape, to_shape):
+    if from_shape[0:2] == to_shape[0:2]:
+        return trbl
+
+    height_to = to_shape[0]
+    width_to = to_shape[1]
+    height_from = from_shape[0]
+    width_from = from_shape[1]
+
+    top = trbl[0]
+    right = trbl[1]
+    bottom = trbl[2]
+    left = trbl[3]
+
+    top = _int_r(height_to * (top/height_from))
+    right = _int_r(width_to * (right/width_from))
+    bottom = _int_r(height_to * (bottom/height_from))
+    left = _int_r(width_to * (left/width_from))
+
+    return top, right, bottom, left
 
 
 def _int_r(value):
@@ -623,64 +728,13 @@ class _CropAndPadSamplingResult(object):
         self.pad_mode = pad_mode
         self.pad_cval = pad_cval
 
-    def prevent_zero_size_(self, shape):
-        crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
-            height=shape[0], width=shape[1],
-            crop_top=self.crop_top, crop_right=self.crop_right,
-            crop_bottom=self.crop_bottom, crop_left=self.crop_left)
-        self.crop_top = crop_top
-        self.crop_right = crop_right
-        self.crop_bottom = crop_bottom
-        self.crop_left = crop_left
+    @property
+    def croppings(self):
+        return self.crop_top, self.crop_right, self.crop_bottom, self.crop_left
 
-    def project(self, from_shape, to_shape):
-        if from_shape[0:2] == to_shape[0:2]:
-            return self
-
-        height_to = to_shape[0]
-        width_to = to_shape[1]
-        height_from = from_shape[0]
-        width_from = from_shape[1]
-
-        cf_t = self.crop_top
-        cf_r = self.crop_right
-        cf_b = self.crop_bottom
-        cf_l = self.crop_left
-
-        pf_t = self.pad_top
-        pf_r = self.pad_right
-        pf_b = self.pad_bottom
-        pf_l = self.pad_left
-
-        crop_top = _int_r(height_to * (cf_t/height_from))
-        crop_right = _int_r(width_to * (cf_r/width_from))
-        crop_bottom = _int_r(height_to * (cf_b/height_from))
-        crop_left = _int_r(width_to * (cf_l/width_from))
-
-        crop_top, crop_right, crop_bottom, crop_left = \
-            _crop_prevent_zero_size(
-                height_to, width_to, crop_top, crop_right,
-                crop_bottom, crop_left)
-
-        pad_top = _int_r(height_to * (pf_t/height_from))
-        pad_right = _int_r(width_to * (pf_r/width_from))
-        pad_bottom = _int_r(height_to * (pf_b/height_from))
-        pad_left = _int_r(width_to * (pf_l/width_from))
-
-        return _CropAndPadSamplingResult(
-            crop_top, crop_right, crop_bottom, crop_left,
-            pad_top, pad_right, pad_bottom, pad_left,
-            self.pad_mode, self.pad_cval
-        )
-
-    def compute_new_shape(self, old_shape):
-        x1, y1, x2, y2 = _crop_trbl_to_xyxy(
-            old_shape, self.crop_top, self.crop_right,
-            self.crop_bottom, self.crop_left)
-        new_shape = list(old_shape)
-        new_shape[0] = y2 - y1 + self.pad_top + self.pad_bottom
-        new_shape[1] = x2 - x1 + self.pad_left + self.pad_right
-        return tuple(new_shape)
+    @property
+    def paddings(self):
+        return self.pad_top, self.pad_right, self.pad_bottom, self.pad_left
 
 
 class CropAndPad(meta.Augmenter):
@@ -1082,18 +1136,9 @@ class CropAndPad(meta.Augmenter):
             height, width = image.shape[0:2]
             samples = self._draw_samples_image(rng, height, width)
 
-            image_cr = _crop_arr_(image, samples.crop_top, samples.crop_right,
-                                  samples.crop_bottom, samples.crop_left)
-
-            image_cr_pa = ia.pad(
-                image_cr,
-                top=samples.pad_top, right=samples.pad_right,
-                bottom=samples.pad_bottom, left=samples.pad_left,
-                mode=samples.pad_mode, cval=samples.pad_cval)
-
-            if self.keep_size:
-                image_cr_pa = ia.imresize_single_image(image_cr_pa,
-                                                       (height, width))
+            image_cr_pa = _crop_and_pad_arr(
+                image, samples.croppings, samples.paddings, samples.pad_mode,
+                samples.pad_cval, self.keep_size)
 
             result.append(image_cr_pa)
 
@@ -1120,36 +1165,19 @@ class CropAndPad(meta.Augmenter):
             random_state)
 
     def _augment_segmaps_and_heatmaps(self, augmentables, arr_attr_name,
-                                      mode, cval, random_state):
+                                      pad_mode, pad_cval, random_state):
         result = []
         rngs = random_state.duplicate(len(augmentables))
         for augmentable, rng in zip(augmentables, rngs):
-            arr = getattr(augmentable, arr_attr_name)
             height_img, width_img = augmentable.shape[0:2]
-            height_seg, width_seg = arr.shape[0:2]
+            samples_img = self._draw_samples_image(rng, height_img, width_img)
 
-            samples_img = self._draw_samples_image(rng, height_img,
-                                                   width_img)
-            samples_augm = samples_img.project(augmentable.shape, arr.shape)
-
-            arr_cr = _crop_arr_(
-                arr,
-                samples_augm.crop_top, samples_augm.crop_right,
-                samples_augm.crop_bottom, samples_augm.crop_left)
-            arr_cr_pa = ia.pad(
-                arr_cr,
-                top=samples_augm.pad_top, right=samples_augm.pad_right,
-                bottom=samples_augm.pad_bottom, left=samples_augm.pad_left,
-                mode=samples_augm.pad_mode if mode is None else mode,
-                cval=samples_augm.pad_cval if cval is None else cval)
-
-            setattr(augmentable, arr_attr_name, arr_cr_pa)
-
-            if self.keep_size:
-                augmentable = augmentable.resize((height_seg, width_seg))
-            else:
-                augmentable.shape = samples_img.compute_new_shape(
-                    augmentable.shape)
+            augmentable = _crop_and_pad_hms_or_segmaps_(
+                augmentable, arr_attr_name,
+                croppings_img=samples_img.croppings,
+                paddings_img=samples_img.paddings,
+                pad_mode=pad_mode, pad_cval=pad_cval, keep_size=self.keep_size
+            )
 
             result.append(augmentable)
 
@@ -1164,14 +1192,10 @@ class CropAndPad(meta.Augmenter):
             height, width = keypoints_on_image.shape[0:2]
             samples = self._draw_samples_image(rng, height, width)
 
-            shifted = keypoints_on_image.shift(
-                x=-samples.crop_left+samples.pad_left,
-                y=-samples.crop_top+samples.pad_top)
-            shifted.shape = samples.compute_new_shape(keypoints_on_image.shape)
-            if self.keep_size:
-                result.append(shifted.on(keypoints_on_image.shape))
-            else:
-                result.append(shifted)
+            kpsoi_aug = _crop_and_pad_kpsoi(
+                keypoints_on_image, croppings_img=samples.croppings,
+                paddings_img=samples.paddings, keep_size=self.keep_size)
+            result.append(kpsoi_aug)
 
         return result
 
