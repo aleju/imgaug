@@ -330,6 +330,16 @@
   Use `imgaug.augmenters.contrast.LinearContrast` instead. #396
 * Renamed argument `X` of `imgaug.augmentables.kps.compute_geometric_median()`
   to `points`. The old argument is still accepted, but now deprecated. #402
+* Refactored `Affine` to improve code quality and minimize code duplication.
+  * Removed `Affine.VALID_DTYPES_CV2_ORDER_0`.
+  * Removed `Affine.VALID_DTYPES_CV2_ORDER_NOT_0`.
+  * Removed `Affine.order_map_skimage_cv2`.
+  * Removed `Affine.mode_map_skimage_cv2`.
+* Refactored `CropAndPad` to improve code quality and minimize code
+  duplication.
+* Refactored module `size` to decrease code duplication between different
+  augmenters.
+
 
 ## Improved Segmentation Map Augmentation #302
 
