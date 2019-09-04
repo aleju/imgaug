@@ -36,32 +36,21 @@ import imgaug as ia
 from .. import parameters as iap
 
 
-def _int_r(value):
-    return int(np.round(value))
+def _crop_trbl_to_xyxy(shape, top, right, bottom, left):
+    height, width = shape[0:2]
+    x1 = left
+    x2 = width - right
+    y1 = top
+    y2 = height - bottom
+    return x1, y1, x2, y2
 
 
-# TODO somehow integrate this with ia.pad()
-def _handle_pad_mode_param(pad_mode):
-    pad_modes_available = {
-        "constant", "edge", "linear_ramp", "maximum", "mean", "median",
-        "minimum", "reflect", "symmetric", "wrap"}
-    if pad_mode == ia.ALL:
-        return iap.Choice(list(pad_modes_available))
-    elif ia.is_string(pad_mode):
-        assert pad_mode in pad_modes_available, (
-            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (
-                pad_mode, ", ".join(pad_modes_available)))
-        return iap.Deterministic(pad_mode)
-    elif isinstance(pad_mode, list):
-        assert all([v in pad_modes_available for v in pad_mode]), (
-            "At least one in list %s is not a valid pad mode. Valid pad "
-            "modes are: %s." % (str(pad_mode), ", ".join(pad_modes_available)))
-        return iap.Choice(pad_mode)
-    elif isinstance(pad_mode, iap.StochasticParameter):
-        return pad_mode
-    raise Exception(
-        "Expected pad_mode to be ia.ALL or string or list of strings or "
-        "StochasticParameter, got %s." % (type(pad_mode),))
+def _crop_arr_(arr, top, right, bottom, left, prevent_zero_size=True):
+    if prevent_zero_size:
+        top, right, bottom, left = _crop_prevent_zero_size(
+            arr.shape[0], arr.shape[1], top, right, bottom, left)
+    x1, y1, x2, y2 = _crop_trbl_to_xyxy(arr.shape, top, right, bottom, left)
+    return arr[y1:y2, x1:x2, ...]
 
 
 def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
@@ -133,6 +122,34 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
         crop_left = crop_left - regain_left
 
     return crop_top, crop_right, crop_bottom, crop_left
+
+
+def _int_r(value):
+    return int(np.round(value))
+
+
+# TODO somehow integrate this with ia.pad()
+def _handle_pad_mode_param(pad_mode):
+    pad_modes_available = {
+        "constant", "edge", "linear_ramp", "maximum", "mean", "median",
+        "minimum", "reflect", "symmetric", "wrap"}
+    if pad_mode == ia.ALL:
+        return iap.Choice(list(pad_modes_available))
+    elif ia.is_string(pad_mode):
+        assert pad_mode in pad_modes_available, (
+            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (
+                pad_mode, ", ".join(pad_modes_available)))
+        return iap.Deterministic(pad_mode)
+    elif isinstance(pad_mode, list):
+        assert all([v in pad_modes_available for v in pad_mode]), (
+            "At least one in list %s is not a valid pad mode. Valid pad "
+            "modes are: %s." % (str(pad_mode), ", ".join(pad_modes_available)))
+        return iap.Choice(pad_mode)
+    elif isinstance(pad_mode, iap.StochasticParameter):
+        return pad_mode
+    raise Exception(
+        "Expected pad_mode to be ia.ALL or string or list of strings or "
+        "StochasticParameter, got %s." % (type(pad_mode),))
 
 
 def _handle_position_parameter(position):
@@ -656,16 +673,10 @@ class _CropAndPadSamplingResult(object):
             self.pad_mode, self.pad_cval
         )
 
-    def to_crop_xyxy(self, shape):
-        height, width = shape[0:2]
-        x1 = self.crop_left
-        x2 = width - self.crop_right
-        y1 = self.crop_top
-        y2 = height - self.crop_bottom
-        return x1, y1, x2, y2
-
     def compute_new_shape(self, old_shape):
-        x1, y1, x2, y2 = self.to_crop_xyxy(old_shape)
+        x1, y1, x2, y2 = _crop_trbl_to_xyxy(
+            old_shape, self.crop_top, self.crop_right,
+            self.crop_bottom, self.crop_left)
         new_shape = list(old_shape)
         new_shape[0] = y2 - y1 + self.pad_top + self.pad_bottom
         new_shape[1] = x2 - x1 + self.pad_left + self.pad_right
@@ -1071,8 +1082,8 @@ class CropAndPad(meta.Augmenter):
             height, width = image.shape[0:2]
             samples = self._draw_samples_image(rng, height, width)
 
-            x1, y1, x2, y2 = samples.to_crop_xyxy(image.shape)
-            image_cr = image[y1:y2, x1:x2, ...]
+            image_cr = _crop_arr_(image, samples.crop_top, samples.crop_right,
+                                  samples.crop_bottom, samples.crop_left)
 
             image_cr_pa = ia.pad(
                 image_cr,
@@ -1121,8 +1132,10 @@ class CropAndPad(meta.Augmenter):
                                                    width_img)
             samples_augm = samples_img.project(augmentable.shape, arr.shape)
 
-            x1, y1, x2, y2 = samples_augm.to_crop_xyxy(arr.shape)
-            arr_cr = arr[y1:y2, x1:x2, ...]
+            arr_cr = _crop_arr_(
+                arr,
+                samples_augm.crop_top, samples_augm.crop_right,
+                samples_augm.crop_bottom, samples_augm.crop_left)
             arr_cr_pa = ia.pad(
                 arr_cr,
                 top=samples_augm.pad_top, right=samples_augm.pad_right,
@@ -2116,11 +2129,8 @@ class CropToFixedSize(meta.Augmenter):
                 crop_image_left = int(offset_xs[i] * (width_image - w))
                 crop_image_right = width_image - w - crop_image_left
 
-            image = image[
-                crop_image_top:height_image-crop_image_bottom,
-                crop_image_left:width_image-crop_image_right,
-                ...
-            ]
+            image = _crop_arr_(image, crop_image_top, crop_image_right,
+                               crop_image_bottom, crop_image_left)
 
             result.append(image)
 
