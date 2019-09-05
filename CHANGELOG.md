@@ -339,6 +339,11 @@
   duplication.
 * Refactored module `size` to decrease code duplication between different
   augmenters.
+* Changed `imgaug.imgaug.pad` to automatically clip the `cval` argument
+  to the value range of the array to be padded.
+* Moved matrix generation logic of augmenters in module `convolutional`
+  to classes, one per augmenter (i.e. one per category of convolutional
+  matrix). This should avoid errors related to pickling of functions.
 
 
 ## Improved Segmentation Map Augmentation #302
@@ -582,6 +587,8 @@ Changes:
 * Fixed `Convolve` using an overly restrictive check when validating inputs
   for `matrix` w.r.t. whether they are callables. The check should now also
   support class methods (and possibly various other callables).
+* Fixed `CropAndPad`, `Pad` and `PadToFixedSize` still clipping `cval` samples
+  to the `uint8`. They now clip to the input array's dtype's value range.
 
 
 # 0.2.9
