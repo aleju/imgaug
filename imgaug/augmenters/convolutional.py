@@ -295,33 +295,39 @@ class Sharpen(Convolve):
             lightness, "lightness",
             value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
-        def _create_matrices(_image, nb_channels, random_state_func):
-            alpha_sample = alpha_param.draw_sample(
-                random_state=random_state_func)
-            assert 0 <= alpha_sample <= 1.0, (
-                "Expected 'alpha' to be in the interval [0.0, 1.0], "
-                "got %.4f." % (alpha_sample,))
-            lightness_sample = lightness_param.draw_sample(
-                random_state=random_state_func)
-            matrix_nochange = np.array([
-                [0, 0, 0],
-                [0, 1, 0],
-                [0, 0, 0]
-            ], dtype=np.float32)
-            matrix_effect = np.array([
-                [-1, -1, -1],
-                [-1, 8+lightness_sample, -1],
-                [-1, -1, -1]
-            ], dtype=np.float32)
-            matrix = (
-                (1-alpha_sample) * matrix_nochange
-                + alpha_sample * matrix_effect
-            )
-            return [matrix] * nb_channels
+        matrix_gen = _SharpeningMatrixGenerator(alpha_param, lightness_param)
 
         super(Sharpen, self).__init__(
-            matrix=_create_matrices, name=name, deterministic=deterministic,
+            matrix=matrix_gen, name=name, deterministic=deterministic,
             random_state=random_state)
+
+
+class _SharpeningMatrixGenerator(object):
+    def __init__(self, alpha, lightness):
+        self.alpha = alpha
+        self.lightness = lightness
+
+    def __call__(self, _image, nb_channels, random_state):
+        alpha_sample = self.alpha.draw_sample(random_state=random_state)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], "
+            "got %.4f." % (alpha_sample,))
+        lightness_sample = self.lightness.draw_sample(random_state=random_state)
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [-1, -1, -1],
+            [-1, 8+lightness_sample, -1],
+            [-1, -1, -1]
+        ], dtype=np.float32)
+        matrix = (
+            (1-alpha_sample) * matrix_nochange
+            + alpha_sample * matrix_effect
+        )
+        return [matrix] * nb_channels
 
 
 class Emboss(Convolve):
@@ -390,33 +396,39 @@ class Emboss(Convolve):
             strength, "strength",
             value_range=(0, None), tuple_to_uniform=True, list_to_choice=True)
 
-        def _create_matrices(_image, nb_channels, random_state_func):
-            alpha_sample = alpha_param.draw_sample(
-                random_state=random_state_func)
-            assert 0 <= alpha_sample <= 1.0, (
-                "Expected 'alpha' to be in the interval [0.0, 1.0], "
-                "got %.4f." % (alpha_sample,))
-            strength_sample = strength_param.draw_sample(
-                random_state=random_state_func)
-            matrix_nochange = np.array([
-                [0, 0, 0],
-                [0, 1, 0],
-                [0, 0, 0]
-            ], dtype=np.float32)
-            matrix_effect = np.array([
-                [-1-strength_sample, 0-strength_sample, 0],
-                [0-strength_sample, 1, 0+strength_sample],
-                [0, 0+strength_sample, 1+strength_sample]
-            ], dtype=np.float32)
-            matrix = (
-                (1-alpha_sample) * matrix_nochange
-                + alpha_sample * matrix_effect
-            )
-            return [matrix] * nb_channels
+        matrix_gen = _EmbossMatrixGenerator(alpha_param, strength_param)
 
         super(Emboss, self).__init__(
-            matrix=_create_matrices, name=name, deterministic=deterministic,
+            matrix=matrix_gen, name=name, deterministic=deterministic,
             random_state=random_state)
+
+
+class _EmbossMatrixGenerator(object):
+    def __init__(self, alpha, strength):
+        self.alpha = alpha
+        self.strength = strength
+
+    def __call__(self, _image, nb_channels, random_state):
+        alpha_sample = self.alpha.draw_sample(random_state=random_state)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], "
+            "got %.4f." % (alpha_sample,))
+        strength_sample = self.strength.draw_sample(random_state=random_state)
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [-1-strength_sample, 0-strength_sample, 0],
+            [0-strength_sample, 1, 0+strength_sample],
+            [0, 0+strength_sample, 1+strength_sample]
+        ], dtype=np.float32)
+        matrix = (
+            (1-alpha_sample) * matrix_nochange
+            + alpha_sample * matrix_effect
+        )
+        return [matrix] * nb_channels
 
 
 # TODO add tests
@@ -468,31 +480,37 @@ class EdgeDetect(Convolve):
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
 
-        def _create_matrices(_image, nb_channels, random_state_func):
-            alpha_sample = alpha_param.draw_sample(
-                random_state=random_state_func)
-            assert 0 <= alpha_sample <= 1.0, (
-                "Expected 'alpha' to be in the interval [0.0, 1.0], "
-                "got %.4f." % (alpha_sample,))
-            matrix_nochange = np.array([
-                [0, 0, 0],
-                [0, 1, 0],
-                [0, 0, 0]
-            ], dtype=np.float32)
-            matrix_effect = np.array([
-                [0, 1, 0],
-                [1, -4, 1],
-                [0, 1, 0]
-            ], dtype=np.float32)
-            matrix = (
-                (1-alpha_sample) * matrix_nochange
-                + alpha_sample * matrix_effect
-            )
-            return [matrix] * nb_channels
+        matrix_gen = _EdgeDetectMatrixGenerator(alpha_param)
 
         super(EdgeDetect, self).__init__(
-            matrix=_create_matrices, name=name, deterministic=deterministic,
+            matrix=matrix_gen, name=name, deterministic=deterministic,
             random_state=random_state)
+
+
+class _EdgeDetectMatrixGenerator(object):
+    def __init__(self, alpha):
+        self.alpha = alpha
+
+    def __call__(self, _image, nb_channels, random_state):
+        alpha_sample = self.alpha.draw_sample(random_state=random_state)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], "
+            "got %.4f." % (alpha_sample,))
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        matrix_effect = np.array([
+            [0, 1, 0],
+            [1, -4, 1],
+            [0, 1, 0]
+        ], dtype=np.float32)
+        matrix = (
+            (1-alpha_sample) * matrix_nochange
+            + alpha_sample * matrix_effect
+        )
+        return [matrix] * nb_channels
 
 
 # TODO add tests
@@ -588,52 +606,59 @@ class DirectedEdgeDetect(Convolve):
             direction, "direction",
             value_range=None, tuple_to_uniform=True, list_to_choice=True)
 
-        def _create_matrices(_image, nb_channels, random_state_func):
-            alpha_sample = alpha_param.draw_sample(
-                random_state=random_state_func)
-            assert 0 <= alpha_sample <= 1.0, (
-                "Expected 'alpha' to be in the interval [0.0, 1.0], "
-                "got %.4f." % (alpha_sample,))
-            direction_sample = direction_param.draw_sample(
-                random_state=random_state_func)
-
-            deg = int(direction_sample * 360) % 360
-            rad = np.deg2rad(deg)
-            x = np.cos(rad - 0.5*np.pi)
-            y = np.sin(rad - 0.5*np.pi)
-            direction_vector = np.array([x, y])
-
-            matrix_effect = np.array([
-                [0, 0, 0],
-                [0, 0, 0],
-                [0, 0, 0]
-            ], dtype=np.float32)
-            for x, y in itertools.product([-1, 0, 1], [-1, 0, 1]):
-                if (x, y) != (0, 0):
-                    cell_vector = np.array([x, y])
-                    distance_deg = np.rad2deg(
-                        ia.angle_between_vectors(cell_vector,
-                                                 direction_vector))
-                    distance = distance_deg / 180
-                    similarity = (1 - distance)**4
-                    matrix_effect[y+1, x+1] = similarity
-            matrix_effect = matrix_effect / np.sum(matrix_effect)
-            matrix_effect = matrix_effect * (-1)
-            matrix_effect[1, 1] = 1
-
-            matrix_nochange = np.array([
-                [0, 0, 0],
-                [0, 1, 0],
-                [0, 0, 0]
-            ], dtype=np.float32)
-
-            matrix = (
-                (1-alpha_sample) * matrix_nochange
-                + alpha_sample * matrix_effect
-            )
-
-            return [matrix] * nb_channels
+        matrix_gen = _DirectedEdgeDetectMatrixGenerator(alpha_param,
+                                                        direction_param)
 
         super(DirectedEdgeDetect, self).__init__(
-            matrix=_create_matrices, name=name, deterministic=deterministic,
+            matrix=matrix_gen, name=name, deterministic=deterministic,
             random_state=random_state)
+
+
+class _DirectedEdgeDetectMatrixGenerator(object):
+    def __init__(self, alpha, direction):
+        self.alpha = alpha
+        self.direction = direction
+
+    def __call__(self, _image, nb_channels, random_state):
+        alpha_sample = self.alpha.draw_sample(random_state=random_state)
+        assert 0 <= alpha_sample <= 1.0, (
+            "Expected 'alpha' to be in the interval [0.0, 1.0], "
+            "got %.4f." % (alpha_sample,))
+        direction_sample = self.direction.draw_sample(random_state=random_state)
+
+        deg = int(direction_sample * 360) % 360
+        rad = np.deg2rad(deg)
+        x = np.cos(rad - 0.5*np.pi)
+        y = np.sin(rad - 0.5*np.pi)
+        direction_vector = np.array([x, y])
+
+        matrix_effect = np.array([
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+        for x, y in itertools.product([-1, 0, 1], [-1, 0, 1]):
+            if (x, y) != (0, 0):
+                cell_vector = np.array([x, y])
+                distance_deg = np.rad2deg(
+                    ia.angle_between_vectors(cell_vector,
+                                             direction_vector))
+                distance = distance_deg / 180
+                similarity = (1 - distance)**4
+                matrix_effect[y+1, x+1] = similarity
+        matrix_effect = matrix_effect / np.sum(matrix_effect)
+        matrix_effect = matrix_effect * (-1)
+        matrix_effect[1, 1] = 1
+
+        matrix_nochange = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=np.float32)
+
+        matrix = (
+            (1-alpha_sample) * matrix_nochange
+            + alpha_sample * matrix_effect
+        )
+
+        return [matrix] * nb_channels
