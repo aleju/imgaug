@@ -502,10 +502,10 @@ Changes:
 * [rarely breaking] Removed `imgaug.imgaug.CURRENT_RANDOM_STATE`.
   Use `imgaug.random.get_global_rng()` instead.
 * [rarely breaking] Removed `imgaug.imgaug.SEED_MIN_VALUE`.
-  Use  `imgaug.random.SEED_MIN_VALUE` instead or sample seeds via
+  Use `imgaug.random.SEED_MIN_VALUE` instead or sample seeds via
   `imgaug.random.generate_seeds_()`.
 * [rarely breaking] Removed `imgaug.imgaug.SEED_MAX_VALUE`.
-  Use  `imgaug.random.SEED_MAX_VALUE` instead or sample seeds via
+  Use `imgaug.random.SEED_MAX_VALUE` instead or sample seeds via
   `imgaug.random.generate_seeds_()`.
 * Optimized RNG handling throughout all augmenters to minimize the number of
   RNG copies. RNGs are now re-used as often as possible. This improves
@@ -517,6 +517,16 @@ Changes:
   change.
 * [breaking] The above listed changes will lead to different values being
   sampled for the same seeds (compared to past versions of the library).
+* [breaking] The seed for `imgaug`'s global random number generator is now
+  sampled from numpy's default random number generator. That means, that every
+  run of a program using `imgaug` will by default use a different seed and
+  hence result in different samples. Previously, a fixed seed was used,
+  resulting in the same samples for each run (unless the seed was manually
+  changed to a fixed one). It also means that seeding numpy will automatically
+  also seed imgaug (not guarantueed that this behaviour will be kept in
+  future releases). The change from fixed to random seed was done, because the
+  old (fixed) behaviour didn't match the common practice (and especially not
+  numpy's standard behaviour) and hence led to confusion. #408
 
 ## Fixes
  
