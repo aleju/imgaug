@@ -375,6 +375,12 @@ class WithHueAndSaturation(meta.Augmenter):
             heatmaps, self.children.augment_heatmaps, parents,
             hooks)
 
+    def _augment_segmentation_maps(self, segmaps, random_state, parents,
+                                   hooks):
+        return self._augment_nonimages(
+            segmaps, self.children.augment_segmentation_maps,
+            parents, hooks)
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
         return self._augment_nonimages(
