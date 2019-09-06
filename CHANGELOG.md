@@ -330,6 +330,22 @@
   Use `imgaug.augmenters.contrast.LinearContrast` instead. #396
 * Renamed argument `X` of `imgaug.augmentables.kps.compute_geometric_median()`
   to `points`. The old argument is still accepted, but now deprecated. #402
+* Refactored `Affine` to improve code quality and minimize code
+  duplication. #407
+  * [rarely breaking] Removed `Affine.VALID_DTYPES_CV2_ORDER_0`.
+  * [rarely breaking] Removed `Affine.VALID_DTYPES_CV2_ORDER_NOT_0`.
+  * [rarely breaking] Removed `Affine.order_map_skimage_cv2`.
+  * [rarely breaking] Removed `Affine.mode_map_skimage_cv2`.
+* Refactored `CropAndPad` to improve code quality and minimize code
+  duplication. #407
+* Refactored module `size` to decrease code duplication between different
+  augmenters. #407
+* Changed `imgaug.imgaug.pad` to automatically clip the `cval` argument
+  to the value range of the array to be padded. #407
+* Moved matrix generation logic of augmenters in module `convolutional`
+  to classes, one per augmenter (i.e. one per category of convolutional
+  matrix). This should avoid errors related to pickling of functions. #407
+
 
 ## Improved Segmentation Map Augmentation #302
 
@@ -571,7 +587,9 @@ Changes:
   augmentations. #385
 * Fixed `Convolve` using an overly restrictive check when validating inputs
   for `matrix` w.r.t. whether they are callables. The check should now also
-  support class methods (and possibly various other callables).
+  support class methods (and possibly various other callables). #407
+* Fixed `CropAndPad`, `Pad` and `PadToFixedSize` still clipping `cval` samples
+  to the `uint8`. They now clip to the input array's dtype's value range. #407
 
 
 # 0.2.9

@@ -36,32 +36,115 @@ import imgaug as ia
 from .. import parameters as iap
 
 
-def _int_r(value):
-    return int(np.round(value))
+def _crop_trbl_to_xyxy(shape, top, right, bottom, left):
+    height, width = shape[0:2]
+    x1 = left
+    x2 = width - right
+    y1 = top
+    y2 = height - bottom
+    return x1, y1, x2, y2
 
 
-# TODO somehow integrate this with ia.pad()
-def _handle_pad_mode_param(pad_mode):
-    pad_modes_available = {
-        "constant", "edge", "linear_ramp", "maximum", "mean", "median",
-        "minimum", "reflect", "symmetric", "wrap"}
-    if pad_mode == ia.ALL:
-        return iap.Choice(list(pad_modes_available))
-    elif ia.is_string(pad_mode):
-        assert pad_mode in pad_modes_available, (
-            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (
-                pad_mode, ", ".join(pad_modes_available)))
-        return iap.Deterministic(pad_mode)
-    elif isinstance(pad_mode, list):
-        assert all([v in pad_modes_available for v in pad_mode]), (
-            "At least one in list %s is not a valid pad mode. Valid pad "
-            "modes are: %s." % (str(pad_mode), ", ".join(pad_modes_available)))
-        return iap.Choice(pad_mode)
-    elif isinstance(pad_mode, iap.StochasticParameter):
-        return pad_mode
-    raise Exception(
-        "Expected pad_mode to be ia.ALL or string or list of strings or "
-        "StochasticParameter, got %s." % (type(pad_mode),))
+def _crop_arr_(arr, top, right, bottom, left, prevent_zero_size=True):
+    if prevent_zero_size:
+        top, right, bottom, left = _crop_prevent_zero_size(
+            arr.shape[0], arr.shape[1], top, right, bottom, left)
+    x1, y1, x2, y2 = _crop_trbl_to_xyxy(arr.shape, top, right, bottom, left)
+    return arr[y1:y2, x1:x2, ...]
+
+
+def _crop_and_pad_arr(arr, croppings, paddings, pad_mode="constant",
+                      pad_cval=0, keep_size=False):
+    height, width = arr.shape[0:2]
+
+    image_cr = _crop_arr_(arr, *croppings)
+
+    image_cr_pa = ia.pad(
+        image_cr,
+        top=paddings[0], right=paddings[1],
+        bottom=paddings[2], left=paddings[3],
+        mode=pad_mode, cval=pad_cval)
+
+    if keep_size:
+        image_cr_pa = ia.imresize_single_image(image_cr_pa, (height, width))
+
+    return image_cr_pa
+
+
+def _crop_and_pad_heatmap_(heatmap, croppings_img, paddings_img,
+                           pad_mode="constant", pad_cval=0.0, keep_size=False):
+    return _crop_and_pad_hms_or_segmaps_(heatmap, croppings_img,
+                                         paddings_img, pad_mode, pad_cval,
+                                         keep_size)
+
+
+def _crop_and_pad_segmap_(segmap, croppings_img, paddings_img,
+                          pad_mode="constant", pad_cval=0, keep_size=False):
+    return _crop_and_pad_hms_or_segmaps_(segmap, croppings_img,
+                                         paddings_img, pad_mode, pad_cval,
+                                         keep_size)
+
+
+def _crop_and_pad_hms_or_segmaps_(augmentable, croppings_img,
+                                  paddings_img, pad_mode="constant",
+                                  pad_cval=None, keep_size=False):
+    if isinstance(augmentable, ia.HeatmapsOnImage):
+        arr_attr_name = "arr_0to1"
+        pad_cval = pad_cval if pad_cval is not None else 0.0
+    else:
+        assert isinstance(augmentable, ia.SegmentationMapsOnImage), (
+            "Expected HeatmapsOnImage or SegmentationMapsOnImage, got %s." % (
+                type(augmentable)))
+        arr_attr_name = "arr"
+        pad_cval = pad_cval if pad_cval is not None else 0
+
+    arr = getattr(augmentable, arr_attr_name)
+    arr_shape_orig = arr.shape
+    augm_shape = augmentable.shape
+
+    croppings_proj = _project_size_changes(croppings_img, augm_shape, arr.shape)
+    paddings_proj = _project_size_changes(paddings_img, augm_shape, arr.shape)
+
+    croppings_proj = _crop_prevent_zero_size(arr.shape[0], arr.shape[1],
+                                             *croppings_proj)
+
+    arr_cr = _crop_arr_(arr,
+                        croppings_proj[0], croppings_proj[1],
+                        croppings_proj[2], croppings_proj[3])
+    arr_cr_pa = ia.pad(
+        arr_cr,
+        top=paddings_proj[0], right=paddings_proj[1],
+        bottom=paddings_proj[2], left=paddings_proj[3],
+        mode=pad_mode,
+        cval=pad_cval)
+
+    setattr(augmentable, arr_attr_name, arr_cr_pa)
+
+    if keep_size:
+        augmentable = augmentable.resize(arr_shape_orig[0:2])
+    else:
+        augmentable.shape = _compute_shape_after_crop_and_pad(
+            augmentable.shape, croppings_img, paddings_img)
+    return augmentable
+
+
+def _crop_and_pad_kpsoi(kpsoi, croppings_img, paddings_img, keep_size):
+    shifted = kpsoi.shift(
+        x=-croppings_img[3]+paddings_img[3],
+        y=-croppings_img[0]+paddings_img[0])
+    shifted.shape = _compute_shape_after_crop_and_pad(
+            kpsoi.shape, croppings_img, paddings_img)
+    if keep_size:
+        shifted = shifted.on(kpsoi.shape)
+    return shifted
+
+
+def _compute_shape_after_crop_and_pad(old_shape, croppings, paddings):
+    x1, y1, x2, y2 = _crop_trbl_to_xyxy(old_shape, *croppings)
+    new_shape = list(old_shape)
+    new_shape[0] = y2 - y1 + paddings[0] + paddings[2]
+    new_shape[1] = x2 - x1 + paddings[1] + paddings[3]
+    return tuple(new_shape)
 
 
 def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
@@ -133,6 +216,56 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
         crop_left = crop_left - regain_left
 
     return crop_top, crop_right, crop_bottom, crop_left
+
+
+def _project_size_changes(trbl, from_shape, to_shape):
+    if from_shape[0:2] == to_shape[0:2]:
+        return trbl
+
+    height_to = to_shape[0]
+    width_to = to_shape[1]
+    height_from = from_shape[0]
+    width_from = from_shape[1]
+
+    top = trbl[0]
+    right = trbl[1]
+    bottom = trbl[2]
+    left = trbl[3]
+
+    top = _int_r(height_to * (top/height_from))
+    right = _int_r(width_to * (right/width_from))
+    bottom = _int_r(height_to * (bottom/height_from))
+    left = _int_r(width_to * (left/width_from))
+
+    return top, right, bottom, left
+
+
+def _int_r(value):
+    return int(np.round(value))
+
+
+# TODO somehow integrate this with ia.pad()
+def _handle_pad_mode_param(pad_mode):
+    pad_modes_available = {
+        "constant", "edge", "linear_ramp", "maximum", "mean", "median",
+        "minimum", "reflect", "symmetric", "wrap"}
+    if pad_mode == ia.ALL:
+        return iap.Choice(list(pad_modes_available))
+    elif ia.is_string(pad_mode):
+        assert pad_mode in pad_modes_available, (
+            "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (
+                pad_mode, ", ".join(pad_modes_available)))
+        return iap.Deterministic(pad_mode)
+    elif isinstance(pad_mode, list):
+        assert all([v in pad_modes_available for v in pad_mode]), (
+            "At least one in list %s is not a valid pad mode. Valid pad "
+            "modes are: %s." % (str(pad_mode), ", ".join(pad_modes_available)))
+        return iap.Choice(pad_mode)
+    elif isinstance(pad_mode, iap.StochasticParameter):
+        return pad_mode
+    raise Exception(
+        "Expected pad_mode to be ia.ALL or string or list of strings or "
+        "StochasticParameter, got %s." % (type(pad_mode),))
 
 
 def _handle_position_parameter(position):
@@ -337,129 +470,114 @@ class Resize(meta.Augmenter):
         super(Resize, self).__init__(name=name, deterministic=deterministic,
                                      random_state=random_state)
 
-        def handle(val, allow_dict):
-            if val == "keep":
-                return iap.Deterministic("keep")
-            elif ia.is_single_integer(val):
-                assert val > 0, "Expected only values > 0, got %d" % (val,)
-                return iap.Deterministic(val)
-            elif ia.is_single_float(val):
-                assert val > 0, "Expected only values > 0, got %.4f" % (val,)
-                return iap.Deterministic(val)
-            elif allow_dict and isinstance(val, dict):
-                if len(val.keys()) == 0:
-                    return iap.Deterministic("keep")
-                elif any([key in ["height", "width"] for key in val.keys()]):
-                    hw_keys_exist = all([
-                        key in ["height", "width"] for key in val.keys()])
-                    assert hw_keys_exist, (
-                        "Expected dict to contain height and width keys, "
-                        "found neither of them.")
-                    if "height" in val and "width" in val:
-                        not_both_kaa = (
-                            val["height"] != "keep-aspect-ratio"
-                            or val["width"] != "keep-aspect-ratio")
-                        assert not_both_kaa, (
-                            "Expected height and width to not be both set "
-                            "to \"keep-aspect-ratio\".")
+        self.size, self.size_order = self._handle_size_arg(size, False)
+        self.interpolation = self._handle_interpolation_arg(interpolation)
 
-                    size_tuple = []
-                    for k in ["height", "width"]:
-                        if k in val:
-                            if (val[k] == "keep-aspect-ratio"
-                                    or val[k] == "keep"):
-                                entry = iap.Deterministic(val[k])
-                            else:
-                                entry = handle(val[k], False)
-                        else:
-                            entry = iap.Deterministic("keep")
-                        size_tuple.append(entry)
-                    return tuple(size_tuple)
-                elif any([key in ["shorter-side", "longer-side"]
-                          for key in val.keys()]):
-                    sl_keys_exist = all([
-                        key in ["shorter-side", "longer-side"]
-                        for key in val.keys()])
-                    assert sl_keys_exist, (
-                        "Expected dict to contain shorter-side and "
-                        "longer-side keys, found neither of them.")
-                    if "shorter-side" in val and "longer-side" in val:
-                        not_both_kaa = (
-                            val["shorter-side"] != "keep-aspect-ratio"
-                            or val["longer-side"] != "keep-aspect-ratio")
-                        assert not_both_kaa, (
-                            "Expected shorter-side and longer-side to not be "
-                            "both set to \"keep-aspect-ratio\".")
+    @classmethod
+    def _handle_size_arg(cls, size, subcall):
+        def _dict_to_size_tuple(v1, v2):
+            kaa = "keep-aspect-ratio"
+            not_both_kaa = (v1 != kaa or v2 != kaa)
+            assert not_both_kaa, (
+                "Expected at least one value to not be \"keep-aspect-ratio\", "
+                "but got it two times.")
 
-                    size_tuple = []
-                    for k in ["shorter-side", "longer-side"]:
-                        if k in val:
-                            if (val[k] == "keep-aspect-ratio"
-                                    or val[k] == "keep"):
-                                entry = iap.Deterministic(val[k])
-                            else:
-                                entry = handle(val[k], False)
-                        else:
-                            entry = iap.Deterministic("keep")
-                        size_tuple.append(entry)
-                    return tuple(size_tuple)
-
-            elif isinstance(val, tuple):
-                assert len(val) == 2, (
-                    "Expected size tuple to contain exactly 2 values, "
-                    "got %d." % (len(val),))
-                assert val[0] > 0 and val[1] > 0, (
-                    "Expected size tuple to only contain values >0, "
-                    "got %d and %d." % (val[0], val[1]))
-                if ia.is_single_float(val[0]) or ia.is_single_float(val[1]):
-                    return iap.Uniform(val[0], val[1])
+            size_tuple = []
+            for k in [v1, v2]:
+                if k in ["keep-aspect-ratio", "keep"]:
+                    entry = iap.Deterministic(k)
                 else:
-                    return iap.DiscreteUniform(val[0], val[1])
-            elif isinstance(val, list):
-                if len(val) == 0:
-                    return iap.Deterministic("keep")
-                else:
-                    all_int = all([ia.is_single_integer(v) for v in val])
-                    all_float = all([ia.is_single_float(v) for v in val])
-                    assert all_int or all_float, (
-                        "Expected to get only integers or floats.")
-                    assert all([v > 0 for v in val]), (
-                        "Expected all values to be >0.")
-                    return iap.Choice(val)
-            elif isinstance(val, iap.StochasticParameter):
-                return val
+                    entry = cls._handle_size_arg(k, True)
+                size_tuple.append(entry)
+            return tuple(size_tuple)
 
-            raise Exception(
+        def _contains_any_key(dict_, keys):
+            return any([key in dict_ for key in keys])
+
+        # HW = height, width
+        # SL = shorter, longer
+        size_order = "HW"
+
+        if size == "keep":
+            result = iap.Deterministic("keep")
+        elif ia.is_single_number(size):
+            assert size > 0, "Expected only values > 0, got %s" % (size,)
+            result = iap.Deterministic(size)
+        elif not subcall and isinstance(size, dict):
+            if len(size.keys()) == 0:
+                result = iap.Deterministic("keep")
+            elif _contains_any_key(size, ["height", "width"]):
+                height = size.get("height", "keep")
+                width = size.get("width", "keep")
+                result = _dict_to_size_tuple(height, width)
+            elif _contains_any_key(size, ["shorter-side", "longer-side"]):
+                shorter = size.get("shorter-side", "keep")
+                longer = size.get("longer-side", "keep")
+                result = _dict_to_size_tuple(shorter, longer)
+                size_order = "SL"
+            else:
+                raise ValueError(
+                    "Expected dictionary containing no keys, "
+                    "the keys \"height\" and/or \"width\", "
+                    "or the keys \"shorter-side\" and/or \"longer-side\". "
+                    "Got keys: %s." % (str(size.keys()),))
+        elif isinstance(size, tuple):
+            assert len(size) == 2, (
+                "Expected size tuple to contain exactly 2 values, "
+                "got %d." % (len(size),))
+            assert size[0] > 0 and size[1] > 0, (
+                "Expected size tuple to only contain values >0, "
+                "got %d and %d." % (size[0], size[1]))
+            if ia.is_single_float(size[0]) or ia.is_single_float(size[1]):
+                result = iap.Uniform(size[0], size[1])
+            else:
+                result = iap.DiscreteUniform(size[0], size[1])
+        elif isinstance(size, list):
+            if len(size) == 0:
+                result = iap.Deterministic("keep")
+            else:
+                all_int = all([ia.is_single_integer(v) for v in size])
+                all_float = all([ia.is_single_float(v) for v in size])
+                assert all_int or all_float, (
+                    "Expected to get only integers or floats.")
+                assert all([v > 0 for v in size]), (
+                    "Expected all values to be >0.")
+                result = iap.Choice(size)
+        elif isinstance(size, iap.StochasticParameter):
+            result = size
+        else:
+            raise ValueError(
                 "Expected number, tuple of two numbers, list of numbers, "
                 "dictionary of form "
                 "{'height': number/tuple/list/'keep-aspect-ratio'/'keep', "
                 "'width': <analogous>}, dictionary of form "
                 "{'shorter-side': number/tuple/list/'keep-aspect-ratio'/"
                 "'keep', 'longer-side': <analogous>} "
-                " or StochasticParameter, got %s." % (type(val),)
+                "or StochasticParameter, got %s." % (type(size),)
             )
 
-        self.size = handle(size, True)
-        self.size_order = (
-            'SL'
-            if (isinstance(size, dict) and 'shorter-side' in size)
-            else 'HW')
+        if subcall:
+            return result
+        return result, size_order
 
+    @classmethod
+    def _handle_interpolation_arg(cls, interpolation):
         if interpolation == ia.ALL:
-            self.interpolation = iap.Choice(
+            interpolation = iap.Choice(
                 ["nearest", "linear", "area", "cubic"])
         elif ia.is_single_integer(interpolation):
-            self.interpolation = iap.Deterministic(interpolation)
+            interpolation = iap.Deterministic(interpolation)
         elif ia.is_string(interpolation):
-            self.interpolation = iap.Deterministic(interpolation)
+            interpolation = iap.Deterministic(interpolation)
         elif ia.is_iterable(interpolation):
-            self.interpolation = iap.Choice(interpolation)
+            interpolation = iap.Choice(interpolation)
         elif isinstance(interpolation, iap.StochasticParameter):
-            self.interpolation = interpolation
+            interpolation = interpolation
         else:
             raise Exception(
                 "Expected int or string or iterable or StochasticParameter, "
                 "got %s." % (type(interpolation),))
+        return interpolation
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
@@ -484,40 +602,26 @@ class Resize(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = []
-        nb_heatmaps = len(heatmaps)
-        samples_a, samples_b, samples_ip = self._draw_samples(
-            nb_heatmaps, random_state, do_sample_ip=True)
-
-        for i in sm.xrange(nb_heatmaps):
-            heatmaps_i = heatmaps[i]
-            arr_shape = heatmaps_i.arr_0to1.shape
-            img_shape = heatmaps_i.shape
-            sample_a, sample_b, sample_ip = \
-                samples_a[i], samples_b[i], samples_ip[i]
-            h_img, w_img = self._compute_height_width(
-                img_shape, sample_a, sample_b, self.size_order)
-            h = int(np.round(h_img * (arr_shape[0] / img_shape[0])))
-            w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
-            h = max(h, 1)
-            w = max(w, 1)
-            # TODO change this to always have cubic or automatic interpolation?
-            heatmaps_i_resized = heatmaps_i.resize(
-                (h, w), interpolation=sample_ip)
-            heatmaps_i_resized.shape = (h_img, w_img) + img_shape[2:]
-            result.append(heatmaps_i_resized)
-
-        return result
+        return self._augment_heatmaps_segmaps(heatmaps, random_state,
+                                              do_sample_ip=True)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        return self._augment_heatmaps_segmaps(segmaps, random_state,
+                                              do_sample_ip=False)
+
+    def _augment_heatmaps_segmaps(self, augmentables, random_state,
+                                  do_sample_ip):
         result = []
-        nb_segmaps = len(segmaps)
-        samples_h, samples_w, _ = self._draw_samples(
-            nb_segmaps, random_state, do_sample_ip=False)
-        for i in sm.xrange(nb_segmaps):
-            segmaps_i = segmaps[i]
-            arr_shape = segmaps_i.arr.shape
-            img_shape = segmaps_i.shape
+        nb_items = len(augmentables)
+        samples_h, samples_w, samples_ip = self._draw_samples(
+            nb_items, random_state, do_sample_ip=do_sample_ip)
+        for i in sm.xrange(nb_items):
+            augmentable = augmentables[i]
+            arr_shape = (
+                augmentable.arr.shape
+                if hasattr(augmentable, "arr")
+                else augmentable.arr_0to1.shape)
+            img_shape = augmentable.shape
             sample_h, sample_w = samples_h[i], samples_w[i]
             h_img, w_img = self._compute_height_width(
                 img_shape, sample_h, sample_w, self.size_order)
@@ -525,9 +629,15 @@ class Resize(meta.Augmenter):
             w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
             h = max(h, 1)
             w = max(w, 1)
-            heatmaps_i_resized = segmaps_i.resize((h, w))
-            heatmaps_i_resized.shape = (h_img, w_img) + img_shape[2:]
-            result.append(heatmaps_i_resized)
+            if do_sample_ip:
+                # TODO change this for heatmaps to always have cubic or
+                #      automatic interpolation?
+                augmentable_resize = augmentable.resize(
+                    (h, w), interpolation=samples_ip[i])
+            else:
+                augmentable_resize = augmentable.resize((h, w))
+            augmentable_resize.shape = (h_img, w_img) + img_shape[2:]
+            result.append(augmentable_resize)
 
         return result
 
@@ -613,6 +723,29 @@ class Resize(meta.Augmenter):
 
     def get_parameters(self):
         return [self.size, self.interpolation, self.size_order]
+
+
+class _CropAndPadSamplingResult(object):
+    def __init__(self, crop_top, crop_right, crop_bottom, crop_left,
+                 pad_top, pad_right, pad_bottom, pad_left, pad_mode, pad_cval):
+        self.crop_top = crop_top
+        self.crop_right = crop_right
+        self.crop_bottom = crop_bottom
+        self.crop_left = crop_left
+        self.pad_top = pad_top
+        self.pad_right = pad_right
+        self.pad_bottom = pad_bottom
+        self.pad_left = pad_left
+        self.pad_mode = pad_mode
+        self.pad_cval = pad_cval
+
+    @property
+    def croppings(self):
+        return self.crop_top, self.crop_right, self.crop_bottom, self.crop_left
+
+    @property
+    def paddings(self):
+        return self.pad_top, self.pad_right, self.pad_bottom, self.pad_left
 
 
 class CropAndPad(meta.Augmenter):
@@ -851,123 +984,8 @@ class CropAndPad(meta.Augmenter):
         super(CropAndPad, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        self.all_sides = None
-        self.top = None
-        self.right = None
-        self.bottom = None
-        self.left = None
-        if px is None and percent is None:
-            self.mode = "noop"
-        elif px is not None and percent is not None:
-            raise Exception("Can only pad by pixels or percent, not both.")
-        elif px is not None:
-            self.mode = "px"
-            if ia.is_single_integer(px):
-                self.all_sides = iap.Deterministic(px)
-            elif isinstance(px, tuple):
-                assert len(px) in [2, 4], (
-                    "Expected 'px' given as a tuple to contain 2 or 4 "
-                    "entries, got %d." % (len(px),))
-
-                def handle_param(p):
-                    if ia.is_single_integer(p):
-                        return iap.Deterministic(p)
-                    elif isinstance(p, tuple):
-                        assert len(p) == 2, (
-                            "Expected tuple of 2 values, got %d." % (len(p)))
-                        only_ints = (
-                            ia.is_single_integer(p[0])
-                            and ia.is_single_integer(p[1]))
-                        assert only_ints, (
-                            "Expected tuple of integers, got %s and %s." % (
-                                type(p[0]), type(p[1])))
-                        return iap.DiscreteUniform(p[0], p[1])
-                    elif isinstance(p, list):
-                        assert len(p) > 0, (
-                            "Expected non-empty list, but got empty one.")
-                        assert all([ia.is_single_integer(val) for val in p]), (
-                            "Expected list of ints, got types %s." % (
-                                ", ".join([str(type(v)) for v in p])))
-                        return iap.Choice(p)
-                    elif isinstance(p, iap.StochasticParameter):
-                        return p
-                    else:
-                        raise Exception(
-                            "Expected int, tuple of two ints, list of ints or "
-                            "StochasticParameter, got type %s." % (type(p),))
-
-                if len(px) == 2:
-                    self.all_sides = handle_param(px)
-                else:  # len == 4
-                    self.top = handle_param(px[0])
-                    self.right = handle_param(px[1])
-                    self.bottom = handle_param(px[2])
-                    self.left = handle_param(px[3])
-            elif isinstance(px, iap.StochasticParameter):
-                self.top = self.right = self.bottom = self.left = px
-            else:
-                raise Exception(
-                    "Expected int, tuple of 4 "
-                    "ints/tuples/lists/StochasticParameters or "
-                    "StochasticParameter, got type %s." % (type(px),))
-        else:  # = elif percent is not None:
-            self.mode = "percent"
-            if ia.is_single_number(percent):
-                assert percent > -1.0, (
-                    "Expected 'percent' to be >-1.0, got %.4f." % (percent,))
-                self.all_sides = iap.Deterministic(percent)
-            elif isinstance(percent, tuple):
-                assert len(percent) in [2, 4], (
-                    "Expected 'percent' given as a tuple to contain 2 or 4 "
-                    "entries, got %d." % (len(px),))
-
-                def handle_param(p):
-                    if ia.is_single_number(p):
-                        return iap.Deterministic(p)
-                    elif isinstance(p, tuple):
-                        assert len(p) == 2, (
-                            "Expected tuple of 2 values, got %d." % (len(p)))
-                        only_numbers = (
-                            ia.is_single_number(p[0])
-                            and ia.is_single_number(p[1]))
-                        assert only_numbers, (
-                            "Expected tuple of numbers, got %s and %s." % (
-                                type(p[0]), type(p[1])))
-                        assert p[0] > -1.0 and p[1] > -1.0, (
-                            "Expected tuple of values >-1.0, got %.4f and "
-                            "%.4f." % (p[0], p[1]))
-                        return iap.Uniform(p[0], p[1])
-                    elif isinstance(p, list):
-                        assert len(p) > 0, (
-                            "Expected non-empty list, but got empty one.")
-                        assert all([ia.is_single_number(val) for val in p]), (
-                            "Expected list of numbers, got types %s." % (
-                                ", ".join([str(type(v)) for v in p])))
-                        assert all([val > -1.0 for val in p]), (
-                            "Expected list of values >-1.0, got values %s." % (
-                                ", ".join(["%.4f" % (v,) for v in p])))
-                        return iap.Choice(p)
-                    elif isinstance(p, iap.StochasticParameter):
-                        return p
-                    else:
-                        raise Exception(
-                            "Expected int, tuple of two ints, list of ints or "
-                            "StochasticParameter, got type %s." % (type(p),))
-
-                if len(percent) == 2:
-                    self.all_sides = handle_param(percent)
-                else:  # len == 4
-                    self.top = handle_param(percent[0])
-                    self.right = handle_param(percent[1])
-                    self.bottom = handle_param(percent[2])
-                    self.left = handle_param(percent[3])
-            elif isinstance(percent, iap.StochasticParameter):
-                self.top = self.right = self.bottom = self.left = percent
-            else:
-                raise Exception(
-                    "Expected number, tuple of 4 "
-                    "numbers/tuples/lists/StochasticParameters or "
-                    "StochasticParameter, got type %s." % (type(percent),))
+        self.mode, self.all_sides, self.top, self.right, self.bottom, \
+            self.left = self._handle_px_and_percent_args(px, percent)
 
         self.pad_mode = _handle_pad_mode_param(pad_mode)
         # TODO enable ALL here, like in e.g. Affine
@@ -978,27 +996,160 @@ class CropAndPad(meta.Augmenter):
         self.keep_size = keep_size
         self.sample_independently = sample_independently
 
+        # set these to None to use the same values as sampled for the
+        # images (not tested)
+        self._pad_mode_heatmaps = "constant"
+        self._pad_mode_segmentation_maps = "constant"
+        self._pad_cval_heatmaps = 0.0
+        self._pad_cval_segmentation_maps = 0
+
+    @classmethod
+    def _handle_px_and_percent_args(cls, px, percent):
+        all_sides = None
+        top, right, bottom, left = None, None, None, None
+
+        if px is None and percent is None:
+            mode = "noop"
+        elif px is not None and percent is not None:
+            raise Exception("Can only pad by pixels or percent, not both.")
+        elif px is not None:
+            mode = "px"
+            all_sides, top, right, bottom, left = cls._handle_px_arg(px)
+        else:  # = elif percent is not None:
+            mode = "percent"
+            all_sides, top, right, bottom, left = cls._handle_percent_arg(
+                percent)
+        return mode, all_sides, top, right, bottom, left
+
+    @classmethod
+    def _handle_px_arg(cls, px):
+        all_sides = None
+        top, right, bottom, left = None, None, None, None
+
+        if ia.is_single_integer(px):
+            all_sides = iap.Deterministic(px)
+        elif isinstance(px, tuple):
+            assert len(px) in [2, 4], (
+                "Expected 'px' given as a tuple to contain 2 or 4 "
+                "entries, got %d." % (len(px),))
+
+            def handle_param(p):
+                if ia.is_single_integer(p):
+                    return iap.Deterministic(p)
+                elif isinstance(p, tuple):
+                    assert len(p) == 2, (
+                        "Expected tuple of 2 values, got %d." % (len(p)))
+                    only_ints = (
+                        ia.is_single_integer(p[0])
+                        and ia.is_single_integer(p[1]))
+                    assert only_ints, (
+                        "Expected tuple of integers, got %s and %s." % (
+                            type(p[0]), type(p[1])))
+                    return iap.DiscreteUniform(p[0], p[1])
+                elif isinstance(p, list):
+                    assert len(p) > 0, (
+                        "Expected non-empty list, but got empty one.")
+                    assert all([ia.is_single_integer(val) for val in p]), (
+                        "Expected list of ints, got types %s." % (
+                            ", ".join([str(type(v)) for v in p])))
+                    return iap.Choice(p)
+                elif isinstance(p, iap.StochasticParameter):
+                    return p
+                else:
+                    raise Exception(
+                        "Expected int, tuple of two ints, list of ints or "
+                        "StochasticParameter, got type %s." % (type(p),))
+
+            if len(px) == 2:
+                all_sides = handle_param(px)
+            else:  # len == 4
+                top = handle_param(px[0])
+                right = handle_param(px[1])
+                bottom = handle_param(px[2])
+                left = handle_param(px[3])
+        elif isinstance(px, iap.StochasticParameter):
+            top = right = bottom = left = px
+        else:
+            raise Exception(
+                "Expected int, tuple of 4 "
+                "ints/tuples/lists/StochasticParameters or "
+                "StochasticParameter, got type %s." % (type(px),))
+        return all_sides, top, right, bottom, left
+
+    @classmethod
+    def _handle_percent_arg(cls, percent):
+        all_sides = None
+        top, right, bottom, left = None, None, None, None
+
+        if ia.is_single_number(percent):
+            assert percent > -1.0, (
+                "Expected 'percent' to be >-1.0, got %.4f." % (percent,))
+            all_sides = iap.Deterministic(percent)
+        elif isinstance(percent, tuple):
+            assert len(percent) in [2, 4], (
+                "Expected 'percent' given as a tuple to contain 2 or 4 "
+                "entries, got %d." % (len(percent),))
+
+            def handle_param(p):
+                if ia.is_single_number(p):
+                    return iap.Deterministic(p)
+                elif isinstance(p, tuple):
+                    assert len(p) == 2, (
+                        "Expected tuple of 2 values, got %d." % (len(p),))
+                    only_numbers = (
+                        ia.is_single_number(p[0])
+                        and ia.is_single_number(p[1]))
+                    assert only_numbers, (
+                        "Expected tuple of numbers, got %s and %s." % (
+                            type(p[0]), type(p[1])))
+                    assert p[0] > -1.0 and p[1] > -1.0, (
+                        "Expected tuple of values >-1.0, got %.4f and "
+                        "%.4f." % (p[0], p[1]))
+                    return iap.Uniform(p[0], p[1])
+                elif isinstance(p, list):
+                    assert len(p) > 0, (
+                        "Expected non-empty list, but got empty one.")
+                    assert all([ia.is_single_number(val) for val in p]), (
+                        "Expected list of numbers, got types %s." % (
+                            ", ".join([str(type(v)) for v in p])))
+                    assert all([val > -1.0 for val in p]), (
+                        "Expected list of values >-1.0, got values %s." % (
+                            ", ".join(["%.4f" % (v,) for v in p])))
+                    return iap.Choice(p)
+                elif isinstance(p, iap.StochasticParameter):
+                    return p
+                else:
+                    raise Exception(
+                        "Expected int, tuple of two ints, list of ints or "
+                        "StochasticParameter, got type %s." % (type(p),))
+
+            if len(percent) == 2:
+                all_sides = handle_param(percent)
+            else:  # len == 4
+                top = handle_param(percent[0])
+                right = handle_param(percent[1])
+                bottom = handle_param(percent[2])
+                left = handle_param(percent[3])
+        elif isinstance(percent, iap.StochasticParameter):
+            top = right = bottom = left = percent
+        else:
+            raise Exception(
+                "Expected number, tuple of 4 "
+                "numbers/tuples/lists/StochasticParameters or "
+                "StochasticParameter, got type %s." % (type(percent),))
+        return all_sides, top, right, bottom, left
+
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
         rngs = random_state.duplicate(nb_images)
-        for i in sm.xrange(nb_images):
-            height, width = images[i].shape[0:2]
-            crop_top, crop_right, crop_bottom, crop_left, \
-                pad_top, pad_right, pad_bottom, pad_left, pad_mode, \
-                pad_cval = self._draw_samples_image(rngs[i], height, width)
+        for image, rng in zip(images, rngs):
+            height, width = image.shape[0:2]
+            samples = self._draw_samples_image(rng, height, width)
 
-            image_cr = images[i][crop_top:height-crop_bottom,
-                                 crop_left:width-crop_right,
-                                 :]
-
-            image_cr_pa = ia.pad(
-                image_cr, top=pad_top, right=pad_right, bottom=pad_bottom,
-                left=pad_left, mode=pad_mode, cval=pad_cval)
-
-            if self.keep_size:
-                image_cr_pa = ia.imresize_single_image(image_cr_pa,
-                                                       (height, width))
+            image_cr_pa = _crop_and_pad_arr(
+                image, samples.croppings, samples.paddings, samples.pad_mode,
+                samples.pad_cval, self.keep_size)
 
             result.append(image_cr_pa)
 
@@ -1013,156 +1164,39 @@ class CropAndPad(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = []
-        nb_heatmaps = len(heatmaps)
-        rngs = random_state.duplicate(nb_heatmaps)
-        for i in sm.xrange(nb_heatmaps):
-            height_img, width_img = heatmaps[i].shape[0:2]
-            height_hms, width_hms = heatmaps[i].arr_0to1.shape[0:2]
-
-            vals = self._draw_samples_image(rngs[i], height_img, width_img)
-            crop_img_t, crop_img_r, crop_img_b, crop_img_l, pad_img_t, \
-                pad_img_r, pad_img_b, pad_img_l, _pad_mode, _pad_cval = vals
-
-            if (height_img, width_img) != (height_hms, width_hms):
-                crop_top = _int_r(height_hms * (crop_img_t/height_img))
-                crop_right = _int_r(width_hms * (crop_img_r/width_img))
-                crop_bottom = _int_r(height_hms * (crop_img_b/height_img))
-                crop_left = _int_r(width_hms * (crop_img_l/width_img))
-
-                crop_top, crop_right, crop_bottom, crop_left = \
-                    _crop_prevent_zero_size(
-                        height_hms, width_hms,
-                        crop_top, crop_right, crop_bottom, crop_left)
-
-                pad_top = _int_r(height_hms * (pad_img_t/height_img))
-                pad_right = _int_r(width_hms * (pad_img_r/width_img))
-                pad_bottom = _int_r(height_hms * (pad_img_b/height_img))
-                pad_left = _int_r(width_hms * (pad_img_l/width_img))
-            else:
-                crop_top = crop_img_t
-                crop_right = crop_img_r
-                crop_bottom = crop_img_b
-                crop_left = crop_img_l
-
-                pad_top = pad_img_t
-                pad_right = pad_img_r
-                pad_bottom = pad_img_b
-                pad_left = pad_img_l
-
-            arr_cr = heatmaps[i].arr_0to1[crop_top:height_hms-crop_bottom,
-                                          crop_left:width_hms-crop_right,
-                                          :]
-
-            # TODO switch to ia.pad()
-            if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
-                if arr_cr.ndim == 2:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right))
-                else:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right),
-                                (0, 0))
-
-                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant",
-                                   constant_values=0)
-            else:
-                arr_cr_pa = arr_cr
-
-            heatmaps[i].arr_0to1 = arr_cr_pa
-
-            if self.keep_size:
-                heatmaps[i] = heatmaps[i].resize((height_hms, width_hms))
-            else:
-                new_height = (
-                    heatmaps[i].shape[0]
-                    - crop_img_t - crop_img_b
-                    + pad_img_t + pad_img_b)
-                new_width = (
-                    heatmaps[i].shape[1]
-                    - crop_img_l - crop_img_r
-                    + pad_img_l + pad_img_r)
-                heatmaps[i].shape = (
-                    new_height,
-                    new_width
-                ) + heatmaps[i].shape[2:]
-
-            result.append(heatmaps[i])
-
-        return result
+        return self._augment_hms_and_segmaps(
+            heatmaps,
+            self._pad_mode_heatmaps, self._pad_cval_heatmaps,
+            random_state)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        return self._augment_hms_and_segmaps(
+            segmaps,
+            self._pad_mode_segmentation_maps, self._pad_cval_segmentation_maps,
+            random_state)
+
+    def _augment_hms_and_segmaps(self, augmentables, pad_mode, pad_cval,
+                                 random_state):
         result = []
-        nb_segmaps = len(segmaps)
-        rngs = random_state.duplicate(nb_segmaps)
-        for i in sm.xrange(nb_segmaps):
-            height_img, width_img = segmaps[i].shape[0:2]
-            height_seg, width_seg = segmaps[i].arr.shape[0:2]
+        rngs = random_state.duplicate(len(augmentables))
+        for augmentable, rng in zip(augmentables, rngs):
+            height_img, width_img = augmentable.shape[0:2]
+            samples_img = self._draw_samples_image(rng, height_img, width_img)
 
-            vals = self._draw_samples_image(rngs[i], height_img, width_img)
-            crop_img_t, crop_img_r, crop_img_b, crop_img_l, pad_img_t,\
-                pad_img_r, pad_img_b, pad_img_l, _pad_mode, _pad_cval = vals
+            augmentable = _crop_and_pad_hms_or_segmaps_(
+                augmentable,
+                croppings_img=samples_img.croppings,
+                paddings_img=samples_img.paddings,
+                pad_mode=(pad_mode
+                          if pad_mode is not None
+                          else samples_img.pad_mode),
+                pad_cval=(pad_cval
+                          if pad_cval is not None
+                          else samples_img.pad_cval),
+                keep_size=self.keep_size
+            )
 
-            if (height_img, width_img) != (height_seg, width_seg):
-                crop_top = _int_r(height_seg * (crop_img_t/height_img))
-                crop_right = _int_r(width_seg * (crop_img_r/width_img))
-                crop_bottom = _int_r(height_seg * (crop_img_b/height_img))
-                crop_left = _int_r(width_seg * (crop_img_l/width_img))
-
-                crop_top, crop_right, crop_bottom, crop_left = \
-                    _crop_prevent_zero_size(
-                        height_seg, width_seg, crop_top, crop_right,
-                        crop_bottom, crop_left)
-
-                pad_top = _int_r(height_seg * (pad_img_t/height_img))
-                pad_right = _int_r(width_seg * (pad_img_r/width_img))
-                pad_bottom = _int_r(height_seg * (pad_img_b/height_img))
-                pad_left = _int_r(width_seg * (pad_img_l/width_img))
-            else:
-                crop_top = crop_img_t
-                crop_right = crop_img_r
-                crop_bottom = crop_img_b
-                crop_left = crop_img_l
-
-                pad_top = pad_img_t
-                pad_right = pad_img_r
-                pad_bottom = pad_img_b
-                pad_left = pad_img_l
-
-            arr_cr = segmaps[i].arr[crop_top:height_seg - crop_bottom,
-                                    crop_left:width_seg - crop_right,
-                                    :]
-
-            # TODO switch to ia.pad()
-            if any([pad_top > 0, pad_right > 0, pad_bottom > 0, pad_left > 0]):
-                if arr_cr.ndim == 2:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right))
-                else:
-                    pad_vals = ((pad_top, pad_bottom), (pad_left, pad_right),
-                                (0, 0))
-
-                arr_cr_pa = np.pad(arr_cr, pad_vals, mode="constant",
-                                   constant_values=0)
-            else:
-                arr_cr_pa = arr_cr
-
-            segmaps[i].arr = arr_cr_pa
-
-            if self.keep_size:
-                segmaps[i] = segmaps[i].resize((height_seg, width_seg))
-            else:
-                new_height = (
-                    segmaps[i].shape[0]
-                    - crop_img_t - crop_img_b
-                    + pad_img_t + pad_img_b)
-                new_width = (
-                    segmaps[i].shape[1]
-                    - crop_img_l - crop_img_r
-                    + pad_img_l + pad_img_r)
-                segmaps[i].shape = (
-                   new_height,
-                   new_width
-                ) + segmaps[i].shape[2:]
-
-            result.append(segmaps[i])
+            result.append(augmentable)
 
         return result
 
@@ -1171,21 +1205,14 @@ class CropAndPad(meta.Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
         rngs = random_state.duplicate(nb_images)
-        for i, keypoints_on_image in enumerate(keypoints_on_images):
+        for keypoints_on_image, rng in zip(keypoints_on_images, rngs):
             height, width = keypoints_on_image.shape[0:2]
-            crop_top, crop_right, crop_bottom, crop_left, \
-                pad_top, pad_right, pad_bottom, pad_left, _pad_mode, \
-                _pad_cval = self._draw_samples_image(rngs[i], height, width)
-            shifted = keypoints_on_image.shift(
-                x=-crop_left+pad_left, y=-crop_top+pad_top)
-            shifted.shape = (
-                height - crop_top - crop_bottom + pad_top + pad_bottom,
-                width - crop_left - crop_right + pad_left + pad_right
-            ) + shifted.shape[2:]
-            if self.keep_size:
-                result.append(shifted.on(keypoints_on_image.shape))
-            else:
-                result.append(shifted)
+            samples = self._draw_samples_image(rng, height, width)
+
+            kpsoi_aug = _crop_and_pad_kpsoi(
+                keypoints_on_image, croppings_img=samples.croppings,
+                paddings_img=samples.paddings, keep_size=self.keep_size)
+            result.append(kpsoi_aug)
 
         return result
 
@@ -1218,10 +1245,10 @@ class CropAndPad(meta.Augmenter):
                 pass
             elif self.mode == "percent":
                 # percentage values have to be transformed to pixel values
-                top = int(np.round(height * top))
-                right = int(np.round(width * right))
-                bottom = int(np.round(height * bottom))
-                left = int(np.round(width * left))
+                top = _int_r(height * top)
+                right = _int_r(width * right)
+                bottom = _int_r(height * bottom)
+                left = _int_r(width * left)
             else:
                 raise Exception("Invalid mode")
 
@@ -1237,7 +1264,6 @@ class CropAndPad(meta.Augmenter):
 
         pad_mode = self.pad_mode.draw_sample(random_state=random_state)
         pad_cval = self.pad_cval.draw_sample(random_state=random_state)
-        pad_cval = np.clip(np.round(pad_cval), 0, 255).astype(np.uint8)
 
         crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
             height, width, crop_top, crop_right, crop_bottom, crop_left)
@@ -1259,9 +1285,17 @@ class CropAndPad(meta.Augmenter):
             "image width, got %d and %d vs. image width %d." % (
                 crop_left, crop_right, width))
 
-        return (crop_top, crop_right, crop_bottom, crop_left,
-                pad_top, pad_right, pad_bottom, pad_left,
-                pad_mode, pad_cval)
+        return _CropAndPadSamplingResult(
+            crop_top=crop_top,
+            crop_right=crop_right,
+            crop_bottom=crop_bottom,
+            crop_left=crop_left,
+            pad_top=pad_top,
+            pad_right=pad_right,
+            pad_bottom=pad_bottom,
+            pad_left=pad_left,
+            pad_mode=pad_mode,
+            pad_cval=pad_cval)
 
     def get_parameters(self):
         return [self.all_sides, self.top, self.right, self.bottom, self.left,
@@ -1812,21 +1846,29 @@ class PadToFixedSize(meta.Augmenter):
             pad_cval, "pad_cval", value_range=None, tuple_to_uniform=True,
             list_to_choice=True, allow_floats=True)
 
+        # set these to None to use the same values as sampled for the
+        # images (not tested)
+        self._pad_mode_heatmaps = "constant"
+        self._pad_mode_segmentation_maps = "constant"
+        self._pad_cval_heatmaps = 0.0
+        self._pad_cval_segmentation_maps = 0
+
     def _augment_images(self, images, random_state, parents, hooks):
         result = []
         nb_images = len(images)
-        w, h = self.size
+        width_min, height_min = self.size
         pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images,
                                                                   random_state)
         for i in sm.xrange(nb_images):
             image = images[i]
-            ih, iw = image.shape[:2]
-            pad_x0, pad_x1, pad_y0, pad_y1 = self._calculate_paddings(
-                h, w, ih, iw, pad_xs[i], pad_ys[i])
-            image = ia.pad(
-                image, top=pad_y0, right=pad_x1, bottom=pad_y1, left=pad_x0,
-                mode=pad_modes[i], cval=pad_cvals[i]
-            )
+            height_image, width_image = image.shape[:2]
+            paddings = self._calculate_paddings(height_image, width_image,
+                                                height_min, width_min,
+                                                pad_xs[i], pad_ys[i])
+
+            image = _crop_and_pad_arr(
+                image, (0, 0, 0, 0), paddings, pad_modes[i], pad_cvals[i],
+                keep_size=False)
 
             result.append(image)
 
@@ -1839,104 +1881,64 @@ class PadToFixedSize(meta.Augmenter):
                            hooks):
         result = []
         nb_images = len(keypoints_on_images)
-        w, h = self.size
+        width_min, height_min = self.size
         pad_xs, pad_ys, _, _ = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
             keypoints_on_image = keypoints_on_images[i]
-            ih, iw = keypoints_on_image.shape[:2]
-            pad_x0, _pad_x1, pad_y0, _pad_y1 = self._calculate_paddings(
-                h, w, ih, iw, pad_xs[i], pad_ys[i])
-            keypoints_padded = keypoints_on_image.shift(x=pad_x0, y=pad_y0)
-            keypoints_padded.shape = (
-                max(ih, h),
-                max(iw, w)
-            ) + keypoints_padded.shape[2:]
+            height_image, width_image = keypoints_on_image.shape[:2]
+            paddings_img = self._calculate_paddings(height_image, width_image,
+                                                    height_min, width_min,
+                                                    pad_xs[i], pad_ys[i])
+
+            keypoints_padded = _crop_and_pad_kpsoi(
+                keypoints_on_image, (0, 0, 0, 0), paddings_img,
+                keep_size=False)
 
             result.append(keypoints_padded)
 
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        nb_images = len(heatmaps)
-        w, h = self.size
-        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(nb_images,
-                                                                    random_state)
-        for i in sm.xrange(nb_images):
-            height_img, width_img = heatmaps[i].shape[:2]
-            pad_img_l, pad_img_r, pad_img_t, pad_img_b = \
-                self._calculate_paddings(
-                    h, w, height_img, width_img, pad_xs[i], pad_ys[i])
-            height_hm, width_hm = heatmaps[i].arr_0to1.shape[0:2]
-
-            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results
-            #      in paddings of 1 on each side (assuming
-            #      position=(0.5, 0.5)) giving 17x17 heatmaps when they should
-            #      be 16x16. Error is due to each side getting projected 0.5
-            #      padding which is rounded to 1. This doesn't seem right.
-            if (height_img, width_img) != (height_hm, width_hm):
-                pad_top = _int_r(height_hm * (pad_img_t/height_img))
-                pad_right = _int_r(width_hm * (pad_img_r/width_img))
-                pad_bottom = _int_r(height_hm * (pad_img_b/height_img))
-                pad_left = _int_r(width_hm * (pad_img_l/width_img))
-            else:
-                pad_top = pad_img_t
-                pad_right = pad_img_r
-                pad_bottom = pad_img_b
-                pad_left = pad_img_l
-
-            heatmaps[i].arr_0to1 = ia.pad(
-                heatmaps[i].arr_0to1,
-                top=pad_top, right=pad_right, bottom=pad_bottom, left=pad_left,
-                mode="constant", cval=0
-            )
-            heatmaps[i].shape = (
-                height_img + pad_img_t + pad_img_b,
-                width_img + pad_img_l + pad_img_r
-            ) + heatmaps[i].shape[2:]
-
-        return heatmaps
+        return self._augment_hms_or_segmaps(
+            heatmaps,
+            self._pad_mode_heatmaps, self._pad_cval_heatmaps,
+            random_state)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents,
                                    hooks):
-        nb_images = len(segmaps)
-        w, h = self.size
-        pad_xs, pad_ys, _pad_modes, _pad_cvals = self._draw_samples(
-            nb_images, random_state)
+        return self._augment_hms_or_segmaps(
+            segmaps,
+            self._pad_mode_segmentation_maps, self._pad_cval_segmentation_maps,
+            random_state)
 
-        for i in sm.xrange(nb_images):
-            height_img, width_img = segmaps[i].shape[:2]
-            pad_img_l, pad_img_r, pad_img_t, pad_img_b = \
-                self._calculate_paddings(
-                    h, w, height_img, width_img, pad_xs[i], pad_ys[i])
-            height_sm, width_sm = segmaps[i].arr.shape[0:2]
+    def _augment_hms_or_segmaps(self, augmentables, pad_mode, pad_cval,
+                                random_state):
+        width_min, height_min = self.size
+        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(
+            len(augmentables), random_state)
 
-            # TODO for 30x30 padded to 32x32 with 15x15 heatmaps this results
+        for i, augmentable in enumerate(augmentables):
+            height_img, width_img = augmentable.shape[:2]
+            paddings_img = self._calculate_paddings(
+                height_img, width_img, height_min, width_min,
+                pad_xs[i], pad_ys[i])
+
+            # TODO for the previous method (and likely the new/current one
+            #      too):
+            #      for 30x30 padded to 32x32 with 15x15 heatmaps this results
             #      in paddings of 1 on each side (assuming
             #      position=(0.5, 0.5)) giving 17x17 heatmaps when they should
             #      be 16x16. Error is due to each side getting projected 0.5
             #      padding which is rounded to 1. This doesn't seem right.
-            if (height_img, width_img) != (height_sm, width_sm):
-                pad_top = _int_r(height_sm * (pad_img_t/height_img))
-                pad_right = _int_r(width_sm * (pad_img_r/width_img))
-                pad_bottom = _int_r(height_sm * (pad_img_b/height_img))
-                pad_left = _int_r(width_sm * (pad_img_l/width_img))
-            else:
-                pad_top = pad_img_t
-                pad_right = pad_img_r
-                pad_bottom = pad_img_b
-                pad_left = pad_img_l
+            augmentables[i] = _crop_and_pad_hms_or_segmaps_(
+                augmentables[i],
+                (0, 0, 0, 0),
+                paddings_img,
+                pad_mode=pad_mode if pad_mode is not None else pad_modes[i],
+                pad_cval=pad_cval if pad_cval is not None else pad_cvals[i],
+                keep_size=False)
 
-            segmaps[i].arr = ia.pad(
-                segmaps[i].arr,
-                top=pad_top, right=pad_right, bottom=pad_bottom, left=pad_left,
-                mode="constant", cval=0
-            )
-            segmaps[i].shape = (
-                height_img + pad_img_t + pad_img_b,
-                width_img + pad_img_l + pad_img_r
-            ) + segmaps[i].shape[2:]
-
-        return segmaps
+        return augmentables
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
@@ -1961,23 +1963,26 @@ class PadToFixedSize(meta.Augmenter):
                                                random_state=rngs[2])
         pad_cvals = self.pad_cval.draw_samples(nb_images,
                                                random_state=rngs[3])
-        pad_cvals = np.clip(np.round(pad_cvals), 0, 255).astype(np.uint8)
 
         return pad_xs, pad_ys, pad_modes, pad_cvals
 
     @classmethod
-    def _calculate_paddings(cls, h, w, ih, iw, pad_xs_i, pad_ys_i):
-        pad_x1, pad_x0, pad_y1, pad_y0 = 0, 0, 0, 0
+    def _calculate_paddings(cls, height_image, width_image,
+                            height_min, width_min, pad_xs_i, pad_ys_i):
+        pad_top = 0
+        pad_right = 0
+        pad_bottom = 0
+        pad_left = 0
 
-        if iw < w:
-            pad_x1 = int(pad_xs_i * (w - iw))
-            pad_x0 = w - iw - pad_x1
+        if width_image < width_min:
+            pad_right = int(pad_xs_i * (width_min - width_image))
+            pad_left = width_min - width_image - pad_right
 
-        if ih < h:
-            pad_y1 = int(pad_ys_i * (h - ih))
-            pad_y0 = h - ih - pad_y1
+        if height_image < height_min:
+            pad_bottom = int(pad_ys_i * (height_min - height_image))
+            pad_top = height_min - height_image - pad_bottom
 
-        return pad_x0, pad_x1, pad_y0, pad_y1
+        return pad_top, pad_right, pad_bottom, pad_left
 
     def get_parameters(self):
         return [self.position, self.pad_mode, self.pad_cval]
@@ -2124,24 +2129,13 @@ class CropToFixedSize(meta.Augmenter):
             image = images[i]
             height_image, width_image = image.shape[0:2]
 
-            crop_image_top, crop_image_bottom = 0, 0
-            crop_image_left, crop_image_right = 0, 0
+            croppings = self._calculate_crop_amounts(
+                height_image, width_image, h, w, offset_ys[i], offset_xs[i])
 
-            if height_image > h:
-                crop_image_top = int(offset_ys[i] * (height_image - h))
-                crop_image_bottom = height_image - h - crop_image_top
+            image_cropped = _crop_and_pad_arr(image, croppings, (0, 0, 0, 0),
+                                              keep_size=False)
 
-            if width_image > w:
-                crop_image_left = int(offset_xs[i] * (width_image - w))
-                crop_image_right = width_image - w - crop_image_left
-
-            image = image[
-                crop_image_top:height_image-crop_image_bottom,
-                crop_image_left:width_image-crop_image_right,
-                ...
-            ]
-
-            result.append(image)
+            result.append(image_cropped)
 
         return result
 
@@ -2152,28 +2146,16 @@ class CropToFixedSize(meta.Augmenter):
         w, h = self.size
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
-            keypoints_on_image = keypoints_on_images[i]
-            height_image, width_image = keypoints_on_image.shape[0:2]
+            kpsoi = keypoints_on_images[i]
+            height_image, width_image = kpsoi.shape[0:2]
 
-            crop_image_top, crop_image_bottom = 0, 0
-            crop_image_left, crop_image_right = 0, 0
+            croppings_img = self._calculate_crop_amounts(
+                height_image, width_image, h, w, offset_ys[i], offset_xs[i])
 
-            if height_image > h:
-                crop_image_top = int(offset_ys[i] * (height_image - h))
-                crop_image_bottom = height_image - h - crop_image_top
+            kpsoi_cropped = _crop_and_pad_kpsoi(
+                kpsoi, croppings_img, (0, 0, 0, 0), keep_size=False)
 
-            if width_image > w:
-                crop_image_left = int(offset_xs[i] * (width_image - w))
-                crop_image_right = width_image - w - crop_image_left
-
-            keypoints_cropped = keypoints_on_image.shift(x=-crop_image_left,
-                                                         y=-crop_image_top)
-            keypoints_cropped.shape = (
-                height_image - crop_image_top - crop_image_bottom,
-                width_image - crop_image_left - crop_image_right
-            ) + keypoints_on_image.shape[2:]
-
-            result.append(keypoints_cropped)
+            result.append(kpsoi_cropped)
 
         return result
 
@@ -2183,99 +2165,44 @@ class CropToFixedSize(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks)
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        nb_images = len(heatmaps)
-        w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            height_img, width_img = heatmaps[i].shape[0:2]
-            height_hm, width_hm = heatmaps[i].arr_0to1.shape[0:2]
-
-            crop_img_t, crop_img_b = 0, 0
-            crop_img_l, crop_img_r = 0, 0
-
-            if height_img > h:
-                crop_img_t = int(offset_ys[i] * (height_img - h))
-                crop_img_b = height_img - h - crop_img_t
-
-            if width_img > w:
-                crop_img_l = int(offset_xs[i] * (width_img - w))
-                crop_img_r = width_img - w - crop_img_l
-
-            if (height_img, width_img) != (height_hm, width_hm):
-                crop_top = _int_r(height_hm * (crop_img_t/height_img))
-                crop_right = _int_r(width_hm * (crop_img_r/width_img))
-                crop_bottom = _int_r(height_hm * (crop_img_b/height_img))
-                crop_left = _int_r(width_hm * (crop_img_l/width_img))
-
-                # TODO add test for zero-size prevention
-                crop_top, crop_right, crop_bottom, crop_left = \
-                    _crop_prevent_zero_size(
-                        height_hm, width_hm,
-                        crop_top, crop_right, crop_bottom, crop_left)
-            else:
-                crop_top = crop_img_t
-                crop_right = crop_img_r
-                crop_bottom = crop_img_b
-                crop_left = crop_img_l
-
-            heatmaps[i].arr_0to1 = \
-                heatmaps[i].arr_0to1[crop_top:height_hm-crop_bottom,
-                                     crop_left:width_hm-crop_right,
-                                     :]
-
-            heatmaps[i].shape = (
-                heatmaps[i].shape[0] - crop_img_t - crop_img_b,
-                heatmaps[i].shape[1] - crop_img_l - crop_img_r
-            ) + heatmaps[i].shape[2:]
-
-        return heatmaps
+        return self._augment_hms_and_segmaps(heatmaps, random_state)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        nb_images = len(segmaps)
+        return self._augment_hms_and_segmaps(segmaps, random_state)
+
+    def _augment_hms_and_segmaps(self, augmentables, random_state):
+        nb_images = len(augmentables)
         w, h = self.size
         offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
         for i in sm.xrange(nb_images):
-            height_img, width_img = segmaps[i].shape[0:2]
-            height_sm, width_sm = segmaps[i].arr.shape[0:2]
+            height_image, width_image = augmentables[i].shape[0:2]
 
-            crop_img_t, crop_img_b = 0, 0
-            crop_img_l, crop_img_r = 0, 0
+            croppings_img = self._calculate_crop_amounts(
+                height_image, width_image, h, w, offset_ys[i], offset_xs[i])
 
-            if height_img > h:
-                crop_img_t = int(offset_ys[i] * (height_img - h))
-                crop_img_b = height_img - h - crop_img_t
+            augmentables[i] = _crop_and_pad_hms_or_segmaps_(
+                augmentables[i], croppings_img, (0, 0, 0, 0), keep_size=False)
 
-            if width_img > w:
-                crop_img_l = int(offset_xs[i] * (width_img - w))
-                crop_img_r = width_img - w - crop_img_l
+        return augmentables
 
-            if (height_img, width_img) != (height_sm, width_sm):
-                crop_top = _int_r(height_sm * (crop_img_t/height_img))
-                crop_right = _int_r(width_sm * (crop_img_r/width_img))
-                crop_bottom = _int_r(height_sm * (crop_img_b/height_img))
-                crop_left = _int_r(width_sm * (crop_img_l/width_img))
+    @classmethod
+    def _calculate_crop_amounts(cls, height_image, width_image,
+                                height_max, width_max,
+                                offset_y, offset_x):
+        crop_top = 0
+        crop_right = 0
+        crop_bottom = 0
+        crop_left = 0
 
-                # TODO add test for zero-size prevention
-                crop_top, crop_right, crop_bottom, crop_left = \
-                    _crop_prevent_zero_size(
-                        height_sm, width_sm,
-                        crop_top, crop_right, crop_bottom, crop_left)
-            else:
-                crop_top = crop_img_t
-                crop_right = crop_img_r
-                crop_bottom = crop_img_b
-                crop_left = crop_img_l
+        if height_image > height_max:
+            crop_top = int(offset_y * (height_image - height_max))
+            crop_bottom = height_image - height_max - crop_top
 
-            segmaps[i].arr = segmaps[i].arr[crop_top:height_sm - crop_bottom,
-                                            crop_left:width_sm-crop_right,
-                                            :]
+        if width_image > width_max:
+            crop_left = int(offset_x * (width_image - width_max))
+            crop_right = width_image - width_max - crop_left
 
-            segmaps[i].shape = (
-                segmaps[i].shape[0] - crop_img_t - crop_img_b,
-                segmaps[i].shape[1] - crop_img_l - crop_img_r
-            ) + segmaps[i].shape[2:]
-
-        return segmaps
+        return crop_top, crop_right, crop_bottom, crop_left
 
     def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(2)

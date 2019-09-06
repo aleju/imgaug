@@ -1660,12 +1660,24 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         ``W'=W+left+right``.
 
     """
+    import imgaug.dtypes as iadt
+
     _assert_two_or_three_dims(arr)
     assert all([v >= 0 for v in [top, right, bottom, left]]), (
         "Expected padding amounts that are >=0, but got %d, %d, %d, %d "
         "(top, right, botto, left)" % (top, right, bottom, left))
 
     if top > 0 or right > 0 or bottom > 0 or left > 0:
+        min_value, _, max_value = iadt.get_value_range_of_dtype(arr.dtype)
+
+        # without the if here there are crashes for float128, e.g. if
+        # cval is an int (just using float(cval) seems to not be accurate
+        # enough)
+        if arr.dtype.name == "float128":
+            cval = np.float128(cval)
+
+        cval = max(min(cval, max_value), min_value)
+
         mapping_mode_np_to_cv2 = {
             "constant": cv2.BORDER_CONSTANT,
             "edge": cv2.BORDER_REPLICATE,
