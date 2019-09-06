@@ -130,8 +130,7 @@ class WithColorspace(meta.Augmenter):
 
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
-        if hooks is None or hooks.is_propagating(images, augmenter=self,
-                                                 parents=parents, default=True):
+        if self._is_propagating(images, hooks, parents):
             result = ChangeColorspace(
                 to_colorspace=self.to_colorspace,
                 from_colorspace=self.from_colorspace
@@ -148,38 +147,34 @@ class WithColorspace(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = heatmaps
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self,
-                                                 parents=parents, default=True):
-            result = self.children.augment_heatmaps(
-                result,
-                parents=parents + [self],
-                hooks=hooks,
-            )
-        return result
+        return self._augment_nonimages(
+            heatmaps, self.children.augment_heatmaps, parents,
+            hooks)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        result = segmaps
-        if hooks is None or hooks.is_propagating(segmaps, augmenter=self, parents=parents, default=True):
-            result = self.children.augment_segmentation_maps(
-                result,
-                parents=parents + [self],
-                hooks=hooks,
-            )
-        return result
+        return self._augment_nonimages(
+            segmaps, self.children.augment_segmentation_maps,
+            parents, hooks)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
-        result = keypoints_on_images
-        if hooks is None or hooks.is_propagating(keypoints_on_images,
-                                                 augmenter=self,
-                                                 parents=parents, default=True):
-            result = self.children.augment_keypoints(
-                result,
+        return self._augment_nonimages(
+            keypoints_on_images, self.children.augment_keypoints, parents,
+            hooks)
+
+    def _augment_nonimages(self, augmentables, children_augfunc, parents,
+                           hooks):
+        if self._is_propagating(augmentables, hooks, parents):
+            augmentables = children_augfunc(
+                augmentables,
                 parents=parents + [self],
-                hooks=hooks,
+                hooks=hooks
             )
-        return result
+        return augmentables
+
+    def _is_propagating(self, augmentables, hooks, parents):
+        return (hooks is None or hooks.is_propagating(
+            augmentables, augmenter=self, parents=parents, default=True))
 
     def _to_deterministic(self):
         aug = self.copy()
