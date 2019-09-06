@@ -387,6 +387,12 @@ class WithHueAndSaturation(meta.Augmenter):
             keypoints_on_images, self.children.augment_keypoints, parents,
             hooks)
 
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_nonimages(
+            polygons_on_images, self.children.augment_polygons, parents,
+            hooks)
+
     def _augment_nonimages(self, augmentables, children_augfunc, parents,
                            hooks):
         if self._is_propagating(augmentables, hooks, parents):
