@@ -364,6 +364,12 @@
       library to fail if the input image does not have three channels.
     * Changed colorspace transformations throughout the library to also
       support `YUV` colorspace.
+* Added function `imgaug.augmentables.utils.copy_augmentables`. #410
+* Refactored `Alpha` to decrease code duplication. #410
+* Refactored `AlphaElementwise` to decrease code duplication. #410
+    * [rarely breaking] Changed `AlphaElementwise` to verify that the number
+      of coordinates before/after augmentation does not change. Previously
+      this was allowed. #410
 
 ## Improved Segmentation Map Augmentation #302
 
@@ -621,6 +627,13 @@ Changes:
 * Fixed `WithColorspace` not propagating polygons to child augmenters. #409
 * Fixed `WithHueAndSaturation` not propagating segmentation maps and polygons
   to child augmenters. #409
+* Fixed `AlphaElementwise` to blend coordinates (for keypoints, polygons,
+  line strings) on a point-by-point basis following the image's average
+  alpha value in the sampled alpha mask of the point's coordinate.
+  Previously, the average over the whole mask was used and then either all
+  points of the first branch or all of the second branch were used as the
+  augmentation output. This also affects `SimplexNoiseAlpha` and
+  `FrequencyNoiseAlpha`. #410
 
 
 # 0.2.9
