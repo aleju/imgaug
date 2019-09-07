@@ -244,7 +244,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
             # images that are views (e.g. image[..., 0:3]) and returns a
             # cv2.UMat instance instead of an array. So we check here first
             # if the array looks like it is non-contiguous or a view.
-            if image.flags["C_CONTIGUOUS"] and image.flags["OWNDATA"]:
+            if image.flags["C_CONTIGUOUS"]:
                 return image
         return None
 
