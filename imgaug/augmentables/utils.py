@@ -4,6 +4,20 @@ import six.moves as sm
 import imgaug as ia
 
 
+# TODO add tests
+def copy_augmentables(augmentables):
+    if ia.is_np_array(augmentables):
+        return np.copy(augmentables)
+
+    result = []
+    for augmentable in augmentables:
+        if ia.is_np_array(augmentable):
+            result.append(np.copy(augmentable))
+        else:
+            result.append(augmentable.deepcopy())
+    return result
+
+
 # TODO integrate into keypoints
 def normalize_shape(shape):
     """Normalize a shape ``tuple`` or ``array`` to a shape ``tuple``.
