@@ -27,10 +27,10 @@ from imgaug.testutils import reseed
 import imgaug.augmenters.color as colorlib
 
 
-# TODO warnings
 class Test_change_colorspace_(unittest.TestCase):
     def test_non_uint8_fails(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         image_float = image.astype(np.float32) / 255.0
         with self.assertRaises(ValueError) as cm:
             _ = iaa.change_colorspace_(image_float, iaa.CSPACE_BGR)
@@ -38,6 +38,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_unknown_to_colorspace_fails(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspace = iaa.CSPACE_RGB
         to_cspace = "foo"
         with self.assertRaises(AssertionError) as cm:
@@ -47,6 +48,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_unknown_from_colorspace_fails(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspace = "foo"
         to_cspace = iaa.CSPACE_RGB
         with self.assertRaises(AssertionError) as cm:
@@ -56,6 +58,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_change_to_same_colorspace_does_nothing(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspace = iaa.CSPACE_RGB
         to_cspace = iaa.CSPACE_RGB
         image_out = iaa.change_colorspace_(
@@ -63,8 +66,22 @@ class Test_change_colorspace_(unittest.TestCase):
             to_colorspace=to_cspace, from_colorspace=from_cspace)
         assert np.array_equal(image_out, image)
 
+    def test_function_works_inplace(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        image_orig = np.copy(image)
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_BGR
+        image_out = iaa.change_colorspace_(
+            image,
+            to_colorspace=to_cspace, from_colorspace=from_cspace)
+        assert image_out is image
+        assert np.array_equal(image_out, image)
+        assert not np.array_equal(image_out, image_orig)
+
     def test_image_is_view(self):
         image = np.arange(4*5*4).astype(np.uint8).reshape((4, 5, 4))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         image_copy = np.copy(image)
         image_view = image[..., 0:3]
         assert image_view.flags["OWNDATA"] is False
@@ -82,7 +99,8 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_image_is_noncontiguous(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
-        image_copy = np.ascontiguousarray(np.fliplr(np.copy(image)))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        image_copy = np.copy(np.ascontiguousarray(np.fliplr(image)))
         image_noncontiguous = np.fliplr(image)
         assert image_noncontiguous.flags["C_CONTIGUOUS"] is False
 
@@ -98,6 +116,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_cannot_transform_from_grayscale_to_another_cspace(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspace = iaa.CSPACE_GRAY
         to_cspace = iaa.CSPACE_RGB
         with self.assertRaises(AssertionError) as cm:
@@ -110,6 +129,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_image_without_channels_fails(self):
         image = np.arange(4*5).astype(np.uint8).reshape((4, 5))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspace = iaa.CSPACE_RGB
         to_cspace = iaa.CSPACE_BGR
         with self.assertRaises(AssertionError) as cm:
@@ -122,6 +142,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_image_with_four_channels_fails(self):
         image = np.arange(4*5*4).astype(np.uint8).reshape((4, 5, 4))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspace = iaa.CSPACE_RGB
         to_cspace = iaa.CSPACE_BGR
         with self.assertRaises(AssertionError) as cm:
@@ -134,6 +155,7 @@ class Test_change_colorspace_(unittest.TestCase):
 
     def test_colorspace_combinations(self):
         image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
         from_cspaces = iaa.CSPACE_ALL
         to_cspaces = iaa.CSPACE_ALL
         gen = itertools.product(from_cspaces, to_cspaces)
