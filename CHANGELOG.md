@@ -348,7 +348,7 @@
 * Refactored `imgaug.augmenters.color` (#409):
     * Added to `imgaug.augmenters.color` the constants `CSPACE_RGB`, 
       `CSPACE_BGR`, `CSPACE_GRAY`, `CSPACE_CIE`, `CSPACE_YCrCb`, `CSPACE_HSV`,
-      `CSPACE_HLS`, `CSPACE_Lab`, `CSPACE_Luv`, `CSPACE_ALL`.
+      `CSPACE_HLS`, `CSPACE_Lab`, `CSPACE_Luv`, `CSPACE_YUV`, `CSPACE_ALL`.
     * Added `imgaug.augmenters.color.change_colorspace_()`.
     * Added `imgaug.augmenters.color.change_colorspace_batch_()`.
     * Refactored color augmenters to use `change_colorspace_()` and
@@ -360,7 +360,10 @@
     * Added output `from_colorspace` to
       `AddToHueAndSaturation.get_parameters()`. This also affects `AddToHue`
       and `AddToSaturation`.
-
+    * [rarely breaking] Changed colorspace transformations throughout the
+      library to fail if the input image does not have three channels.
+    * Changed colorspace transformations throughout the library to also
+      support `YUV` colorspace.
 
 ## Improved Segmentation Map Augmentation #302
 
