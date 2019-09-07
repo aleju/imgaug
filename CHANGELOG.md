@@ -605,6 +605,9 @@ Changes:
   support class methods (and possibly various other callables). #407
 * Fixed `CropAndPad`, `Pad` and `PadToFixedSize` still clipping `cval` samples
   to the `uint8`. They now clip to the input array's dtype's value range. #407
+* Fixed `WithColorspace` not propagating polygons to child augmenters. #409
+* Fixed `WithHueAndSaturation` not propagating segmentation maps and polygons
+  to child augmenters. #409
 
 
 # 0.2.9
