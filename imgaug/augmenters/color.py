@@ -94,6 +94,37 @@ _CSPACE_OPENCV_CONV_VARS = {
         if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR)
 }
 
+# TODO test these pairs
+_CHANGE_COLORSPACE_INPLACE = {
+    # RGB
+    (CSPACE_RGB, CSPACE_BGR): True,
+    (CSPACE_RGB, CSPACE_GRAY): False,
+    (CSPACE_RGB, CSPACE_CIE): True,
+    (CSPACE_RGB, CSPACE_YCrCb): True,
+    (CSPACE_RGB, CSPACE_HSV): True,
+    (CSPACE_RGB, CSPACE_HLS): True,
+    (CSPACE_RGB, CSPACE_Lab): False,
+    (CSPACE_RGB, CSPACE_Luv): True,
+    # BGR
+    (CSPACE_BGR, CSPACE_RGB): True,
+    (CSPACE_BGR, CSPACE_GRAY): False,
+    (CSPACE_BGR, CSPACE_CIE): True,
+    (CSPACE_BGR, CSPACE_YCrCb): True,
+    (CSPACE_BGR, CSPACE_HSV): True,
+    (CSPACE_BGR, CSPACE_HLS): True,
+    (CSPACE_BGR, CSPACE_Lab): False,
+    (CSPACE_BGR, CSPACE_Luv): True,
+    # HSV
+    (CSPACE_HSV, CSPACE_RGB): True,
+    (CSPACE_HSV, CSPACE_BGR): True,
+    # HLS
+    (CSPACE_HLS, CSPACE_RGB): True,
+    (CSPACE_HLS, CSPACE_BGR): True,
+    # Lab
+    (CSPACE_Lab, CSPACE_RGB): False,
+    (CSPACE_Lab, CSPACE_BGR): False
+}
+
 
 # TODO add direct tests
 # TODO allow grayscale input images that have three channels
@@ -159,6 +190,16 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     # the docs, but at least for conversion to grayscale that
     # results in errors, ie uint8 is expected
 
+    def _get_dst(image, from_to_cspace):
+        if _CHANGE_COLORSPACE_INPLACE[from_to_cspace]:
+            # inplace mode for cv2's cvtColor seems to have issues with
+            # images that are views (e.g. image[..., 0:3]) and returns a
+            # cv2.UMat instance instead of an array. So we check here first
+            # if the array looks like it is non-contiguous or a view.
+            if image.flags["C_CONTIGUOUS"] and image.flags["OWNDATA"]:
+                return image
+        return None
+
     iadt.gate_dtypes(
         image,
         allowed=["uint8"],
@@ -204,12 +245,17 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     image_aug = image
     if from_to_direct in _CSPACE_OPENCV_CONV_VARS:
         from2to_var = _CSPACE_OPENCV_CONV_VARS[from_to_direct]
-        image_aug = cv2.cvtColor(image, from2to_var, dst=image_aug)
+        dst = _get_dst(image_aug, from_to_direct)
+        image_aug = cv2.cvtColor(image_aug, from2to_var, dst=dst)
     else:
         from2rgb_var = _CSPACE_OPENCV_CONV_VARS[from_to_indirect[0]]
         rgb2to_var = _CSPACE_OPENCV_CONV_VARS[from_to_indirect[1]]
-        image_aug = cv2.cvtColor(image_aug, from2rgb_var, dst=image_aug)
-        image_aug = cv2.cvtColor(image_aug, rgb2to_var, dst=image_aug)
+
+        dst1 = _get_dst(image_aug, from_to_indirect[0])
+        dst2 = _get_dst(image_aug, from_to_indirect[1])
+
+        image_aug = cv2.cvtColor(image_aug, from2rgb_var, dst=dst1)
+        image_aug = cv2.cvtColor(image_aug, rgb2to_var, dst=dst2)
 
     # TODO dont convert to uint8
     if image_aug.dtype.kind == "f":
