@@ -344,19 +344,17 @@ class Alpha(meta.Augmenter):
 
         self.epsilon = 1e-2
 
-
-
     def _augment_images(self, images, random_state, parents, hooks):
         outputs_first, outputs_second = self._generate_branch_outputs(
             images, "augment_images", hooks, parents)
 
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = random_state.duplicate(2)
+        rngs = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_images,
-                                                    random_state=rss[0])
+                                                    random_state=rngs[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels),
-                                          random_state=rss[1])
+                                          random_state=rngs[1])
         result = images
         gen = enumerate(zip(outputs_first, outputs_second))
         for i, (image_first, image_second) in gen:
@@ -406,11 +404,11 @@ class Alpha(meta.Augmenter):
             return augmentables
 
         nb_channels = meta.estimate_max_number_of_channels(augmentables)
-        rss = random_state.duplicate(2)
+        rngs = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_images,
-                                                    random_state=rss[0])
+                                                    random_state=rngs[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels),
-                                          random_state=rss[1])
+                                          random_state=rngs[1])
 
         result = augmentables
         gen = enumerate(zip(outputs_first, outputs_second))
@@ -450,7 +448,7 @@ class Alpha(meta.Augmenter):
                                  parents):
         outputs_first = augmentables
         outputs_second = augmentables
-        
+
         if self._is_propagating(augmentables, hooks, parents):
             if self.first is not None:
                 outputs_first = getattr(self.first, augfunc_name)(
@@ -645,64 +643,41 @@ class AlphaElementwise(Alpha):
         )
 
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+        outputs_first, outputs_second = self._generate_branch_outputs(
+            images, "augment_images", hooks, parents)
+
         nb_images = len(images)
-        rngs = random_state.duplicate(nb_images)
+        rngs = random_state.duplicate(nb_images+1)
+        per_channel = self.per_channel.draw_samples(nb_images,
+                                                    random_state=rngs[-1])
 
-        if hooks is None or hooks.is_propagating(images, augmenter=self,
-                                                 parents=parents, default=True):
-            if self.first is None:
-                images_first = images
-            else:
-                images_first = self.first.augment_images(
-                    images=meta.copy_arrays(images),
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            if self.second is None:
-                images_second = images
-            else:
-                images_second = self.second.augment_images(
-                    images=meta.copy_arrays(images),
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-        else:
-            images_first = images
-            images_second = images
-
-        # TODO simplify this loop and the ones for heatmaps, keypoints;
-        #      similar to Alpha
-        for i in sm.xrange(nb_images):
-            image = images[i]
+        result = images
+        gen = enumerate(zip(images, outputs_first, outputs_second))
+        for i, (image, image_first, image_second) in gen:
             h, w, nb_channels = image.shape[0:3]
-            image_first = images_first[i]
-            image_second = images_second[i]
-            per_channel = self.per_channel.draw_sample(random_state=rngs[i])
-            if per_channel > 0.5:
-                alphas = []
-                for _ in sm.xrange(nb_channels):
-                    samples_c = self.factor.draw_samples((h, w),
-                                                         random_state=rngs[i])
+            mask = self._sample_mask(h, w, nb_channels, per_channel[i], rngs[i])
 
-                    # validate only first value
-                    assert 0 <= samples_c.item(0) <= 1.0, (
-                        "Expected 'factor' samples to be in the interval"
-                        "[0.0, 1.0]. Got min %.4f and max %.4f." % (
-                            np.min(samples_c), np.max(samples_c),))
-
-                    alphas.append(samples_c)
-                alphas = np.float64(alphas).transpose((1, 2, 0))
-            else:
-                alphas = self.factor.draw_samples((h, w), random_state=rngs[i])
-                assert 0.0 <= alphas.item(0) <= 1.0, (
-                    "Expected alpha samples to be in the interval"
-                    "[0.0, 1.0]. Got min %.4f and max %.4f." % (
-                        np.min(alphas), np.max(alphas),))
-            result[i] = blend_alpha(image_first, image_second, alphas,
+            result[i] = blend_alpha(image_first, image_second, mask,
                                     eps=self.epsilon)
+
         return result
+
+    def _sample_mask(self, height, width, nb_channels, per_channel, rng):
+        if per_channel > 0.5:
+            mask = [
+                self.factor.draw_samples((height, width), random_state=rng)
+                for _ in sm.xrange(nb_channels)]
+            mask = np.stack(mask, axis=-1).astype(np.float64)
+        else:
+            mask = self.factor.draw_samples((height, width, nb_channels),
+                                            random_state=rng)
+
+        assert 0 <= mask.item(0) <= 1.0, (
+            "Expected 'factor' samples to be in the interval "
+            "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                np.min(mask), np.max(mask),))
+
+        return mask
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         def _sample_factor_mask(h_images, w_images, h_heatmaps, w_heatmaps,
