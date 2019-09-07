@@ -834,6 +834,7 @@ class _DummyMaskParameter(iap.StochasticParameter):
             assert False
 
 
+# TODO add tests for heatmaps and segmaps that differ from the image size
 class TestAlphaElementwise(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -1136,25 +1137,23 @@ class TestAlphaElementwise(unittest.TestCase):
         expected = self.kpsoi.shift(x=1)
         assert keypoints_equal([observed], [expected])
 
-    def _Xtest_keypoints_factor_is_choice_of_vals_close_050_per_channel(self):
-        """
-        TODO this test currently doesn't work as AlphaElementwise augments
-             keypoints without sampling overlay factors per (x, y) location.
-             (i.e. similar behaviour to Alpha)
-
+    def test_keypoints_factor_is_choice_of_vals_close_050_per_channel(self):
         aug = iaa.Alpha(
             iap.Choice([0.49, 0.51]),
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
+        kpsoi = self.kpsoi
+
         expected_same = kpsoi.deepcopy()
         expected_both_shifted = kpsoi.shift(x=1)
-        expected_first_shifted = KeypointsOnImage(
-            [kps[0].shift(x=1), kps[1]],
-            shape=kpsoi.shape)
-        expected_second_shifted = KeypointsOnImage(
-            [kps[0], kps[1].shift(x=1)],
-            shape=kpsoi.shape)
+        expected_first_shifted = ia.KeypointsOnImage(
+            [kpsoi.keypoints[0].shift(x=1), kpsoi.keypoints[1]],
+            shape=self.kpsoi.shape)
+        expected_second_shifted = ia.KeypointsOnImage(
+            [kpsoi.keypoints[0], kpsoi.keypoints[1].shift(x=1)],
+            shape=self.kpsoi.shape)
+
         seen = [0, 0]
         for _ in sm.xrange(200):
             observed = aug.augment_keypoints([kpsoi])[0]
@@ -1170,7 +1169,6 @@ class TestAlphaElementwise(unittest.TestCase):
                 assert False
         assert 100 - 50 < seen[0] < 100 + 50
         assert 100 - 50 < seen[1] < 100 + 50
-        """
 
     def test_keypoints_are_empty(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
@@ -1288,21 +1286,40 @@ class TestAlphaElementwise(unittest.TestCase):
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
-        expected_same = self.psoi.deepcopy()
-        expected_shifted = self.psoi.shift(left=1)
-        seen = [0, 0]
-        for _ in sm.xrange(200):
-            observed = aug.augment_polygons([self.psoi])[0]
-            if observed.polygons[0].exterior_almost_equals(
-                    expected_same.polygons[0]):
+        ps = [ia.Polygon([(0, 0), (15, 0), (10, 0), (10, 5), (10, 10),
+                          (5, 10), (5, 5), (0, 10), (0, 5), (0, 0)])]
+        psoi = ia.PolygonsOnImage(ps, shape=(15, 15, 3))
+
+        expected_same = psoi.deepcopy()
+        expected_shifted = psoi.shift(left=1)
+
+        nb_iterations = 400
+        seen = [0, 0, 0]
+        for _ in sm.xrange(nb_iterations):
+            observed = aug.augment_polygons([psoi])[0]
+            # We use here allclose() instead of exterior_almost_equals()
+            # as the latter one is much slower and we don't have to deal
+            # with tricky geometry changes here, just naive shifting.
+            if np.allclose(observed.polygons[0].exterior,
+                           expected_same.polygons[0].exterior,
+                           rtol=0, atol=0.1):
                 seen[0] += 1
-            elif observed.polygons[0].exterior_almost_equals(
-                    expected_shifted.polygons[0]):
+            elif np.allclose(observed.polygons[0].exterior,
+                             expected_shifted.polygons[0].exterior,
+                             rtol=0, atol=0.1):
                 seen[1] += 1
             else:
-                assert False
-        assert 100 - 50 < seen[0] < 100 + 50
-        assert 100 - 50 < seen[1] < 100 + 50
+                seen[2] += 1
+
+        nb_points = len(ps[0].exterior)
+        p_all_same = 2 * ((1/2)**nb_points)  # all points moved in the same way
+        expected_iter = nb_iterations*p_all_same
+        expected_iter_notsame = nb_iterations*(1-p_all_same)
+        atol = nb_iterations * (5*p_all_same)
+
+        assert np.isclose(seen[0], expected_iter, rtol=0, atol=atol)
+        assert np.isclose(seen[1], expected_iter, rtol=0, atol=atol)
+        assert np.isclose(seen[2], expected_iter_notsame, rtol=0, atol=atol)
 
     def test_empty_polygons(self):
         psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
