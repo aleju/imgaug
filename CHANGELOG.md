@@ -345,6 +345,21 @@
 * Moved matrix generation logic of augmenters in module `convolutional`
   to classes, one per augmenter (i.e. one per category of convolutional
   matrix). This should avoid errors related to pickling of functions. #407
+* Refactored `imgaug.augmenters.color`:
+    * Added to `imgaug.augmenters.color` the constants `CSPACE_RGB`, 
+      `CSPACE_BGR`, `CSPACE_GRAY`, `CSPACE_CIE`, `CSPACE_YCrCb`, `CSPACE_HSV`,
+      `CSPACE_HLS`, `CSPACE_Lab`, `CSPACE_Luv`, `CSPACE_ALL`.
+    * Added `imgaug.augmenters.color.change_colorspace_()`.
+    * Added `imgaug.augmenters.color.change_colorspace_batch_()`.
+    * Refactored color augmenters to use `change_colorspace_()` and
+      `change_colorspace_batch_()`. 
+    * [rarely breaking] Removed attributes `colorspace_changer` and
+      `colorspace_changer_inv` from `AddToHueAndSaturation`.
+    * Added attribute `from_colorspace` to `AddToHueAndSaturation`. This also
+      affects `AddToHue` and `AddToSaturation`.
+    * Added output `from_colorspace` to
+      `AddToHueAndSaturation.get_parameters()`. This also affects `AddToHue`
+      and `AddToSaturation`.
 
 
 ## Improved Segmentation Map Augmentation #302

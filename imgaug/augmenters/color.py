@@ -48,6 +48,277 @@ from .. import dtypes as iadt
 from .. import random as iarandom
 
 
+CSPACE_RGB = "RGB"
+CSPACE_BGR = "BGR"
+CSPACE_GRAY = "GRAY"
+CSPACE_CIE = "CIE"
+CSPACE_YCrCb = "YCrCb"
+CSPACE_HSV = "HSV"
+CSPACE_HLS = "HLS"
+CSPACE_Lab = "Lab"
+CSPACE_Luv = "Luv"
+CSPACE_ALL = {CSPACE_RGB, CSPACE_BGR, CSPACE_GRAY, CSPACE_CIE, CSPACE_YCrCb,
+              CSPACE_HSV, CSPACE_HLS, CSPACE_Lab, CSPACE_Luv}
+
+_CSPACE_OPENCV_CONV_VARS = {
+    # RGB
+    (CSPACE_RGB, CSPACE_BGR): cv2.COLOR_RGB2BGR,
+    (CSPACE_RGB, CSPACE_GRAY): cv2.COLOR_RGB2GRAY,
+    (CSPACE_RGB, CSPACE_CIE): cv2.COLOR_RGB2XYZ,
+    (CSPACE_RGB, CSPACE_YCrCb): cv2.COLOR_RGB2YCR_CB,
+    (CSPACE_RGB, CSPACE_HSV): cv2.COLOR_RGB2HSV,
+    (CSPACE_RGB, CSPACE_HLS): cv2.COLOR_RGB2HLS,
+    (CSPACE_RGB, CSPACE_Lab): cv2.COLOR_RGB2LAB,
+    (CSPACE_RGB, CSPACE_Luv): cv2.COLOR_RGB2LUV,
+    # BGR
+    (CSPACE_BGR, CSPACE_RGB): cv2.COLOR_BGR2RGB,
+    (CSPACE_BGR, CSPACE_GRAY): cv2.COLOR_BGR2GRAY,
+    (CSPACE_BGR, CSPACE_CIE): cv2.COLOR_BGR2XYZ,
+    (CSPACE_BGR, CSPACE_YCrCb): cv2.COLOR_BGR2YCR_CB,
+    (CSPACE_BGR, CSPACE_HSV): cv2.COLOR_BGR2HSV,
+    (CSPACE_BGR, CSPACE_HLS): cv2.COLOR_BGR2HLS,
+    (CSPACE_BGR, CSPACE_Lab): cv2.COLOR_BGR2LAB,
+    (CSPACE_BGR, CSPACE_Luv): cv2.COLOR_BGR2LUV,
+    # HSV
+    (CSPACE_HSV, CSPACE_RGB): cv2.COLOR_HSV2RGB,
+    (CSPACE_HSV, CSPACE_BGR): cv2.COLOR_HSV2BGR,
+    # HLS
+    (CSPACE_HLS, CSPACE_RGB): cv2.COLOR_HLS2RGB,
+    (CSPACE_HLS, CSPACE_BGR): cv2.COLOR_HLS2BGR,
+    # Lab
+    (CSPACE_Lab, CSPACE_RGB): (
+        cv2.COLOR_Lab2RGB
+        if hasattr(cv2, "COLOR_Lab2RGB") else cv2.COLOR_LAB2RGB),
+    (CSPACE_Lab, CSPACE_BGR): (
+        cv2.COLOR_Lab2BGR
+        if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR)
+}
+
+
+# TODO add direct tests
+# TODO allow grayscale input images that have three channels
+def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
+    """Change the colorspace of an image inplace.
+
+    .. note ::
+
+        All outputs of this function are `uint8`. For some colorspaces this
+        may not be optimal.
+
+    .. note ::
+
+        Output grayscale images will still have three channels.
+
+    dtype support::
+
+        * ``uint8``: yes; indirectly tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    image : ndarray
+        The image to convert from one colorspace into another.
+        Usually expected to have shape ``(H,W,3)``.
+
+    to_colorspace : str
+        The target colorspace. See the ``CSPACE`` constants,
+        e.g. ``imgaug.augmenters.color.CSPACE_RGB``.
+
+    from_colorspace : str, optional
+        The source colorspace. Analogous to `to_colorspace`. Defaults
+        to ``RGB``.
+
+    Returns
+    -------
+    ndarray
+        Image with target colorspace. *Can* be the same array instance as was
+        originally provided (i.e. changed inplace). Grayscale images will
+        still have three channels.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> import numpy as np
+    >>> # fake RGB image
+    >>> image_rgb = np.arange(4*4*3).astype(np.uint8).reshape((4, 4, 3))
+    >>> image_bgr = iaa.change_colorspace_(np.copy(image_rgb), iaa.CSPACE_BGR)
+
+    """
+    # some colorspaces here should use image/255.0 according to
+    # the docs, but at least for conversion to grayscale that
+    # results in errors, ie uint8 is expected
+
+    iadt.gate_dtypes(
+        image,
+        allowed=["uint8"],
+        disallowed=[
+            "bool",
+            "uint16", "uint32", "uint64", "uint128", "uint256",
+            "int32", "int64", "int128", "int256",
+            "float16", "float32", "float64", "float96", "float128",
+            "float256"],
+        augmenter=None)
+
+    for arg_name in ["to_colorspace", "from_colorspace"]:
+        assert locals()[arg_name] in CSPACE_ALL, (
+            "Expected `%s` to be one of: %s. Got: %s." % (
+                arg_name, CSPACE_ALL, locals()[arg_name]))
+
+    if image.ndim != 3:
+        ia.warn(
+            "Received an image with %d dimensions in "
+            "change_colorspace_(), but expected 3 "
+            "dimensions, i.e. shape "
+            "(height, width, channels)." % (image.ndim,)
+        )
+    elif image.shape[2] != 3:
+        ia.warn(
+            "Received an image with shape (H, W, C) and C=%d in "
+            "change_colorspace_(). Expected C to "
+            "usually be 3 -- any other value will likely result in "
+            "errors. (Note that this function is e.g. called "
+            "during grayscale conversion and hue/saturation "
+            "changes.)" % (image.shape[2],)
+        )
+
+    if from_colorspace == to_colorspace:
+        return image
+
+    from_to_direct = (from_colorspace, to_colorspace)
+    from_to_indirect = [
+        (from_colorspace, CSPACE_RGB),
+        (CSPACE_RGB, to_colorspace)
+    ]
+
+    image_aug = image
+    if from_to_direct in _CSPACE_OPENCV_CONV_VARS:
+        from2to_var = _CSPACE_OPENCV_CONV_VARS[from_to_direct]
+        image_aug = cv2.cvtColor(image, from2to_var, dst=image_aug)
+    else:
+        from2rgb_var = _CSPACE_OPENCV_CONV_VARS[from_to_indirect[0]]
+        rgb2to_var = _CSPACE_OPENCV_CONV_VARS[from_to_indirect[1]]
+        image_aug = cv2.cvtColor(image_aug, from2rgb_var, dst=image_aug)
+        image_aug = cv2.cvtColor(image_aug, rgb2to_var, dst=image_aug)
+
+    # TODO dont convert to uint8
+    if image_aug.dtype.kind == "f":
+        image_aug = image_aug * 255.0
+    image_aug = iadt.restore_dtypes_([image_aug], ["uint8"])[0]
+
+    # for grayscale: covnert from (H, W) to (H, W, 3)
+    if len(image_aug.shape) == 2:
+        image_aug = image_aug[:, :, np.newaxis]
+        image_aug = np.tile(image_aug, (1, 1, 3))
+
+    return image_aug
+
+
+def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
+    """Change the colorspaces of a batch of images inplace.
+
+    .. note ::
+
+        All outputs of this function are `uint8`. For some colorspaces this
+        may not be optimal.
+
+    .. note ::
+
+        Output grayscale images will still have three channels.
+
+    dtype support::
+
+        * ``uint8``: yes; indirectly tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    images : ndarray or list of ndarray
+        The images to convert from one colorspace into another.
+        Either a list of ``(H,W,3)`` arrays or a single ``(N,H,W,3)`` array.
+
+    to_colorspaces : str or list of str
+        The target colorspaces. Either a single string (all images will be
+        converted to the same colorspace) or a list of strings (one per image).
+        See the ``CSPACE`` constants, e.g.
+        ``imgaug.augmenters.color.CSPACE_RGB``.
+
+    from_colorspaces : str or list of str, optional
+        The source colorspace. Analogous to `to_colorspace`. Defaults
+        to ``RGB``.
+
+    Returns
+    -------
+    ndarray or list of ndarray
+        Images with target colorspaces. *Can* contain the same array instances
+        as were originally provided (i.e. changed inplace). Grayscale images
+        will still have three channels.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> import numpy as np
+    >>> # fake RGB image
+    >>> image_rgb = np.arange(4*4*3).astype(np.uint8).reshape((4, 4, 3))
+    >>> images_rgb = [image_rgb, image_rgb, image_rgb]
+    >>> images_rgb_copy = [np.copy(image_rgb) for image_rgb in images_rgb]
+    >>> images_bgr = iaa.change_colorspaces_(images_rgb_copy, iaa.CSPACE_BGR)
+
+    Create three example ``RGB`` images and convert them to ``BGR`` colorspace.
+
+    >>> images_rgb_copy = [np.copy(image_rgb) for image_rgb in images_rgb]
+    >>> images_various = iaa.change_colorspaces_(
+    >>>     images_rgb_copy, [iaa.CSPACE_BGR, iaa.CSPACE_HSV, iaa.CSPACE_GRAY])
+
+    Chnage the colorspace of the first image to ``BGR``, the one of the second
+    image to ``HSV`` and the one of the third image to ``grayscale`` (note
+    that in the latter case the image will still have shape ``(H,W,3)``,
+    not ``(H,W,1)``).
+
+    """
+    def _validate(arg, arg_name):
+        if isinstance(arg, list):
+            assert len(arg) == len(images), (
+                "If `%s` is provided as a list it must have the same length "
+                "as `images`. Got length %d, expected %d." % (
+                    arg_name, len(arg), len(images)))
+        else:
+            assert ia.is_string(arg), (
+                "Expected `%s` to be either a list of strings or a single "
+                "string. Got type %s." % (arg_name, type(arg)))
+            arg = [arg] * len(images)
+        return arg
+
+    to_colorspaces = _validate(to_colorspaces, "to_colorspaces")
+    from_colorspaces = _validate(from_colorspaces, "from_colorspaces")
+
+    for i in sm.xrange(len(images)):
+        images[i] = change_colorspace_(
+            images[i], to_colorspaces[i], from_colorspaces[i])
+    return images
+
+
 @ia.deprecated(alt_func="WithColorspace")
 def InColorspace(to_colorspace, from_colorspace="RGB", children=None,
                  name=None, deterministic=False, random_state=None):
@@ -67,27 +338,15 @@ class WithColorspace(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
     to_colorspace : str
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     children : None or Augmenter or list of Augmenters, optional
         See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
@@ -105,8 +364,8 @@ class WithColorspace(meta.Augmenter):
     --------
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.WithColorspace(
-    >>>     to_colorspace="HSV",
-    >>>     from_colorspace="RGB",
+    >>>     to_colorspace=iaa.CSPACE_HSV,
+    >>>     from_colorspace=iaa.CSPACE_RGB,
     >>>     children=iaa.WithChannels(
     >>>         0,
     >>>         iaa.Add((0, 50))
@@ -119,7 +378,7 @@ class WithColorspace(meta.Augmenter):
 
     """
 
-    def __init__(self, to_colorspace, from_colorspace="RGB", children=None,
+    def __init__(self, to_colorspace, from_colorspace=CSPACE_RGB, children=None,
                  name=None, deterministic=False, random_state=None):
         super(WithColorspace, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -131,19 +390,19 @@ class WithColorspace(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         if self._is_propagating(images, hooks, parents):
-            result = ChangeColorspace(
-                to_colorspace=self.to_colorspace,
-                from_colorspace=self.from_colorspace
-            ).augment_images(images=result)
+            result = change_colorspaces_(
+                result,
+                to_colorspaces=self.to_colorspace,
+                from_colorspaces=self.from_colorspace)
             result = self.children.augment_images(
                 images=result,
                 parents=parents + [self],
                 hooks=hooks
             )
-            result = ChangeColorspace(
-                to_colorspace=self.from_colorspace,
-                from_colorspace=self.to_colorspace
-            ).augment_images(images=result)
+            result = change_colorspaces_(
+                result,
+                to_colorspaces=self.from_colorspace,
+                from_colorspaces=self.to_colorspace)
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
@@ -228,24 +487,12 @@ class WithHueAndSaturation(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: no; not tested
-        * ``uint32``: no; not tested
-        * ``uint64``: no; not tested
-        * ``int8``: no; not tested
-        * ``int16``: no; not tested
-        * ``int32``: no; not tested
-        * ``int64``: no; not tested
-        * ``float16``: no; not tested
-        * ``float32``: no; not tested
-        * ``float64``: no; not tested
-        * ``float128``: no; not tested
-        * ``bool``: no; not tested
+        See :func:`imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     children : None or Augmenter or list of Augmenters, optional
         See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
@@ -302,25 +549,11 @@ class WithHueAndSaturation(meta.Augmenter):
         self._internal_dtype = np.int16
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(
-            images,
-            allowed=["uint8"],
-            disallowed=[
-                "bool",
-                "uint16", "uint32", "uint64", "uint128", "uint256",
-                "int32", "int64", "int128", "int256",
-                "float16", "float32", "float64", "float96", "float128",
-                "float256"],
-            augmenter=self)
-
         result = images
-        if hooks is None or hooks.is_propagating(images, augmenter=self,
-                                                 parents=parents, default=True):
+        if self._is_propagating(images, hooks, parents):
             # RGB (or other source colorspace) -> HSV
-            images_hsv = ChangeColorspace(
-                to_colorspace=ChangeColorspace.HSV,
-                from_colorspace=self.from_colorspace
-            ).augment_images(images)
+            images_hsv = change_colorspaces_(
+                images, CSPACE_HSV, self.from_colorspace)
 
             # HSV -> HS
             hue_and_sat = []
@@ -364,10 +597,10 @@ class WithHueAndSaturation(meta.Augmenter):
                 hue_and_sat_proj = np.uint8(hue_and_sat_proj)
 
             # HSV -> RGB (or whatever the source colorspace was)
-            result = ChangeColorspace(
-                to_colorspace=self.from_colorspace,
-                from_colorspace=ChangeColorspace.HSV
-            ).augment_images(hue_and_sat_proj)
+            result = change_colorspaces_(
+                hue_and_sat_proj,
+                to_colorspaces=self.from_colorspace,
+                from_colorspaces=CSPACE_HSV)
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
@@ -505,7 +738,7 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
         are used instead of `mul`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -654,7 +887,7 @@ class MultiplyHue(MultiplyHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -715,7 +948,7 @@ class MultiplySaturation(MultiplyHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -770,7 +1003,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB",
         See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     channels : int or list of int or None, optional
         See :func:`imgaug.augmenters.meta.WithChannels.__init__()`.
@@ -816,19 +1049,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: no
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: no
-        * ``int16``: no
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: no
-        * ``float32``: no
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: no
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -890,7 +1111,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         are used instead of `value`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -926,14 +1147,7 @@ class AddToHueAndSaturation(meta.Augmenter):
             value_saturation)
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
-
-        # we don't change these in a modified to_deterministic() here,
-        # because they are called in _augment_images() with random states
-        self.colorspace_changer = ChangeColorspace(
-            from_colorspace=from_colorspace, to_colorspace="HSV")
-        self.colorspace_changer_inv = ChangeColorspace(
-            from_colorspace="HSV", to_colorspace=from_colorspace)
-
+        self.from_colorspace = from_colorspace
         self.backend = "cv2"
 
         # precompute tables for cv2.LUT
@@ -981,17 +1195,6 @@ class AddToHueAndSaturation(meta.Augmenter):
         return samples_hue, samples_saturation
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(
-            images,
-            allowed=["uint8"],
-            disallowed=[
-                "bool",
-                "uint16", "uint32", "uint64", "uint128", "uint256",
-                "int32", "int64", "int128", "int256",
-                "float16", "float32", "float64", "float96", "float128",
-                "float256"],
-            augmenter=self)
-
         input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         result = images
@@ -1003,13 +1206,11 @@ class AddToHueAndSaturation(meta.Augmenter):
         # else:
         #    images_hsv = images_hsv.astype(np.int32)
 
-        rss = random_state.duplicate(3)
-        images_hsv = self.colorspace_changer._augment_images(
-            images, rss[0], parents + [self], hooks)
-        samples = self._draw_samples(images, rss[1])
+        images_hsv = change_colorspaces_(
+            images, CSPACE_HSV, self.from_colorspace)
+        samples = self._draw_samples(images, random_state)
         hues = samples[0]
         saturations = samples[1]
-        rs_inv = rss[2]
 
         # this is needed if no cache for LUT is used:
         # value_range = np.arange(0, 256, dtype=np.int16)
@@ -1024,11 +1225,10 @@ class AddToHueAndSaturation(meta.Augmenter):
                     image_hsv, hue_i, saturation_i)
 
             image_hsv = image_hsv.astype(input_dtypes[i])
-            # the inverse colorspace changer has a deterministic output
-            # (always <from_colorspace>, so that can always provide it the
-            # same random state as input
-            image_rgb = self.colorspace_changer_inv._augment_images(
-                [image_hsv], rs_inv, parents + [self], hooks)[0]
+            image_rgb = change_colorspace_(
+                image_hsv,
+                to_colorspace=self.from_colorspace,
+                from_colorspace=CSPACE_HSV)
             result[i] = image_rgb
 
         return result
@@ -1070,7 +1270,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     def get_parameters(self):
         return [self.value, self.value_hue, self.value_saturation,
-                self.per_channel]
+                self.per_channel, self.from_colorspace]
 
     @classmethod
     def _handle_value_arg(cls, value, value_hue, value_saturation):
@@ -1164,7 +1364,7 @@ class AddToHue(AddToHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1186,8 +1386,8 @@ class AddToHue(AddToHueAndSaturation):
 
     """
 
-    def __init__(self, value=(-255, 255), from_colorspace="RGB", name=None,
-                 deterministic=False, random_state=None):
+    def __init__(self, value=(-255, 255), from_colorspace=CSPACE_RGB,
+                 name=None, deterministic=False, random_state=None):
         super(AddToHue, self).__init__(
             value_hue=value,
             from_colorspace=from_colorspace,
@@ -1229,7 +1429,7 @@ class AddToSaturation(AddToHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__()`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1262,39 +1462,25 @@ class AddToSaturation(AddToHueAndSaturation):
 
 
 # TODO tests
-# Note: Not clear whether this class will be kept (for anything aside from
-# grayscale)
-# other colorspaces dont really make sense and they also might not work
-# correctly due to having no clearly limited range (like 0-255 or 0-1)
 # TODO rename to ChangeColorspace3D and then introduce ChangeColorspace, which
 #      does not enforce 3d images?
 class ChangeColorspace(meta.Augmenter):
     """
     Augmenter to change the colorspace of images.
 
-    **Note**: This augmenter is not tested. Some colorspaces might work, others
-    might not.
+    .. note ::
 
-    **Note**: This augmenter tries to project the colorspace value range on
-    0-255. It outputs dtype=uint8 images.
+        This augmenter is not tested. Some colorspaces might work, others
+        might not.
 
-    TODO check dtype support
+    ..note ::
+
+        This augmenter tries to project the colorspace value range on
+        0-255. It outputs dtype=uint8 images.
 
     dtype support::
 
-        * ``uint8``: yes; not tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -1302,8 +1488,9 @@ class ChangeColorspace(meta.Augmenter):
         The target colorspace.
         Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``,
         ``HSV``, ``HLS``, ``Lab``, ``Luv``.
-        These are also accessible via ``ChangeColorspace.<NAME>``,
-        e.g. ``ChangeColorspace.YCrCb``.
+        These are also accessible via
+        ``imgaug.augmenters.color.CSPACE_<NAME>``,
+        e.g. ``imgaug.augmenters.CSPACE_YCrCb``.
 
             * If a string, it must be among the allowed colorspaces.
             * If a list, it is expected to be a list of strings, each one
@@ -1341,15 +1528,16 @@ class ChangeColorspace(meta.Augmenter):
 
     """
 
-    RGB = "RGB"
-    BGR = "BGR"
-    GRAY = "GRAY"
-    CIE = "CIE"
-    YCrCb = "YCrCb"
-    HSV = "HSV"
-    HLS = "HLS"
-    Lab = "Lab"
-    Luv = "Luv"
+    # TODO mark these as deprecated
+    RGB = CSPACE_RGB
+    BGR = CSPACE_BGR
+    GRAY = CSPACE_GRAY
+    CIE = CSPACE_CIE
+    YCrCb = CSPACE_YCrCb
+    HSV = CSPACE_HSV
+    HLS = CSPACE_HLS
+    Lab = CSPACE_Lab
+    Luv = CSPACE_Luv
     COLORSPACES = {RGB, BGR, GRAY, CIE, YCrCb, HSV, HLS, Lab, Luv}
     # TODO access cv2 COLOR_ variables directly instead of indirectly via
     #      dictionary mapping
@@ -1387,7 +1575,7 @@ class ChangeColorspace(meta.Augmenter):
             if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR)
     }
 
-    def __init__(self, to_colorspace, from_colorspace="RGB", alpha=1.0,
+    def __init__(self, to_colorspace, from_colorspace=CSPACE_RGB, alpha=1.0,
                  name=None, deterministic=False, random_state=None):
         super(ChangeColorspace, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -1398,9 +1586,9 @@ class ChangeColorspace(meta.Augmenter):
             list_to_choice=True)
 
         if ia.is_string(to_colorspace):
-            assert to_colorspace in ChangeColorspace.COLORSPACES, (
+            assert to_colorspace in CSPACE_ALL, (
                 "Expected 'to_colorspace' to be one of %s. Got %s." % (
-                    ChangeColorspace.COLORSPACES, to_colorspace))
+                    CSPACE_ALL, to_colorspace))
             self.to_colorspace = iap.Deterministic(to_colorspace)
         elif ia.is_iterable(to_colorspace):
             all_strings = all(
@@ -1410,12 +1598,12 @@ class ChangeColorspace(meta.Augmenter):
                 "Got types %s." % (
                     ", ".join([str(type(v)) for v in to_colorspace])))
             all_valid = all(
-                [(colorspace in ChangeColorspace.COLORSPACES)
+                [(colorspace in CSPACE_ALL)
                  for colorspace in to_colorspace])
             assert all_valid, (
                 "Expected list of 'to_colorspace' to only contain strings "
                 "that are in %s. Got strings %s." % (
-                    ChangeColorspace.COLORSPACES, to_colorspace))
+                    CSPACE_ALL, to_colorspace))
             self.to_colorspace = iap.Choice(to_colorspace)
         elif isinstance(to_colorspace, iap.StochasticParameter):
             self.to_colorspace = to_colorspace
@@ -1427,10 +1615,10 @@ class ChangeColorspace(meta.Augmenter):
         assert ia.is_string(from_colorspace), (
             "Expected from_colorspace to be a single string, "
             "got type %s." % (type(from_colorspace),))
-        assert from_colorspace in ChangeColorspace.COLORSPACES, (
+        assert from_colorspace in CSPACE_ALL, (
             "Expected from_colorspace to be one of: %s. Got: %s." % (
-                ", ".join(ChangeColorspace.COLORSPACES), from_colorspace))
-        assert from_colorspace != ChangeColorspace.GRAY, (
+                ", ".join(CSPACE_ALL), from_colorspace))
+        assert from_colorspace != CSPACE_GRAY, (
             "Cannot convert from grayscale images to other colorspaces.")
         self.from_colorspace = from_colorspace
 
@@ -1454,71 +1642,16 @@ class ChangeColorspace(meta.Augmenter):
             to_colorspace = to_colorspaces[i]
             image = images[i]
 
-            assert to_colorspace in ChangeColorspace.COLORSPACES, (
+            assert to_colorspace in CSPACE_ALL, (
                 "Expected 'to_colorspace' to be one of %s. Got %s." % (
-                    ChangeColorspace.COLORSPACES, to_colorspace))
+                    CSPACE_ALL, to_colorspace))
 
-            if alpha == 0 or self.from_colorspace == to_colorspace:
+            if alpha <= self.eps or self.from_colorspace == to_colorspace:
                 pass  # no change necessary
             else:
-                # some colorspaces here should use image/255.0 according to
-                # the docs, but at least for conversion to grayscale that
-                # results in errors, ie uint8 is expected
-
-                if image.ndim != 3:
-                    ia.warn(
-                        "Received an image with %d dimensions in "
-                        "ChangeColorspace._augment_image(), but expected 3 "
-                        "dimensions, i.e. shape "
-                        "(height, width, channels)." % (image.ndim,)
-                    )
-                elif image.shape[2] != 3:
-                    ia.warn(
-                        "Received an image with shape (H, W, C) and C=%d in "
-                        "ChangeColorspace._augment_image(). Expected C to "
-                        "usually be 3 -- any other value will likely result in "
-                        "errors. (Note that this function is e.g. called "
-                        "during grayscale conversion and hue/saturation "
-                        "changes.)" % (image.shape[2],)
-                    )
-
-                if self.from_colorspace in [ChangeColorspace.RGB,
-                                            ChangeColorspace.BGR]:
-                    from_to_var_name = "%s2%s" % (
-                        self.from_colorspace, to_colorspace)
-                    from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
-                    img_to_cs = cv2.cvtColor(image, from_to_var)
-                else:
-                    # convert to RGB
-                    from_to_var_name = "%s2%s" % (
-                        self.from_colorspace, ChangeColorspace.RGB)
-                    from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
-                    img_rgb = cv2.cvtColor(image, from_to_var)
-
-                    if to_colorspace == ChangeColorspace.RGB:
-                        img_to_cs = img_rgb
-                    else:
-                        # convert from RGB to desired target colorspace
-                        from_to_var_name = "%s2%s" % (
-                            ChangeColorspace.RGB, to_colorspace)
-                        from_to_var = ChangeColorspace.CV_VARS[from_to_var_name]
-                        img_to_cs = cv2.cvtColor(img_rgb, from_to_var)
-
-                # this will break colorspaces that have values outside 0-255
-                # or 0.0-1.0
-                # TODO dont convert to uint8
-                if ia.is_integer_array(img_to_cs):
-                    img_to_cs = np.clip(img_to_cs, 0, 255).astype(np.uint8)
-                else:
-                    img_to_cs = np.clip(img_to_cs * 255, 0, 255).astype(
-                        np.uint8)
-
-                # for grayscale: covnert from (H, W) to (H, W, 3)
-                if len(img_to_cs.shape) == 2:
-                    img_to_cs = img_to_cs[:, :, np.newaxis]
-                    img_to_cs = np.tile(img_to_cs, (1, 1, 3))
-
-                result[i] = blend.blend_alpha(img_to_cs, image, alpha, self.eps)
+                image_aug = change_colorspace_(image, to_colorspace,
+                                               self.from_colorspace)
+                result[i] = blend.blend_alpha(image_aug, image, alpha, self.eps)
 
         return images
 
@@ -1528,29 +1661,18 @@ class ChangeColorspace(meta.Augmenter):
 
 # TODO rename to Grayscale3D and add Grayscale that keeps the image at 1D?
 class Grayscale(ChangeColorspace):
-    """
-    Augmenter to convert images to their grayscale versions.
+    """Augmenter to convert images to their grayscale versions.
 
-    NOTE: Number of output channels is still 3, i.e. this augmenter just
-    "removes" color.
+    .. note ::
+
+        Number of output channels is still ``3``, i.e. this augmenter just
+        "removes" color.
 
     TODO check dtype support
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -1572,7 +1694,7 @@ class Grayscale(ChangeColorspace):
         The source colorspace (of the input images).
         Allowed strings are: ``RGB``, ``BGR``, ``GRAY``, ``CIE``, ``YCrCb``,
         ``HSV``, ``HLS``, ``Lab``, ``Luv``.
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1600,10 +1722,10 @@ class Grayscale(ChangeColorspace):
 
     """
 
-    def __init__(self, alpha=0, from_colorspace="RGB",
+    def __init__(self, alpha=0, from_colorspace=CSPACE_RGB,
                  name=None, deterministic=False, random_state=None):
         super(Grayscale, self).__init__(
-            to_colorspace=ChangeColorspace.GRAY,
+            to_colorspace=CSPACE_GRAY,
             alpha=alpha,
             from_colorspace=from_colorspace,
             name=name,
@@ -1614,8 +1736,8 @@ class Grayscale(ChangeColorspace):
 @six.add_metaclass(ABCMeta)
 class _AbstractColorQuantization(meta.Augmenter):
     def __init__(self,
-                 n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
-                 to_colorspace=[ChangeColorspace.RGB, ChangeColorspace.Lab],
+                 n_colors=(2, 16), from_colorspace=CSPACE_RGB,
+                 to_colorspace=[CSPACE_RGB, CSPACE_Lab],
                  max_size=128,
                  interpolation="linear",
                  name=None, deterministic=False, random_state=None):
@@ -1643,17 +1765,6 @@ class _AbstractColorQuantization(meta.Augmenter):
         return n_colors
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(
-            images,
-            allowed=["uint8"],
-            disallowed=[
-                "bool",
-                "uint16", "uint32", "uint64", "uint128", "uint256",
-                "int32", "int64", "int128", "int256",
-                "float16", "float32", "float64", "float96", "float128",
-                "float256"],
-            augmenter=self)
-
         rss = random_state.duplicate(1 + len(images))
         n_colors = self._draw_samples(len(images), rss[-1])
 
@@ -1691,14 +1802,14 @@ class _AbstractColorQuantization(meta.Augmenter):
                 cs = ChangeColorspace(
                     from_colorspace=self.from_colorspace,
                     to_colorspace=self.to_colorspace,
-                    random_state=random_state.copy_unless_global_rng(),
+                    random_state=random_state.copy(),
                     deterministic=True)
                 _, to_colorspaces = cs._draw_samples(
-                    1, random_state.copy_unless_global_rng())
+                    1, random_state.copy())
                 cs_inv = ChangeColorspace(
                     from_colorspace=to_colorspaces[0],
                     to_colorspace=self.from_colorspace,
-                    random_state=random_state.copy_unless_global_rng(),
+                    random_state=random_state.copy(),
                     deterministic=True)
 
             image_tf = cs.augment_image(image)
@@ -1796,7 +1907,7 @@ class KMeansColorQuantization(_AbstractColorQuantization):
 
     to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
-        See ``ChangeColorspace`` for valid values.
+        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
         This will be ignored for grayscale input images.
 
             * If ``None`` the colorspace of input images will not be changed.
@@ -1854,14 +1965,14 @@ class KMeansColorQuantization(_AbstractColorQuantization):
     ``[4..16]``.
 
     >>> aug = iaa.KMeansColorQuantization(
-    >>>     from_colorspace=iaa.ChangeColorspace.BGR)
+    >>>     from_colorspace=iaa.CSPACE_BGR)
 
     Create an augmenter that quantizes input images that are in
     ``BGR`` colorspace. The quantization happens in ``RGB`` or ``Lab``
     colorspace, into which the images are temporarily converted.
 
     >>> aug = iaa.KMeansColorQuantization(
-    >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
+    >>>     to_colorspace=[iaa.CSPACE_RGB, iaa.CSPACE_HSV])
 
     Create an augmenter that quantizes images by clustering colors randomly
     in either ``RGB`` or ``HSV`` colorspace. The assumed input colorspace
@@ -1869,8 +1980,8 @@ class KMeansColorQuantization(_AbstractColorQuantization):
 
     """
 
-    def __init__(self, n_colors=(2, 16), from_colorspace=ChangeColorspace.RGB,
-                 to_colorspace=[ChangeColorspace.RGB, ChangeColorspace.Lab],
+    def __init__(self, n_colors=(2, 16), from_colorspace=CSPACE_RGB,
+                 to_colorspace=[CSPACE_RGB, CSPACE_Lab],
                  max_size=128, interpolation="linear",
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
@@ -2039,7 +2150,7 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
     to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
-        See ``ChangeColorspace`` for valid values.
+        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
         This will be ignored for grayscale input images.
 
             * If ``None`` the colorspace of input images will not be changed.
@@ -2096,8 +2207,8 @@ class UniformColorQuantization(_AbstractColorQuantization):
     ``[4..16]``.
 
     >>> aug = iaa.UniformColorQuantization(
-    >>>     from_colorspace=iaa.ChangeColorspace.BGR,
-    >>>     to_colorspace=[iaa.ChangeColorspace.RGB, iaa.ChangeColorspace.HSV])
+    >>>     from_colorspace=iaa.CSPACE_BGR,
+    >>>     to_colorspace=[iaa.CSPACE_RGB, iaa.CSPACE_HSV])
 
     Create an augmenter that uniformly quantizes images in either ``RGB``
     or ``HSV`` colorspace (randomly picked per image). The input colorspace
@@ -2107,7 +2218,7 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
     def __init__(self,
                  n_colors=(2, 16),
-                 from_colorspace=ChangeColorspace.RGB,
+                 from_colorspace=CSPACE_RGB,
                  to_colorspace=None,
                  max_size=None,
                  interpolation="linear",
