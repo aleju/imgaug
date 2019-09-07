@@ -345,7 +345,7 @@
 * Moved matrix generation logic of augmenters in module `convolutional`
   to classes, one per augmenter (i.e. one per category of convolutional
   matrix). This should avoid errors related to pickling of functions. #407
-* Refactored `imgaug.augmenters.color`:
+* Refactored `imgaug.augmenters.color` (#409):
     * Added to `imgaug.augmenters.color` the constants `CSPACE_RGB`, 
       `CSPACE_BGR`, `CSPACE_GRAY`, `CSPACE_CIE`, `CSPACE_YCrCb`, `CSPACE_HSV`,
       `CSPACE_HLS`, `CSPACE_Lab`, `CSPACE_Luv`, `CSPACE_ALL`.
