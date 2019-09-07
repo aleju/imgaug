@@ -735,11 +735,11 @@ class LinearContrast(_ContrastFuncWrapper):
 #      to CLAHE and HistogramEqualization?
 #      this is essentially tested by tests for CLAHE
 class _IntensityChannelBasedApplier(object):
-    RGB = color_lib.ChangeColorspace.RGB
-    BGR = color_lib.ChangeColorspace.BGR
-    HSV = color_lib.ChangeColorspace.HSV
-    HLS = color_lib.ChangeColorspace.HLS
-    Lab = color_lib.ChangeColorspace.Lab
+    RGB = color_lib.CSPACE_RGB
+    BGR = color_lib.CSPACE_BGR
+    HSV = color_lib.CSPACE_HSV
+    HLS = color_lib.CSPACE_HLS
+    Lab = color_lib.CSPACE_Lab
     _CHANNEL_MAPPING = {
         HSV: 2,
         HLS: 1,
@@ -761,15 +761,8 @@ class _IntensityChannelBasedApplier(object):
             "Expected 'to_colorspace' to be one of %s, got %s." % (
                 valid_to_colorspaces, to_colorspace))
 
-        self.change_colorspace = color_lib.ChangeColorspace(
-            to_colorspace=to_colorspace,
-            from_colorspace=from_colorspace,
-            name="%s_IntensityChannelBasedApplier_ChangeColorspace" % (name,))
-        self.change_colorspace_inv = color_lib.ChangeColorspace(
-            to_colorspace=from_colorspace,
-            from_colorspace=to_colorspace,
-            name="%s_IntensityChannelBasedApplier_ChangeColorspaceInverse" % (
-                name,))
+        self.from_colorspace = from_colorspace
+        self.to_colorspace = to_colorspace
 
     def apply(self, images, random_state, parents, hooks, func):
         input_was_array = ia.is_np_array(images)
@@ -811,13 +804,14 @@ class _IntensityChannelBasedApplier(object):
         # convert colorspaces of normalized 3-channel images
         images_after_color_conversion = [None] * len(images_normalized)
         if len(images_change_cs) > 0:
-            images_new_cs = self.change_colorspace._augment_images(
-                images_change_cs, rss[0], parents + [self], hooks)
+            images_new_cs = color_lib.change_colorspaces_(
+                images_change_cs,
+                to_colorspaces=self.to_colorspace,
+                from_colorspaces=self.from_colorspace)
 
             for image_new_cs, target_idx in zip(images_new_cs,
                                                 images_change_cs_indices):
-                chan_idx = self._CHANNEL_MAPPING[
-                    self.change_colorspace.to_colorspace.value]
+                chan_idx = self._CHANNEL_MAPPING[self.to_colorspace]
                 images_normalized[target_idx] = image_new_cs[
                     ..., chan_idx:chan_idx+1]
                 images_after_color_conversion[target_idx] = image_new_cs
@@ -833,8 +827,7 @@ class _IntensityChannelBasedApplier(object):
         for i, (image, image_conv, image_aug) in gen:
             nb_channels = image.shape[2]
             if nb_channels in [3, 4]:
-                chan_idx = self._CHANNEL_MAPPING[
-                    self.change_colorspace.to_colorspace.value]
+                chan_idx = self._CHANNEL_MAPPING[self.to_colorspace]
                 image_tmp = image_conv
                 image_tmp[..., chan_idx:chan_idx+1] = image_aug
 
@@ -846,8 +839,10 @@ class _IntensityChannelBasedApplier(object):
 
         # invert colorspace conversion
         if len(images_change_cs) > 0:
-            images_new_cs = self.change_colorspace_inv._augment_images(
-                images_change_cs, rss[0], parents + [self], hooks)
+            images_new_cs = color_lib.change_colorspaces_(
+                images_change_cs,
+                to_colorspaces=self.from_colorspace,
+                from_colorspaces=self.to_colorspace)
             for image_new_cs, target_idx in zip(images_new_cs,
                                                 images_change_cs_indices):
                 if result[target_idx] is None:
@@ -863,6 +858,9 @@ class _IntensityChannelBasedApplier(object):
             result = np.array(result, dtype=result[0].dtype)
 
         return result
+
+    def get_parameters(self):
+        return [self.from_colorspace, self.to_colorspace]
 
 
 # TODO add parameter `tile_grid_size_percent`
@@ -1120,7 +1118,8 @@ class CLAHE(meta.Augmenter):
         be ignored and it will be assumed that the input is grayscale.
         If a fourth channel is present in an input image, it will be removed
         before the colorspace conversion and later re-added.
-        See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
+        See also :func:`imgaug.augmenters.color.change_colorspace_` for
+        details.
 
     to_colorspace : {"Lab", "HLS", "HSV"}, optional
         Colorspace in which to perform CLAHE. For ``Lab``, CLAHE will only be
@@ -1170,8 +1169,8 @@ class CLAHE(meta.Augmenter):
     list ``[3, 5, 7]``.
 
     >>> aug = iaa.CLAHE(
-    >>>     from_colorspace=iaa.CLAHE.BGR,
-    >>>     to_colorspace=iaa.CLAHE.HSV)
+    >>>     from_colorspace=iaa.CSPACE_BGR,
+    >>>     to_colorspace=iaa.CSPACE_HSV)
 
     Create a CLAHE augmenter that converts images from BGR colorspace to
     HSV colorspace and then applies the local histogram equalization to the
@@ -1182,16 +1181,16 @@ class CLAHE(meta.Augmenter):
     does not have to be changed for them).
 
     """
-    RGB = _IntensityChannelBasedApplier.RGB
-    BGR = _IntensityChannelBasedApplier.BGR
-    HSV = _IntensityChannelBasedApplier.HSV
-    HLS = _IntensityChannelBasedApplier.HLS
-    Lab = _IntensityChannelBasedApplier.Lab
+    RGB = color_lib.CSPACE_RGB
+    BGR = color_lib.CSPACE_BGR
+    HSV = color_lib.CSPACE_HSV
+    HLS = color_lib.CSPACE_HLS
+    Lab = color_lib.CSPACE_Lab
 
     def __init__(self, clip_limit=40, tile_grid_size_px=8,
                  tile_grid_size_px_min=3,
-                 from_colorspace=color_lib.ChangeColorspace.RGB,
-                 to_colorspace=color_lib.ChangeColorspace.Lab,
+                 from_colorspace=color_lib.CSPACE_RGB,
+                 to_colorspace=color_lib.CSPACE_Lab,
                  name=None, deterministic=False, random_state=None):
         super(CLAHE, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -1232,9 +1231,8 @@ class CLAHE(meta.Augmenter):
         return [
             ac_clahe.clip_limit,
             ac_clahe.tile_grid_size_px,
-            ac_clahe.tile_grid_size_px_min,
-            intb_applier.change_colorspace.from_colorspace,  # always str
-            intb_applier.change_colorspace.to_colorspace.value]
+            ac_clahe.tile_grid_size_px_min
+        ] + intb_applier.get_parameters()
 
 
 class AllChannelsHistogramEqualization(meta.Augmenter):
@@ -1372,7 +1370,8 @@ class HistogramEqualization(meta.Augmenter):
         ignored and it will be assumed that the input is grayscale.
         If a fourth channel is present in an input image, it will be removed
         before the colorspace conversion and later re-added.
-        See also ``imgaug.augmenters.color.ChangeColorspace`` for details.
+        See also :func:`imgaug.augmenters.color.change_colorspace_` for
+        details.
 
     to_colorspace : {"Lab", "HLS", "HSV"}, optional
         Colorspace in which to perform Histogram Equalization. For ``Lab``,
@@ -1407,22 +1406,22 @@ class HistogramEqualization(meta.Augmenter):
     to various strengths of contrast normalization.
 
     >>> aug = iaa.HistogramEqualization(
-    >>>     from_colorspace=iaa.HistogramEqualization.BGR,
-    >>>     to_colorspace=iaa.HistogramEqualization.HSV)
+    >>>     from_colorspace=iaa.CSPACE_BGR,
+    >>>     to_colorspace=iaa.CSPACE_HSV)
 
     Same as in the first example, but the colorspace of input images has
     to be ``BGR`` (instead of default ``RGB``) and the histogram equalization
     is applied to the ``V`` channel in ``HSV`` colorspace.
 
     """
-    RGB = _IntensityChannelBasedApplier.RGB
-    BGR = _IntensityChannelBasedApplier.BGR
-    HSV = _IntensityChannelBasedApplier.HSV
-    HLS = _IntensityChannelBasedApplier.HLS
-    Lab = _IntensityChannelBasedApplier.Lab
+    RGB = color_lib.CSPACE_RGB
+    BGR = color_lib.CSPACE_BGR
+    HSV = color_lib.CSPACE_HSV
+    HLS = color_lib.CSPACE_HLS
+    Lab = color_lib.CSPACE_Lab
 
-    def __init__(self,  from_colorspace=color_lib.ChangeColorspace.RGB,
-                 to_colorspace=color_lib.ChangeColorspace.Lab,
+    def __init__(self,  from_colorspace=color_lib.CSPACE_RGB,
+                 to_colorspace=color_lib.CSPACE_Lab,
                  name=None, deterministic=False, random_state=None):
         super(HistogramEqualization, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -1457,10 +1456,7 @@ class HistogramEqualization(meta.Augmenter):
 
     def get_parameters(self):
         icb_applier = self.intensity_channel_based_applier
-        return [
-            icb_applier.change_colorspace.from_colorspace,  # always str
-            icb_applier.change_colorspace.to_colorspace.value
-        ]
+        return icb_applier.get_parameters()
 
 
 # TODO delete this or maybe move it somewhere else
