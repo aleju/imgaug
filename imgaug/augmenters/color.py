@@ -51,34 +51,58 @@ from .. import random as iarandom
 CSPACE_RGB = "RGB"
 CSPACE_BGR = "BGR"
 CSPACE_GRAY = "GRAY"
-CSPACE_CIE = "CIE"
 CSPACE_YCrCb = "YCrCb"
 CSPACE_HSV = "HSV"
 CSPACE_HLS = "HLS"
 CSPACE_Lab = "Lab"
+# TODO add Luv to various color/contrast augmenters as random default choice?
 CSPACE_Luv = "Luv"
-CSPACE_ALL = {CSPACE_RGB, CSPACE_BGR, CSPACE_GRAY, CSPACE_CIE, CSPACE_YCrCb,
-              CSPACE_HSV, CSPACE_HLS, CSPACE_Lab, CSPACE_Luv}
+CSPACE_YUV = "YUV"
+CSPACE_CIE = "CIE"  # XYZ in OpenCV
+CSPACE_ALL = {CSPACE_RGB, CSPACE_BGR, CSPACE_GRAY, CSPACE_YCrCb,
+              CSPACE_HSV, CSPACE_HLS, CSPACE_Lab, CSPACE_Luv,
+              CSPACE_YUV, CSPACE_CIE}
+
+
+def _get_opencv_attr(attr_names):
+    for attr_name in attr_names:
+        if hasattr(cv2, attr_name):
+            return getattr(cv2, attr_name)
+    ia.warn("Could not find any of the following attributes in cv2: %s. "
+            "This can cause issues with colorspace transformations." % (
+                attr_names))
+    return None
+
 
 _CSPACE_OPENCV_CONV_VARS = {
     # RGB
     (CSPACE_RGB, CSPACE_BGR): cv2.COLOR_RGB2BGR,
     (CSPACE_RGB, CSPACE_GRAY): cv2.COLOR_RGB2GRAY,
-    (CSPACE_RGB, CSPACE_CIE): cv2.COLOR_RGB2XYZ,
-    (CSPACE_RGB, CSPACE_YCrCb): cv2.COLOR_RGB2YCR_CB,
+    (CSPACE_RGB, CSPACE_YCrCb): _get_opencv_attr(["COLOR_RGB2YCR_CB"]),
     (CSPACE_RGB, CSPACE_HSV): cv2.COLOR_RGB2HSV,
     (CSPACE_RGB, CSPACE_HLS): cv2.COLOR_RGB2HLS,
-    (CSPACE_RGB, CSPACE_Lab): cv2.COLOR_RGB2LAB,
+    (CSPACE_RGB, CSPACE_Lab): _get_opencv_attr(["COLOR_RGB2LAB",
+                                                "COLOR_RGB2Lab"]),
     (CSPACE_RGB, CSPACE_Luv): cv2.COLOR_RGB2LUV,
+    (CSPACE_RGB, CSPACE_YUV): cv2.COLOR_RGB2YUV,
+    (CSPACE_RGB, CSPACE_CIE): cv2.COLOR_RGB2XYZ,
     # BGR
     (CSPACE_BGR, CSPACE_RGB): cv2.COLOR_BGR2RGB,
     (CSPACE_BGR, CSPACE_GRAY): cv2.COLOR_BGR2GRAY,
-    (CSPACE_BGR, CSPACE_CIE): cv2.COLOR_BGR2XYZ,
-    (CSPACE_BGR, CSPACE_YCrCb): cv2.COLOR_BGR2YCR_CB,
+    (CSPACE_BGR, CSPACE_YCrCb): _get_opencv_attr(["COLOR_BGR2YCR_CB"]),
     (CSPACE_BGR, CSPACE_HSV): cv2.COLOR_BGR2HSV,
     (CSPACE_BGR, CSPACE_HLS): cv2.COLOR_BGR2HLS,
-    (CSPACE_BGR, CSPACE_Lab): cv2.COLOR_BGR2LAB,
+    (CSPACE_BGR, CSPACE_Lab): _get_opencv_attr(["COLOR_BGR2LAB",
+                                                "COLOR_BGR2Lab"]),
     (CSPACE_BGR, CSPACE_Luv): cv2.COLOR_BGR2LUV,
+    (CSPACE_BGR, CSPACE_YUV): cv2.COLOR_BGR2YUV,
+    (CSPACE_BGR, CSPACE_CIE): cv2.COLOR_BGR2XYZ,
+    # GRAY
+    # YCrCb
+    (CSPACE_YCrCb, CSPACE_RGB): _get_opencv_attr(["COLOR_YCrCb2RGB",
+                                                  "COLOR_YCR_CB2RGB"]),
+    (CSPACE_YCrCb, CSPACE_BGR): _get_opencv_attr(["COLOR_YCrCb2BGR",
+                                                  "COLOR_YCR_CB2BGR"]),
     # HSV
     (CSPACE_HSV, CSPACE_RGB): cv2.COLOR_HSV2RGB,
     (CSPACE_HSV, CSPACE_BGR): cv2.COLOR_HSV2BGR,
@@ -86,34 +110,51 @@ _CSPACE_OPENCV_CONV_VARS = {
     (CSPACE_HLS, CSPACE_RGB): cv2.COLOR_HLS2RGB,
     (CSPACE_HLS, CSPACE_BGR): cv2.COLOR_HLS2BGR,
     # Lab
-    (CSPACE_Lab, CSPACE_RGB): (
-        cv2.COLOR_Lab2RGB
-        if hasattr(cv2, "COLOR_Lab2RGB") else cv2.COLOR_LAB2RGB),
-    (CSPACE_Lab, CSPACE_BGR): (
-        cv2.COLOR_Lab2BGR
-        if hasattr(cv2, "COLOR_Lab2BGR") else cv2.COLOR_LAB2BGR)
+    (CSPACE_Lab, CSPACE_RGB): _get_opencv_attr(["COLOR_Lab2RGB",
+                                                "COLOR_LAB2RGB"]),
+    (CSPACE_Lab, CSPACE_BGR): _get_opencv_attr(["COLOR_Lab2BGR",
+                                                "COLOR_LAB2BGR"]),
+    # Luv
+    (CSPACE_Luv, CSPACE_RGB): _get_opencv_attr(["COLOR_Luv2RGB",
+                                                "COLOR_LUV2RGB"]),
+    (CSPACE_Luv, CSPACE_BGR): _get_opencv_attr(["COLOR_Luv2BGR",
+                                                "COLOR_LUV2BGR"]),
+    # YUV
+    (CSPACE_YUV, CSPACE_RGB): cv2.COLOR_YUV2RGB,
+    (CSPACE_YUV, CSPACE_BGR): cv2.COLOR_YUV2BGR,
+    # CIE
+    (CSPACE_CIE, CSPACE_RGB): cv2.COLOR_XYZ2RGB,
+    (CSPACE_CIE, CSPACE_BGR): cv2.COLOR_XYZ2BGR,
 }
 
-# TODO test these pairs
+# This defines which colorspace pairs will be converted in-place in
+# change_colorspace_(). Currently, all colorspaces seem to work fine with
+# in-place transformations, which is why they are all set to True.
 _CHANGE_COLORSPACE_INPLACE = {
     # RGB
     (CSPACE_RGB, CSPACE_BGR): True,
-    (CSPACE_RGB, CSPACE_GRAY): False,
-    (CSPACE_RGB, CSPACE_CIE): True,
+    (CSPACE_RGB, CSPACE_GRAY): True,
     (CSPACE_RGB, CSPACE_YCrCb): True,
     (CSPACE_RGB, CSPACE_HSV): True,
     (CSPACE_RGB, CSPACE_HLS): True,
-    (CSPACE_RGB, CSPACE_Lab): False,
+    (CSPACE_RGB, CSPACE_Lab): True,
     (CSPACE_RGB, CSPACE_Luv): True,
+    (CSPACE_RGB, CSPACE_YUV): True,
+    (CSPACE_RGB, CSPACE_CIE): True,
     # BGR
     (CSPACE_BGR, CSPACE_RGB): True,
-    (CSPACE_BGR, CSPACE_GRAY): False,
-    (CSPACE_BGR, CSPACE_CIE): True,
+    (CSPACE_BGR, CSPACE_GRAY): True,
     (CSPACE_BGR, CSPACE_YCrCb): True,
     (CSPACE_BGR, CSPACE_HSV): True,
     (CSPACE_BGR, CSPACE_HLS): True,
-    (CSPACE_BGR, CSPACE_Lab): False,
+    (CSPACE_BGR, CSPACE_Lab): True,
     (CSPACE_BGR, CSPACE_Luv): True,
+    (CSPACE_BGR, CSPACE_YUV): True,
+    (CSPACE_BGR, CSPACE_CIE): True,
+    # GRAY
+    # YCrCb
+    (CSPACE_YCrCb, CSPACE_RGB): True,
+    (CSPACE_YCrCb, CSPACE_BGR): True,
     # HSV
     (CSPACE_HSV, CSPACE_RGB): True,
     (CSPACE_HSV, CSPACE_BGR): True,
@@ -121,13 +162,20 @@ _CHANGE_COLORSPACE_INPLACE = {
     (CSPACE_HLS, CSPACE_RGB): True,
     (CSPACE_HLS, CSPACE_BGR): True,
     # Lab
-    (CSPACE_Lab, CSPACE_RGB): False,
-    (CSPACE_Lab, CSPACE_BGR): False
+    (CSPACE_Lab, CSPACE_RGB): True,
+    (CSPACE_Lab, CSPACE_BGR): True,
+    # Luv
+    (CSPACE_Luv, CSPACE_RGB): True,
+    (CSPACE_Luv, CSPACE_BGR): True,
+    # YUV
+    (CSPACE_YUV, CSPACE_RGB): True,
+    (CSPACE_YUV, CSPACE_BGR): True,
+    # CIE
+    (CSPACE_CIE, CSPACE_RGB): True,
+    (CSPACE_CIE, CSPACE_BGR): True,
 }
 
 
-# TODO add direct tests
-# TODO allow grayscale input images that have three channels
 def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     """Change the colorspace of an image inplace.
 
@@ -216,22 +264,16 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
             "Expected `%s` to be one of: %s. Got: %s." % (
                 arg_name, CSPACE_ALL, locals()[arg_name]))
 
-    if image.ndim != 3:
-        ia.warn(
-            "Received an image with %d dimensions in "
-            "change_colorspace_(), but expected 3 "
-            "dimensions, i.e. shape "
-            "(height, width, channels)." % (image.ndim,)
-        )
-    elif image.shape[2] != 3:
-        ia.warn(
-            "Received an image with shape (H, W, C) and C=%d in "
-            "change_colorspace_(). Expected C to "
-            "usually be 3 -- any other value will likely result in "
-            "errors. (Note that this function is e.g. called "
-            "during grayscale conversion and hue/saturation "
-            "changes.)" % (image.shape[2],)
-        )
+    assert from_colorspace != CSPACE_GRAY, (
+        "Cannot convert from grayscale to another colorspace as colors "
+        "cannot be recovered.")
+
+    assert image.ndim == 3, (
+        "Expected image shape to be three-dimensional, i.e. (H,W,C), "
+        "got %d dimensions with shape %s." % (image.ndim, image.shape))
+    assert image.shape[2] == 3, (
+        "Expected number of channels to be three, got %d channels with "
+        "shape %s." % (image.ndim, image.shape,))
 
     if from_colorspace == to_colorspace:
         return image
@@ -257,10 +299,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
         image_aug = cv2.cvtColor(image_aug, from2rgb_var, dst=dst1)
         image_aug = cv2.cvtColor(image_aug, rgb2to_var, dst=dst2)
 
-    # TODO dont convert to uint8
-    if image_aug.dtype.kind == "f":
-        image_aug = image_aug * 255.0
-    image_aug = iadt.restore_dtypes_([image_aug], ["uint8"])[0]
+    assert image_aug.dtype.name == "uint8"
 
     # for grayscale: covnert from (H, W) to (H, W, 3)
     if len(image_aug.shape) == 2:
