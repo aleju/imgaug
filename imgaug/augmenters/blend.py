@@ -29,6 +29,7 @@ from . import meta
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from ..augmentables import utils as augm_utils
 
 
 def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
@@ -343,8 +344,41 @@ class Alpha(meta.Augmenter):
 
         self.epsilon = 1e-2
 
+    def _is_propagating(self, augmentables, hooks, parents):
+        return (hooks is None
+                or hooks.is_propagating(augmentables, augmenter=self,
+                                        parents=parents, default=True))
+
+    def _generate_branch_outputs(self, augmentables, augfunc_name, hooks,
+                                 parents):
+        if self._is_propagating(augmentables, hooks, parents):
+            if self.first is None:
+                outputs_first = augmentables
+            else:
+                outputs_first = getattr(self.first, augfunc_name)(
+                    augm_utils.copy_augmentables(augmentables),
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+
+            if self.second is None:
+                outputs_second = augmentables
+            else:
+                outputs_second = getattr(self.second, augfunc_name)(
+                    augm_utils.copy_augmentables(augmentables),
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        else:
+            outputs_first = augmentables
+            outputs_second = augmentables
+
+        return outputs_first, outputs_second
+
     def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+        outputs_first, outputs_second = self._generate_branch_outputs(
+            images, "augment_images", hooks, parents)
+
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
@@ -352,31 +386,8 @@ class Alpha(meta.Augmenter):
                                                     random_state=rss[0])
         alphas = self.factor.draw_samples((nb_images, nb_channels),
                                           random_state=rss[1])
-
-        if hooks is None or hooks.is_propagating(images, augmenter=self,
-                                                 parents=parents, default=True):
-            if self.first is None:
-                images_first = images
-            else:
-                images_first = self.first.augment_images(
-                    images=meta.copy_arrays(images),
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            if self.second is None:
-                images_second = images
-            else:
-                images_second = self.second.augment_images(
-                    images=meta.copy_arrays(images),
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-        else:
-            images_first = images
-            images_second = images
-
-        gen = enumerate(zip(images_first, images_second))
+        result = images
+        gen = enumerate(zip(outputs_first, outputs_second))
         for i, (image_first, image_second) in gen:
             if per_channel[i] > 0.5:
                 nb_channels_i = image_first.shape[2]
@@ -389,7 +400,9 @@ class Alpha(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = heatmaps
+        outputs_first, outputs_second = self._generate_branch_outputs(
+            heatmaps, "augment_heatmaps", hooks, parents)
+
         nb_heatmaps = len(heatmaps)
         if nb_heatmaps == 0:
             return heatmaps
@@ -401,30 +414,8 @@ class Alpha(meta.Augmenter):
         alphas = self.factor.draw_samples((nb_heatmaps, nb_channels),
                                           random_state=rss[1])
 
-        if hooks is None or hooks.is_propagating(heatmaps, augmenter=self,
-                                                 parents=parents, default=True):
-            if self.first is None:
-                heatmaps_first = heatmaps
-            else:
-                heatmaps_first = self.first.augment_heatmaps(
-                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            if self.second is None:
-                heatmaps_second = heatmaps
-            else:
-                heatmaps_second = self.second.augment_heatmaps(
-                    [heatmaps_i.deepcopy() for heatmaps_i in heatmaps],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-        else:
-            heatmaps_first = heatmaps
-            heatmaps_second = heatmaps
-
-        gen = enumerate(zip(heatmaps_first, heatmaps_second))
+        result = heatmaps
+        gen = enumerate(zip(outputs_first, outputs_second))
         for i, (heatmaps_first_i, heatmaps_second_i) in gen:
             # sample alphas channelwise if necessary and try to use the
             # image's channel number values properly synchronized with the
@@ -446,9 +437,10 @@ class Alpha(meta.Augmenter):
 
         return result
 
-    # TODO This is almost identical to coordinate based augmentation.
-    #      Merge the two.
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        outputs_first, outputs_second = self._generate_branch_outputs(
+            segmaps, "augment_segmentation_maps", hooks, parents)
+
         nb_images = len(segmaps)
         if nb_images == 0:
             return segmaps
@@ -461,30 +453,6 @@ class Alpha(meta.Augmenter):
                                           random_state=rss[1])
 
         result = segmaps
-
-        if hooks is None or hooks.is_propagating(segmaps, augmenter=self,
-                                                 parents=parents, default=True):
-            if self.first is None:
-                outputs_first = segmaps
-            else:
-                outputs_first = self.first.augment_segmentation_maps(
-                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            if self.second is None:
-                outputs_second = segmaps
-            else:
-                outputs_second = self.second.augment_segmentation_maps(
-                    [segmaps_i.deepcopy() for segmaps_i in segmaps],
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-        else:
-            outputs_first = segmaps
-            outputs_second = segmaps
-
         gen = enumerate(zip(outputs_first, outputs_second))
         for i, (outputs_first_i, outputs_second_i) in gen:
             # Segmap augmentation also works channel-wise based on image
@@ -515,34 +483,21 @@ class Alpha(meta.Augmenter):
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
-        def _augfunc(augs_, keypoints_on_images_, parents_, hooks_):
-            return augs_.augment_keypoints(
-                keypoints_on_images=[
-                    kpsoi_i.deepcopy() for kpsoi_i in keypoints_on_images_],
-                parents=parents_,
-                hooks=hooks_
-            )
-
         return self._augment_coordinate_based(
-            keypoints_on_images, random_state, parents, hooks, _augfunc
-        )
+            keypoints_on_images, random_state, parents, hooks,
+            "augment_keypoints")
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
-        def _augfunc(augs_, polygons_on_images_, parents_, hooks_):
-            return augs_.augment_polygons(
-                polygons_on_images=[
-                    polysoi_i.deepcopy() for polysoi_i in polygons_on_images_],
-                parents=parents_,
-                hooks=hooks_
-            )
-
         return self._augment_coordinate_based(
-            polygons_on_images, random_state, parents, hooks, _augfunc
-        )
+            polygons_on_images, random_state, parents, hooks,
+            "augment_polygons")
 
     def _augment_coordinate_based(self, inputs, random_state, parents, hooks,
-                                  func):
+                                  augfunc_name):
+        outputs_first, outputs_second = self._generate_branch_outputs(
+            inputs, augfunc_name, hooks, parents)
+
         nb_images = len(inputs)
         if nb_images == 0:
             return inputs
@@ -555,24 +510,6 @@ class Alpha(meta.Augmenter):
                                           random_state=rss[1])
 
         result = inputs
-
-        if hooks is None or hooks.is_propagating(inputs, augmenter=self,
-                                                 parents=parents, default=True):
-            if self.first is None:
-                outputs_first = inputs
-            else:
-                outputs_first = func(self.first, inputs, parents + [self],
-                                     hooks)
-
-            if self.second is None:
-                outputs_second = inputs
-            else:
-                outputs_second = func(self.second, inputs, parents + [self],
-                                      hooks)
-        else:
-            outputs_first = inputs
-            outputs_second = inputs
-
         gen = enumerate(zip(outputs_first, outputs_second))
         for i, (outputs_first_i, outputs_second_i) in gen:
             # coordinate augmentation also works channel-wise -- even though
