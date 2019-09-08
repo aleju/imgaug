@@ -688,8 +688,13 @@ class AlphaElementwise(Alpha):
                 for _ in sm.xrange(nb_channels)]
             mask = np.stack(mask, axis=-1).astype(np.float64)
         else:
-            mask = self.factor.draw_samples((height, width, nb_channels),
-                                            random_state=rng)
+            # TODO When this was wrongly sampled directly as (H,W,C) no
+            #      test for AlphaElementwise ended up failing. That should not
+            #      happen.
+            # note that this should not be (H,W,1) as otherwise
+            # SimplexNoiseAlpha fails as noise params expected a call of (H,W)
+            mask = self.factor.draw_samples((height, width), random_state=rng)
+            mask = np.tile(mask[..., np.newaxis], (1, 1, nb_channels))
 
         assert 0 <= mask.item(0) <= 1.0, (
             "Expected 'factor' samples to be in the interval "
