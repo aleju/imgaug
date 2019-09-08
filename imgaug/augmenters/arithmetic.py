@@ -737,6 +737,207 @@ def replace_elementwise_(image, mask, replacements):
     return image
 
 
+def invert(image, min_value=None, max_value=None):
+    """Invert an array.
+
+    dtype support::
+
+        if (min_value=None and max_value=None)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: yes; tested
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: yes; tested
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: yes; tested
+            * ``float128``: yes; tested
+            * ``bool``: yes; tested
+
+        if (min_value!=None or max_value!=None)::
+
+            * ``uint8``: yes; fully tested
+            * ``uint16``: yes; tested
+            * ``uint32``: yes; tested
+            * ``uint64``: no (1)
+            * ``int8``: yes; tested
+            * ``int16``: yes; tested
+            * ``int32``: yes; tested
+            * ``int64``: no (1)
+            * ``float16``: yes; tested
+            * ``float32``: yes; tested
+            * ``float64``: no (1)
+            * ``float128``: no (2)
+            * ``bool``: no (3)
+
+            - (1) Not allowed due to numpy's clip converting from ``uint64`` to
+                  ``float64``.
+            - (2) Not allowed as int/float have to be increased in resolution
+                  when using min/max values.
+            - (3) Not tested.
+            - (4) Makes no sense when using min/max values.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+
+    min_value : None or number, optional
+        Minimum of the value range of input images, e.g. ``0`` for ``uint8``
+        images. If set to ``None``, the value will be automatically derived
+        from the image's dtype.
+
+    max_value : None or number, optional
+        Maximum of the value range of input images, e.g. ``255`` for ``uint8``
+        images. If set to ``None``, the value will be automatically derived
+        from the image's dtype.
+
+    Returns
+    -------
+    ndarray
+        Inverted image.
+
+    """
+    # when no custom min/max are chosen, all bool, uint, int and float dtypes
+    # should be invertable (float tested only up to 64bit)
+    # when chosing custom min/max:
+    # - bool makes no sense, not allowed
+    # - int and float must be increased in resolution if custom min/max values
+    #   are chosen, hence they are limited to 32 bit and below
+    # - uint64 is converted by numpy's clip to float64, hence loss of accuracy
+    # - float16 seems to not be perfectly accurate, but still ok-ish -- was
+    #   off by 10 for center value of range (float 16 min, 16), where float
+    #   16 min is around -65500
+    allow_dtypes_custom_minmax = {"uint8", "uint16", "uint32",
+                                  "int8", "int16", "int32",
+                                  "float16", "float32"}
+
+    min_value_dt, _, max_value_dt = \
+        iadt.get_value_range_of_dtype(image.dtype)
+    min_value = (min_value_dt
+                 if min_value is None else min_value)
+    max_value = (max_value_dt
+                 if max_value is None else max_value)
+    assert min_value >= min_value_dt, (
+        "Expected min_value to be above or equal to dtype's min "
+        "value, got %s (vs. min possible %s for %s)" % (
+            str(min_value), str(min_value_dt), image.dtype.name)
+    )
+    assert max_value <= max_value_dt, (
+        "Expected max_value to be below or equal to dtype's max "
+        "value, got %s (vs. max possible %s for %s)" % (
+            str(max_value), str(max_value_dt), image.dtype.name)
+    )
+    assert min_value < max_value, (
+            "Expected min_value to be below max_value, got %s "
+            "and %s" % (
+                str(min_value), str(max_value))
+    )
+
+    if min_value != min_value_dt or max_value != max_value_dt:
+        assert image.dtype.name in allow_dtypes_custom_minmax, (
+            "Can use custom min/max values only with the following "
+            "dtypes: %s. Got: %s." % (
+                ", ".join(allow_dtypes_custom_minmax), image.dtype.name))
+
+    dtype_kind_to_invert_func = {
+        "b": _invert_bool,
+        "u": _invert_uint,
+        "i": _invert_int,
+        "f": _invert_float
+    }
+
+    func = dtype_kind_to_invert_func[image.dtype.kind]
+    return func(image, min_value, max_value)
+
+
+def _invert_bool(arr, min_value, max_value):
+    assert min_value == 0 and max_value == 1, (
+        "min_value and max_value must be 0 and 1 for bool arrays. "
+        "Got %.4f and %.4f." % (min_value, max_value))
+    return ~arr
+
+
+def _invert_uint(arr, min_value, max_value):
+    if min_value == 0 and max_value == np.iinfo(arr.dtype).max:
+        return max_value - arr
+    return _invert_by_distance(
+        np.clip(arr, min_value, max_value),
+        min_value, max_value
+    )
+
+
+def _invert_int(arr, min_value, max_value):
+    # note that for int dtypes the max value is
+    #   (-1) * min_value - 1
+    # e.g. -128 and 127 (min/max) for int8
+    # mapping example:
+    #  [-4, -3, -2, -1,  0,  1,  2,  3]
+    # will be mapped to
+    #  [ 3,  2,  1,  0, -1, -2, -3, -4]
+    # hence we can not simply compute the inverse as:
+    #  after = (-1) * before
+    # but instead need
+    #  after = (-1) * before - 1
+    # however, this exceeds the value range for the minimum value, e.g.
+    # for int8: -128 -> 128 -> 127, where 128 exceeds it. Hence, we must
+    # compute the inverse via a mask (extra step for the minimum)
+    # or we have to increase the resolution of the array. Here, a
+    # two-step approach is used.
+
+    if min_value == (-1) * max_value - 1:
+        mask = (arr == min_value)
+
+        # there is probably a one-liner here to do this, but
+        #  ((-1) * (arr * ~mask) - 1) + mask * max_value
+        # has the disadvantage of inverting min_value to max_value - 1
+        # while
+        #  ((-1) * (arr * ~mask) - 1) + mask * (max_value+1)
+        #  ((-1) * (arr * ~mask) - 1) + mask * max_value + mask
+        # both sometimes increase the dtype resolution (e.g. int32 to int64)
+        n_min = np.sum(mask)
+        if n_min > 0:
+            arr[mask] = max_value
+        if n_min < arr.size:
+            arr[~mask] = (-1) * arr[~mask] - 1
+        return arr
+    else:
+        return _invert_by_distance(
+            np.clip(arr, min_value, max_value),
+            min_value, max_value
+        )
+
+
+def _invert_float(arr, min_value, max_value):
+    if np.isclose(max_value, (-1)*min_value, rtol=0):
+        return (-1) * arr
+    return _invert_by_distance(
+        np.clip(arr, min_value, max_value),
+        min_value, max_value
+    )
+
+
+def _invert_by_distance(arr, min_value, max_value):
+    arr_modify = arr
+    if arr.dtype.kind in ["i", "f"]:
+        arr_modify = iadt.increase_array_resolutions_([np.copy(arr)], 2)[0]
+    distance_from_min = np.abs(arr_modify - min_value)  # d=abs(v-min)
+    arr_modify = max_value - distance_from_min  # v'=MAX-d
+    # due to floating point inaccuracies, we might exceed the min/max
+    # values for floats here, hence clip this happens especially for
+    # values close to the float dtype's maxima
+    if arr.dtype.kind == "f":
+        arr_modify = np.clip(arr_modify, min_value, max_value)
+    if arr.dtype.kind in ["i", "f"]:
+        arr_modify = iadt.restore_dtypes_(
+            arr_modify, arr.dtype, clip=False)
+    return arr_modify
+
+
 class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
@@ -2668,44 +2869,7 @@ class Invert(meta.Augmenter):
 
     dtype support::
 
-        if (min_value=None and max_value=None)::
-
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested
-            * ``uint64``: yes; tested
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: yes; tested
-            * ``float16``: yes; tested
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: yes; tested
-            * ``bool``: yes; tested
-
-        if (min_value!=None or max_value!=None)::
-
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested
-            * ``uint64``: no (1)
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: no (1)
-            * ``float16``: yes; tested
-            * ``float32``: yes; tested
-            * ``float64``: no (1)
-            * ``float128``: no (2)
-            * ``bool``: no (3)
-
-            - (1) Not allowed due to numpy's clip converting from ``uint64`` to
-                  ``float64``.
-            - (2) Not allowed as int/float have to be increased in resolution
-                  when using min/max values.
-            - (3) Not tested.
-            - (4) Makes no sense when using min/max values.
+        See :func:`imgaug.augmenters.arithmetic.invert`.
 
     Parameters
     ----------
@@ -2736,7 +2900,7 @@ class Invert(meta.Augmenter):
         images. If set to ``None``, the value will be automatically derived
         from the image's dtype.
 
-    max_value : int or float, optional
+    max_value : None or number, optional
         Maximum of the value range of input images, e.g. ``255`` for ``uint8``
         images. If set to ``None``, the value will be automatically derived
         from the image's dtype.
@@ -2798,13 +2962,6 @@ class Invert(meta.Augmenter):
         self.min_value = min_value
         self.max_value = max_value
 
-        self.dtype_kind_to_invert_func = {
-            "b": self._invert_bool,
-            "u": self._invert_uint,
-            "i": self._invert_int,
-            "f": self._invert_float
-        }
-
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
@@ -2816,134 +2973,16 @@ class Invert(meta.Augmenter):
 
         gen = zip(images, per_channel_samples, p_samples)
         for image, per_channel_samples_i, p_samples_i in gen:
-            min_value_dt, _, max_value_dt = \
-                iadt.get_value_range_of_dtype(image.dtype)
-            min_value = (min_value_dt
-                         if self.min_value is None else self.min_value)
-            max_value = (max_value_dt
-                         if self.max_value is None else self.max_value)
-            assert min_value >= min_value_dt, (
-                "Expected min_value to be above or equal to dtype's min "
-                "value, got %s (vs. min possible %s for %s)" % (
-                    str(min_value), str(min_value_dt), image.dtype.name)
-            )
-            assert max_value <= max_value_dt, (
-                "Expected max_value to be below or equal to dtype's max "
-                "value, got %s (vs. max possible %s for %s)" % (
-                    str(max_value), str(max_value_dt), image.dtype.name)
-            )
-            assert min_value < max_value, (
-                    "Expected min_value to be below max_value, got %s "
-                    "and %s" % (
-                        str(min_value), str(max_value))
-            )
-
-            if min_value != min_value_dt or max_value != max_value_dt:
-                assert image.dtype.type in self.ALLOW_DTYPES_CUSTOM_MINMAX, (
-                    "Can use custom min/max values only with the following "
-                    "dtypes: %s. Got: %s." % (
-                        ", ".join([
-                            dt.name for dt in self.ALLOW_DTYPES_CUSTOM_MINMAX
-                        ]),
-                        image.dtype.name))
-
-            _invertfunc = self.dtype_kind_to_invert_func[image.dtype.kind]
-
             if per_channel_samples_i > 0.5:
-                for c, p_sample in enumerate(p_samples_i):
-                    if p_sample > 0.5:
-                        image[..., c] = _invertfunc(
-                            image[..., c], min_value, max_value)
+                mask = p_samples_i > 0.5
+                image[..., mask] = invert(image[..., mask],
+                                          self.min_value, self.max_value)
             else:
                 if p_samples_i[0] > 0.5:
-                    image[:, :, :] = _invertfunc(image, min_value, max_value)
+                    image[:, :, :] = invert(image, self.min_value,
+                                            self.max_value)
 
         return images
-
-    @classmethod
-    def _invert_bool(cls, arr, min_value, max_value):
-        assert min_value == 0 and max_value == 1, (
-            "min_value and max_value must be 0 and 1 for bool arrays. "
-            "Got %.4f and %.4f." % (min_value, max_value))
-        return ~arr
-
-    @classmethod
-    def _invert_uint(cls, arr, min_value, max_value):
-        if min_value == 0 and max_value == np.iinfo(arr.dtype).max:
-            return max_value - arr
-        else:
-            return cls._invert_by_distance(
-                np.clip(arr, min_value, max_value),
-                min_value, max_value
-            )
-
-    @classmethod
-    def _invert_int(cls, arr, min_value, max_value):
-        # note that for int dtypes the max value is
-        #   (-1) * min_value - 1
-        # e.g. -128 and 127 (min/max) for int8
-        # mapping example:
-        #  [-4, -3, -2, -1,  0,  1,  2,  3]
-        # will be mapped to
-        #  [ 3,  2,  1,  0, -1, -2, -3, -4]
-        # hence we can not simply compute the inverse as:
-        #  after = (-1) * before
-        # but instead need
-        #  after = (-1) * before - 1
-        # however, this exceeds the value range for the minimum value, e.g.
-        # for int8: -128 -> 128 -> 127, where 128 exceeds it. Hence, we must
-        # compute the inverse via a mask (extra step for the minimum)
-        # or we have to increase the resolution of the array. Here, a
-        # two-step approach is used.
-
-        if min_value == (-1) * max_value - 1:
-            mask = (arr == min_value)
-
-            # there is probably a one-liner here to do this, but
-            #  ((-1) * (arr * ~mask) - 1) + mask * max_value
-            # has the disadvantage of inverting min_value to max_value - 1
-            # while
-            #  ((-1) * (arr * ~mask) - 1) + mask * (max_value+1)
-            #  ((-1) * (arr * ~mask) - 1) + mask * max_value + mask
-            # both sometimes increase the dtype resolution (e.g. int32 to int64)
-            n_min = np.sum(mask)
-            if n_min > 0:
-                arr[mask] = max_value
-            if n_min < arr.size:
-                arr[~mask] = (-1) * arr[~mask] - 1
-            return arr
-        else:
-            return cls._invert_by_distance(
-                np.clip(arr, min_value, max_value),
-                min_value, max_value
-            )
-
-    @classmethod
-    def _invert_float(cls, arr, min_value, max_value):
-        if np.isclose(max_value, (-1)*min_value, rtol=0):
-            return (-1) * arr
-        else:
-            return cls._invert_by_distance(
-                np.clip(arr, min_value, max_value),
-                min_value, max_value
-            )
-
-    @classmethod
-    def _invert_by_distance(cls, arr, min_value, max_value):
-        arr_modify = arr
-        if arr.dtype.kind in ["i", "f"]:
-            arr_modify = iadt.increase_array_resolutions_([np.copy(arr)], 2)[0]
-        distance_from_min = np.abs(arr_modify - min_value)  # d=abs(v-min)
-        arr_modify = max_value - distance_from_min  # v'=MAX-d
-        # due to floating point inaccuracies, we might exceed the min/max
-        # values for floats here, hence clip this happens especially for
-        # values close to the float dtype's maxima
-        if arr.dtype.kind == "f":
-            arr_modify = np.clip(arr_modify, min_value, max_value)
-        if arr.dtype.kind in ["i", "f"]:
-            arr_modify = iadt.restore_dtypes_(
-                arr_modify, arr.dtype, clip=False)
-        return arr_modify
 
     def get_parameters(self):
         return [self.p, self.per_channel, self.min_value, self.max_value]
