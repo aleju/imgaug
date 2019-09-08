@@ -872,7 +872,7 @@ class _switch_keypoint_mode_temporarily(object):
         self.mode_orig = self.augmenter._keypoints_mode
         self.augmenter._keypoints_mode = self.mode
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, traceback):
         self.augmenter._keypoints_mode = self.mode_orig
 
 
