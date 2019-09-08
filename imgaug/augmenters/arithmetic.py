@@ -48,7 +48,6 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
-# TODO add tests
 def add_scalar(image, value):
     """Add a single scalar value or one scalar value per channel to an image.
 
