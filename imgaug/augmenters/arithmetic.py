@@ -48,28 +48,167 @@ from .. import parameters as iap
 from .. import dtypes as iadt
 
 
+# TODO add tests
+def add_scalar(image, value):
+    """Add a single scalar value or one scalar value per channel to an image.
+
+    This method ensures that ``uint8`` does not overflow during the addition.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: limited; tested (1)
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: limited; tested (1)
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+        If `value` contains more than one value, the shape of the image is
+        expected to be ``(H,W,C)``.
+
+    value : number or ndarray
+        The value to add to the image. Either a single value or an array
+        containing exactly one component per channel, i.e. ``C`` components.
+
+    Returns
+    -------
+    ndarray
+        Image with value added to it.
+
+    """
+    iadt.gate_dtypes(
+        image,
+        allowed=["bool",
+                 "uint8", "uint16",
+                 "int8", "int16",
+                 "float16", "float32"],
+        disallowed=["uint32", "uint64", "uint128", "uint256",
+                    "int32", "int64", "int128", "int256",
+                    "float64", "float96", "float128",
+                    "float256"],
+        augmenter=None)
+
+    if image.dtype.name == "uint8":
+        return _add_scalar_to_uint8(image, value)
+    return _add_scalar_to_non_uint8(image, value)
+
+
+def _add_scalar_to_uint8(image, value):
+    # Using this LUT approach is significantly faster than using
+    # numpy-based adding with dtype checks (around 3-4x speedup) and is
+    # still faster than the simple numpy image+sample approach without LUT
+    # (about 10% at 64x64 and about 2x at 224x224 -- maybe dependent on
+    # installed BLAS libraries?)
+    is_single_value = (
+        ia.is_single_number(value)
+        or ia.is_np_scalar(value)
+        or (ia.is_np_array(value) and value.size == 1))
+    is_channelwise = not is_single_value
+    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+
+    value = np.clip(np.round(value), -255, 255).astype(np.int16)
+
+    value_range = np.arange(0, 256, dtype=np.int16)
+    if is_channelwise:
+        assert value.ndim == 1, (
+            "Expected `value` to be 1-dimensional, got %d-dimensional "
+            "data with shape %s." % (value.ndim, value.shape))
+        assert image.ndim == 3, (
+            "Expected `image` to be 3-dimensional when adding one value per "
+            "channel, got %d-dimensional data with shape %s." % (
+                image.ndim, image.shape))
+        assert image.shape[-1] == value.size, (
+            "Expected number of channels in `image` and number of components "
+            "in `value` to be identical. Got %d vs. %d." % (
+                image.shape[-1], value.size))
+
+        result = []
+        tables = np.tile(
+            value_range[np.newaxis, :],
+            (nb_channels, 1)
+        ) + value[:, np.newaxis]
+        tables = np.clip(tables, 0, 255).astype(image.dtype)
+
+        for c, table in enumerate(tables):
+            result.append(cv2.LUT(image[..., c], table))
+
+        return np.stack(result, axis=-1)
+    else:
+        table = value_range + value
+        image_aug = cv2.LUT(
+            image,
+            iadt.clip_(table, 0, 255).astype(image.dtype))
+        if image_aug.ndim == 2 and image.ndim == 3:
+            image_aug = image_aug[..., np.newaxis]
+        return image_aug
+
+
+def _add_scalar_to_non_uint8(image, value):
+    input_dtype = image.dtype
+
+    is_single_value = (
+        ia.is_single_number(value)
+        or ia.is_np_scalar(value)
+        or (ia.is_np_array(value) and value.size == 1))
+    is_channelwise = not is_single_value
+    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+
+    if is_channelwise:
+        value = value.reshape((1, 1, nb_channels))
+    else:
+        value = np.array(value).reshape((1, 1, 1))
+
+    # We limit here the value range of the value parameter to the
+    # bytes in the image's dtype. This prevents overflow problems
+    # and makes it less likely that the image has to be up-casted,
+    # which again improves performance and saves memory. Note that
+    # this also enables more dtypes for image inputs.
+    # The downside is that the mul parameter is limited in its
+    # value range.
+    #
+    # We need 2* the itemsize of the image here to allow to shift
+    # the image's max value to the lowest possible value, e.g. for
+    # uint8 it must allow for -255 to 255.
+    itemsize = image.dtype.itemsize * 2
+    dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
+    value = iadt.clip_to_dtype_value_range_(
+        value, dtype_target, validate=True)
+
+    # Itemsize is currently reduced from 2 to 1 due to clip no
+    # longer supporting int64, which can cause issues with int32
+    # samples (32*2 = 64bit).
+    # TODO limit value ranges of samples to int16/uint16 for
+    #      security
+    image, value = iadt.promote_array_dtypes_(
+        [image, value],
+        dtypes=[image.dtype, dtype_target],
+        increase_itemsize_factor=1)
+    image = np.add(image, value, out=image, casting="no")
+
+    return iadt.restore_dtypes_(image, input_dtype)
+
+
 class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: limited; tested
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: limited; tested
-        * ``int16``: limited; tested
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: limited; tested
-        * ``float32``: limited; tested
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: limited; tested
-
-        - (1) Non-uint8 dtypes can overflow. For floats, this can result
-              in +/-inf.
+        See :func:`imgaug.augmenters.arithmetic.add`.
 
     Parameters
     ----------
@@ -143,19 +282,6 @@ class Add(meta.Augmenter):
             per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(images,
-                         allowed=["bool",
-                                  "uint8", "uint16",
-                                  "int8", "int16",
-                                  "float16", "float32"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int32", "int64", "int128", "int256",
-                                     "float64", "float96", "float128",
-                                     "float256"],
-                         augmenter=self)
-
-        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
-
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
@@ -165,9 +291,8 @@ class Add(meta.Augmenter):
         value_samples = self.value.draw_samples(
             (nb_images, nb_channels_max), random_state=rss[1])
 
-        gen = enumerate(zip(images, value_samples, per_channel_samples,
-                            input_dtypes))
-        for i, (image, value_samples_i, per_channel_samples_i, input_dtype) in gen:
+        gen = enumerate(zip(images, value_samples, per_channel_samples))
+        for i, (image, value_samples_i, per_channel_samples_i) in gen:
             nb_channels = image.shape[2]
 
             # Example code to directly add images via image+sample (uint8 only)
@@ -188,70 +313,12 @@ class Add(meta.Augmenter):
             #         0, 255
             #     ).astype(np.uint8)
 
-            if image.dtype.name == "uint8":
-                # Using this LUT approach is significantly faster than the
-                # else-block code (around 3-4x speedup) and is still faster
-                # than the simpler image+sample approach without LUT (about
-                # 10% at 64x64 and about 2x at 224x224 -- maybe dependent on
-                # installed BLAS libraries?)
-                value_samples_i = np.clip(
-                    np.round(value_samples_i), -255, 255).astype(np.int16)
-                value_range = np.arange(0, 256, dtype=np.int16)
-                if per_channel_samples_i > 0.5:
-                    result = []
-                    tables = np.tile(
-                        value_range[np.newaxis, :],
-                        (nb_channels, 1)
-                    ) + value_samples_i[0:nb_channels, np.newaxis]
-                    tables = np.clip(tables, 0, 255).astype(image.dtype)
-                    for c, table in enumerate(tables):
-                        arr_aug = cv2.LUT(image[..., c], table)
-                        result.append(arr_aug[..., np.newaxis])
-                    images[i] = np.concatenate(result, axis=2)
-                else:
-                    table = value_range + value_samples_i[0]
-                    image_aug = cv2.LUT(
-                        image,
-                        np.clip(table, 0, 255).astype(image.dtype))
-                    if image_aug.ndim == 2:
-                        image_aug = image_aug[..., np.newaxis]
-                    images[i] = image_aug
+            if per_channel_samples_i > 0.5:
+                value = value_samples_i[0:nb_channels]
             else:
-                if per_channel_samples_i > 0.5:
-                    value = value_samples_i[0:nb_channels].reshape(
-                        (1, 1, nb_channels))
-                else:
-                    value = value_samples_i[0:1].reshape((1, 1, 1))
+                value = value_samples_i[0]
 
-                # We limit here the value range of the value parameter to the
-                # bytes in the image's dtype. This prevents overflow problems
-                # and makes it less likely that the image has to be up-casted,
-                # which again improves performance and saves memory. Note that
-                # this also enables more dtypes for image inputs.
-                # The downside is that the mul parameter is limited in its
-                # value range.
-                #
-                # We need 2* the itemsize of the image here to allow to shift
-                # the image's max value to the lowest possible value, e.g. for
-                # uint8 it must allow for -255 to 255.
-                itemsize = image.dtype.itemsize * 2
-                dtype_target = np.dtype("%s%d" % (value.dtype.kind, itemsize))
-                value = iadt.clip_to_dtype_value_range_(
-                    value, dtype_target, validate=True)
-
-                # Itemsize is currently reduced from 2 to 1 due to clip no
-                # longer supporting int64, which can cause issues with int32
-                # samples (32*2 = 64bit).
-                # TODO limit value ranges of samples to int16/uint16 for
-                #      security
-                image, value = iadt.promote_array_dtypes_(
-                    [image, value],
-                    dtypes=[image.dtype, dtype_target],
-                    increase_itemsize_factor=1)
-                image = np.add(image, value, out=image, casting="no")
-
-                image = iadt.restore_dtypes_(image, input_dtype)
-                images[i] = image
+            images[i] = add_scalar(image, value)
 
         return images
 
