@@ -938,6 +938,98 @@ def _invert_by_distance(arr, min_value, max_value):
     return arr_modify
 
 
+def compress_jpeg(image, compression):
+    """Compress an image using jpeg compression.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
+    Parameters
+    ----------
+    image : ndarray
+        Image of dtype ``uint8`` and shape ``(H,W,[C])``. If ``C`` is provided,
+        it must be ``1`` or ``3``.
+
+    compression : int
+        Strength of the compression in the interval ``[0, 100]``.
+
+    Returns
+    -------
+    ndarray
+        Input image after applying jpeg compression to it and reloading
+        the result into a new array. Same shape and dtype as the input.
+
+    """
+    # The value range 1 to 95 is suggested by PIL's save() documentation
+    # Values above 95 seem to not make sense (no improvement in visual
+    # quality, but large file size).
+    # A value of 100 would mostly deactivate jpeg compression.
+    # A value of 0 would lead to no compression (instead of maximum
+    # compression).
+    # We use range 1 to 100 here, because this augmenter is about
+    # generating images for training and not for saving, hence we do not
+    # care about large file sizes.
+    maximum_quality = 100
+    minimum_quality = 1
+
+    assert image.dtype.name == "uint8", (
+        "Jpeg compression can only be applied to uint8 images. "
+        "Got dtype %s." % (image.dtype.name,))
+    assert 0 <= compression <= 100, (
+        "Expected compression to be in the interval [0, 100], "
+        "got %.4f." % (compression,))
+
+    has_no_channels = (image.ndim == 2)
+    is_single_channel = (image.ndim == 3 and image.shape[-1] == 1)
+    if is_single_channel:
+        image = image[..., 0]
+
+    # Map from compression to quality used by PIL
+    # We have valid compressions from 0 to 100, i.e. 101 possible
+    # values
+    quality = int(
+        np.clip(
+            np.round(
+                minimum_quality
+                + (maximum_quality - minimum_quality)
+                * (1.0 - (compression / 101))
+            ),
+            minimum_quality,
+            maximum_quality
+        )
+    )
+
+    image_pil = PIL_Image.fromarray(image)
+    with tempfile.NamedTemporaryFile(mode="wb+", suffix=".jpg") as f:
+        image_pil.save(f, quality=quality)
+
+        # Read back from file.
+        # We dont read from f.name, because that leads to PermissionDenied
+        # errors on Windows. We add f.seek(0) here, because otherwise we get
+        # `SyntaxError: index out of range` in PIL.
+        f.seek(0)
+        pilmode = "RGB"
+        if has_no_channels or is_single_channel:
+            pilmode = "L"
+        image = imageio.imread(f, pilmode=pilmode, format="jpeg")
+    if is_single_channel:
+        image = image[..., np.newaxis]
+    return image
+
+
 class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
@@ -3075,19 +3167,7 @@ class JpegCompression(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: ?
-        * ``uint32``: ?
-        * ``uint64``: ?
-        * ``int8``: ?
-        * ``int16``: ?
-        * ``int32``: ?
-        * ``int64``: ?
-        * ``float16``: ?
-        * ``float32``: ?
-        * ``float64``: ?
-        * ``float128``: ?
-        * ``bool``: ?
+        See :func:`imgaug.augmenters.arithmetic.compress_jpeg`.
 
     Parameters
     ----------
@@ -3141,18 +3221,6 @@ class JpegCompression(meta.Augmenter):
             compression, "compression",
             value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
 
-        # The value range 1 to 95 is suggested by PIL's save() documentation
-        # Values above 95 seem to not make sense (no improvement in visual
-        # quality, but large file size).
-        # A value of 100 would mostly deactivate jpeg compression.
-        # A value of 0 would lead to no compression (instead of maximum
-        # compression).
-        # We use range 1 to 100 here, because this augmenter is about
-        # generating images for training and not for saving, hence we do not
-        # care about large file sizes.
-        self.maximum_quality = 100
-        self.minimum_quality = 1
-
     def _augment_images(self, images, random_state, parents, hooks):
         result = images
         nb_images = len(images)
@@ -3160,49 +3228,8 @@ class JpegCompression(meta.Augmenter):
                                                 random_state=random_state)
 
         for i, (image, sample) in enumerate(zip(images, samples)):
-            assert image.dtype.name == "uint8", (
-                "Can apply jpeg compression only to uint8 images.")
-            nb_channels = image.shape[-1]
-            is_single_channel = (nb_channels == 1)
-            if is_single_channel:
-                image = image[..., 0]
-            sample = int(sample)
-            assert 100 >= sample >= 0, (
-                "Expected compression to be in the interval [0, 100], "
-                "got %.4f." % (sample,))
-            image_pil = PIL_Image.fromarray(image)
-            with tempfile.NamedTemporaryFile(mode="wb+", suffix=".jpg") as f:
-                # Map from compression to quality used by PIL
-                # We have valid compressions from 0 to 100, i.e. 101 possible
-                # values
-                quality = int(
-                    np.clip(
-                        np.round(
-                            self.minimum_quality
-                            + (self.maximum_quality - self.minimum_quality)
-                            * (1.0 - (sample / 101))
-                        ),
-                        self.minimum_quality,
-                        self.maximum_quality
-                    )
-                )
+            result[i] = compress_jpeg(image, int(sample))
 
-                image_pil.save(f, quality=quality)
-
-                # read back from file
-                # we dont read from f.name, because that leads to
-                # PermissionDenied errors on windows
-                # we add f.seek(0) here, because otherwise we get
-                # SyntaxError: index out of range
-                # from PIL
-                f.seek(0)
-                if nb_channels == 1:
-                    image = imageio.imread(f, pilmode="L", format="jpeg")
-                else:
-                    image = imageio.imread(f, pilmode="RGB", format="jpeg")
-            if is_single_channel:
-                image = image[..., np.newaxis]
-            result[i] = image
         return result
 
     def get_parameters(self):
