@@ -525,10 +525,9 @@ class AddElementwise(meta.Augmenter):
         super(AddElementwise, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        # TODO open to continous, similar to Add
-        self.value = iap.handle_discrete_param(
-            value, "value", value_range=(-255, 255), tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=False)
+        self.value = iap.handle_continuous_param(
+            value, "value", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
