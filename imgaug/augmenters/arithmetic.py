@@ -626,6 +626,117 @@ def _multiply_elementwise_to_non_uint8(image, multipliers):
     return iadt.restore_dtypes_(image, input_dtype)
 
 
+def replace_elementwise_(image, mask, replacements):
+    """Replace components in an image array with new values.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: no (1)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: no (2)
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no
+        * ``bool``: yes; tested
+
+        - (1) ``uint64`` is currently not supported, because
+              :func:`imgaug.dtypes.clip_to_dtype_value_range_()` does not
+              support it, which again is because numpy.clip() seems to not
+              support it.
+        - (2) `int64` is disallowed due to being converted to `float64`
+              by :func:`numpy.clip` since 1.17 (possibly also before?).
+
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+
+    mask : ndarray
+        Mask of shape ``(H,W,[C])`` denoting which components to replace.
+        If ``C`` is provided, it must be ``1`` or match the ``C`` of `image`.
+        May contain floats in the interval ``[0.0, 1.0]``.
+
+    replacements : iterable
+        Replacements to place in `image` at the locations defined by `mask`.
+        This 1-dimensional iterable must contain exactly as many values
+        as there are replaced components in `image`.
+
+    Returns
+    -------
+    ndarray
+        Image with replaced components.
+
+    """
+    iadt.gate_dtypes(
+        image,
+        allowed=["bool",
+                 "uint8", "uint16", "uint32",
+                 "int8", "int16", "int32",
+                 "float16", "float32", "float64"],
+        disallowed=["uint64", "uint128", "uint256",
+                    "int64", "int128", "int256",
+                    "float96", "float128", "float256"],
+        augmenter=None)
+
+    # This is slightly faster (~20%) for masks that are True at many
+    # locations, but slower (~50%) for masks with few Trues, which is
+    # probably the more common use-case:
+    #
+    # replacement_samples = self.replacement.draw_samples(
+    #     sampling_shape, random_state=rs_replacement)
+    #
+    # # round, this makes 0.2 e.g. become 0 in case of boolean
+    # # image (otherwise replacing values with 0.2 would
+    # # lead to True instead of False).
+    # if (image.dtype.kind in ["i", "u", "b"]
+    #         and replacement_samples.dtype.kind == "f"):
+    #     replacement_samples = np.round(replacement_samples)
+    #
+    # replacement_samples = iadt.clip_to_dtype_value_range_(
+    #     replacement_samples, image.dtype, validate=False)
+    # replacement_samples = replacement_samples.astype(
+    #     image.dtype, copy=False)
+    #
+    # if sampling_shape[2] == 1:
+    #     mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
+    #     replacement_samples = np.tile(
+    #         replacement_samples, (1, 1, nb_channels))
+    # mask_thresh = mask_samples > 0.5
+    # image[mask_thresh] = replacement_samples[mask_thresh]
+    input_shape = image.shape
+    if image.ndim == 2:
+        image = image[..., np.newaxis]
+    if mask.ndim == 2:
+        mask = mask[..., np.newaxis]
+
+    mask_thresh = mask > 0.5
+    if mask.shape[2] == 1:
+        nb_channels = image.shape[-1]
+        # TODO verify if tile() is here really necessary
+        mask_thresh = np.tile(mask_thresh, (1, 1, nb_channels))
+
+    # round, this makes 0.2 e.g. become 0 in case of boolean
+    # image (otherwise replacing values with 0.2 would lead to True
+    # instead of False).
+    if image.dtype.kind in ["i", "u", "b"] and replacements.dtype.kind == "f":
+        replacements = np.round(replacements)
+
+    replacement_samples = iadt.clip_to_dtype_value_range_(
+        replacements, image.dtype, validate=False)
+    replacement_samples = replacement_samples.astype(image.dtype, copy=False)
+
+    image[mask_thresh] = replacement_samples
+    if len(input_shape) == 2:
+        return image[..., 0]
+    return image
+
+
 class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
@@ -1712,26 +1823,7 @@ class ReplaceElementwise(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: yes; tested
-        * ``uint32``: yes; tested
-        * ``uint64``: no (1)
-        * ``int8``: yes; tested
-        * ``int16``: yes; tested
-        * ``int32``: yes; tested
-        * ``int64``: no (2)
-        * ``float16``: yes; tested
-        * ``float32``: yes; tested
-        * ``float64``: yes; tested
-        * ``float128``: no
-        * ``bool``: yes; tested
-
-        - (1) ``uint64`` is currently not supported, because
-              :func:`imgaug.dtypes.clip_to_dtype_value_range_()` does not
-              support it, which again is because numpy.clip() seems to not
-              support it.
-        - (2) `int64` is disallowed due to being converted to `float64`
-              by :func:`numpy.clip` since 1.17 (possibly also before?).
+        See :func:`imgaug.augmenters.arithmetic.replace_elementwise_`.
 
     Parameters
     ----------
@@ -1836,23 +1928,13 @@ class ReplaceElementwise(meta.Augmenter):
                                                         "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(images,
-                         allowed=["bool",
-                                  "uint8", "uint16", "uint32",
-                                  "int8", "int16", "int32",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint64", "uint128", "uint256",
-                                     "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
-
         nb_images = len(images)
         rss = random_state.duplicate(1+2*nb_images)
         per_channel_samples = self.per_channel.draw_samples(
             (nb_images,), random_state=rss[0])
 
-        gen = zip(images, per_channel_samples, rss[1::2], rss[2::2])
-        for image, per_channel_i, rs_mask, rs_replacement in gen:
+        gen = enumerate(zip(images, per_channel_samples, rss[1::2], rss[2::2]))
+        for i, (image, per_channel_i, rs_mask, rs_replacement) in gen:
             height, width, nb_channels = image.shape
             sampling_shape = (height,
                               width,
@@ -1860,42 +1942,13 @@ class ReplaceElementwise(meta.Augmenter):
             mask_samples = self.mask.draw_samples(sampling_shape,
                                                   random_state=rs_mask)
 
-            # This is slightly faster (~20%) for masks that are True at many
-            # locations, but slower (~50%) for masks with few Trues, which is
-            # probably the more common use-case:
-            #
-            # replacement_samples = self.replacement.draw_samples(
-            #     sampling_shape, random_state=rs_replacement)
-            #
-            # # round, this makes 0.2 e.g. become 0 in case of boolean
-            # # image (otherwise replacing values with 0.2 would
-            # # lead to True instead of False).
-            # if (image.dtype.kind in ["i", "u", "b"]
-            #         and replacement_samples.dtype.kind == "f"):
-            #     replacement_samples = np.round(replacement_samples)
-            #
-            # replacement_samples = iadt.clip_to_dtype_value_range_(
-            #     replacement_samples, image.dtype, validate=False)
-            # replacement_samples = replacement_samples.astype(
-            #     image.dtype, copy=False)
-            #
-            # if sampling_shape[2] == 1:
-            #     mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
-            #     replacement_samples = np.tile(
-            #         replacement_samples, (1, 1, nb_channels))
-            # mask_thresh = mask_samples > 0.5
-            # image[mask_thresh] = replacement_samples[mask_thresh]
-
-            if sampling_shape[2] == 1:
-                mask_samples = np.tile(mask_samples, (1, 1, nb_channels))
-            mask_thresh = mask_samples > 0.5
-
             # TODO add separate per_channels for mask and replacement
             # TODO add test that replacement with per_channel=False is not
             #      sampled per channel
             if per_channel_i <= 0.5:
+                nb_channels = image.shape[-1]
                 replacement_samples = self.replacement.draw_samples(
-                    (int(np.sum(mask_thresh[:, :, 0])),),
+                    (int(np.sum(mask_samples[:, :, 0])),),
                     random_state=rs_replacement)
                 # important here to use repeat instead of tile. repeat
                 # converts e.g. [0, 1, 2] to [0, 0, 1, 1, 2, 2], while tile
@@ -1903,25 +1956,14 @@ class ReplaceElementwise(meta.Augmenter):
                 # over each channel and pixel simultaneously, *not* first
                 # over all pixels of channel 0, then all pixels in
                 # channel 1, ...
-                replacement_samples = np.repeat(
-                    replacement_samples, mask_thresh.shape[2])
+                replacement_samples = np.repeat(replacement_samples,
+                                                nb_channels)
             else:
                 replacement_samples = self.replacement.draw_samples(
-                    (int(np.sum(mask_thresh)),), random_state=rs_replacement)
+                    (int(np.sum(mask_samples)),), random_state=rs_replacement)
 
-            # round, this makes 0.2 e.g. become 0 in case of boolean
-            # image (otherwise replacing values with 0.2 would lead to True
-            # instead of False).
-            if (image.dtype.kind in ["i", "u", "b"]
-                    and replacement_samples.dtype.kind == "f"):
-                replacement_samples = np.round(replacement_samples)
-
-            replacement_samples = iadt.clip_to_dtype_value_range_(
-                replacement_samples, image.dtype, validate=False)
-            replacement_samples = replacement_samples.astype(
-                image.dtype, copy=False)
-
-            image[mask_thresh] = replacement_samples
+            images[i] = replace_elementwise_(image, mask_samples,
+                                             replacement_samples)
 
         return images
 
