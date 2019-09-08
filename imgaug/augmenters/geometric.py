@@ -2053,7 +2053,7 @@ class PiecewiseAffine(meta.Augmenter):
 
             if transformer is not None:
                 input_dtype = image.dtype
-                if image.dtype == np.bool_:
+                if image.dtype.kind == "b":
                     image = image.astype(np.float64)
 
                 min_value, _center_value, max_value = \
@@ -2071,7 +2071,7 @@ class PiecewiseAffine(meta.Augmenter):
                     output_shape=images[i].shape
                 )
 
-                if input_dtype == np.bool_:
+                if input_dtype.kind == "b":
                     image_warped = image_warped > 0.5
                 else:
                     # warp seems to change everything to float64, including
@@ -2084,62 +2084,25 @@ class PiecewiseAffine(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = heatmaps
-        nb_images = len(heatmaps)
-
-        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
-            _mode_samples = self._draw_samples(nb_images, random_state)
-
-        rss = random_state.duplicate(nb_images)
-
-        for i in sm.xrange(nb_images):
-            heatmaps_i = heatmaps[i]
-            arr_0to1 = heatmaps_i.arr_0to1
-
-            rs_image = rss[i]
-            h, w = arr_0to1.shape[0:2]
-            transformer = self._get_transformer(
-                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
-
-            if transformer is not None:
-                arr_0to1_warped = tf.warp(
-                    arr_0to1,
-                    transformer,
-                    order=3,
-                    mode="constant",
-                    cval=0,
-                    preserve_range=True,
-                    output_shape=arr_0to1.shape
-                )
-
-                # skimage converts to float64
-                arr_0to1_warped = arr_0to1_warped.astype(np.float32)
-
-                # TODO not entirely clear whether this breaks the value
-                #      range -- Affine does
-                # TODO add test for this
-                # order=3 matches cubic interpolation and can cause values
-                # to go outside of the range [0.0, 1.0] not clear whether
-                # 4+ also do that
-                arr_0to1_warped = np.clip(arr_0to1_warped, 0.0, 1.0,
-                                          out=arr_0to1_warped)
-
-                heatmaps_i.arr_0to1 = arr_0to1_warped
-
-        return result
+        return self._augment_hms_and_segmaps(heatmaps, random_state,
+                                             "arr_0to1", 0, "constant", 3)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        result = segmaps
-        nb_images = len(segmaps)
+        return self._augment_hms_and_segmaps(segmaps, random_state, "arr",
+                                             0, "constant", 0)
+
+    def _augment_hms_and_segmaps(self, augmentables, random_state,
+                                 arr_attr_name, cval, mode, order):
+        result = augmentables
+        nb_images = len(augmentables)
 
         nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
             _mode_samples = self._draw_samples(nb_images, random_state)
 
         rss = random_state.duplicate(nb_images)
 
-        for i in sm.xrange(nb_images):
-            segmaps_i = segmaps[i]
-            arr = segmaps_i.arr
+        for i, augmentable in enumerate(augmentables):
+            arr = getattr(augmentable, arr_attr_name)
 
             rs_image = rss[i]
             h, w = arr.shape[0:2]
@@ -2150,16 +2113,28 @@ class PiecewiseAffine(meta.Augmenter):
                 arr_warped = tf.warp(
                     arr,
                     transformer,
-                    order=0,
-                    mode="constant",
-                    cval=0,
+                    order=order,
+                    mode=mode,
+                    cval=cval,
                     preserve_range=True,
                     output_shape=arr.shape
                 )
 
                 # skimage converts to float64
-                arr_warped = iadt.restore_dtypes_(arr_warped, arr.dtype)
-                segmaps_i.arr = arr_warped
+                arr_warped = arr_warped.astype(arr.dtype)
+
+                # TODO not entirely clear whether this breaks the value
+                #      range -- Affine does
+                # TODO add test for this
+                # order=3 matches cubic interpolation and can cause values
+                # to go outside of the range [0.0, 1.0] not clear whether
+                # 4+ also do that
+                # We don't modify segmaps here, because they don't have a
+                # clear value range of [0, 1]
+                if order >= 3 and isinstance(augmentable, ia.HeatmapsOnImage):
+                    arr_warped = np.clip(arr_warped, 0.0, 1.0, out=arr_warped)
+
+                setattr(augmentable, arr_attr_name, arr_warped)
 
         return result
 
