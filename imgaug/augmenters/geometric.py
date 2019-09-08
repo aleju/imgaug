@@ -2021,6 +2021,18 @@ class PiecewiseAffine(meta.Augmenter):
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
+        # Special order, mode and cval parameters for heatmaps and
+        # segmentation maps. These may either be None or a fixed value.
+        # Stochastic parameters are currently *not* supported.
+        # If set to None, the same values as for images will be used.
+        # That is really not recommended for the cval parameter.
+        self._order_heatmaps = 3
+        self._order_segmentation_maps = 0
+        self._mode_heatmaps = "constant"
+        self._mode_segmentation_maps = "constant"
+        self._cval_heatmaps = 0
+        self._cval_segmentation_maps = 0
+
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(
             images,
@@ -2076,12 +2088,14 @@ class PiecewiseAffine(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(heatmaps, random_state,
-                                             "arr_0to1", 0, "constant", 3)
+        return self._augment_hms_and_segmaps(
+            heatmaps, random_state, "arr_0to1", self._cval_heatmaps,
+            self._mode_heatmaps, self._order_heatmaps)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(segmaps, random_state, "arr",
-                                             0, "constant", 0)
+        return self._augment_hms_and_segmaps(
+            segmaps, random_state, "arr", self._cval_segmentation_maps,
+            self._mode_segmentation_maps, self._order_segmentation_maps)
 
     def _augment_hms_and_segmaps(self, augmentables, random_state,
                                  arr_attr_name, cval, mode, order):
@@ -2104,9 +2118,9 @@ class PiecewiseAffine(meta.Augmenter):
                 arr_warped = tf.warp(
                     arr,
                     transformer,
-                    order=order,
-                    mode=mode,
-                    cval=cval,
+                    order=order if order is not None else samples.order[i],
+                    mode=mode if mode is not None else samples.mode[i],
+                    cval=cval if cval is not None else samples.cval[i],
                     preserve_range=True,
                     output_shape=arr.shape
                 )
