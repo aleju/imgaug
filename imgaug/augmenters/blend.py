@@ -499,9 +499,9 @@ class Alpha(meta.Augmenter):
             self.first, self.second, self.deterministic)
 
 
-# TODO merge this with Alpha
 # FIXME the output of the third example makes it look like per_channel isn't
 #       working
+# TODO switch line strings to either-or approach, like polygons
 class AlphaElementwise(Alpha):
     """
     Alpha-blend two image sources using alpha/opacity values sampled per pixel.
@@ -521,10 +521,13 @@ class AlphaElementwise(Alpha):
         coordinate results (first or second branch) should be used as the
         coordinates after augmentation.
 
-        Currently, the results of the first and second branch will be mixed.
-        For each coordinate, the augmented one from the first or second
-        branch will be picked based on the average alpha mask value at
-        the corresponding spatial location.
+        Currently, the for keypoints and line strings the results of the
+        first and second branch will be mixed. For each coordinate, the
+        augmented one from the first or second branch will be picked based
+        on the average alpha mask value at the corresponding spatial location.
+
+        For polygons, only all polygons of the first or all of the second
+        branch will be used, based on the average over the whole alpha mask.
 
     dtype support::
 
@@ -631,6 +634,16 @@ class AlphaElementwise(Alpha):
 
     """
 
+    # Currently the mode is only used for keypoint augmentation.
+    # either or: use all keypoints from first or all from second branch (based
+    #   on average of the whole mask).
+    # pointwise: decide for each point whether to use the first or secon
+    #   branch's keypoint (based on the average mask value at the point's
+    #   xy-location).
+    _MODE_EITHER_OR = "either-or"
+    _MODE_POINTWISE = "pointwise"
+    _MODES = [_MODE_POINTWISE, _MODE_EITHER_OR]
+
     def __init__(self, factor=0, first=None, second=None, per_channel=False,
                  name=None, deterministic=False, random_state=None):
         super(AlphaElementwise, self).__init__(
@@ -642,6 +655,11 @@ class AlphaElementwise(Alpha):
             deterministic=deterministic,
             random_state=random_state
         )
+
+        # this controls how keypoints and polygons are augmented
+        # keypoint mode currently also affects line strings and bounding boxes
+        self._keypoints_mode = self._MODE_POINTWISE
+        self._polygons_mode = self._MODE_EITHER_OR
 
     def _augment_images(self, images, random_state, parents, hooks):
         outputs_first, outputs_second = self._generate_branch_outputs(
@@ -753,17 +771,27 @@ class AlphaElementwise(Alpha):
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
-        # FIXME this needs a polygon recoverer as each point can be moved
-        #       in individual ways
-        # TODO choosing pointwise here is problematic, even when
-        #      forcing the same number of points, as there is no guarantuee
-        #      that their order does not change (e.g. ccw to cw)
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+        # This currently uses an either-or approach.
+        # Using pointwise augmentation is problematic here, because the order
+        # of the points may have changed (e.g. from clockwise to
+        # counter-clockwise). For polygons, it is also overall more likely
+        # that some child-augmenter added/deleted points and we would need a
+        # polygon recoverer.
+        # Overall it seems to be the better approach to use all polygons
+        # from one branch or the other, which guarantuees their validity.
+        # TODO decide the either-or not based on the whole average mask
+        #      value but on the average mask value within the polygon's area?
+        with _switch_keypoint_mode_temporarily(self, self._polygons_mode):
+            return self._augment_polygons_as_keypoints(
+                polygons_on_images, random_state, parents, hooks)
 
     def _augment_coordinate_based(self, inputs, random_state, parents, hooks,
                                   augfunc_name, get_coords_func,
                                   assign_coords_func):
+        assert self._keypoints_mode in self._MODES, (
+            "Expected _keypoint_mode to be one of: %s. Got: %s." % (
+                self._MODES, self._keypoint_mode))
+
         outputs_first, outputs_second = self._generate_branch_outputs(
             inputs, augfunc_name, hooks, parents)
 
@@ -778,13 +806,6 @@ class AlphaElementwise(Alpha):
             coords = get_coords_func(augmentable_i)
             coords_first = get_coords_func(outputs_first_i)
             coords_second = get_coords_func(outputs_second_i)
-            assert len(coords_first) == len(coords_second), (
-                "Got different numbers of coordinates before/after "
-                "augmentation in AlphaElementwise. The number of coordinates "
-                "is currently not allowed to change for this augmenter. "
-                "Input contained %d coordinates, first branch %d, second "
-                "branch %d." % (len(coords), len(coords_first),
-                                len(coords_second)))
 
             h_img, w_img = augmentable_i.shape[0:2]
             nb_channels_img = (
@@ -795,23 +816,64 @@ class AlphaElementwise(Alpha):
             mask_image = self._sample_mask(h_img, w_img, nb_channels_img,
                                            per_channel_i, rngs[i])
 
-            coords_aug = []
-            subgen = zip(coords, coords_first, coords_second)
-            for coord, coord_first, coord_second in subgen:
-                x_int = int(np.round(coord[0]))
-                y_int = int(np.round(coord[1]))
-                if 0 <= y_int < h_img and 0 <= x_int < w_img:
-                    alpha = np.average(mask_image[y_int, x_int, :])
-                    if alpha > 0.5:
-                        coords_aug.append(coord_first)
+            if self._keypoints_mode == self._MODE_POINTWISE:
+                # Augment pointwise, i.e. check for each point and its
+                # xy-location the average mask value and pick based on that
+                # either the point from the first or second branch.
+                assert len(coords_first) == len(coords_second), (
+                    "Got different numbers of coordinates before/after "
+                    "augmentation in AlphaElementwise. The number of "
+                    "coordinates is currently not allowed to change for this "
+                    "augmenter. Input contained %d coordinates, first branch "
+                    "%d, second branch %d." % (
+                        len(coords), len(coords_first), len(coords_second)))
+
+                coords_aug = []
+                subgen = zip(coords, coords_first, coords_second)
+                for coord, coord_first, coord_second in subgen:
+                    x_int = int(np.round(coord[0]))
+                    y_int = int(np.round(coord[1]))
+                    if 0 <= y_int < h_img and 0 <= x_int < w_img:
+                        alpha = np.average(mask_image[y_int, x_int, :])
+                        if alpha > 0.5:
+                            coords_aug.append(coord_first)
+                        else:
+                            coords_aug.append(coord_second)
                     else:
-                        coords_aug.append(coord_second)
+                        coords_aug.append((x_int, y_int))
+            else:
+                # Augment with an either-or approach over all points, i.e.
+                # based on the average of the whole mask, either all points
+                # from the first or all points from the second branch are
+                # used.
+                # Note that we ensured above that _keypoint_mode must be
+                # _MODE_EITHER_OR if it wasn't _MODE_POINTWISE.
+                mask_image_avg = np.average(mask_image)
+                if mask_image_avg > 0.5:
+                    coords_aug = coords_first
                 else:
-                    coords_aug.append((x_int, y_int))
+                    coords_aug = coords_second
 
             result[i] = assign_coords_func(result[i], coords_aug)
 
         return result
+
+
+# Helper for AlphaElementwise to temporarily change the augmentation mode
+# of keypoints.
+class _switch_keypoint_mode_temporarily(object):
+    def __init__(self, augmenter, mode):
+        self.augmenter = augmenter
+        self.mode = mode
+        self.mode_orig = None
+
+    def __enter__(self):
+        # pylint:disable=protected-access
+        self.mode_orig = self.augmenter._keypoints_mode
+        self.augmenter._keypoints_mode = self.mode
+
+    def __exit__(self, type, value, traceback):
+        self.augmenter._keypoints_mode = self.mode_orig
 
 
 class SimplexNoiseAlpha(AlphaElementwise):

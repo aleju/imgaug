@@ -367,9 +367,19 @@
 * Added function `imgaug.augmentables.utils.copy_augmentables`. #410
 * Refactored `Alpha` to decrease code duplication. #410
 * Refactored `AlphaElementwise` to decrease code duplication. #410
-    * [rarely breaking] Changed `AlphaElementwise` to verify that the number
-      of coordinates before/after augmentation does not change. Previously
-      this was allowed. #410
+    * [rarely breaking] Changed `AlphaElementwise` to verify for keypoint
+      and line string augmentation that the number of coordinates before/after 
+      augmentation does not change. Previously this was allowed. This also
+      affects `SigmoidNoiseAlpha` and `FrequenceNoiseAlpha`.
+    * [rarely breaking] Changed `AlphaElementwise` to use for keypoint,
+      line string and bounding box augmentation a pointwise approach, where
+      per coordinate a decision is made whether the new coordinate from the
+      first branch's (augmented) results or the second branch's (augmented)
+      results are used. The decision is based on the average alpha mask value
+      at the xy-location of the coordinate. For polygons, the old mode is
+      still used where either all coordinates from the first branch's results
+      or the second branch's results are used. This also affects 
+      `SigmoidNoiseAlpha` and `FrequenceNoiseAlpha`.
 
 ## Improved Segmentation Map Augmentation #302
 
