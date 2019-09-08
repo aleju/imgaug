@@ -77,6 +77,82 @@ _AFFINE_MODE_SKIMAGE_TO_CV2 = {
 }
 
 
+def _handle_order_arg(order, backend):
+    # Peformance in skimage for Affine:
+    #  1.0x order 0
+    #  1.5x order 1
+    #  3.0x order 3
+    # 30.0x order 4
+    # 60.0x order 5
+    # measurement based on 256x256x3 batches, difference is smaller
+    # on smaller images (seems to grow more like exponentially with image
+    # size)
+    if order == ia.ALL:
+        if backend == "auto" or backend == "cv2":
+            return iap.Choice([0, 1, 3])
+        else:
+            # dont use order=2 (bi-quadratic) because that is apparently
+            # currently not recommended (and throws a warning)
+            return iap.Choice([0, 1, 3, 4, 5])
+    elif ia.is_single_integer(order):
+        assert 0 <= order <= 5, (
+            "Expected order's integer value to be in the interval [0, 5], "
+            "got %d." % (order,))
+        if backend == "cv2":
+            assert order in [0, 1, 3], (
+                "Backend \"cv2\" and order=%d was chosen, but cv2 backend "
+                "can only handle order 0, 1 or 3." % (order,))
+        return iap.Deterministic(order)
+    elif isinstance(order, list):
+        assert all([ia.is_single_integer(val) for val in order]), (
+            "Expected order list to only contain integers, "
+            "got types %s." % (str([type(val) for val in order]),))
+        assert all([0 <= val <= 5 for val in order]), (
+            "Expected all of order's integer values to be in range "
+            "0 <= x <= 5, got %s." % (str(order),))
+        if backend == "cv2":
+            assert all([val in [0, 1, 3] for val in order]), (
+                "cv2 backend can only handle order 0, 1 or 3. Got order "
+                "list of %s." % (order,))
+        return iap.Choice(order)
+    elif isinstance(order, iap.StochasticParameter):
+        return order
+    else:
+        raise Exception(
+            "Expected order to be imgaug.ALL, int, list of int or "
+            "StochasticParameter, got %s." % (type(order),))
+
+
+def _handle_cval_arg(cval):
+    if cval == ia.ALL:
+        # TODO change this so that it is dynamically created per image
+        #      (or once per dtype)
+        return iap.Uniform(0, 255)  # skimage transform expects float
+    else:
+        return iap.handle_continuous_param(
+            cval, "cval", value_range=None, tuple_to_uniform=True,
+            list_to_choice=True)
+
+
+def _handle_mode_arg(mode):
+    if mode == ia.ALL:
+        return iap.Choice(["constant", "edge", "symmetric",
+                           "reflect", "wrap"])
+    elif ia.is_string(mode):
+        return iap.Deterministic(mode)
+    elif isinstance(mode, list):
+        assert all([ia.is_string(val) for val in mode]), (
+            "Expected list of modes to only contain strings, got "
+            "types %s" % (", ".join([str(type(v)) for v in mode])))
+        return iap.Choice(mode)
+    elif isinstance(mode, iap.StochasticParameter):
+        return mode
+    else:
+        raise Exception(
+            "Expected mode to be imgaug.ALL, a string, a list of strings "
+            "or StochasticParameter, got %s." % (type(mode),))
+
+
 def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
                      output_shape=None, backend="auto"):
     if ia.is_single_integer(cval):
@@ -772,9 +848,9 @@ class Affine(meta.Augmenter):
             "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
             "got %s." % (backend,))
         self.backend = backend
-        self.order = self._handle_order_arg(order, backend)
-        self.cval = self._handle_cval_arg(cval)
-        self.mode = self._handle_mode_arg(mode)
+        self.order = _handle_order_arg(order, backend)
+        self.cval = _handle_cval_arg(cval)
+        self.mode = _handle_mode_arg(mode)
         self.scale = self._handle_scale_arg(scale)
         self.translate = self._handle_translate_arg(
             translate_px, translate_percent)
@@ -803,82 +879,6 @@ class Affine(meta.Augmenter):
         self._mode_segmentation_maps = "constant"
         self._cval_heatmaps = 0
         self._cval_segmentation_maps = 0
-
-    @classmethod
-    def _handle_order_arg(cls, order, backend):
-        # Peformance in skimage:
-        #  1.0x order 0
-        #  1.5x order 1
-        #  3.0x order 3
-        # 30.0x order 4
-        # 60.0x order 5
-        # measurement based on 256x256x3 batches, difference is smaller
-        # on smaller images (seems to grow more like exponentially with image
-        # size)
-        if order == ia.ALL:
-            if backend == "auto" or backend == "cv2":
-                return iap.Choice([0, 1, 3])
-            else:
-                # dont use order=2 (bi-quadratic) because that is apparently
-                # currently not recommended (and throws a warning)
-                return iap.Choice([0, 1, 3, 4, 5])
-        elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, (
-                "Expected order's integer value to be in the interval [0, 5], "
-                "got %d." % (order,))
-            if backend == "cv2":
-                assert order in [0, 1, 3], (
-                    "Backend \"cv2\" and order=%d was chosen, but cv2 backend "
-                    "can only handle order 0, 1 or 3." % (order,))
-            return iap.Deterministic(order)
-        elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), (
-                "Expected order list to only contain integers, "
-                "got types %s." % (str([type(val) for val in order]),))
-            assert all([0 <= val <= 5 for val in order]), (
-                "Expected all of order's integer values to be in range "
-                "0 <= x <= 5, got %s." % (str(order),))
-            if backend == "cv2":
-                assert all([val in [0, 1, 3] for val in order]), (
-                    "cv2 backend can only handle order 0, 1 or 3. Got order "
-                    "list of %s." % (order,))
-            return iap.Choice(order)
-        elif isinstance(order, iap.StochasticParameter):
-            return order
-        else:
-            raise Exception(
-                "Expected order to be imgaug.ALL, int, list of int or "
-                "StochasticParameter, got %s." % (type(order),))
-
-    @classmethod
-    def _handle_cval_arg(cls, cval):
-        if cval == ia.ALL:
-            # TODO change this so that it is dynamically created per image
-            #      (or once per dtype)
-            return iap.Uniform(0, 255)  # skimage transform expects float
-        else:
-            return iap.handle_continuous_param(
-                cval, "cval", value_range=None, tuple_to_uniform=True,
-                list_to_choice=True)
-
-    @classmethod
-    def _handle_mode_arg(cls, mode):
-        if mode == ia.ALL:
-            return iap.Choice(["constant", "edge", "symmetric",
-                               "reflect", "wrap"])
-        elif ia.is_string(mode):
-            return iap.Deterministic(mode)
-        elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode]), (
-                "Expected list of modes to only contain strings, got "
-                "types %s" % (", ".join([str(type(v)) for v in mode])))
-            return iap.Choice(mode)
-        elif isinstance(mode, iap.StochasticParameter):
-            return mode
-        else:
-            raise Exception(
-                "Expected mode to be imgaug.ALL, a string, a list of strings "
-                "or StochasticParameter, got %s." % (type(mode),))
 
     @classmethod
     def _handle_scale_arg(cls, scale):
@@ -1997,69 +1997,9 @@ class PiecewiseAffine(meta.Augmenter):
             nb_cols, "nb_cols", value_range=(2, None), tuple_to_uniform=True,
             list_to_choice=True, allow_floats=False)
 
-        # --------------
-        # order, mode, cval
-        # TODO these are the same as in class Affine, make DRY
-        # --------------
-
-        # Peformance:
-        #  1.0x order 0
-        #  1.5x order 1
-        #  3.0x order 3
-        # 30.0x order 4
-        # 60.0x order 5
-        # measurement based on 256x256x3 batches, difference is smaller
-        # on smaller images (seems to grow more like exponentially with image
-        # size)
-        if order == ia.ALL:
-            # dont use order=2 (bi-quadratic) because that is apparently
-            # currently not recommended (and throws a warning)
-            self.order = iap.Choice([0, 1, 3, 4, 5])
-        elif ia.is_single_integer(order):
-            assert 0 <= order <= 5, (
-                "Expected order's integer value to be in the interval [0, 5], "
-                "got %d." % (order,))
-            self.order = iap.Deterministic(order)
-        elif isinstance(order, list):
-            assert all([ia.is_single_integer(val) for val in order]), (
-                "Expected order list to only contain integers, got "
-                "types %s." % (str([type(val) for val in order]),))
-            assert all([0 <= val <= 5 for val in order]), (
-                "Expected all of order's integer values to be in range "
-                "0 <= x <= 5, got %s." % (str(order),))
-            self.order = iap.Choice(order)
-        elif isinstance(order, iap.StochasticParameter):
-            self.order = order
-        else:
-            raise Exception("Expected order to be imgaug.ALL, int or "
-                            "StochasticParameter, got %s." % (type(order),))
-
-        if cval == ia.ALL:
-            # TODO change this so that it is dynamically created per image
-            #      (or once per dtype)
-            self.cval = iap.Uniform(0, 255)
-        else:
-            self.cval = iap.handle_continuous_param(
-                cval, "cval", value_range=None, tuple_to_uniform=True,
-                list_to_choice=True)
-
-        # constant, edge, symmetric, reflect, wrap
-        if mode == ia.ALL:
-            self.mode = iap.Choice(["constant", "edge", "symmetric",
-                                    "reflect", "wrap"])
-        elif ia.is_string(mode):
-            self.mode = iap.Deterministic(mode)
-        elif isinstance(mode, list):
-            assert all([ia.is_string(val) for val in mode]), (
-                "Expected all values of 'mode' to be strings, got "
-                "types %s." % (", ".join([str(type(v)) for v in mode])))
-            self.mode = iap.Choice(mode)
-        elif isinstance(mode, iap.StochasticParameter):
-            self.mode = mode
-        else:
-            raise Exception(
-                "Expected mode to be imgaug.ALL, a string, a list of strings "
-                "or StochasticParameter, got %s." % (type(mode),))
+        self.order = _handle_order_arg(order, backend="skimage")
+        self.cval = _handle_cval_arg(cval)
+        self.mode = _handle_mode_arg(mode)
 
         self.absolute_scale = absolute_scale
         self.polygon_recoverer = polygon_recoverer
