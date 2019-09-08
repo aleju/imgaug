@@ -121,8 +121,8 @@ def _add_scalar_to_uint8(image, value):
     nb_channels = 1 if image.ndim == 2 else image.shape[-1]
 
     value = np.clip(np.round(value), -255, 255).astype(np.int16)
-
     value_range = np.arange(0, 256, dtype=np.int16)
+
     if is_channelwise:
         assert value.ndim == 1, (
             "Expected `value` to be 1-dimensional, got %d-dimensional "
@@ -167,10 +167,8 @@ def _add_scalar_to_non_uint8(image, value):
     is_channelwise = not is_single_value
     nb_channels = 1 if image.ndim == 2 else image.shape[-1]
 
-    if is_channelwise:
-        value = value.reshape((1, 1, nb_channels))
-    else:
-        value = np.array(value).reshape((1, 1, 1))
+    shape = (1, 1, nb_channels if is_channelwise else 1)
+    value = np.array(value).reshape(shape)
 
     # We limit here the value range of the value parameter to the
     # bytes in the image's dtype. This prevents overflow problems
@@ -321,6 +319,175 @@ def _add_elementwise_to_non_uint8(image, values):
     if len(input_shape) == 2:
         return image[..., 0]
     return image
+
+
+def multiply_scalar(image, mul):
+    """Multiply an image by a single scalar or one scalar per channel.
+
+    This method ensures that ``uint8`` does not overflow during the
+    multiplication.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: limited; tested (1)
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: limited; tested (1)
+
+        Note: tests were only conducted for rather small multipliers, around
+        -10.0 to +10.0.
+
+        In general, the multipliers sampled from `mul` must be in a value
+        range that corresponds to the input image's dtype. E.g. if the input
+        image has dtype uint16 and the samples generated from `mul` are
+        ``float64``, this augmenter will still force all samples to be within
+        the value range of ``float16``, as it has the same number of
+        bytes (two) as ``uint16``. This is done to make overflows less likely
+        to occur.
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
+              +/-inf.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+        If `value` contains more than one value, the shape of the image is
+        expected to be ``(H,W,C)``.
+
+    mul : number or ndarray
+        The multiplier to use. Either a single value or an array
+        containing exactly one component per channel, i.e. ``C`` components.
+
+    Returns
+    -------
+    ndarray
+        Image multiplied by `mul`.
+
+    """
+    iadt.gate_dtypes(
+        image,
+        allowed=["bool",
+                 "uint8", "uint16",
+                 "int8", "int16",
+                 "float16", "float32"],
+        disallowed=["uint32", "uint64", "uint128", "uint256",
+                    "int32", "int64", "int128", "int256",
+                    "float64", "float96", "float128",
+                    "float256"],
+        augmenter=None)
+
+    if image.dtype.name == "uint8":
+        return _multiply_scalar_to_uint8(image, mul)
+    return _multiply_scalar_to_non_uint8(image, mul)
+
+
+def _multiply_scalar_to_uint8(image, mul):
+    # Using this LUT approach is significantly faster than
+    # else-block code (more than 10x speedup) and is still faster
+    # than the simpler image*sample approach without LUT (1.5-3x
+    # speedup, maybe dependent on installed BLAS libraries?)
+    is_single_value = (
+        ia.is_single_number(mul)
+        or ia.is_np_scalar(mul)
+        or (ia.is_np_array(mul) and mul.size == 1))
+    is_channelwise = not is_single_value
+    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+
+    mul = np.float32(mul)
+    value_range = np.arange(0, 256, dtype=np.float32)
+
+    if is_channelwise:
+        assert mul.ndim == 1, (
+            "Expected `mul` to be 1-dimensional, got %d-dimensional "
+            "data with shape %s." % (mul.ndim, mul.shape))
+        assert image.ndim == 3, (
+            "Expected `image` to be 3-dimensional when multiplying by one "
+            "value per channel, got %d-dimensional data with shape %s." % (
+                image.ndim, image.shape))
+        assert image.shape[-1] == mul.size, (
+            "Expected number of channels in `image` and number of components "
+            "in `mul` to be identical. Got %d vs. %d." % (
+                image.shape[-1], mul.size))
+
+        result = []
+        tables = np.tile(
+            value_range[np.newaxis, :],
+            (nb_channels, 1)
+        ) * mul[:, np.newaxis]
+        tables = np.clip(tables, 0, 255).astype(image.dtype)
+
+        for c, table in enumerate(tables):
+            arr_aug = cv2.LUT(image[..., c], table)
+            result.append(arr_aug[..., np.newaxis])
+
+        return np.stack(result, axis=-1)
+    else:
+        table = value_range * mul
+        image_aug = cv2.LUT(
+            image, np.clip(table, 0, 255).astype(image.dtype))
+        if image_aug.ndim == 2 and image.ndim == 3:
+            image_aug = image_aug[..., np.newaxis]
+        return image_aug
+
+
+def _multiply_scalar_to_non_uint8(image, mul):
+    # TODO estimate via image min/max values whether a resolution
+    #      increase is necessary
+    input_dtype = image.dtype
+
+    is_single_value = (
+        ia.is_single_number(mul)
+        or ia.is_np_scalar(mul)
+        or (ia.is_np_array(mul) and mul.size == 1))
+    is_channelwise = not is_single_value
+    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+
+    shape = (1, 1, nb_channels if is_channelwise else 1)
+    mul = np.array(mul).reshape(shape)
+
+    # deactivated itemsize increase due to clip causing problems
+    # with int64, see Add
+    # mul_min = np.min(mul)
+    # mul_max = np.max(mul)
+    # is_not_increasing_value_range = (
+    #         (-1 <= mul_min <= 1)
+    #         and (-1 <= mul_max <= 1))
+
+    # We limit here the value range of the mul parameter to the
+    # bytes in the image's dtype. This prevents overflow problems
+    # and makes it less likely that the image has to be up-casted,
+    # which again improves performance and saves memory. Note that
+    # this also enables more dtypes for image inputs.
+    # The downside is that the mul parameter is limited in its
+    # value range.
+    itemsize = max(
+        image.dtype.itemsize,
+        2 if mul.dtype.kind == "f" else 1
+    )  # float min itemsize is 2 not 1
+    dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
+    mul = iadt.clip_to_dtype_value_range_(
+        mul, dtype_target, validate=True)
+
+    image, mul = iadt.promote_array_dtypes_(
+        [image, mul],
+        dtypes=[image.dtype, dtype_target],
+        # increase_itemsize_factor=(
+        #     1 if is_not_increasing_value_range else 2)
+        increase_itemsize_factor=1
+    )
+    image = np.multiply(image, mul, out=image, casting="no")
+
+    return iadt.restore_dtypes_(image, input_dtype)
 
 
 class Add(meta.Augmenter):
@@ -885,33 +1052,7 @@ class Multiply(meta.Augmenter):
 
     dtype support::
 
-        * ``uint8``: yes; fully tested
-        * ``uint16``: limited; tested (1)
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: limited; tested (1)
-        * ``int16``: limited; tested (1)
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: limited; tested (1)
-        * ``float32``: limited; tested (1)
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: limited; tested (1)
-
-        Note: tests were only conducted for rather small multipliers, around
-        -10.0 to +10.0.
-
-        In general, the multipliers sampled from `mul` must be in a value
-        range that corresponds to the input image's dtype. E.g. if the input
-        image has dtype uint16 and the samples generated from `mul` are
-        ``float64``, this augmenter will still force all samples to be within
-        the value range of ``float16``, as it has the same number of
-        bytes (two) as ``uint16``. This is done to make overflows less likely
-        to occur.
-
-        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
-              +/-inf.
+        See :func:`imgaug.augmenters.arithmetic.multiply_scalar`.
 
     Parameters
     ----------
@@ -983,19 +1124,6 @@ class Multiply(meta.Augmenter):
             per_channel, "per_channel")
 
     def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(images,
-                         allowed=["bool",
-                                  "uint8", "uint16",
-                                  "int8", "int16",
-                                  "float16", "float32"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int32", "int64", "int128", "int256",
-                                     "float64", "float96", "float128",
-                                     "float256"],
-                         augmenter=self)
-
-        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
-
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
@@ -1004,9 +1132,8 @@ class Multiply(meta.Augmenter):
         mul_samples = self.mul.draw_samples(
             (nb_images, nb_channels_max), random_state=rss[1])
 
-        gen = enumerate(zip(images, mul_samples, per_channel_samples,
-                            input_dtypes))
-        for i, (image, mul_samples_i, per_channel_samples_i, input_dtype) in gen:
+        gen = enumerate(zip(images, mul_samples, per_channel_samples))
+        for i, (image, mul_samples_i, per_channel_samples_i) in gen:
             nb_channels = image.shape[2]
 
             # Example code to directly multiply images via image*sample
@@ -1028,75 +1155,11 @@ class Multiply(meta.Augmenter):
             #         0, 255
             #     ).astype(np.uint8)
 
-            if image.dtype.name == "uint8":
-                # Using this LUT approach is significantly faster than
-                # else-block code (more than 10x speedup) and is still faster
-                # than the simpler image*sample approach without LUT (1.5-3x
-                # speedup, maybe dependent on installed BLAS libraries?)
-                value_range = np.arange(0, 256, dtype=np.float32)
-                if per_channel_samples_i > 0.5:
-                    result = []
-                    mul_samples_i = mul_samples_i.astype(np.float32)
-                    tables = np.tile(
-                        value_range[np.newaxis, :], (nb_channels, 1)) \
-                        * mul_samples_i[0:nb_channels, np.newaxis]
-                    tables = np.clip(tables, 0, 255).astype(image.dtype)
-                    for c, table in enumerate(tables):
-                        arr_aug = cv2.LUT(image[..., c], table)
-                        result.append(arr_aug[..., np.newaxis])
-                    images[i] = np.concatenate(result, axis=2)
-                else:
-                    table = (value_range
-                             * mul_samples_i[0].astype(np.float32))
-                    image_aug = cv2.LUT(
-                        image, np.clip(table, 0, 255).astype(image.dtype))
-                    if image_aug.ndim == 2:
-                        image_aug = image_aug[..., np.newaxis]
-                    images[i] = image_aug
+            if per_channel_samples_i > 0.5:
+                mul = mul_samples_i[0:nb_channels]
             else:
-                # TODO estimate via image min/max values whether a resolution
-                #      increase is necessary
-
-                if per_channel_samples_i > 0.5:
-                    mul = mul_samples_i[0:nb_channels].reshape(
-                        (1, 1, nb_channels))
-                else:
-                    mul = mul_samples_i[0:1].reshape((1, 1, 1))
-
-                # deactivated itemsize increase due to clip causing problems
-                # with int64, see Add
-                # mul_min = np.min(mul)
-                # mul_max = np.max(mul)
-                # is_not_increasing_value_range = (
-                #         (-1 <= mul_min <= 1)
-                #         and (-1 <= mul_max <= 1))
-
-                # We limit here the value range of the mul parameter to the
-                # bytes in the image's dtype. This prevents overflow problems
-                # and makes it less likely that the image has to be up-casted,
-                # which again improves performance and saves memory. Note that
-                # this also enables more dtypes for image inputs.
-                # The downside is that the mul parameter is limited in its
-                # value range.
-                itemsize = max(
-                    image.dtype.itemsize,
-                    2 if mul.dtype.kind == "f" else 1
-                )  # float min itemsize is 2 not 1
-                dtype_target = np.dtype("%s%d" % (mul.dtype.kind, itemsize))
-                mul = iadt.clip_to_dtype_value_range_(mul, dtype_target,
-                                                      validate=True)
-
-                image, mul = iadt.promote_array_dtypes_(
-                    [image, mul],
-                    dtypes=[image.dtype, dtype_target],
-                    # increase_itemsize_factor=(
-                    #     1 if is_not_increasing_value_range else 2)
-                    increase_itemsize_factor=1
-                )
-                image = np.multiply(image, mul, out=image, casting="no")
-
-                image = iadt.restore_dtypes_(image, input_dtype)
-                images[i] = image
+                mul = mul_samples_i[0]
+            images[i] = multiply_scalar(image, mul)
 
         return images
 
