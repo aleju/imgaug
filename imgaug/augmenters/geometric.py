@@ -1006,67 +1006,52 @@ class Affine(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        nb_heatmaps = len(heatmaps)
-        samples = self._draw_samples(nb_heatmaps, random_state)
-        if self._cval_heatmaps is not None:
-            samples.cval = np.full(
-                (nb_heatmaps, 1), self._cval_heatmaps, dtype=np.float32)
-        if self._mode_heatmaps is not None:
-            samples.mode = [self._mode_heatmaps] * nb_heatmaps
-        if self._order_heatmaps is not None:
-            samples.order = [self._order_heatmaps] * nb_heatmaps
-
-        arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
-        arrs_aug, matrices = self._augment_images_by_samples(
-            arrs, samples, return_matrices=True)
-
-        gen = zip(heatmaps, arrs_aug, matrices, samples.order)
-        for heatmaps_i, arr_aug, matrix, order in gen:
-            # order=3 matches cubic interpolation and can cause values to go
-            # outside of the range [0.0, 1.0] not clear whether 4+ also do that
-            # TODO add test for this
-            if order >= 3:
-                arr_aug = np.clip(arr_aug, 0.0, 1.0, out=arr_aug)
-
-            heatmaps_i.arr_0to1 = arr_aug
-            if self.fit_output:
-                _, output_shape_i = _compute_affine_warp_output_shape(
-                    matrix, heatmaps_i.shape)
-            else:
-                output_shape_i = heatmaps_i.shape
-            heatmaps_i.shape = output_shape_i
-        return heatmaps
+        return self._augment_hms_and_segmaps(
+            heatmaps, random_state, "arr_0to1",
+            self._cval_heatmaps, self._mode_heatmaps,
+            self._order_heatmaps, "float32")
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        nb_segmaps = len(segmaps)
-        samples = self._draw_samples(nb_segmaps, random_state)
+        return self._augment_hms_and_segmaps(
+            segmaps, random_state, "arr",
+            self._cval_segmentation_maps, self._mode_segmentation_maps,
+            self._order_segmentation_maps, "int32")
 
-        if self._cval_segmentation_maps is not None:
-            samples.cval = np.full(
-                (nb_segmaps, 1), self._cval_segmentation_maps,
-                dtype=np.int32)
-        if self._mode_segmentation_maps is not None:
-            samples.mode = [self._mode_segmentation_maps] * nb_segmaps
-        if self._order_segmentation_maps is not None:
-            # in contrast to heatmap aug, we don't have to clip augmented
-            # arrays here, as we always use NN interpolation
-            samples.order = [self._order_segmentation_maps] * nb_segmaps
+    def _augment_hms_and_segmaps(self, augmentables, random_state,
+                                 arr_attr_name, cval, mode, order, cval_dtype):
+        nb_images = len(augmentables)
+        samples = self._draw_samples(nb_images, random_state)
+        if cval is not None:
+            samples.cval = np.full((nb_images, 1), cval, dtype=cval_dtype)
+        if mode is not None:
+            samples.mode = [mode] * nb_images
+        if order is not None:
+            samples.order = [order] * nb_images
 
-        # noteworthy here that cv2 affine warp does support int32 arrays
-        arrs = [segmaps_i.arr for segmaps_i in segmaps]
+        arrs = [getattr(augmentable, arr_attr_name)
+                for augmentable in augmentables]
         arrs_aug, matrices = self._augment_images_by_samples(
             arrs, samples, return_matrices=True)
 
-        gen = zip(segmaps, arrs_aug, matrices)
-        for segmaps_i, arr_aug, matrix in gen:
-            segmaps_i.arr = arr_aug
+        gen = zip(augmentables, arrs_aug, matrices, samples.order)
+        for augmentable_i, arr_aug, matrix, order_i in gen:
+            # order=3 matches cubic interpolation and can cause values to go
+            # outside of the range [0.0, 1.0] not clear whether 4+ also do that
+            # We don't clip here for Segmentation Maps, because for these
+            # the value range isn't clearly limited to [0, 1] (and they should
+            # also never use order=3 to begin with).
+            # TODO add test for this
+            if order_i >= 3 and isinstance(augmentable_i, ia.HeatmapsOnImage):
+                arr_aug = np.clip(arr_aug, 0.0, 1.0, out=arr_aug)
+
+            setattr(augmentable_i, arr_attr_name, arr_aug)
             if self.fit_output:
                 _, output_shape_i = _compute_affine_warp_output_shape(
-                    matrix, segmaps_i.shape)
+                    matrix, augmentable_i.shape)
             else:
-                output_shape_i = segmaps_i.shape
-            segmaps_i.shape = output_shape_i
-        return segmaps
+                output_shape_i = augmentable_i.shape
+            augmentable_i.shape = output_shape_i
+        return augmentables
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
