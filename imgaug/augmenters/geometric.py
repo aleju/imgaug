@@ -1847,6 +1847,21 @@ class AffineCv2(meta.Augmenter):
         )
 
 
+class _PiecewiseAffineSamplingResult(object):
+    def __init__(self, nb_rows, nb_cols, order, cval, mode):
+        self.nb_rows = nb_rows
+        self.nb_cols = nb_cols
+        self.order = order
+        self.cval = cval
+        self.mode = mode
+
+    def get_clipped_cval(self, idx, dtype):
+        min_value, _, max_value = iadt.get_value_range_of_dtype(dtype)
+        cval = self.cval[idx]
+        cval = max(min(cval, max_value), min_value)
+        return cval
+
+
 class PiecewiseAffine(meta.Augmenter):
     """
     Apply affine transformations that differ between local neighbourhoods.
@@ -2006,24 +2021,6 @@ class PiecewiseAffine(meta.Augmenter):
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
 
-    def _draw_samples(self, nb_images, random_state):
-        rss = random_state.duplicate(5)
-
-        nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
-                                                    random_state=rss[-5])
-        nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
-                                                    random_state=rss[-4])
-        order_samples = self.order.draw_samples((nb_images,),
-                                                random_state=rss[-3])
-        cval_samples = self.cval.draw_samples((nb_images,),
-                                              random_state=rss[-2])
-        mode_samples = self.mode.draw_samples((nb_images,),
-                                              random_state=rss[-1])
-
-        return (
-            nb_rows_samples, nb_cols_samples, order_samples, cval_samples,
-            mode_samples)
-
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(
             images,
@@ -2039,8 +2036,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = images
         nb_images = len(images)
 
-        nb_rows_samples, nb_cols_samples, order_samples, cval_samples, \
-            mode_samples = self._draw_samples(nb_images, random_state)
+        samples = self._draw_samples(nb_images, random_state)
 
         rss = random_state.duplicate(nb_images)
 
@@ -2049,24 +2045,20 @@ class PiecewiseAffine(meta.Augmenter):
             h, w = image.shape[0:2]
 
             transformer = self._get_transformer(
-                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+                h, w, samples.nb_rows[i], samples.nb_cols[i],
+                rs_image)
 
             if transformer is not None:
                 input_dtype = image.dtype
                 if image.dtype.kind == "b":
                     image = image.astype(np.float64)
 
-                min_value, _center_value, max_value = \
-                    iadt.get_value_range_of_dtype(image.dtype)
-                cval = cval_samples[i]
-                cval = max(min(cval, max_value), min_value)
-
                 image_warped = tf.warp(
                     image,
                     transformer,
-                    order=order_samples[i],
-                    mode=mode_samples[i],
-                    cval=cval,
+                    order=samples.order[i],
+                    mode=samples.mode[i],
+                    cval=samples.get_clipped_cval(i, image.dtype),
                     preserve_range=True,
                     output_shape=images[i].shape
                 )
@@ -2096,8 +2088,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = augmentables
         nb_images = len(augmentables)
 
-        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
-            _mode_samples = self._draw_samples(nb_images, random_state)
+        samples = self._draw_samples(nb_images, random_state)
 
         rss = random_state.duplicate(nb_images)
 
@@ -2107,7 +2098,7 @@ class PiecewiseAffine(meta.Augmenter):
             rs_image = rss[i]
             h, w = arr.shape[0:2]
             transformer = self._get_transformer(
-                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+                h, w, samples.nb_rows[i], samples.nb_cols[i], rs_image)
 
             if transformer is not None:
                 arr_warped = tf.warp(
@@ -2143,8 +2134,7 @@ class PiecewiseAffine(meta.Augmenter):
         result = []
         nb_images = len(keypoints_on_images)
 
-        nb_rows_samples, nb_cols_samples, _order_samples, _cval_samples, \
-            _mode_samples = self._draw_samples(nb_images, random_state)
+        samples = self._draw_samples(nb_images, random_state)
 
         rss = random_state.duplicate(nb_images)
 
@@ -2158,7 +2148,7 @@ class PiecewiseAffine(meta.Augmenter):
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(
-                h, w, nb_rows_samples[i], nb_cols_samples[i], rs_image)
+                h, w, samples.nb_rows[i], samples.nb_cols[i], rs_image)
 
             if transformer is None or len(kpsoi.keypoints) == 0:
                 result.append(kpsoi)
@@ -2233,6 +2223,24 @@ class PiecewiseAffine(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
+
+    def _draw_samples(self, nb_images, random_state):
+        rss = random_state.duplicate(5)
+
+        nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
+                                                    random_state=rss[-5])
+        nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
+                                                    random_state=rss[-4])
+        order_samples = self.order.draw_samples((nb_images,),
+                                                random_state=rss[-3])
+        cval_samples = self.cval.draw_samples((nb_images,),
+                                              random_state=rss[-2])
+        mode_samples = self.mode.draw_samples((nb_images,),
+                                              random_state=rss[-1])
+
+        return _PiecewiseAffineSamplingResult(
+            nb_rows=nb_rows_samples, nb_cols=nb_cols_samples,
+            order=order_samples, cval=cval_samples, mode=mode_samples)
 
     def _get_transformer(self, h, w, nb_rows, nb_cols, random_state):
         # get coords on y and x axis of points to move around
