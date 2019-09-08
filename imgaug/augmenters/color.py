@@ -398,9 +398,9 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
     to_colorspaces = _validate(to_colorspaces, "to_colorspaces")
     from_colorspaces = _validate(from_colorspaces, "from_colorspaces")
 
-    for i in sm.xrange(len(images)):
-        images[i] = change_colorspace_(
-            images[i], to_colorspaces[i], from_colorspaces[i])
+    gen = zip(images, to_colorspaces, from_colorspaces)
+    for i, (image, to_colorspace, from_colorspace) in enumerate(gen):
+        images[i] = change_colorspace_(image, to_colorspace, from_colorspace)
     return images
 
 
