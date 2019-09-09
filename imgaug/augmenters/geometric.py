@@ -134,6 +134,7 @@ def _handle_cval_arg(cval):
             list_to_choice=True)
 
 
+# currently used for Affine and PiecewiseAffine
 def _handle_mode_arg(mode):
     if mode == ia.ALL:
         return iap.Choice(["constant", "edge", "symmetric",
@@ -2308,7 +2309,16 @@ class PiecewiseAffine(meta.Augmenter):
             self.mode, self.absolute_scale]
 
 
-# TODO add args for interpolation, borderMode, borderValue
+class _PerspectiveTransformSamplingResult(object):
+    def __init__(self, matrices, max_heights, max_widths, cvals, modes):
+        self.matrices = matrices
+        self.max_heights = max_heights
+        self.max_widths = max_widths
+        self.cvals = cvals
+        self.modes = modes
+
+
+# TODO add arg for image interpolation
 class PerspectiveTransform(meta.Augmenter):
     """
     Apply random four point perspective transformations to images.
@@ -2479,27 +2489,43 @@ class PerspectiveTransform(meta.Augmenter):
         self.min_height = 2
         self.shift_step_size = 0.5
 
-        if cval == ia.ALL:
-            self.cval = iap.DiscreteUniform(0, 255)
-        else:
-            self.cval = iap.handle_discrete_param(
-                cval, "cval", value_range=(0, 255), tuple_to_uniform=True,
-                list_to_choice=True, allow_floats=True)
+        self.cval = _handle_cval_arg(cval)
+        self.mode = self._handle_mode_arg(mode)
 
+        self.polygon_recoverer = polygon_recoverer
+        if polygon_recoverer == "auto":
+            self.polygon_recoverer = _ConcavePolygonRecoverer()
+
+        # Special order, mode and cval parameters for heatmaps and
+        # segmentation maps. These may either be None or a fixed value.
+        # Stochastic parameters are currently *not* supported.
+        # If set to None, the same values as for images will be used.
+        # That is really not recommended for the cval parameter.
+        self._order_heatmaps = cv2.INTER_LINEAR
+        self._order_segmentation_maps = cv2.INTER_NEAREST
+        self._mode_heatmaps = cv2.BORDER_CONSTANT
+        self._mode_segmentation_maps = cv2.BORDER_CONSTANT
+        self._cval_heatmaps = 0
+        self._cval_segmentation_maps = 0
+
+    # TODO unify this somehow with the global _handle_mode_arg() that is
+    #      currently used for Affine and PiecewiseAffine
+    @classmethod
+    def _handle_mode_arg(cls, mode):
         available_modes = [cv2.BORDER_REPLICATE, cv2.BORDER_CONSTANT]
         available_modes_str = ["replicate", "constant"]
         if mode == ia.ALL:
-            self.mode = iap.Choice(available_modes)
+            return iap.Choice(available_modes)
         elif ia.is_single_integer(mode):
             assert mode in available_modes, (
                 "Expected mode to be in %s, got %d." % (
                     str(available_modes), mode))
-            self.mode = iap.Deterministic(mode)
+            return iap.Deterministic(mode)
         elif ia.is_string(mode):
             assert mode in available_modes_str, (
                 "Expected mode to be in %s, got %s." % (
                     str(available_modes_str), mode))
-            self.mode = iap.Deterministic(mode)
+            return iap.Deterministic(mode)
         elif isinstance(mode, list):
             valid_types = all([ia.is_single_integer(val) or ia.is_string(val)
                                for val in mode])
@@ -2512,18 +2538,14 @@ class PerspectiveTransform(meta.Augmenter):
             assert valid_modes, (
                 "Expected all mode values to be in %s, got %s." % (
                     str(available_modes + available_modes_str), str(mode)))
-            self.mode = iap.Choice(mode)
+            return iap.Choice(mode)
         elif isinstance(mode, iap.StochasticParameter):
-            self.mode = mode
+            return mode
         else:
             raise Exception(
                 "Expected mode to be imgaug.ALL, an int, a string, a list "
                 "of int/strings or StochasticParameter, got %s." % (
                     type(mode),))
-
-        self.polygon_recoverer = polygon_recoverer
-        if polygon_recoverer == "auto":
-            self.polygon_recoverer = _ConcavePolygonRecoverer()
 
     def _augment_images(self, images, random_state, parents, hooks):
         iadt.gate_dtypes(
@@ -2541,60 +2563,54 @@ class PerspectiveTransform(meta.Augmenter):
         if not self.keep_size:
             result = list(result)
 
-        matrices, max_heights, max_widths, cval_samples, mode_samples = \
-            self._create_matrices(
-                [image.shape for image in images],
-                random_state
-            )
+        samples = self._create_matrices([image.shape for image in images],
+                                        random_state)
 
-        gen = enumerate(
-            zip(matrices, max_heights, max_widths, cval_samples, mode_samples)
-        )
+        gen = enumerate(zip(images, samples.matrices, samples.max_heights,
+                            samples.max_widths, samples.cvals, samples.modes))
 
-        for i, (M, max_height, max_width, cval, mode) in gen:
-            image = images[i]
+        for i, (image, matrix, max_height, max_width, cval, mode) in gen:
+            input_dtype = image.dtype
+            if input_dtype.name in ["int8"]:
+                image = image.astype(np.int16)
+            elif input_dtype.name in ["bool", "float16"]:
+                image = image.astype(np.float32)
 
             # cv2.warpPerspective only supports <=4 channels
             nb_channels = image.shape[2]
-            input_dtype = image.dtype
-            if input_dtype in [np.int8]:
-                image = image.astype(np.int16)
-            elif input_dtype in [np.bool_, np.float16]:
-                image = image.astype(np.float32)
-
             if nb_channels <= 4:
                 warped = cv2.warpPerspective(
                     image,
-                    M,
+                    matrix,
                     (max_width, max_height),
                     borderValue=cval,
                     borderMode=mode)
                 if warped.ndim == 2 and images[i].ndim == 3:
                     warped = np.expand_dims(warped, 2)
             else:
-                # FIXME usage of cval here seems incorrect, is always the same
-                #       group
-
-                # warp each channel on its own, re-add channel axis, then stack
-                # the result from a list of [H, W, 1] to (H, W, C).
-                warped = [cv2.warpPerspective(
-                    image[..., c],
-                    M,
-                    (max_width, max_height),
-                    borderValue=cval,
-                    borderMode=mode)
-                          for c in sm.xrange(nb_channels)]
-                warped = [warped_i[..., np.newaxis] for warped_i in warped]
-                warped = np.dstack(warped)
+                # warp each channel on its own
+                # note that cv2 removes the channel axis in case of (H,W,1)
+                # inputs
+                warped = [
+                    cv2.warpPerspective(
+                        image[..., c],
+                        matrix,
+                        (max_width, max_height),
+                        borderValue=cval[min(c, len(cval)-1)],
+                        borderMode=mode,
+                        flags=cv2.INTER_LINEAR
+                    )
+                    for c in sm.xrange(nb_channels)
+                ]
+                warped = np.stack(warped, axis=-1)
 
             if self.keep_size:
                 h, w = image.shape[0:2]
-                warped = ia.imresize_single_image(warped, (h, w),
-                                                  interpolation="cubic")
+                warped = ia.imresize_single_image(warped, (h, w))
 
-            if input_dtype == np.bool_:
+            if input_dtype.name == "bool":
                 warped = warped > 0.5
-            elif warped.dtype != input_dtype:
+            elif warped.dtype.name != input_dtype.name:
                 warped = iadt.restore_dtypes_(warped, input_dtype)
 
             result[i] = warped
@@ -2602,70 +2618,22 @@ class PerspectiveTransform(meta.Augmenter):
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        result = heatmaps
-
-        # TODO would copy_unless_global_rng() here and below enough?
-        matrices, max_heights, max_widths, cval_samples, mode_samples = \
-            self._create_matrices(
-                [heatmaps_i.arr_0to1.shape for heatmaps_i in heatmaps],
-                random_state.copy()
-            )
-
-        # estimate max_heights/max_widths for the underlying images
-        # this is only necessary if keep_size is False as then the underlying
-        # image sizes change and we need to update them here
-        if self.keep_size:
-            max_heights_imgs, max_widths_imgs = max_heights, max_widths
-        else:
-            _, max_heights_imgs, max_widths_imgs, cval_samples, mode_samples = \
-                self._create_matrices(
-                    [heatmaps_i.shape for heatmaps_i in heatmaps],
-                    random_state.copy()
-                )
-
-        gen = enumerate(
-            zip(matrices, max_heights, max_widths, cval_samples, mode_samples)
-        )
-
-        for i, (M, max_height, max_width, cval, mode) in gen:
-            heatmaps_i = heatmaps[i]
-
-            arr = heatmaps_i.arr_0to1
-
-            nb_channels = arr.shape[2]
-
-            warped = [cv2.warpPerspective(
-                arr[..., c], M,
-                (max_width, max_height),
-                borderValue=0,
-                borderMode=cv2.BORDER_CONSTANT) for c in sm.xrange(nb_channels)]
-            warped = [warped_i[..., np.newaxis] for warped_i in warped]
-            warped = np.dstack(warped)
-
-            heatmaps_i_aug = ia.HeatmapsOnImage.from_0to1(
-                warped,
-                shape=heatmaps_i.shape,
-                min_value=heatmaps_i.min_value,
-                max_value=heatmaps_i.max_value)
-
-            if self.keep_size:
-                h, w = arr.shape[0:2]
-                heatmaps_i_aug = heatmaps_i_aug.resize((h, w))
-            else:
-                new_shape = (max_heights_imgs[i], max_widths_imgs[i]) \
-                            + heatmaps_i_aug.shape[2:]
-                heatmaps_i_aug.shape = new_shape
-
-            result[i] = heatmaps_i_aug
-
-        return result
+        return self._augment_hms_and_segmaps(
+            heatmaps, random_state, "arr_0to1", self._cval_heatmaps,
+            self._mode_heatmaps, self._order_heatmaps)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        result = segmaps
+        return self._augment_hms_and_segmaps(
+            segmaps, random_state, "arr", self._cval_segmentation_maps,
+            self._mode_segmentation_maps, self._order_segmentation_maps)
 
-        # TODO would copy_unless_global_rng() here be enough?
-        matrices, max_heights, max_widths, _, _ = self._create_matrices(
-            [segmaps_i.arr.shape for segmaps_i in segmaps],
+    def _augment_hms_and_segmaps(self, augmentables, random_state,
+                                 arr_attr_name, cval, mode, flags):
+        result = augmentables
+
+        samples = self._create_matrices(
+            [getattr(augmentable, arr_attr_name).shape
+             for augmentable in augmentables],
             random_state.copy()
         )
 
@@ -2673,56 +2641,70 @@ class PerspectiveTransform(meta.Augmenter):
         # this is only necessary if keep_size is False as then the underlying
         # image sizes change and we need to update them here
         if self.keep_size:
-            max_heights_imgs, max_widths_imgs = max_heights, max_widths
+            max_heights_imgs = samples.max_heights
+            max_widths_imgs = samples.max_widths
         else:
-            _, max_heights_imgs, max_widths_imgs, _, _ = self._create_matrices(
-                [segmaps_i.shape for segmaps_i in segmaps],
+            samples_images = self._create_matrices(
+                [augmentable_i.shape for augmentable_i in augmentables],
                 random_state.copy()
             )
+            max_heights_imgs = samples_images.max_heights
+            max_widths_imgs = samples_images.max_widths
 
-        gen = enumerate(zip(matrices, max_heights, max_widths))
-        for i, (M, max_height, max_width) in gen:
-            segmaps_i = segmaps[i]
-            arr = segmaps_i.arr
+        gen = enumerate(zip(augmentables, samples.matrices, samples.max_heights,
+                            samples.max_widths))
+
+        for i, (augmentable_i, matrix, max_height, max_width) in gen:
+            arr = getattr(augmentable_i, arr_attr_name)
+
+            mode_i = mode
+            if mode is None:
+                mode_i = samples.modes[i]
+
+            cval_i = cval
+            if cval is None:
+                cval_i = samples.cvals[i]
 
             nb_channels = arr.shape[2]
 
             warped = [
-                cv2.warpPerspective(arr[..., c],
-                                    M,
-                                    (max_width, max_height),
-                                    flags=cv2.INTER_NEAREST)
-                for c
-                in sm.xrange(nb_channels)
+                cv2.warpPerspective(
+                    arr[..., c],
+                    matrix,
+                    (max_width, max_height),
+                    borderValue=cval_i,
+                    borderMode=mode_i,
+                    flags=flags
+                )
+                for c in sm.xrange(nb_channels)
             ]
-            warped = [warped_i[..., np.newaxis] for warped_i in warped]
-            warped = np.dstack(warped)
+            warped = np.stack(warped, axis=-1)
 
-            result[i].arr = warped
+            setattr(augmentable_i, arr_attr_name, warped)
 
             if self.keep_size:
                 h, w = arr.shape[0:2]
-                result[i] = result[i].resize((h, w))
+                augmentable_i = augmentable_i.resize((h, w))
             else:
-                new_shape = (max_heights_imgs[i], max_widths_imgs[i]) \
-                            + result[i].shape[2:]
-                result[i].shape = new_shape
+                new_shape = (
+                    max_heights_imgs[i], max_widths_imgs[i]
+                ) + augmentable_i.shape[2:]
+                augmentable_i.shape = new_shape
+
+            result[i] = augmentable_i
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         result = keypoints_on_images
-        matrices, max_heights, max_widths, cval_samples, mode_samples = \
-            self._create_matrices(
-                [kps.shape for kps in keypoints_on_images],
-                random_state
-            )
+        samples = self._create_matrices(
+            [kps.shape for kps in keypoints_on_images], random_state)
 
-        gen = enumerate(
-            zip(matrices, max_heights, max_widths, cval_samples, mode_samples)
-        )
+        gen = enumerate(zip(samples.matrices, samples.max_heights,
+                            samples.max_widths))
 
-        for i, (M, max_height, max_width, cval, mode) in gen:
+        for i, (matrix, max_height, max_width) in gen:
             keypoints_on_image = keypoints_on_images[i]
             new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
             if not keypoints_on_image.keypoints:
@@ -2730,7 +2712,7 @@ class PerspectiveTransform(meta.Augmenter):
             else:
                 kps_arr = keypoints_on_image.to_xy_array()
                 warped = cv2.perspectiveTransform(
-                    np.array([kps_arr], dtype=np.float32), M)
+                    np.array([kps_arr], dtype=np.float32), matrix)
                 warped = warped[0]
                 warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
                               for kp, coords
@@ -2783,20 +2765,18 @@ class PerspectiveTransform(meta.Augmenter):
             points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
             points = np.mod(np.abs(points), 1)
 
-            # FIXME why are these all 1.0-jitter instead of some being just
-            #       +jitter?
-            # top left
-            points[0, 1] = 1.0 - points[0, 1]  # h = 1.0 - jitter
+            # modify jitter to the four corner point coordinates
+            # some x/y values have to be modified from `jitter` to `1-jtter`
+            # for that
 
+            # top left -- no changes needed, just use jitter
             # top right
+            points[2, 0] = 1.0 - points[2, 0]  # h = 1.0 - jitter
+            # bottom right
             points[1, 0] = 1.0 - points[1, 0]  # w = 1.0 - jitter
             points[1, 1] = 1.0 - points[1, 1]  # h = 1.0 - jitter
-
-            # bottom right
-            points[2, 0] = 1.0 - points[2, 0]  # h = 1.0 - jitter
-
             # bottom left
-            # nothing
+            points[0, 1] = 1.0 - points[0, 1]  # h = 1.0 - jitter
 
             points[:, 0] = points[:, 0] * w
             points[:, 1] = points[:, 1] * h
@@ -2856,8 +2836,9 @@ class PerspectiveTransform(meta.Augmenter):
             max_widths.append(max_width)
 
         mode_samples = mode_samples.astype(int)
-        return (matrices, max_heights, max_widths, cval_samples_cv2,
-                mode_samples)
+        return _PerspectiveTransformSamplingResult(
+            matrices, max_heights, max_widths, cval_samples_cv2,
+            mode_samples)
 
     @classmethod
     def _order_points(cls, pts):
