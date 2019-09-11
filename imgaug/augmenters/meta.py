@@ -43,6 +43,7 @@ import six.moves as sm
 import imgaug as ia
 from .. import parameters as iap
 from .. import random as iarandom
+from .. import validation as iaval
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
@@ -759,60 +760,44 @@ class Augmenter(object):
             Corresponding augmented heatmap(s).
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        if parents is None:
-            parents = []
+            input_was_single_instance = False
+            if isinstance(heatmaps, ia.HeatmapsOnImage):
+                input_was_single_instance = True
+                heatmaps = [heatmaps]
 
-        input_was_single_instance = False
-        if isinstance(heatmaps, ia.HeatmapsOnImage):
-            input_was_single_instance = True
-            heatmaps = [heatmaps]
+            iaval.assert_is_iterable_of(heatmaps, ia.HeatmapsOnImage)
 
-        assert ia.is_iterable(heatmaps), (
-            "Expected to get list of imgaug.HeatmapsOnImage() instances, "
-            "got %s." % (type(heatmaps),))
-        only_heatmaps = all([isinstance(heatmaps_i, ia.HeatmapsOnImage)
-                             for heatmaps_i in heatmaps])
-        assert only_heatmaps, (
-            "Expected to get list of imgaug.HeatmapsOnImage() instances, "
-            "got %s." % ([type(el) for el in heatmaps],))
-
-        # copy, but only if topmost call or hooks are provided
-        if len(parents) == 0 or hooks is not None:
-            heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
-        else:
+            # copy, but only if topmost call or hooks are provided
             heatmaps_copy = heatmaps
+            if len(parents) == 0 or hooks is not None:
+                heatmaps_copy = [hm_i.deepcopy() for hm_i in heatmaps]
 
-        if hooks is not None:
-            heatmaps_copy = hooks.preprocess(heatmaps_copy, augmenter=self,
-                                             parents=parents)
+            if hooks is not None:
+                heatmaps_copy = hooks.preprocess(
+                    heatmaps_copy, augmenter=self, parents=parents)
 
-        if self._is_activated_with_hooks(heatmaps_copy, parents, hooks):
-            if len(heatmaps_copy) > 0:
-                heatmaps_result = self._augment_heatmaps(
-                    heatmaps_copy,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # self.random_state.advance_()
-            else:
-                heatmaps_result = heatmaps_copy
-        else:
             heatmaps_result = heatmaps_copy
+            if self._is_activated_with_hooks(heatmaps_copy, parents, hooks):
+                if len(heatmaps_copy) > 0:
+                    heatmaps_result = self._augment_heatmaps(
+                        heatmaps_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            heatmaps_result = hooks.postprocess(
-                heatmaps_result, augmenter=self, parents=parents)
+            if hooks is not None:
+                heatmaps_result = hooks.postprocess(
+                    heatmaps_result, augmenter=self, parents=parents)
 
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        if input_was_single_instance:
-            return heatmaps_result[0]
-        return heatmaps_result
+            if input_was_single_instance:
+                return heatmaps_result[0]
+            return heatmaps_result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         """Augment a batch of heatmaps in-place.
