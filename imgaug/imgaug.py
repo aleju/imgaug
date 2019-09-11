@@ -1589,7 +1589,7 @@ def imresize_single_image(image, sizes, interpolation=None):
     rs = imresize_many_images(
         image[np.newaxis, :, :, :], sizes, interpolation=interpolation)
     if grayscale:
-        return np.squeeze(rs[0, :, :, 0])
+        return rs[0, :, :, 0]
     return rs[0, ...]
 
 
