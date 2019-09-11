@@ -1005,65 +1005,49 @@ class Augmenter(object):
             Augmented keypoints.
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        kpsois = keypoints_on_images
 
-        if parents is None:
-            parents = []
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        input_was_single_instance = False
-        if isinstance(keypoints_on_images, ia.KeypointsOnImage):
-            input_was_single_instance = True
-            keypoints_on_images = [keypoints_on_images]
+            input_was_single_instance = False
+            if isinstance(kpsois, ia.KeypointsOnImage):
+                input_was_single_instance = True
+                kpsois = [kpsois]
 
-        assert ia.is_iterable(keypoints_on_images), (
-            "Expected to get list of imgaug.KeypointsOnImage() "
-            "instances, got %s." % (type(keypoints_on_images),))
-        only_keypoints = all(
-            [isinstance(keypoints_on_image, ia.KeypointsOnImage)
-             for keypoints_on_image in keypoints_on_images])
-        assert only_keypoints, (
-            "Expected to get list of imgaug.KeypointsOnImage() "
-            "instances, got %s." % ([type(el) for el in keypoints_on_images],))
+            iaval.assert_is_iterable_of(kpsois, ia.KeypointsOnImage)
 
-        # copy, but only if topmost call or hooks are provided
-        if len(parents) == 0 or hooks is not None:
-            keypoints_on_images_copy = [keypoints_on_image.deepcopy()
-                                        for keypoints_on_image
-                                        in keypoints_on_images]
-        else:
-            keypoints_on_images_copy = keypoints_on_images
+            # copy, but only if topmost call or hooks are provided
+            kpsois_copy = kpsois
+            if len(parents) == 0 or hooks is not None:
+                kpsois_copy = [kpsoi.deepcopy() for kpsoi in kpsois]
 
-        if hooks is not None:
-            keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
+            if hooks is not None:
+                kpsois_copy = hooks.preprocess(
+                    kpsois_copy, augmenter=self, parents=parents)
 
-        if self._is_activated_with_hooks(keypoints_on_images_copy, parents,
-                                         hooks):
-            if len(keypoints_on_images_copy) > 0:
-                keypoints_on_images_result = self._augment_keypoints(
-                    keypoints_on_images_copy,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # self.random_state.advance_()
-            else:
-                keypoints_on_images_result = keypoints_on_images_copy
-        else:
-            keypoints_on_images_result = keypoints_on_images_copy
+            kpsois_result = kpsois_copy
+            if self._is_activated_with_hooks(kpsois_copy, parents, hooks):
+                if len(kpsois_copy) > 0:
+                    kpsois_result = self._augment_keypoints(
+                        kpsois_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            keypoints_on_images_result = hooks.postprocess(
-                keypoints_on_images_result, augmenter=self, parents=parents)
+            if hooks is not None:
+                kpsois_result = hooks.postprocess(
+                    kpsois_result, augmenter=self, parents=parents)
 
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
+            if input_was_single_instance:
+                return kpsois_result[0]
+            return kpsois_result
 
-        if input_was_single_instance:
-            return keypoints_on_images_result[0]
-        return keypoints_on_images_result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         """Augment a batch of keypoints in-place.
 
         This is the internal version of :func:`Augmenter.augment_keypoints`.
@@ -1336,7 +1320,8 @@ class Augmenter(object):
         """
         from imgaug.augmentables.lines import LineStringsOnImage
 
-        def _subaugment(line_strings_on_images_, random_state_, parents_, hooks_):
+        def _subaugment(line_strings_on_images_, random_state_, parents_,
+                        hooks_):
             return self._augment_line_strings(
                 line_strings_on_images_,
                 random_state=random_state_,
