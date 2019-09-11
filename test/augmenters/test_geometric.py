@@ -6389,8 +6389,7 @@ class TestRot90(unittest.TestCase):
             img_aug,
             ia.imresize_single_image(
                 np.rot90(img_nonsquare, 1, axes=(1, 0)),
-                (5, 4),
-                interpolation="cubic"
+                (5, 4)
             )
         )
 
