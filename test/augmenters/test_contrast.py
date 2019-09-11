@@ -27,7 +27,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import contrast as contrast_lib
-from imgaug.testutils import keypoints_equal, reseed
+from imgaug.testutils import ArgCopyingMagicMock, keypoints_equal, reseed
 
 
 class TestGammaContrast(unittest.TestCase):
@@ -794,22 +794,37 @@ class TestAllChannelsCLAHE(unittest.TestCase):
 
         aug = iaa.AllChannelsCLAHE(clip_limit=20, tile_grid_size_px=17)
 
-        mock_clahe = mock.Mock()
+        mock_clahe = ArgCopyingMagicMock()
         mock_clahe.apply.return_value = img
-        mock_createCLAHE = mock.MagicMock(return_value=mock_clahe)
 
         # image with single channel
-        with mock.patch('cv2.createCLAHE', mock_createCLAHE):
+        with mock.patch('cv2.createCLAHE') as mock_createCLAHE:
+            mock_createCLAHE.return_value = mock_clahe
             _ = aug.augment_image(img)
 
         mock_createCLAHE.assert_called_once_with(
             clipLimit=20, tileGridSize=(17, 17))
         assert np.array_equal(mock_clahe.apply.call_args_list[0][0][0], img)
 
-        mock_clahe.reset_mock()
-
+    def test_basic_functionality_3d(self):
         # image with three channels
-        with mock.patch('cv2.createCLAHE', mock_createCLAHE):
+        img = [
+            [99, 100, 101],
+            [99, 100, 101],
+            [99, 100, 101]
+        ]
+        img = np.uint8(img)
+        img3d = np.tile(img[:, :, np.newaxis], (1, 1, 3))
+        img3d[..., 1] += 1
+        img3d[..., 2] += 2
+
+        aug = iaa.AllChannelsCLAHE(clip_limit=20, tile_grid_size_px=17)
+
+        mock_clahe = ArgCopyingMagicMock()
+        mock_clahe.apply.return_value = img
+
+        with mock.patch('cv2.createCLAHE') as mock_createCLAHE:
+            mock_createCLAHE.return_value = mock_clahe
             _ = aug.augment_image(img3d)
 
         clist = mock_clahe.apply.call_args_list
