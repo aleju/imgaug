@@ -3736,46 +3736,38 @@ class Rot90(meta.Augmenter):
         return arrs_aug
 
     def _augment_images(self, images, random_state, parents, hooks):
-        resize_func = partial(ia.imresize_single_image, interpolation="cubic")
+        resize_func = partial(ia.imresize_single_image)
         images_aug, _ = self._augment_arrays(images, random_state, resize_func)
         return images_aug
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        arrs = [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps]
-        arrs_aug, ks = self._augment_arrays(arrs, random_state, None)
-        heatmaps_aug = []
-        for heatmaps_i, arr_aug, k_i in zip(heatmaps, arrs_aug, ks):
-            shape_orig = heatmaps_i.arr_0to1.shape
-            heatmaps_i.arr_0to1 = arr_aug
-            if self.keep_size:
-                heatmaps_i = heatmaps_i.resize(shape_orig[0:2])
-            elif k_i % 2 == 1:
-                h, w = heatmaps_i.shape[0:2]
-                heatmaps_i.shape = tuple([w, h] + list(heatmaps_i.shape[2:]))
-            else:
-                # keep_size was False, but rotated by a multiple of 2,
-                # hence height and width do not change
-                pass
-            heatmaps_aug.append(heatmaps_i)
-        return heatmaps_aug
+        return self._augment_hms_and_segmaps(heatmaps, "arr_0to1",
+                                             random_state)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        arrs = [segmaps_i.arr for segmaps_i in segmaps]
+        return self._augment_hms_and_segmaps(segmaps, "arr", random_state)
+
+    def _augment_hms_and_segmaps(self, augmentables, arr_attr_name,
+                                 random_state):
+        arrs = [getattr(segmaps_i, arr_attr_name)
+                for segmaps_i in augmentables]
         arrs_aug, ks = self._augment_arrays(arrs, random_state, None)
         segmaps_aug = []
-        for segmaps_i, arr_aug, k_i in zip(segmaps, arrs_aug, ks):
-            shape_orig = segmaps_i.arr.shape
-            segmaps_i.arr = arr_aug
+        gen = zip(augmentables, arrs, arrs_aug, ks)
+        for augmentable_i, arr, arr_aug, k_i in gen:
+            shape_orig = arr.shape
+            setattr(augmentable_i, arr_attr_name, arr_aug)
             if self.keep_size:
-                segmaps_i = segmaps_i.resize(shape_orig[0:2])
+                augmentable_i = augmentable_i.resize(shape_orig[0:2])
             elif k_i % 2 == 1:
-                h, w = segmaps_i.shape[0:2]
-                segmaps_i.shape = tuple([w, h] + list(segmaps_i.shape[2:]))
+                h, w = augmentable_i.shape[0:2]
+                augmentable_i.shape = tuple(
+                    [w, h] + list(augmentable_i.shape[2:]))
             else:
                 # keep_size was False, but rotated by a multiple of 2,
                 # hence height and width do not change
                 pass
-            segmaps_aug.append(segmaps_i)
+            segmaps_aug.append(augmentable_i)
         return segmaps_aug
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
