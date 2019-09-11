@@ -27,6 +27,8 @@ class ArgCopyingMagicMock(mock.MagicMock):
     This is useful for imgaug as many augmentation methods change data
     in-place.
 
+    Taken from https://stackoverflow.com/a/23264042/3760780
+
     """
 
     def _mock_call(_mock_self, *args, **kwargs):
