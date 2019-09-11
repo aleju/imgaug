@@ -1239,17 +1239,9 @@ class Augmenter(object):
         """
         from imgaug.augmentables.polys import PolygonsOnImage
 
-        def _subaugment(polygons_on_images_, random_state_, parents_, hooks_):
-            return self._augment_polygons(
-                polygons_on_images_,
-                random_state=random_state_,
-                parents=parents_,
-                hooks=hooks_
-            )
-
         return self._augment_coord_augables(
             cls_expected=PolygonsOnImage,
-            subaugment_func=_subaugment,
+            subaugment_func=self._augment_polygons,
             augables_ois=polygons_on_images,
             parents=parents,
             hooks=hooks
@@ -1320,18 +1312,9 @@ class Augmenter(object):
         """
         from imgaug.augmentables.lines import LineStringsOnImage
 
-        def _subaugment(line_strings_on_images_, random_state_, parents_,
-                        hooks_):
-            return self._augment_line_strings(
-                line_strings_on_images_,
-                random_state=random_state_,
-                parents=parents_,
-                hooks=hooks_
-            )
-
         return self._augment_coord_augables(
             cls_expected=LineStringsOnImage,
-            subaugment_func=_subaugment,
+            subaugment_func=self._augment_line_strings,
             augables_ois=line_strings_on_images,
             parents=parents,
             hooks=hooks
