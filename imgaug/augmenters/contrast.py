@@ -1016,8 +1016,7 @@ class AllChannelsCLAHE(meta.Augmenter):
                     c_param += 1
 
             # combine channels to one image
-            image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
-            image_warped = image_warped.transpose((1, 2, 0))
+            image_warped = np.stack(image_warped, axis=-1)
 
             images[i] = image_warped
         return images
