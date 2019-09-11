@@ -874,60 +874,44 @@ class Augmenter(object):
             Corresponding augmented segmentation map(s).
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        if parents is None:
-            parents = []
+            input_was_single_instance = False
+            if isinstance(segmaps, ia.SegmentationMapsOnImage):
+                input_was_single_instance = True
+                segmaps = [segmaps]
 
-        input_was_single_instance = False
-        if isinstance(segmaps, ia.SegmentationMapsOnImage):
-            input_was_single_instance = True
-            segmaps = [segmaps]
+            iaval.assert_is_iterable_of(segmaps, ia.SegmentationMapsOnImage)
 
-        assert ia.is_iterable(segmaps), (
-            "Expected to get list of imgaug.SegmentationMapsOnImage() "
-            "instances, got %s." % (type(segmaps),))
-        only_segmaps = all(
-            [isinstance(segmaps_i, ia.SegmentationMapsOnImage)
-             for segmaps_i in segmaps])
-        assert only_segmaps, (
-            "Expected to get list of imgaug.SegmentationMapsOnImage() "
-            "instances, got %s." % ([type(el) for el in segmaps],))
-
-        # copy, but only if topmost call or hooks are provided
-        if len(parents) == 0 or hooks is not None:
-            segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
-        else:
+            # copy, but only if topmost call or hooks are provided
             segmaps_copy = segmaps
+            if len(parents) == 0 or hooks is not None:
+                segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
 
-        if hooks is not None:
-            segmaps_copy = hooks.preprocess(segmaps_copy, augmenter=self, parents=parents)
+            if hooks is not None:
+                segmaps_copy = hooks.preprocess(
+                    segmaps_copy, augmenter=self, parents=parents)
 
-        if self._is_activated_with_hooks(segmaps_copy, parents, hooks):
-            if len(segmaps_copy) > 0:
-                segmaps_result = self._augment_segmentation_maps(
-                    segmaps_copy,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # self.random_state.advance_()
-            else:
-                segmaps_result = segmaps_copy
-        else:
             segmaps_result = segmaps_copy
+            if self._is_activated_with_hooks(segmaps_copy, parents, hooks):
+                if len(segmaps_copy) > 0:
+                    segmaps_result = self._augment_segmentation_maps(
+                        segmaps_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            segmaps_result = hooks.postprocess(segmaps_result, augmenter=self,
-                                               parents=parents)
+            if hooks is not None:
+                segmaps_result = hooks.postprocess(
+                    segmaps_result, augmenter=self, parents=parents)
 
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        if input_was_single_instance:
-            return segmaps_result[0]
-        return segmaps_result
+            if input_was_single_instance:
+                return segmaps_result[0]
+            return segmaps_result
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         """Augment a batch of segmentation in-place.
