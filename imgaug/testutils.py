@@ -31,12 +31,11 @@ class ArgCopyingMagicMock(mock.MagicMock):
 
     """
 
-    def _mock_call(_mock_self, *args, **kwargs):
+    def _mock_call(self, *args, **kwargs):
         args_copy = copy.deepcopy(args)
         kwargs_copy = copy.deepcopy(kwargs)
-        return super(
-            ArgCopyingMagicMock, _mock_self
-        )._mock_call(*args_copy, **kwargs_copy)
+        return super(ArgCopyingMagicMock, self)._mock_call(
+            *args_copy, **kwargs_copy)
 
 
 def create_random_images(size):
