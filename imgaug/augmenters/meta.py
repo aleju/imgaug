@@ -30,7 +30,6 @@ Note: WithColorspace is in ``color.py``.
 """
 from __future__ import print_function, division, absolute_import
 
-import warnings
 from abc import ABCMeta, abstractmethod
 import copy as copy_module
 import re
@@ -147,11 +146,51 @@ def estimate_max_number_of_channels(images):
 def copy_arrays(arrays):
     if ia.is_np_array(arrays):
         return np.copy(arrays)
-    else:
-        assert ia.is_iterable(arrays), (
-            "Expected ndarray or iterable of ndarray, got type %s." % (
-                type(arrays),))
-        return [np.copy(array) for array in arrays]
+    return [np.copy(array) for array in arrays]
+
+
+def _add_channel_axis(arrs):
+    if ia.is_np_array(arrs):
+        if arrs.ndim == 3:  # (N,H,W)
+            return arrs[..., np.newaxis]  # (N,H,W) -> (N,H,W,1)
+        return arrs
+    return [
+        arr[..., np.newaxis]  # (H,W) -> (H,W,1)
+        if arr.ndim == 2
+        else arr
+        for arr in arrs
+    ]
+
+
+def _remove_added_channel_axis(arrs_added, arrs_orig):
+    if ia.is_np_array(arrs_orig):
+        if arrs_orig.ndim == 3:  # (N,H,W)
+            if ia.is_np_array(arrs_added):
+                return arrs_added[..., 0]  # (N,H,W,1) -> (N,H,W)
+            # (N,H,W) -> (N,H,W,1) -> <augmentation> -> list of (H,W,1)
+            return [arr[..., 0] for arr in arrs_added]
+        return arrs_added
+    return [
+        arr_added[..., 0]
+        if arr_orig.ndim == 2
+        else arr_added   # (H,W,1) -> (H,W)
+        for arr_added, arr_orig
+        in zip(arrs_added, arrs_orig)
+    ]
+
+
+class _maybe_deterministic_context(object):
+    def __init__(self, augmenter):
+        self.augmenter = augmenter
+        self.old_state = None
+
+    def __enter__(self):
+        if self.augmenter.deterministic:
+            self.old_state = self.augmenter.random_state.state
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        if self.old_state is not None:
+            self.augmenter.random_state.state = self.old_state
 
 
 @six.add_metaclass(ABCMeta)
@@ -476,8 +515,6 @@ class Augmenter(object):
             batch = batch_orig.fill_from_augmented_normalized_batch(batch)
         return batch
 
-    # TODO is that used by augment_batches()?
-    # TODO should this simply be removed?
     def _is_activated_with_hooks(self, augmentables, parents, hooks):
         is_activated = (
             (hooks is None and self.activated)
@@ -566,114 +603,16 @@ class Augmenter(object):
         gaussian blurring to them.
 
         """
-        if parents is not None and len(parents) > 0 and hooks is None:
-            # This is a child call. The data has already been validated and
-            # copied. We don't need to copy it again for hooks, as these
-            # don't exist. So we can augment here fully in-place.
-            if not self.activated or len(images) == 0:
-                return images
+        with _maybe_deterministic_context(self):
+            if parents is not None and len(parents) > 0 and hooks is None:
+                # This is a child call. The data has already been validated and
+                # copied. We don't need to copy it again for hooks, as these
+                # don't exist. So we can augment here fully in-place.
+                if not self.activated or len(images) == 0:
+                    return images
 
-            if self.deterministic:
-                state_orig = self.random_state.state
-
-            images_result = self._augment_images(
-                images,
-                random_state=self.random_state,
-                parents=parents,
-                hooks=hooks
-            )
-            # move "forward" the random state, so that the next call to
-            # augment_images() will use different random values
-            # This is currently deactivated as the RNG is no longer copied
-            # for the _augment_* call.
-            # self.random_state.advance_()
-
-            if self.deterministic:
-                self.random_state.set_state_(state_orig)
-
-            return images_result
-
-        #
-        # Everything below is for non-in-place augmentation.
-        # It was either the first call (no parents) or hooks were provided.
-        #
-        if self.deterministic:
-            state_orig = self.random_state.state
-
-        if parents is None:
-            parents = []
-
-        if ia.is_np_array(images):
-            input_type = "array"
-            input_added_axis = False
-
-            assert images.ndim in [3, 4], (
-                "Expected 3d/4d array of form (N, height, width) or (N, "
-                "height, width, channels), got shape %s." % (images.shape,))
-
-            # copy the input, we don't want to augment it in-place
-            images_copy = np.copy(images)
-
-            if images_copy.ndim == 3 and images_copy.shape[-1] in [1, 3]:
-                ia.warn(
-                    "You provided a numpy array of shape %s as input to "
-                    "augment_images(), which was interpreted as (N, H, W). "
-                    "The last dimension however has value 1 or 3, which "
-                    "indicates that you provided a single image with shape "
-                    "(H, W, C) instead. If that is the case, you should use "
-                    "augment_image(image) or augment_images([image]), "
-                    "otherwise you will not get the expected "
-                    "augmentations." % (images_copy.shape,))
-
-            # for 2D input images (i.e. shape (N, H, W)), we add a channel
-            # axis (i.e. (N, H, W, 1)), so that all augmenters can rely on
-            # the input having a channel axis and don't have to add if/else
-            # statements for 2D images
-            if images_copy.ndim == 3:
-                images_copy = images_copy[..., np.newaxis]
-                input_added_axis = True
-        elif ia.is_iterable(images):
-            input_type = "list"
-            input_added_axis = []
-
-            if len(images) == 0:
-                images_copy = []
-            else:
-                assert all(image.ndim in [2, 3] for image in images), (
-                    "Expected list of images with each image having shape "
-                    "(height, width) or (height, width, channels), got "
-                    "shapes %s." % ([image.shape for image in images],))
-
-                # copy images and add channel axis for 2D images (see above,
-                # as for list inputs each image can have different shape, it
-                # is done here on a per images basis)
-                images_copy = []
-                input_added_axis = []
-                for image in images:
-                    image_copy = np.copy(image)
-                    if image.ndim == 2:
-                        image_copy = image_copy[:, :, np.newaxis]
-                        input_added_axis.append(True)
-                    else:
-                        input_added_axis.append(False)
-                    images_copy.append(image_copy)
-        else:
-            raise Exception(
-                "Expected images as one numpy array or list/tuple of numpy "
-                "arrays, got %s." % (
-                    type(images),))
-
-        if hooks is not None:
-            images_copy = hooks.preprocess(images_copy, augmenter=self,
-                                           parents=parents)
-
-        # the is_activated() call allows to use hooks that selectively
-        # deactivate specific augmenters in previously defined augmentation
-        # sequences
-        if self._is_activated_with_hooks(images_copy, parents, hooks):
-            if len(images) > 0:
                 images_result = self._augment_images(
-                    images_copy,
+                    images,
                     random_state=self.random_state,
                     parents=parents,
                     hooks=hooks
@@ -683,37 +622,75 @@ class Augmenter(object):
                 # This is currently deactivated as the RNG is no longer copied
                 # for the _augment_* call.
                 # self.random_state.advance_()
+
+                return images_result
+
+            #
+            # Everything below is for non-in-place augmentation.
+            # It was either the first call (no parents) or hooks were provided.
+            #
+            if parents is None:
+                parents = []
+
+            if ia.is_np_array(images):
+                assert images.ndim in [3, 4], (
+                    "Expected 3d/4d array of form (N, height, width) or (N, "
+                    "height, width, channels), got shape %s." % (images.shape,))
+
+                if images.ndim == 3 and images.shape[-1] in [1, 3]:
+                    ia.warn(
+                        "You provided a numpy array of shape %s as input to "
+                        "augment_images(), which was interpreted as "
+                        "(N, H, W). The last dimension however has value 1 or "
+                        "3, which indicates that you provided a single image "
+                        "with shape (H, W, C) instead. If that is the case, "
+                        "you should use augment_image(image) or "
+                        "augment_images([image]), otherwise you will not get "
+                        "the expected augmentations." % (images.shape,))
+            elif ia.is_iterable(images):
+                if images:
+                    assert all(image.ndim in [2, 3] for image in images), (
+                        "Expected list of images with each image having shape "
+                        "(height, width) or (height, width, channels), got "
+                        "shapes %s." % ([image.shape for image in images],))
             else:
-                images_result = images_copy
-        else:
+                raise Exception(
+                    "Expected images as one numpy array or list/tuple of "
+                    "numpy arrays, got %s." % (type(images),))
+
+            images_orig = images
+            images_copy = _add_channel_axis(copy_arrays(images))
+
+            if hooks is not None:
+                images_copy = hooks.preprocess(images_copy, augmenter=self,
+                                               parents=parents)
+
+            # the is_activated() call allows to use hooks that selectively
+            # deactivate specific augmenters in previously defined augmentation
+            # sequences
             images_result = images_copy
+            if self._is_activated_with_hooks(images_copy, parents, hooks):
+                # don't use "if images:" here, because `images` can be a
+                # numpy array, leading to an 'ambiguous truth' error
+                if len(images) > 0:
+                    images_result = self._augment_images(
+                        images_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # move "forward" the random state, so that the next call to
+                    # augment_images() will use different random values
+                    # This is currently deactivated as the RNG is no longer
+                    # copied for the _augment_* call.
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            images_result = hooks.postprocess(images_result, augmenter=self,
-                                              parents=parents)
+            if hooks is not None:
+                images_result = hooks.postprocess(images_result, augmenter=self,
+                                                  parents=parents)
 
-        # remove temporarily added channel axis for 2D input images
-        output_type = "list" if isinstance(images_result, list) else "array"
-        if input_type == "array":
-            if input_added_axis is True:
-                if output_type == "array":
-                    images_result = np.squeeze(images_result, axis=3)
-                else:
-                    images_result = [np.squeeze(image, axis=2)
-                                     for image in images_result]
-        else:  # input_type == "list"
-            assert len(images_result) == len(images), (
-                "INTERNAL ERROR: Expected number of images to be unchanged "
-                "after augmentation, but was changed from %d to %d." % (
-                    len(images), len(images_result)))
-            for i in sm.xrange(len(images_result)):
-                if input_added_axis[i] is True:
-                    images_result[i] = np.squeeze(images_result[i], axis=2)
-
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        return images_result
+            # remove temporarily added channel axis for 2D input images
+            return _remove_added_channel_axis(images_result, images_orig)
 
     @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
