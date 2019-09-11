@@ -399,6 +399,31 @@
       `JpegCompression`.
     * [rarely breaking] Removed attribute `minimum_quality` from
       `JpegCompression`.
+* Refactored `Affine` to improve code quality and decrease code
+  duplication. #413
+* Refactored `PiecewiseAffine` to improve code quality and decrease code
+  duplication. #413
+* Refactored `PerspectiveTransform` to improve code quality and decrease code
+  duplication. #413
+* Refactored `ElasticTransformation` to improve code quality and decrease code
+  duplication. #413
+  * [rarely breaking] Renamed `ElasticTransformation.generate_shift_maps()` to
+    `ElasticTransformation._generate_shift_maps()`.
+  * [rarely breaking] Renamed `ElasticTransformation.map_coordinates()` to
+    `ElasticTransformation._map_coordinates()`.
+* Refactored `Rot90` to improve code quality and decrease code
+  duplication. #413
+* Added `imgaug.testutils.ArgCopyingMagicMock`. #413
+* Refactored `Augmenter.augment_images()`, `Augmenter.augment_heatmaps()`,
+  `Augmenter.augment_segmentation_maps()`, `Augmenter.augment_polygons()`,
+  `Augmenter.augment_line_strings()` and `Augmenter._augment_coord_augables()`
+  to improve code quality and remove redundancies. #413
+* Refactored `imgaug.imgaug.imresize_single_image()`. #413
+* Added module `imgaug.validation`. #413
+  * Added `imgaug.validation.convert_iterable_to_string_of_types()`.
+  * Added `imgaug.validation.is_iterable_of()`.
+  * Added `imgaug.validation.assert_is_iterable_of()`.
+
 
 ## Improved Segmentation Map Augmentation #302
 
