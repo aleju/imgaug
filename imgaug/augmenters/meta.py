@@ -1358,61 +1358,45 @@ class Augmenter(object):
             Augmented augmentables.
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        if parents is None:
-            parents = []
+            input_was_single_instance = False
+            if isinstance(augables_ois, cls_expected):
+                input_was_single_instance = True
+                augables_ois = [augables_ois]
 
-        input_was_single_instance = False
-        if isinstance(augables_ois, cls_expected):
-            input_was_single_instance = True
-            augables_ois = [augables_ois]
+            iaval.assert_is_iterable_of(augables_ois, cls_expected)
 
-        assert ia.is_iterable(augables_ois), (
-            "Expected to get list of %s instances, got %s." % (
-                cls_expected.__class__.__name__,
-                type(augables_ois),))
-        only_valid_types = all(
-            [isinstance(augable_oi, cls_expected)
-             for augable_oi in augables_ois])
-        assert only_valid_types, (
-            "Expected to get list of %s instances, got %s." % (
-                cls_expected.__class__.__name__,
-                [type(el) for el in augables_ois],))
+            # copy, but only if topmost call or hooks are provided
+            augables_ois_copy = augables_ois
+            if len(parents) == 0 or hooks is not None:
+                augables_ois_copy = [
+                    augable_oi.deepcopy() for augable_oi in augables_ois]
 
-        # copy, but only if topmost call or hooks are provided
-        augables_ois_copy = augables_ois
-        if len(parents) == 0 or hooks is not None:
-            augables_ois_copy = [augable_oi.deepcopy()
-                                 for augable_oi
-                                 in augables_ois]
+            if hooks is not None:
+                augables_ois_copy = hooks.preprocess(
+                    augables_ois_copy, augmenter=self, parents=parents)
 
-        if hooks is not None:
-            augables_ois_copy = hooks.preprocess(
-                augables_ois_copy, augmenter=self, parents=parents)
+            augables_ois_result = augables_ois_copy
+            if self._is_activated_with_hooks(augables_ois_copy, parents, hooks):
+                if len(augables_ois) > 0:
+                    augables_ois_result = subaugment_func(
+                        augables_ois_copy,
+                        self.random_state,
+                        parents,
+                        hooks
+                    )
+                    # self.random_state.advance_()
 
-        augables_ois_result = augables_ois_copy
-        if self._is_activated_with_hooks(augables_ois_copy, parents, hooks):
-            if len(augables_ois) > 0:
-                augables_ois_result = subaugment_func(
-                    augables_ois_copy,
-                    self.random_state,
-                    parents,
-                    hooks
-                )
-                # self.random_state.advance_()
+            if hooks is not None:
+                augables_ois_result = hooks.postprocess(
+                    augables_ois_result, augmenter=self, parents=parents)
 
-        if hooks is not None:
-            augables_ois_result = hooks.postprocess(
-                augables_ois_result, augmenter=self, parents=parents)
-
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        if input_was_single_instance:
-            return augables_ois_result[0]
-        return augables_ois_result
+            if input_was_single_instance:
+                return augables_ois_result[0]
+            return augables_ois_result
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
