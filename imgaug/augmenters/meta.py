@@ -4413,122 +4413,97 @@ class AssertShape(Lambda):
             "Expected shape to have length 4, got %d with shape: %s." % (
                 len(shape), str(shape)))
 
-        def compare(observed, expected, dimension, image_index):
-            if expected is not None:
-                if ia.is_single_integer(expected):
-                    assert observed == expected, (
-                        "Expected dim %d (entry index: %s) to have value %d, "
-                        "got %d." % (dimension, image_index, expected,
-                                     observed))
-                elif isinstance(expected, tuple):
-                    assert len(expected) == 2, (
-                        "Expected tuple argument 'expected' to contain "
-                        "exactly 2 entries, got %d." % (len(expected),))
-                    assert expected[0] <= observed < expected[1], (
-                        "Expected dim %d (entry index: %s) to have value in "
-                        "interval [%d, %d), got %d." % (
-                            dimension, image_index, expected[0], expected[1],
-                            observed))
-                elif isinstance(expected, list):
-                    assert any([observed == val for val in expected]), (
-                        "Expected dim %d (entry index: %s) to have any value "
-                        "of %s, got %d." % (
-                            dimension, image_index, str(expected), observed))
-                else:
-                    raise Exception(
-                        "Invalid datatype for shape entry %d, expected each "
-                        "entry to be an integer, a tuple (with two entries) "
-                        "or a list, got %s." % (dimension, type(expected),))
-
-        def func_images(images, _random_state, _parents, _hooks):
-            if check_images:
-                if isinstance(images, list):
-                    if shape[0] is not None:
-                        compare(len(images), shape[0], 0, "ALL")
-
-                    for i in sm.xrange(len(images)):
-                        image = images[i]
-                        assert len(image.shape) == 3, (
-                            "Expected image number %d to have a shape of "
-                            "length 3, got %d (shape: %s)." % (
-                                i, len(image.shape), str(image.shape)))
-                        for j in sm.xrange(len(shape)-1):
-                            expected = shape[j+1]
-                            observed = image.shape[j]
-                            compare(observed, expected, j, i)
-                else:
-                    assert len(images.shape) == 4, (
-                        "Expected image's shape to have length 4, got %d "
-                        "(shape: %s)." % (len(images.shape),
-                                          str(images.shape)))
-                    for i in range(4):
-                        expected = shape[i]
-                        observed = images.shape[i]
-                        compare(observed, expected, i, "ALL")
-            return images
-
-        def func_heatmaps(heatmaps, _random_state, _parents, _hooks):
-            if check_heatmaps:
-                if shape[0] is not None:
-                    compare(len(heatmaps), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(heatmaps)):
-                    heatmaps_i = heatmaps[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = heatmaps_i.arr_0to1.shape[j]
-                        compare(observed, expected, j, i)
-            return heatmaps
-
-        def func_segmentation_maps(segmaps, _random_state, _parents, _hooks):
-            if check_segmentation_maps:
-                if shape[0] is not None:
-                    compare(len(segmaps), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(segmaps)):
-                    segmaps_i = segmaps[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = segmaps_i.arr.shape[j]
-                        compare(observed, expected, j, i)
-            return segmaps
-
-        def func_keypoints(keypoints_on_images, _random_state, _parents,
-                           _hooks):
-            if check_keypoints:
-                if shape[0] is not None:
-                    compare(len(keypoints_on_images), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(keypoints_on_images)):
-                    keypoints_on_image = keypoints_on_images[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = keypoints_on_image.shape[j]
-                        compare(observed, expected, j, i)
-            return keypoints_on_images
-
-        def func_polygons(polygons_on_images, _random_state, _parents, _hooks):
-            if check_polygons:
-                if shape[0] is not None:
-                    compare(len(polygons_on_images), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(polygons_on_images)):
-                    polygons_on_image = polygons_on_images[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = polygons_on_image.shape[j]
-                        compare(observed, expected, j, i)
-            return polygons_on_images
+        self.shape = shape
+        self.is_checking_images = check_images
+        self.is_checking_heatmaps = check_heatmaps
+        self.is_checking_segmentation_maps = check_segmentation_maps
+        self.is_checking_keypoints = check_keypoints
+        self.is_checking_polygons = check_polygons
 
         super(AssertShape, self).__init__(
-            func_images=func_images,
-            func_heatmaps=func_heatmaps,
-            func_segmentation_maps=func_segmentation_maps,
-            func_keypoints=func_keypoints,
-            func_polygons=func_polygons,
+            func_images=self._check_images,
+            func_heatmaps=self._check_heatmaps,
+            func_segmentation_maps=self._check_segmentation_maps,
+            func_keypoints=self._check_keypoints,
+            func_polygons=self._check_polygons,
             name=name,
             deterministic=deterministic,
             random_state=random_state)
+
+    @classmethod
+    def _compare(cls, observed, expected, dimension, image_index):
+        if expected is not None:
+            if ia.is_single_integer(expected):
+                assert observed == expected, (
+                    "Expected dim %d (entry index: %s) to have value %d, "
+                    "got %d." % (dimension, image_index, expected,
+                                 observed))
+            elif isinstance(expected, tuple):
+                assert len(expected) == 2, (
+                    "Expected tuple argument 'expected' to contain "
+                    "exactly 2 entries, got %d." % (len(expected),))
+                assert expected[0] <= observed < expected[1], (
+                    "Expected dim %d (entry index: %s) to have value in "
+                    "interval [%d, %d), got %d." % (
+                        dimension, image_index, expected[0], expected[1],
+                        observed))
+            elif isinstance(expected, list):
+                assert any([observed == val for val in expected]), (
+                    "Expected dim %d (entry index: %s) to have any value "
+                    "of %s, got %d." % (
+                        dimension, image_index, str(expected), observed))
+            else:
+                raise Exception(
+                    "Invalid datatype for shape entry %d, expected each "
+                    "entry to be an integer, a tuple (with two entries) "
+                    "or a list, got %s." % (dimension, type(expected),))
+
+    def _check_augmentables(self, augmentables, get_shape_func,
+                            shape_target=None):
+        if shape_target is None:
+            # 0:3 so that we don't check C for most augmentables
+            shape_target = self.shape[0:3]
+
+        if self.shape[0] is not None:
+            self._compare(len(augmentables), shape_target[0], 0, "ALL")
+
+        for augm_idx, augmentable in enumerate(augmentables):
+            # note that dim_idx is here per object, dim 0 of shape target
+            # denotes "number of all objects" and was checked above
+            for dim_idx, expected in enumerate(shape_target[1:]):
+                observed = get_shape_func(augmentable)[dim_idx]
+                self._compare(observed, expected, dim_idx, augm_idx)
+
+    def _check_images(self, images, _random_state, _parents, _hooks):
+        if self.is_checking_images:
+            # set shape_target so that we check all target dimensions,
+            # including C, which isn't checked for the other methods
+            self._check_augmentables(images, lambda obj: obj.shape,
+                                     shape_target=self.shape)
+        return images
+
+    def _check_heatmaps(self, heatmaps, _random_state, _parents, _hooks):
+        if self.is_checking_heatmaps:
+            self._check_augmentables(heatmaps, lambda obj: obj.arr_0to1.shape)
+        return heatmaps
+
+    def _check_segmentation_maps(self, segmaps, _random_state, _parents,
+                                 _hooks):
+        if self.is_checking_segmentation_maps:
+            self._check_augmentables(segmaps, lambda obj: obj.arr.shape)
+        return segmaps
+
+    def _check_keypoints(self, keypoints_on_images, _random_state, _parents,
+                         _hooks):
+        if self.is_checking_keypoints:
+            self._check_augmentables(keypoints_on_images, lambda obj: obj.shape)
+        return keypoints_on_images
+
+    def _check_polygons(self, polygons_on_images, _random_state, _parents,
+                        _hooks):
+        if self.is_checking_polygons:
+            self._check_augmentables(polygons_on_images, lambda obj: obj.shape)
+        return polygons_on_images
 
 
 class ChannelShuffle(Augmenter):
