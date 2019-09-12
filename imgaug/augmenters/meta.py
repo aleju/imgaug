@@ -3148,36 +3148,41 @@ class SomeOf(Augmenter, list):
             raise Exception("Expected None or Augmenter or list of Augmenter, "
                             "got %s." % (type(children),))
 
-        if ia.is_single_number(n):
-            self.n = int(n)
-            self.n_mode = "deterministic"
-        elif n is None:
-            self.n = None
-            self.n_mode = "None"
-        elif ia.is_iterable(n):
-            assert len(n) == 2, (
-                "Expected iterable 'n' to contain exactly two values, "
-                "got %d." % (len(n),))
-            if ia.is_single_number(n[0]) and n[1] is None:
-                self.n = (int(n[0]), None)
-                self.n_mode = "(int,None)"
-            elif ia.is_single_number(n[0]) and ia.is_single_number(n[1]):
-                self.n = iap.DiscreteUniform(int(n[0]), int(n[1]))
-                self.n_mode = "stochastic"
-            else:
-                raise Exception("Expected tuple of (int, None) or (int, int), "
-                                "got %s" % ([type(el) for el in n],))
-        elif isinstance(n, iap.StochasticParameter):
-            self.n = n
-            self.n_mode = "stochastic"
-        else:
-            raise Exception("Expected int, (int, None), (int, int) or "
-                            "StochasticParameter, got %s" % (type(n),))
+        self.n, self.n_mode = self._handle_arg_n(n)
 
         assert ia.is_single_bool(random_order), (
             "Expected random_order to be boolean, got %s." % (
                 type(random_order),))
         self.random_order = random_order
+
+    @classmethod
+    def _handle_arg_n(cls, n):
+        if ia.is_single_number(n):
+            n = int(n)
+            n_mode = "deterministic"
+        elif n is None:
+            n = None
+            n_mode = "None"
+        elif ia.is_iterable(n):
+            assert len(n) == 2, (
+                "Expected iterable 'n' to contain exactly two values, "
+                "got %d." % (len(n),))
+            if ia.is_single_number(n[0]) and n[1] is None:
+                n = (int(n[0]), None)
+                n_mode = "(int,None)"
+            elif ia.is_single_number(n[0]) and ia.is_single_number(n[1]):
+                n = iap.DiscreteUniform(int(n[0]), int(n[1]))
+                n_mode = "stochastic"
+            else:
+                raise Exception("Expected tuple of (int, None) or (int, int), "
+                                "got %s" % ([type(el) for el in n],))
+        elif isinstance(n, iap.StochasticParameter):
+            n = n
+            n_mode = "stochastic"
+        else:
+            raise Exception("Expected int, (int, None), (int, int) or "
+                            "StochasticParameter, got %s" % (type(n),))
+        return n, n_mode
 
     def _get_n(self, nb_images, random_state):
         if self.n_mode == "deterministic":
@@ -3218,71 +3223,74 @@ class SomeOf(Augmenter, list):
         )
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if self._is_propagating(images, parents, hooks):
-            input_is_array = ia.is_np_array(images)
+        if not self._is_propagating(images, parents, hooks):
+            return images
 
-            # This must happen before creating the augmenter_active array,
-            # otherwise in case of determinism the number of augmented images
-            # would change the random_state's state, resulting in the order
-            # being dependent on the number of augmented images (and not be
-            # constant). By doing this first, the random state is always the
-            # same (when determinism is active), so the order is always the
-            # same.
-            augmenter_order = self._get_augmenter_order(random_state)
+        input_is_array = ia.is_np_array(images)
 
-            # create an array of active augmenters per image
-            # e.g.
-            #  [[0, 0, 1],
-            #   [1, 0, 1],
-            #   [1, 0, 0]]
-            # would signal, that augmenter 3 is active for the first image,
-            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(images),
-                                                          random_state)
+        # This must happen before creating the augmenter_active array,
+        # otherwise in case of determinism the number of augmented images
+        # would change the random_state's state, resulting in the order
+        # being dependent on the number of augmented images (and not be
+        # constant). By doing this first, the random state is always the
+        # same (when determinism is active), so the order is always the
+        # same.
+        augmenter_order = self._get_augmenter_order(random_state)
 
-            for augmenter_index in augmenter_order:
-                active = augmenter_active[:, augmenter_index].nonzero()[0]
-                if len(active) > 0:
-                    # pick images to augment, i.e. images for which
-                    # augmenter at current index is active
-                    if input_is_array:
-                        images_to_aug = images[active]
+        # create an array of active augmenters per image
+        # e.g.
+        #  [[0, 0, 1],
+        #   [1, 0, 1],
+        #   [1, 0, 0]]
+        # would signal, that augmenter 3 is active for the first image,
+        # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
+        augmenter_active = self._get_augmenter_active(len(images),
+                                                      random_state)
+
+        for augmenter_index in augmenter_order:
+            active = augmenter_active[:, augmenter_index].nonzero()[0]
+            if len(active) > 0:
+                # pick images to augment, i.e. images for which
+                # augmenter at current index is active
+                if input_is_array:
+                    images_to_aug = images[active]
+                else:
+                    images_to_aug = [images[idx] for idx in active]
+
+                # augment the images
+                images_to_aug = self[augmenter_index].augment_images(
+                    images=images_to_aug,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+                output_is_array = ia.is_np_array(images_to_aug)
+                output_all_same_shape = len(
+                    set([img.shape for img in images_to_aug])) == 1
+
+                # Map them back to their position in the images array/list
+                # But it can happen that the augmented images have
+                # different shape(s) from the input image, as well as
+                # being suddenly a list instead of a numpy array.
+                # This is usually the case if a child augmenter has to
+                # change shapes, e.g. due to cropping (without resize
+                # afterwards). So accomodate here for that possibility.
+                if input_is_array:
+                    if not output_is_array and output_all_same_shape:
+                        images_to_aug = np.array(
+                            images_to_aug, dtype=images.dtype)
+                        output_is_array = True
+
+                    if (output_is_array
+                            and images_to_aug.shape[1:] == images.shape[1:]):
+                        images[active] = images_to_aug
                     else:
-                        images_to_aug = [images[idx] for idx in active]
-
-                    # augment the images
-                    images_to_aug = self[augmenter_index].augment_images(
-                        images=images_to_aug,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-                    output_is_array = ia.is_np_array(images_to_aug)
-                    output_all_same_shape = len(
-                        set([img.shape for img in images_to_aug])) == 1
-
-                    # Map them back to their position in the images array/list
-                    # But it can happen that the augmented images have
-                    # different shape(s) from the input image, as well as
-                    # being suddenly a list instead of a numpy array.
-                    # This is usually the case if a child augmenter has to
-                    # change shapes, e.g. due to cropping (without resize
-                    # afterwards). So accomodate here for that possibility.
-                    if input_is_array:
-                        if not output_is_array and output_all_same_shape:
-                            images_to_aug = np.array(
-                                images_to_aug, dtype=images.dtype)
-                            output_is_array = True
-
-                        if output_is_array and images_to_aug.shape[1:] == images.shape[1:]:
-                            images[active] = images_to_aug
-                        else:
-                            images = list(images)
-                            for aug_idx, original_idx in enumerate(active):
-                                images[original_idx] = images_to_aug[aug_idx]
-                            input_is_array = False
-                    else:
+                        images = list(images)
                         for aug_idx, original_idx in enumerate(active):
                             images[original_idx] = images_to_aug[aug_idx]
+                        input_is_array = False
+                else:
+                    for aug_idx, original_idx in enumerate(active):
+                        images[original_idx] = images_to_aug[aug_idx]
 
         return images
 
