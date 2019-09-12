@@ -4588,9 +4588,9 @@ class ChannelShuffle(Augmenter):
         p_samples = self.p.draw_samples((nb_images,),
                                         random_state=random_state)
         rss = random_state.duplicate(nb_images)
-        for i in sm.xrange(nb_images):
-            if p_samples[i] >= 1-1e-4:
-                images[i] = shuffle_channels(images[i], rss[i], self.channels)
+        for i, (image, p_i, rs) in enumerate(zip(images, p_samples, rss)):
+            if p_i >= 1-1e-4:
+                images[i] = shuffle_channels(image, rs, self.channels)
         return images
 
     def get_parameters(self):
