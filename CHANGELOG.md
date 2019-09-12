@@ -400,29 +400,40 @@
     * [rarely breaking] Removed attribute `minimum_quality` from
       `JpegCompression`.
 * Refactored `Affine` to improve code quality and decrease code
-  duplication. #413
+  duplication. #414
 * Refactored `PiecewiseAffine` to improve code quality and decrease code
-  duplication. #413
+  duplication. #414
 * Refactored `PerspectiveTransform` to improve code quality and decrease code
-  duplication. #413
+  duplication. #414
 * Refactored `ElasticTransformation` to improve code quality and decrease code
-  duplication. #413
+  duplication. #414
   * [rarely breaking] Renamed `ElasticTransformation.generate_shift_maps()` to
     `ElasticTransformation._generate_shift_maps()`.
   * [rarely breaking] Renamed `ElasticTransformation.map_coordinates()` to
     `ElasticTransformation._map_coordinates()`.
 * Refactored `Rot90` to improve code quality and decrease code
-  duplication. #413
-* Added `imgaug.testutils.ArgCopyingMagicMock`. #413
+  duplication. #414
+* Added `imgaug.testutils.ArgCopyingMagicMock`. #414
 * Refactored `Augmenter.augment_images()`, `Augmenter.augment_heatmaps()`,
   `Augmenter.augment_segmentation_maps()`, `Augmenter.augment_polygons()`,
   `Augmenter.augment_line_strings()` and `Augmenter._augment_coord_augables()`
-  to improve code quality and remove redundancies. #413
-* Refactored `imgaug.imgaug.imresize_single_image()`. #413
-* Added module `imgaug.validation`. #413
+  to improve code quality and remove redundancies. #414
+* Refactored `imgaug.imgaug.imresize_single_image()`. #414
+* Added module `imgaug.validation`. #414
   * Added `imgaug.validation.convert_iterable_to_string_of_types()`.
   * Added `imgaug.validation.is_iterable_of()`.
   * Added `imgaug.validation.assert_is_iterable_of()`.
+* Refactored `Sequential` to reduce code duplication. #414
+* Refactored `SomeOf` to improve code quality. #414
+* Refactored `Sometimes` to reduce code duplication. #414
+* Refactored `AssertShape` to reduce code duplication. #414
+* Refactored `ChannelShuffle` to improve code quality. #414
+* [rarely breaking] Changed `KeypointsOnImage.from_keypoints_image()` to
+  return `(x+0.5, y+0.5)` instead of `(x, y)` where `(x, y)` denotes the
+  coordinates of the pixel in which a maximum was found. This change matches
+  the standard that all pixels are given with subpixel accuracy and therefore
+  any whole pixel with a maximum should denote the coordinates of that
+  pixel's center.
 
 
 ## Improved Segmentation Map Augmentation #302
