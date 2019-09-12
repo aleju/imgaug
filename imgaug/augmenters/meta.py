@@ -2942,98 +2942,45 @@ class Sequential(Augmenter, list):
                                     parents=parents, default=True)
         )
 
-    # TODO make the below functions more DRY
     def _augment_images(self, images, random_state, parents, hooks):
-        if self._is_propagating(images, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    images = self[index].augment_images(
-                        images=images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    images = augmenter.augment_images(
-                        images=images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return images
+        return self._augment_augmentables(
+            images, random_state, parents, hooks, "augment_images")
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if self._is_propagating(heatmaps, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    heatmaps = self[index].augment_heatmaps(
-                        heatmaps=heatmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    heatmaps = augmenter.augment_heatmaps(
-                        heatmaps=heatmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return heatmaps
+        return self._augment_augmentables(
+            heatmaps, random_state, parents, hooks, "augment_heatmaps")
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        if self._is_propagating(segmaps, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    segmaps = self[index].augment_segmentation_maps(
-                        segmaps=segmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    segmaps = augmenter.augment_segmentation_maps(
-                        segmaps=segmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return segmaps
+        return self._augment_augmentables(
+            segmaps, random_state, parents, hooks, "augment_segmentation_maps")
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
-        if self._is_propagating(keypoints_on_images, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    keypoints_on_images = self[index].augment_keypoints(
-                        keypoints_on_images=keypoints_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    keypoints_on_images = augmenter.augment_keypoints(
-                        keypoints_on_images=keypoints_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return keypoints_on_images
+        return self._augment_augmentables(
+            keypoints_on_images, random_state, parents, hooks,
+            "augment_keypoints")
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
-        if self._is_propagating(polygons_on_images, parents, hooks):
+        return self._augment_augmentables(
+            polygons_on_images, random_state, parents, hooks,
+            "augment_polygons")
+
+    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
+                              augfunc_name):
+        if self._is_propagating(augmentables, parents, hooks):
             if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    polygons_on_images = self[index].augment_polygons(
-                        polygons_on_images=polygons_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
+                order = random_state.permutation(len(self))
             else:
-                for augmenter in self:
-                    polygons_on_images = augmenter.augment_polygons(
-                        polygons_on_images=polygons_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return polygons_on_images
+                order = sm.xrange(len(self))
+
+            for index in order:
+                augmentables = getattr(self[index], augfunc_name)(
+                    augmentables,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        return augmentables
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
