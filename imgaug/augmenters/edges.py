@@ -37,7 +37,7 @@ from .. import dtypes as iadt
 # TODO this should be placed in some other file than edges.py as it could be
 #      re-used wherever a binary image is the result
 @six.add_metaclass(ABCMeta)
-class BinaryImageColorizerIf(object):
+class IBinaryImageColorizer(object):
     @abstractmethod
     def colorize(self, image_binary, image_original, nth_image, random_state):
         """
@@ -66,7 +66,7 @@ class BinaryImageColorizerIf(object):
 
 
 # TODO see above, this should be moved to another file
-class RandomColorsBinaryImageColorizer(BinaryImageColorizerIf):
+class RandomColorsBinaryImageColorizer(IBinaryImageColorizer):
     """
     Colorizer using two randomly sampled foreground/background colors.
 

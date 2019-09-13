@@ -498,7 +498,7 @@ class TestVoronoi(unittest.TestCase):
         assert mock_imresize.call_args_list[0][1]["interpolation"] == "cubic"
 
     def test_point_sampler_called(self):
-        class LoggedPointSampler(iaa.PointsSamplerIf):
+        class LoggedPointSampler(iaa.IPointsSampler):
             def __init__(self, other):
                 self.other = other
                 self.call_count = 0
@@ -516,7 +516,7 @@ class TestVoronoi(unittest.TestCase):
         assert sampler.call_count == 1
 
     def test_point_sampler_returns_no_points_integrationtest(self):
-        class NoPointsPointSampler(iaa.PointsSamplerIf):
+        class NoPointsPointSampler(iaa.IPointsSampler):
             def sample_points(self, images, random_state):
                 return [np.zeros((0, 2), dtype=np.float32)]
 
@@ -1053,7 +1053,7 @@ class TestRelativeRegularGridPointSampler(unittest.TestCase):
         assert sampler.__str__() == sampler.__repr__() == expected
 
 
-class _FixedPointsSampler(iaa.PointsSamplerIf):
+class _FixedPointsSampler(iaa.IPointsSampler):
     def __init__(self, points):
         self.points = np.float32(np.copy(points))
         self.last_random_state = None
