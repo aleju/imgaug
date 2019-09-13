@@ -395,9 +395,9 @@
       `Invert`.
 * Added function `imgaug.augmenters.arithmetic.compress_jpg()`. #411
     * Refactored `JpegCompression` to use that function.
-    * [rarely breaking] Removed attribute `maximum_quality` from 
+    * [rarely breaking] Removed attribute `maximum_quality` from
       `JpegCompression`.
-    * [rarely breaking] Removed attribute `minimum_quality` from 
+    * [rarely breaking] Removed attribute `minimum_quality` from
       `JpegCompression`.
 
 ## Improved Segmentation Map Augmentation #302
