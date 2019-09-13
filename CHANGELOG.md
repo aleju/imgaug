@@ -345,7 +345,25 @@
 * Moved matrix generation logic of augmenters in module `convolutional`
   to classes, one per augmenter (i.e. one per category of convolutional
   matrix). This should avoid errors related to pickling of functions. #407
-
+* Refactored `imgaug.augmenters.color` (#409):
+    * Added to `imgaug.augmenters.color` the constants `CSPACE_RGB`, 
+      `CSPACE_BGR`, `CSPACE_GRAY`, `CSPACE_CIE`, `CSPACE_YCrCb`, `CSPACE_HSV`,
+      `CSPACE_HLS`, `CSPACE_Lab`, `CSPACE_Luv`, `CSPACE_YUV`, `CSPACE_ALL`.
+    * Added `imgaug.augmenters.color.change_colorspace_()`.
+    * Added `imgaug.augmenters.color.change_colorspace_batch_()`.
+    * Refactored color augmenters to use `change_colorspace_()` and
+      `change_colorspace_batch_()`. 
+    * [rarely breaking] Removed attributes `colorspace_changer` and
+      `colorspace_changer_inv` from `AddToHueAndSaturation`.
+    * Added attribute `from_colorspace` to `AddToHueAndSaturation`. This also
+      affects `AddToHue` and `AddToSaturation`.
+    * Added output `from_colorspace` to
+      `AddToHueAndSaturation.get_parameters()`. This also affects `AddToHue`
+      and `AddToSaturation`.
+    * [rarely breaking] Changed colorspace transformations throughout the
+      library to fail if the input image does not have three channels.
+    * Changed colorspace transformations throughout the library to also
+      support `YUV` colorspace.
 
 ## Improved Segmentation Map Augmentation #302
 
@@ -600,6 +618,9 @@ Changes:
   support class methods (and possibly various other callables). #407
 * Fixed `CropAndPad`, `Pad` and `PadToFixedSize` still clipping `cval` samples
   to the `uint8`. They now clip to the input array's dtype's value range. #407
+* Fixed `WithColorspace` not propagating polygons to child augmenters. #409
+* Fixed `WithHueAndSaturation` not propagating segmentation maps and polygons
+  to child augmenters. #409
 
 
 # 0.2.9

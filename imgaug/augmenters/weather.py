@@ -23,9 +23,8 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 
 import numpy as np
-import cv2
 
-from . import meta, arithmetic, blur, contrast, color as augmenters_color
+from . import meta, arithmetic, blur, contrast, color as colorlib
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
@@ -133,7 +132,8 @@ class FastSnowyLandscape(meta.Augmenter):
     """
 
     def __init__(self, lightness_threshold=(100, 255),
-                 lightness_multiplier=(1.0, 4.0), from_colorspace="RGB",
+                 lightness_multiplier=(1.0, 4.0),
+                 from_colorspace=colorlib.CSPACE_RGB,
                  name=None, deterministic=False, random_state=None):
         super(FastSnowyLandscape, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -161,13 +161,8 @@ class FastSnowyLandscape(meta.Augmenter):
 
         gen = enumerate(zip(images, thresh_samples, lmul_samples))
         for i, (image, thresh, lmul) in gen:
-            cv_vars = augmenters_color.ChangeColorspace.CV_VARS
-            from2hls = "%s2HLS" % (self.from_colorspace,)
-            hls2from = "HLS2%s" % (self.from_colorspace,)
-            color_transform = cv_vars[from2hls]
-            color_transform_inverse = cv_vars[hls2from]
-
-            image_hls = cv2.cvtColor(image, color_transform)
+            image_hls = colorlib.change_colorspace_(
+                image, colorlib.CSPACE_HLS, self.from_colorspace)
             cvt_dtype = image_hls.dtype
             image_hls = image_hls.astype(np.float64)
             lightness = image_hls[..., 1]
@@ -175,7 +170,8 @@ class FastSnowyLandscape(meta.Augmenter):
             lightness[lightness < thresh] *= lmul
 
             image_hls = iadt.restore_dtypes_(image_hls, cvt_dtype)
-            image_rgb = cv2.cvtColor(image_hls, color_transform_inverse)
+            image_rgb = colorlib.change_colorspace_(
+                image_hls, self.from_colorspace, colorlib.CSPACE_HLS)
 
             result[i] = image_rgb
 

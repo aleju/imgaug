@@ -24,6 +24,183 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug.augmenters.meta as meta
 from imgaug.testutils import reseed
+import imgaug.augmenters.color as colorlib
+
+
+class Test_change_colorspace_(unittest.TestCase):
+    def test_non_uint8_fails(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        image_float = image.astype(np.float32) / 255.0
+        with self.assertRaises(ValueError) as cm:
+            _ = iaa.change_colorspace_(image_float, iaa.CSPACE_BGR)
+        assert "which is a forbidden dtype" in str(cm.exception)
+
+    def test_unknown_to_colorspace_fails(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = "foo"
+        with self.assertRaises(AssertionError) as cm:
+            _ = iaa.change_colorspace_(
+                image, to_colorspace=to_cspace, from_colorspace=from_cspace)
+        assert "Expected `to_colorspace` to be one of" in str(cm.exception)
+
+    def test_unknown_from_colorspace_fails(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspace = "foo"
+        to_cspace = iaa.CSPACE_RGB
+        with self.assertRaises(AssertionError) as cm:
+            _ = iaa.change_colorspace_(
+                image, to_colorspace=to_cspace, from_colorspace=from_cspace)
+        assert "Expected `from_colorspace` to be one of" in str(cm.exception)
+
+    def test_change_to_same_colorspace_does_nothing(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_RGB
+        image_out = iaa.change_colorspace_(
+            np.copy(image),
+            to_colorspace=to_cspace, from_colorspace=from_cspace)
+        assert np.array_equal(image_out, image)
+
+    def test_function_works_inplace(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        image_orig = np.copy(image)
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_BGR
+        image_out = iaa.change_colorspace_(
+            image,
+            to_colorspace=to_cspace, from_colorspace=from_cspace)
+        assert image_out is image
+        assert np.array_equal(image_out, image)
+        assert not np.array_equal(image_out, image_orig)
+
+    def test_image_is_view(self):
+        image = np.arange(4*5*4).astype(np.uint8).reshape((4, 5, 4))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        image_copy = np.copy(image)
+        image_view = image[..., 0:3]
+        assert image_view.flags["OWNDATA"] is False
+
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_BGR
+        image_out = iaa.change_colorspace_(
+            image_view,
+            to_colorspace=to_cspace, from_colorspace=from_cspace)
+
+        expected = self._generate_expected_image(
+            np.ascontiguousarray(image_copy[..., 0:3]),
+            from_cspace, to_cspace)
+        assert np.array_equal(image_out, expected)
+
+    def test_image_is_noncontiguous(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        image_copy = np.copy(np.ascontiguousarray(np.fliplr(image)))
+        image_noncontiguous = np.fliplr(image)
+        assert image_noncontiguous.flags["C_CONTIGUOUS"] is False
+
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_BGR
+        image_out = iaa.change_colorspace_(
+            image_noncontiguous,
+            to_colorspace=to_cspace, from_colorspace=from_cspace)
+
+        expected = self._generate_expected_image(image_copy, from_cspace,
+                                                 to_cspace)
+        assert np.array_equal(image_out, expected)
+
+    def test_cannot_transform_from_grayscale_to_another_cspace(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspace = iaa.CSPACE_GRAY
+        to_cspace = iaa.CSPACE_RGB
+        with self.assertRaises(AssertionError) as cm:
+            _ = iaa.change_colorspace_(
+                np.copy(image),
+                from_colorspace=from_cspace, to_colorspace=to_cspace)
+        assert (
+            "Cannot convert from grayscale to another colorspace"
+            in str(cm.exception))
+
+    def test_image_without_channels_fails(self):
+        image = np.arange(4*5).astype(np.uint8).reshape((4, 5))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_BGR
+        with self.assertRaises(AssertionError) as cm:
+            _ = iaa.change_colorspace_(
+                np.copy(image),
+                from_colorspace=from_cspace, to_colorspace=to_cspace)
+        assert (
+            "Expected image shape to be three-dimensional"
+            in str(cm.exception))
+
+    def test_image_with_four_channels_fails(self):
+        image = np.arange(4*5*4).astype(np.uint8).reshape((4, 5, 4))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspace = iaa.CSPACE_RGB
+        to_cspace = iaa.CSPACE_BGR
+        with self.assertRaises(AssertionError) as cm:
+            _ = iaa.change_colorspace_(
+                np.copy(image),
+                from_colorspace=from_cspace, to_colorspace=to_cspace)
+        assert (
+            "Expected number of channels to be three"
+            in str(cm.exception))
+
+    def test_colorspace_combinations(self):
+        image = np.arange(4*5*3).astype(np.uint8).reshape((4, 5, 3))
+        image = np.copy(image)  # reshape sets flag OWNDATA=False
+        from_cspaces = iaa.CSPACE_ALL
+        to_cspaces = iaa.CSPACE_ALL
+        gen = itertools.product(from_cspaces, to_cspaces)
+        for from_cspace, to_cspace in gen:
+            if from_cspace == iaa.CSPACE_GRAY:
+                continue
+
+            with self.subTest(from_colorspace=from_cspace,
+                              to_colorspace=to_cspace):
+                image_out = iaa.change_colorspace_(np.copy(image), to_cspace,
+                                                   from_cspace)
+
+                if from_cspace == to_cspace:
+                    expected = np.copy(image)
+                else:
+                    expected = self._generate_expected_image(image, from_cspace,
+                                                             to_cspace)
+
+                if to_cspace == iaa.CSPACE_GRAY:
+                    expected = np.tile(expected[..., np.newaxis], (1, 1, 3))
+
+                assert np.array_equal(image_out, expected)
+
+    @classmethod
+    def _generate_expected_image(cls, image, from_colorspace, to_colorspace):
+        cv_vars = colorlib._CSPACE_OPENCV_CONV_VARS
+        if from_colorspace == iaa.CSPACE_RGB:
+            from2rgb = None
+        else:
+            from2rgb = cv_vars[(from_colorspace, iaa.CSPACE_RGB)]
+
+        if to_colorspace == iaa.CSPACE_RGB:
+            rgb2to = None
+        else:
+            rgb2to = cv_vars[(iaa.CSPACE_RGB, to_colorspace)]
+
+        image_rgb = image
+        if from2rgb is not None:
+            image_rgb = cv2.cvtColor(image, from2rgb)
+
+        image_out = image_rgb
+        if rgb2to is not None:
+            image_out = cv2.cvtColor(image_rgb, rgb2to)
+
+        return image_out
 
 
 class TestWithHueAndSaturation(unittest.TestCase):

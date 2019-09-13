@@ -1037,8 +1037,8 @@ class TestCLAHE(unittest.TestCase):
             clip_limit=1,
             tile_grid_size_px=3,
             tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.BGR,
-            to_colorspace=iaa.CLAHE.HSV)
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=iaa.CSPACE_HSV)
 
         assert clahe.all_channel_clahe.clip_limit.value == 1
         assert clahe.all_channel_clahe.tile_grid_size_px[0].value == 3
@@ -1046,12 +1046,11 @@ class TestCLAHE(unittest.TestCase):
         assert clahe.all_channel_clahe.tile_grid_size_px_min == 2
 
         icba = clahe.intensity_channel_based_applier
-        assert icba.change_colorspace.from_colorspace == iaa.CLAHE.BGR
-        assert icba.change_colorspace.to_colorspace.value == iaa.CLAHE.HSV
-        assert icba.change_colorspace_inv.from_colorspace == iaa.CLAHE.HSV
-        assert icba.change_colorspace_inv.to_colorspace.value == iaa.CLAHE.BGR
+        assert icba.from_colorspace == iaa.CSPACE_BGR
+        assert icba.to_colorspace == iaa.CSPACE_HSV
 
-    def test_single_image_grayscale(self):
+    @mock.patch("imgaug.augmenters.color.change_colorspace_")
+    def test_single_image_grayscale(self, mock_cs):
         img = [
             [0, 1, 2, 3, 4],
             [5, 6, 7, 8, 9],
@@ -1059,135 +1058,107 @@ class TestCLAHE(unittest.TestCase):
         ]
         img = np.uint8(img)
 
-        mock_change_cs = mock.Mock()
-        mock_change_cs._augment_images.return_value = \
-            [img[..., np.newaxis] + 1]
+        def _side_effect(image, _to_colorspace, _from_colorspace):
+            return image + 1
+
+        mock_cs.side_effect = _side_effect
 
         mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.return_value = \
             [img[..., np.newaxis] + 2]
 
-        mock_change_colorspace_inv = mock.Mock()
-        mock_change_colorspace_inv._augment_image.return_value = \
-            [img[..., np.newaxis] + 3]
-
         clahe = iaa.CLAHE(
             clip_limit=1,
             tile_grid_size_px=3,
             tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.RGB,
-            to_colorspace=iaa.CLAHE.Lab)
+            from_colorspace=iaa.CSPACE_RGB,
+            to_colorspace=iaa.CSPACE_Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.intensity_channel_based_applier.change_colorspace = \
-            mock_change_cs
-        clahe.intensity_channel_based_applier.change_colorspace_inv = \
-            mock_change_colorspace_inv
 
         img_aug = clahe.augment_image(img)
         assert np.array_equal(img_aug, img+2)
 
-        mock_change_cs = mock_change_cs._augment_images
         mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-        mock_change_colorspace_inv = mock_change_colorspace_inv._augment_images
 
-        assert mock_change_cs.call_count == 0
+        assert mock_cs.call_count == 0
         assert mock_all_channel_clahe.call_count == 1
-        assert mock_change_colorspace_inv.call_count == 0
 
     @classmethod
     def _test_single_image_3d_rgb_to_x(cls, to_colorspace, channel_idx):
-        img = [
-            [0, 1, 2, 3, 4],
-            [5, 6, 7, 8, 9],
-            [10, 11, 12, 13, 14]
-        ]
-        img = np.uint8(img)
-        img3d = np.tile(img[..., np.newaxis], (1, 1, 3))
-        img3d[..., 1] += 10
-        img3d[..., 2] += 20
+        fname_cs = "imgaug.augmenters.color.change_colorspace_"
+        with mock.patch(fname_cs) as mock_cs:
+            img = [
+                [0, 1, 2, 3, 4],
+                [5, 6, 7, 8, 9],
+                [10, 11, 12, 13, 14]
+            ]
+            img = np.uint8(img)
+            img3d = np.tile(img[..., np.newaxis], (1, 1, 3))
+            img3d[..., 1] += 10
+            img3d[..., 2] += 20
 
-        def side_effect_change_colorspace(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [imgs_call[0] + 1]
+            def side_effect_change_colorspace(image, _to_colorspace,
+                                              _from_colorspace):
+                return image + 1
 
-        def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [imgs_call[0] + 2]
-
-        def side_effect_change_colorspace_inv(imgs_call, _random_state,
+            def side_effect_all_channel_clahe(imgs_call, _random_state,
                                               _parents, _hooks):
-            return [imgs_call[0] + 3]
+                return [imgs_call[0] + 2]
 
-        mock_change_cs = mock.Mock()
-        mock_change_cs._augment_images.side_effect = \
-            side_effect_change_colorspace
-        mock_change_cs.to_colorspace = iap.Deterministic(to_colorspace)
+            mock_cs.side_effect = side_effect_change_colorspace
 
-        mock_all_channel_clahe = mock.Mock()
-        mock_all_channel_clahe._augment_images.side_effect = \
-            side_effect_all_channel_clahe
+            mock_all_channel_clahe = mock.Mock()
+            mock_all_channel_clahe._augment_images.side_effect = \
+                side_effect_all_channel_clahe
 
-        mock_change_colorspace_inv = mock.Mock()
-        mock_change_colorspace_inv._augment_images.side_effect = \
-            side_effect_change_colorspace_inv
+            clahe = iaa.CLAHE(
+                clip_limit=1,
+                tile_grid_size_px=3,
+                tile_grid_size_px_min=2,
+                from_colorspace=iaa.CSPACE_RGB,
+                to_colorspace=to_colorspace)
+            clahe.all_channel_clahe = mock_all_channel_clahe
 
-        clahe = iaa.CLAHE(
-            clip_limit=1,
-            tile_grid_size_px=3,
-            tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.RGB,
-            to_colorspace=to_colorspace)
-        clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.intensity_channel_based_applier.change_colorspace = \
-            mock_change_cs
-        clahe.intensity_channel_based_applier.change_colorspace_inv = \
-            mock_change_colorspace_inv
+            img3d_aug = clahe.augment_image(np.copy(img3d))
+            expected1 = img3d + 1
+            expected2 = np.copy(expected1)
+            expected2[..., channel_idx] += 2
+            expected3 = np.copy(expected2) + 1
+            assert np.array_equal(img3d_aug, expected3)
 
-        img3d_aug = clahe.augment_image(np.copy(img3d))
-        expected1 = img3d + 1
-        expected2 = np.copy(expected1)
-        expected2[..., channel_idx] += 2
-        expected3 = np.copy(expected2) + 3
-        assert np.array_equal(img3d_aug, expected3)
+            mock_all_channel_clahe = mock_all_channel_clahe._augment_images
 
-        mock_change_cs = mock_change_cs._augment_images
-        mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-        mock_change_colorspace_inv = mock_change_colorspace_inv._augment_images
+            assert mock_cs.call_count == 2
+            assert mock_all_channel_clahe.call_count == 1
 
-        assert mock_change_cs.call_count == 1
-        assert mock_all_channel_clahe.call_count == 1
-        assert mock_change_colorspace_inv.call_count == 1
+            # indices: call 0, args, arg 0
+            assert np.array_equal(mock_cs.call_args_list[0][0][0], img3d)
 
-        # indices: call 0, args, arg 0, image 0 in list of images
-        assert np.array_equal(mock_change_cs.call_args_list[0][0][0][0], img3d)
+            # for some unclear reason, call_args_list here seems to contain the
+            # output instead of the input to side_effect_all_channel_clahe, so
+            # this assert is deactivated for now
+            # cargs = mock_all_channel_clahe.call_args_list
+            # print("mock", cargs[0][0][0][0].shape)
+            # print("mock", cargs[0][0][0][0][..., 0])
+            # print("exp ", expected1[..., channel_idx])
+            # assert np.array_equal(
+            #     cargs[0][0][0][0],
+            #     expected1[..., channel_idx:channel_idx+1]
+            # )
 
-        # for some unclear reason, call_args_list here seems to contain the
-        # output instead of the input to side_effect_all_channel_clahe, so
-        # this assert is deactivated for now
-        # cargs = mock_all_channel_clahe.call_args_list
-        # print("mock", cargs[0][0][0][0].shape)
-        # print("mock", cargs[0][0][0][0][..., 0])
-        # print("exp ", expected1[..., channel_idx])
-        # assert np.array_equal(
-        #     cargs[0][0][0][0],
-        #     expected1[..., channel_idx:channel_idx+1]
-        # )
-
-        assert np.array_equal(
-            mock_change_colorspace_inv.call_args_list[0][0][0][0],
-            expected2
-        )
+            assert np.array_equal(mock_cs.call_args_list[1][0][0], expected2)
 
     def test_single_image_3d_rgb_to_lab(self):
-        self._test_single_image_3d_rgb_to_x(iaa.CLAHE.Lab, 0)
+        self._test_single_image_3d_rgb_to_x(iaa.CSPACE_Lab, 0)
 
     def test_single_image_3d_rgb_to_hsv(self):
-        self._test_single_image_3d_rgb_to_x(iaa.CLAHE.HSV, 2)
+        self._test_single_image_3d_rgb_to_x(iaa.CSPACE_HSV, 2)
 
     def test_single_image_3d_rgb_to_hls(self):
-        self._test_single_image_3d_rgb_to_x(iaa.CLAHE.HLS, 1)
+        self._test_single_image_3d_rgb_to_x(iaa.CSPACE_HLS, 1)
 
-    def test_single_image_4d_rgb_to_lab(self):
+    @mock.patch("imgaug.augmenters.color.change_colorspace_")
+    def test_single_image_4d_rgb_to_lab(self, mock_cs):
         channel_idx = 0
 
         img = [
@@ -1201,62 +1172,43 @@ class TestCLAHE(unittest.TestCase):
         img4d[..., 2] += 20
         img4d[..., 3] += 30
 
-        def side_effect_change_colorspace(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [imgs_call[0] + 1]
+        def side_effect_change_colorspace(image, _to_colorspace,
+                                          _from_colorspace):
+            return image + 1
 
         def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
                                           _hooks):
             return [imgs_call[0] + 2]
 
-        def side_effect_change_colorspace_inv(imgs_call, _random_state,
-                                              _parents, _hooks):
-            return [imgs_call[0] + 3]
-
-        mock_change_cs = mock.Mock()
-        mock_change_cs._augment_images.side_effect = \
-            side_effect_change_colorspace
-        mock_change_cs.to_colorspace = iap.Deterministic(iaa.CLAHE.Lab)
+        mock_cs.side_effect = side_effect_change_colorspace
 
         mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = \
             side_effect_all_channel_clahe
 
-        mock_change_colorspace_inv = mock.Mock()
-        mock_change_colorspace_inv._augment_images.side_effect = \
-            side_effect_change_colorspace_inv
-
         clahe = iaa.CLAHE(
             clip_limit=1,
             tile_grid_size_px=3,
             tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.RGB,
-            to_colorspace=iaa.CLAHE.Lab)
+            from_colorspace=iaa.CSPACE_RGB,
+            to_colorspace=iaa.CSPACE_Lab)
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.intensity_channel_based_applier.change_colorspace = \
-            mock_change_cs
-        clahe.intensity_channel_based_applier.change_colorspace_inv = \
-            mock_change_colorspace_inv
 
         img4d_aug = clahe.augment_image(img4d)
         expected1 = img4d[..., 0:3] + 1
         expected2 = np.copy(expected1)
         expected2[..., channel_idx] += 2
-        expected3 = np.copy(expected2) + 3
+        expected3 = np.copy(expected2) + 1
         expected4 = np.dstack((expected3, img4d[..., 3:4]))
         assert np.array_equal(img4d_aug, expected4)
 
-        mock_change_cs = mock_change_cs._augment_images
         mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-        mock_change_colorspace_inv = mock_change_colorspace_inv._augment_images
 
-        assert mock_change_cs.call_count == 1
+        assert mock_cs.call_count == 2
         assert mock_all_channel_clahe.call_count == 1
-        assert mock_change_colorspace_inv.call_count == 1
 
-        # indices: call 0, args, arg 0, image 0 in list of images
-        assert np.array_equal(mock_change_cs.call_args_list[0][0][0][0],
-                              img4d[..., 0:3])
+        # indices: call 0, args, arg 0
+        assert np.array_equal(mock_cs.call_args_list[0][0][0], img4d[..., 0:3])
 
         # for some unclear reason, call_args_list here seems to contain the
         # output instead of the input to side_effect_all_channel_clahe, so
@@ -1266,12 +1218,10 @@ class TestCLAHE(unittest.TestCase):
         #     expected1[..., channel_idx:channel_idx+1]
         # )
 
-        assert np.array_equal(
-            mock_change_colorspace_inv.call_args_list[0][0][0][0],
-            expected2
-        )
+        assert np.array_equal(mock_cs.call_args_list[1][0][0], expected2)
 
-    def test_single_image_5d_rgb_to_lab(self):
+    @mock.patch("imgaug.augmenters.color.change_colorspace_")
+    def test_single_image_5d_rgb_to_lab(self, mock_cs):
         img = [
             [0, 1, 2, 3, 4],
             [5, 6, 7, 8, 9],
@@ -1284,42 +1234,28 @@ class TestCLAHE(unittest.TestCase):
         img5d[..., 3] += 30
         img5d[..., 4] += 40
 
-        def side_effect_change_colorspace(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [imgs_call[0] + 1]
+        def side_effect_change_colorspace(image, _to_colorspace,
+                                          _from_colorspace):
+            return image + 1
 
         def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
                                           _hooks):
             return [imgs_call[0] + 2]
 
-        def side_effect_change_colorspace_inv(imgs_call, _random_state,
-                                              _parents, _hooks):
-            return [imgs_call[0] + 3]
-
-        mock_change_cs = mock.Mock()
-        mock_change_cs._augment_images.side_effect = \
-            side_effect_change_colorspace
+        mock_cs.side_effect = side_effect_change_colorspace
 
         mock_all_channel_clahe = mock.Mock()
         mock_all_channel_clahe._augment_images.side_effect = \
             side_effect_all_channel_clahe
 
-        mock_change_colorspace_inv = mock.Mock()
-        mock_change_colorspace_inv._augment_images.side_effect = \
-            side_effect_change_colorspace_inv
-
         clahe = iaa.CLAHE(
             clip_limit=1,
             tile_grid_size_px=3,
             tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.RGB,
-            to_colorspace=iaa.CLAHE.Lab,
+            from_colorspace=iaa.CSPACE_RGB,
+            to_colorspace=iaa.CSPACE_Lab,
             name="ExampleCLAHE")
         clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.intensity_channel_based_applier.change_colorspace = \
-            mock_change_cs
-        clahe.intensity_channel_based_applier.change_colorspace_inv = \
-            mock_change_colorspace_inv
 
         # note that self.assertWarningRegex does not exist in python 2.7
         with warnings.catch_warnings(record=True) as caught_warnings:
@@ -1328,19 +1264,16 @@ class TestCLAHE(unittest.TestCase):
             assert len(caught_warnings) == 1
             assert (
                 "Got image with 5 channels in _IntensityChannelBasedApplier "
-                "(parents: ExampleCLAHE)" \
+                "(parents: ExampleCLAHE)"
                 in str(caught_warnings[-1].message)
             )
 
         assert np.array_equal(img5d_aug, img5d + 2)
 
-        mock_change_cs = mock_change_cs._augment_images
         mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-        mock_change_colorspace_inv = mock_change_colorspace_inv._augment_images
 
-        assert mock_change_cs.call_count == 0
+        assert mock_cs.call_count == 0
         assert mock_all_channel_clahe.call_count == 1
-        assert mock_change_colorspace_inv.call_count == 0
 
         # indices: call 0, args, arg 0, image 0 in list of images
         assert np.array_equal(
@@ -1350,120 +1283,95 @@ class TestCLAHE(unittest.TestCase):
 
     @classmethod
     def _test_many_images_rgb_to_lab_list(cls, with_3d_images):
-        img = [
-            [0, 1, 2, 3, 4],
-            [5, 6, 7, 8, 9],
-            [10, 11, 12, 13, 14]
-        ]
-        img = np.uint8(img)
+        fname_cs = "imgaug.augmenters.color.change_colorspace_"
+        with mock.patch(fname_cs) as mock_cs:
+            img = [
+                [0, 1, 2, 3, 4],
+                [5, 6, 7, 8, 9],
+                [10, 11, 12, 13, 14]
+            ]
+            img = np.uint8(img)
 
-        imgs = [
-            img,
-            img + 1
-        ]
-        if with_3d_images:
-            imgs.extend([
-                np.tile(img[..., np.newaxis], (1, 1, 3)) + 2,
-                np.tile(img[..., np.newaxis], (1, 1, 3)) + 3,
-                np.tile(img[..., np.newaxis], (1, 1, 4)) + 4
-            ])
+            n_imgs = 2
+            n_3d_imgs = 3 if with_3d_images else 0
 
-        def side_effect_change_colorspace(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [img + 1 for img in imgs_call]
+            imgs = []
+            for i in sm.xrange(n_imgs):
+                imgs.append(img + i)
+            for i in sm.xrange(n_3d_imgs):
+                imgs.append(np.tile(img[..., np.newaxis], (1, 1, 3)) + 2 + i)
 
-        def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [img + 2 for img in imgs_call]
+            def side_effect_change_colorspace(image, _to_colorspace,
+                                              _from_colorspace):
+                return image + 1
 
-        def side_effect_change_colorspace_inv(imgs_call, _random_state,
+            def side_effect_all_channel_clahe(imgs_call, _random_state,
                                               _parents, _hooks):
-            return [img + 3 for img in imgs_call]
+                return [img + 2 for img in imgs_call]
 
-        mock_change_cs = mock.Mock()
-        mock_change_cs._augment_images.side_effect = \
-            side_effect_change_colorspace
-        mock_change_cs.to_colorspace = iap.Deterministic(iaa.CLAHE.Lab)
+            mock_cs.side_effect = side_effect_change_colorspace
 
-        mock_all_channel_clahe = mock.Mock()
-        mock_all_channel_clahe._augment_images.side_effect = \
-            side_effect_all_channel_clahe
+            mock_all_channel_clahe = mock.Mock()
+            mock_all_channel_clahe._augment_images.side_effect = \
+                side_effect_all_channel_clahe
 
-        mock_change_colorspace_inv = mock.Mock()
-        mock_change_colorspace_inv._augment_images.side_effect = \
-            side_effect_change_colorspace_inv
+            clahe = iaa.CLAHE(
+                clip_limit=1,
+                tile_grid_size_px=3,
+                tile_grid_size_px_min=2,
+                from_colorspace=iaa.CSPACE_RGB,
+                to_colorspace=iaa.CSPACE_Lab)
+            clahe.all_channel_clahe = mock_all_channel_clahe
 
-        clahe = iaa.CLAHE(
-            clip_limit=1,
-            tile_grid_size_px=3,
-            tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.RGB,
-            to_colorspace=iaa.CLAHE.Lab)
-        clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.intensity_channel_based_applier.change_colorspace = \
-            mock_change_cs
-        clahe.intensity_channel_based_applier.change_colorspace_inv = \
-            mock_change_colorspace_inv
+            imgs_aug = clahe.augment_images(imgs)
+            assert isinstance(imgs_aug, list)
 
-        imgs_aug = clahe.augment_images(imgs)
-        assert isinstance(imgs_aug, list)
+            mock_all_channel_clahe = mock_all_channel_clahe._augment_images
 
-        mock_change_cs = mock_change_cs._augment_images
-        mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-        mock_change_colorspace_inv = mock_change_colorspace_inv._augment_images
+            assert mock_cs.call_count == (n_3d_imgs*2 if with_3d_images else 0)
+            assert mock_all_channel_clahe.call_count == 1
 
-        assert mock_change_cs.call_count == (1 if with_3d_images else 0)
-        assert mock_all_channel_clahe.call_count == 1
-        assert mock_change_colorspace_inv.call_count == (
-            1 if with_3d_images else 0)
+            # indices: call 0, args, arg 0
+            assert isinstance(mock_all_channel_clahe.call_args_list[0][0][0],
+                              list)
 
-        # indices: call 0, args, arg 0
-        if with_3d_images:
-            assert isinstance(mock_change_cs.call_args_list[0][0][0], list)
-            assert isinstance(
-                mock_change_colorspace_inv.call_args_list[0][0][0], list)
-        assert isinstance(mock_all_channel_clahe.call_args_list[0][0][0], list)
+            assert (
+                len(mock_all_channel_clahe.call_args_list[0][0][0])
+                == 5 if with_3d_images else 2)
 
-        if with_3d_images:
-            assert len(mock_change_cs.call_args_list[0][0][0]) == 3
-            assert len(mock_change_colorspace_inv.call_args_list[0][0][0]) == 3
-        assert (
-            len(mock_all_channel_clahe.call_args_list[0][0][0])
-            == 5 if with_3d_images else 2)
-
-        # indices: call 0, args, arg 0, image i in list of images
-        for i in sm.xrange(0, 2):
-            expected = imgs[i][..., np.newaxis]
-            assert np.array_equal(
-                mock_all_channel_clahe.call_args_list[0][0][0][i],
-                expected
-            )
-
-        if with_3d_images:
-            for i in sm.xrange(2, 5):
-                expected = imgs[i]
-                if expected.shape[2] == 4:
-                    expected = expected[..., 0:3]
+            # indices: call 0, args, arg 0, image i in list of images
+            for i in sm.xrange(0, 2):
+                expected = imgs[i][..., np.newaxis]
                 assert np.array_equal(
-                    mock_change_cs.call_args_list[0][0][0][i-2],
+                    mock_all_channel_clahe.call_args_list[0][0][0][i],
                     expected
                 )
 
-                # for some unclear reason, call_args_list here seems to
-                # contain the output instead of the input to
-                # side_effect_all_channel_clahe, so this assert is deactivated
-                # for now
-                # assert np.array_equal(
-                #     mock_all_channel_clahe.call_args_list[0][0][0][i],
-                #     (expected + 1)[..., 0:1]
-                # )
+            if with_3d_images:
+                for i in sm.xrange(2, 5):
+                    expected = imgs[i]
+                    if expected.shape[2] == 4:
+                        expected = expected[..., 0:3]
+                    assert np.array_equal(
+                        mock_cs.call_args_list[i-2][0][0],
+                        expected
+                    )
 
-                exp = (expected + 1)
-                exp[..., 0:1] += 2
-                assert np.array_equal(
-                    mock_change_colorspace_inv.call_args_list[0][0][0][i-2],
-                    exp
-                )
+                    # for some unclear reason, call_args_list here seems to
+                    # contain the output instead of the input to
+                    # side_effect_all_channel_clahe, so this assert is
+                    # deactivated for now
+                    # assert np.array_equal(
+                    #     mock_all_channel_clahe.call_args_list[0][0][0][i],
+                    #     (expected + 1)[..., 0:1]
+                    # )
+
+                    exp = (expected + 1)
+                    exp[..., 0:1] += 2
+                    assert np.array_equal(
+                        mock_cs.call_args_list[3+i-2][0][0],
+                        exp
+                    )
 
     def test_many_images_rgb_to_lab_list_without_3d_images(self):
         self._test_many_images_rgb_to_lab_list(with_3d_images=False)
@@ -1473,124 +1381,104 @@ class TestCLAHE(unittest.TestCase):
 
     @classmethod
     def _test_many_images_rgb_to_lab_array(cls, nb_channels, nb_images):
-        with_color_conversion = (
-            True if nb_channels is not None and nb_channels in [3, 4]
-            else False)
+        fname_cs = "imgaug.augmenters.color.change_colorspace_"
+        with mock.patch(fname_cs) as mock_cs:
+            with_color_conversion = (
+                True if nb_channels is not None and nb_channels in [3, 4]
+                else False)
 
-        img = [
-            [0, 1, 2, 3, 4],
-            [5, 6, 7, 8, 9],
-            [10, 11, 12, 13, 14]
-        ]
-        img = np.uint8(img)
-        if nb_channels is not None:
-            img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
+            img = [
+                [0, 1, 2, 3, 4],
+                [5, 6, 7, 8, 9],
+                [10, 11, 12, 13, 14]
+            ]
+            img = np.uint8(img)
+            if nb_channels is not None:
+                img = np.tile(img[..., np.newaxis], (1, 1, nb_channels))
 
-        imgs = [img] * nb_images
-        imgs = np.uint8(imgs)
+            imgs = [img] * nb_images
+            imgs = np.uint8(imgs)
 
-        def side_effect_change_colorspace(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [img + 1 for img in imgs_call]
+            def side_effect_change_colorspace(image, _to_colorspace,
+                                              _from_colorspace):
+                return image + 1
 
-        def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
-                                          _hooks):
-            return [img + 2 for img in imgs_call]
-
-        def side_effect_change_colorspace_inv(imgs_call, _random_state,
+            def side_effect_all_channel_clahe(imgs_call, _random_state,
                                               _parents, _hooks):
-            return [img + 3 for img in imgs_call]
+                return [img + 2 for img in imgs_call]
 
-        mock_change_cs = mock.Mock()
-        mock_change_cs._augment_images.side_effect = \
-            side_effect_change_colorspace
-        mock_change_cs.to_colorspace = iap.Deterministic(iaa.CLAHE.Lab)
+            mock_cs.side_effect = side_effect_change_colorspace
 
-        mock_all_channel_clahe = mock.Mock()
-        mock_all_channel_clahe._augment_images.side_effect = \
-            side_effect_all_channel_clahe
+            mock_all_channel_clahe = mock.Mock()
+            mock_all_channel_clahe._augment_images.side_effect = \
+                side_effect_all_channel_clahe
 
-        mock_change_colorspace_inv = mock.Mock()
-        mock_change_colorspace_inv._augment_images.side_effect = \
-            side_effect_change_colorspace_inv
+            clahe = iaa.CLAHE(
+                clip_limit=1,
+                tile_grid_size_px=3,
+                tile_grid_size_px_min=2,
+                from_colorspace=iaa.CSPACE_RGB,
+                to_colorspace=iaa.CSPACE_Lab)
+            clahe.all_channel_clahe = mock_all_channel_clahe
 
-        clahe = iaa.CLAHE(
-            clip_limit=1,
-            tile_grid_size_px=3,
-            tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.RGB,
-            to_colorspace=iaa.CLAHE.Lab)
-        clahe.all_channel_clahe = mock_all_channel_clahe
-        clahe.intensity_channel_based_applier.change_colorspace = \
-            mock_change_cs
-        clahe.intensity_channel_based_applier.change_colorspace_inv = \
-            mock_change_colorspace_inv
+            imgs_aug = clahe.augment_images(imgs)
+            assert ia.is_np_array(imgs_aug)
 
-        imgs_aug = clahe.augment_images(imgs)
-        assert ia.is_np_array(imgs_aug)
+            mock_all_channel_clahe = mock_all_channel_clahe._augment_images
 
-        mock_change_cs = mock_change_cs._augment_images
-        mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-        mock_change_colorspace_inv = mock_change_colorspace_inv._augment_images
+            assert mock_cs.call_count == (2*nb_images
+                                          if with_color_conversion
+                                          else 0)
+            assert mock_all_channel_clahe.call_count == 1
 
-        assert mock_change_cs.call_count == (1 if with_color_conversion else 0)
-        assert mock_all_channel_clahe.call_count == 1
-        assert mock_change_colorspace_inv.call_count == (
-            1 if with_color_conversion else 0)
+            # indices: call 0, args, arg 0
+            assert isinstance(mock_all_channel_clahe.call_args_list[0][0][0],
+                              list)
 
-        # indices: call 0, args, arg 0
-        if with_color_conversion:
-            assert isinstance(mock_change_cs.call_args_list[0][0][0], list)
-            assert isinstance(
-                mock_change_colorspace_inv.call_args_list[0][0][0], list)
-        assert isinstance(mock_all_channel_clahe.call_args_list[0][0][0], list)
-
-        if with_color_conversion:
-            assert len(mock_change_cs.call_args_list[0][0][0]) == nb_images
             assert (
-                len(mock_change_colorspace_inv.call_args_list[0][0][0])
+                len(mock_all_channel_clahe.call_args_list[0][0][0])
                 == nb_images)
-        assert len(mock_all_channel_clahe.call_args_list[0][0][0]) == nb_images
 
-        # indices: call 0, args, arg 0, image i in list of images
-        if not with_color_conversion:
-            for i in sm.xrange(nb_images):
-                expected = imgs[i]
-                if expected.ndim == 2:
-                    expected = expected[..., np.newaxis]
-                # cant have 4 channels and no color conversion for RGB2Lab
+            # indices: call 0, args, arg 0, image i in list of images
+            if not with_color_conversion:
+                for i in sm.xrange(nb_images):
+                    expected = imgs[i]
+                    if expected.ndim == 2:
+                        expected = expected[..., np.newaxis]
+                    # cant have 4 channels and no color conversion for RGB2Lab
 
-                assert np.array_equal(
-                    mock_all_channel_clahe.call_args_list[0][0][0][i],
-                    expected
-                )
-        else:
-            for i in sm.xrange(nb_images):
-                expected = imgs[i]
-                if expected.shape[2] == 4:
-                    expected = expected[..., 0:3]
-                # cant have color conversion for RGB2Lab and no channel axis
+                    assert np.array_equal(
+                        mock_all_channel_clahe.call_args_list[0][0][0][i],
+                        expected
+                    )
+            else:
+                for i in sm.xrange(nb_images):
+                    expected = imgs[i]
+                    if expected.shape[2] == 4:
+                        expected = expected[..., 0:3]
+                    # cant have color conversion for RGB2Lab and no channel
+                    # axis
 
-                assert np.array_equal(
-                    mock_change_cs.call_args_list[0][0][0][i],
-                    expected
-                )
+                    assert np.array_equal(
+                        mock_cs.call_args_list[i][0][0],
+                        expected
+                    )
 
-                # for some unclear reason, call_args_list here seems to
-                # contain the output instead of the input to
-                # side_effect_all_channel_clahe, so this assert is deactivated
-                # for now
-                # assert np.array_equal(
-                #     mock_all_channel_clahe.call_args_list[0][0][0][i],
-                #     (expected + 1)[..., 0:1]
-                # )
+                    # for some unclear reason, call_args_list here seems to
+                    # contain the output instead of the input to
+                    # side_effect_all_channel_clahe, so this assert is
+                    # deactivated for now
+                    # assert np.array_equal(
+                    #     mock_all_channel_clahe.call_args_list[0][0][0][i],
+                    #     (expected + 1)[..., 0:1]
+                    # )
 
-                exp = (expected + 1)
-                exp[..., 0:1] += 2
-                assert np.array_equal(
-                    mock_change_colorspace_inv.call_args_list[0][0][0][i],
-                    exp
-                )
+                    exp = (expected + 1)
+                    exp[..., 0:1] += 2
+                    assert np.array_equal(
+                        mock_cs.call_args_list[nb_images+i][0][0],
+                        exp
+                    )
 
     def test_many_images_rgb_to_lab_array(self):
         gen = itertools.product([None, 1, 3, 4], [1, 2, 4])
@@ -1604,8 +1492,8 @@ class TestCLAHE(unittest.TestCase):
         clahe = iaa.CLAHE(clip_limit=(1, 100),
                           tile_grid_size_px=(3, 60),
                           tile_grid_size_px_min=2,
-                          from_colorspace=iaa.CLAHE.RGB,
-                          to_colorspace=iaa.CLAHE.Lab)
+                          from_colorspace=iaa.CSPACE_RGB,
+                          to_colorspace=iaa.CSPACE_Lab)
 
         for nb_channels in [None, 1, 3, 4]:
             with self.subTest(nb_channels=nb_channels):
@@ -1639,15 +1527,15 @@ class TestCLAHE(unittest.TestCase):
             clip_limit=1,
             tile_grid_size_px=3,
             tile_grid_size_px_min=2,
-            from_colorspace=iaa.CLAHE.BGR,
-            to_colorspace=iaa.CLAHE.HSV)
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=iaa.CSPACE_HSV)
         params = clahe.get_parameters()
         assert params[0].value == 1
         assert params[1][0].value == 3
         assert params[1][1] is None
         assert params[2] == 2
-        assert params[3] == iaa.CLAHE.BGR
-        assert params[4] == iaa.CLAHE.HSV
+        assert params[3] == iaa.CSPACE_BGR
+        assert params[4] == iaa.CSPACE_HSV
 
 
 class TestAllChannelsHistogramEqualization(unittest.TestCase):
@@ -1777,17 +1665,15 @@ class TestHistogramEqualization(unittest.TestCase):
 
     def test_init(self):
         aug = iaa.HistogramEqualization(
-            from_colorspace=iaa.HistogramEqualization.BGR,
-            to_colorspace=iaa.HistogramEqualization.HSV)
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=iaa.CSPACE_HSV)
         assert isinstance(
             aug.all_channel_histogram_equalization,
             iaa.AllChannelsHistogramEqualization)
 
         icba = aug.intensity_channel_based_applier
-        assert (icba.change_colorspace.from_colorspace
-                == iaa.HistogramEqualization.BGR)
-        assert (icba.change_colorspace.to_colorspace.value
-                == iaa.HistogramEqualization.HSV)
+        assert icba.from_colorspace == iaa.CSPACE_BGR
+        assert icba.to_colorspace == iaa.CSPACE_HSV
 
     def test_basic_functionality_integrationtest(self):
         for nb_channels in [None, 1, 3, 4, 5]:
@@ -1805,8 +1691,8 @@ class TestHistogramEqualization(unittest.TestCase):
                         img[..., 2] += 20
 
                 aug = iaa.HistogramEqualization(
-                    from_colorspace=iaa.HistogramEqualization.BGR,
-                    to_colorspace=iaa.HistogramEqualization.HSV,
+                    from_colorspace=iaa.CSPACE_BGR,
+                    to_colorspace=iaa.CSPACE_HSV,
                     name="ExampleHistEq")
 
                 if nb_channels is None or nb_channels != 5:
@@ -1847,8 +1733,8 @@ class TestHistogramEqualization(unittest.TestCase):
 
     def test_determinism(self):
         aug = iaa.HistogramEqualization(
-            from_colorspace=iaa.HistogramEqualization.RGB,
-            to_colorspace=iaa.HistogramEqualization.Lab)
+            from_colorspace=iaa.CSPACE_RGB,
+            to_colorspace=iaa.CSPACE_Lab)
 
         for nb_channels in [None, 1, 3, 4]:
             with self.subTest(nb_channels=nb_channels):
@@ -1863,8 +1749,8 @@ class TestHistogramEqualization(unittest.TestCase):
 
     def test_get_parameters(self):
         aug = iaa.HistogramEqualization(
-            from_colorspace=iaa.HistogramEqualization.BGR,
-            to_colorspace=iaa.HistogramEqualization.HSV)
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=iaa.CSPACE_HSV)
         params = aug.get_parameters()
-        assert params[0] == iaa.HistogramEqualization.BGR
-        assert params[1] == iaa.HistogramEqualization.HSV
+        assert params[0] == iaa.CSPACE_BGR
+        assert params[1] == iaa.CSPACE_HSV
