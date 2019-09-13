@@ -380,6 +380,25 @@
       still used where either all coordinates from the first branch's results
       or the second branch's results are used. This also affects 
       `SigmoidNoiseAlpha` and `FrequenceNoiseAlpha`.
+* Added function `imgaug.augmenters.arithmetic.add_scalar()`. #411
+    * Refactored `Add` to use that function.
+* Added function `imgaug.augmenters.arithmetic.add_elementwise()`. #411
+    * Refactored `AddElementwise` to use that function.
+    * Removed restrictions of `value` parameter in `AddElementwise`.
+      The value range is now no longer limited to `[-255, 255]` and floats
+      are now allowed.
+* Added function `imgaug.augmenters.arithmetic.replace_elementwise_()`. #411
+    * Refactored `ReplaceElementwise` to use that function.
+    * [rarely breaking] Removed class constant `ALLOW_DTYPES_CUSTOM_MINMAX`
+      from `Invert`.
+    * [rarely breaking] Removed attribute `dtype_kind_to_invert_func` from
+      `Invert`.
+* Added function `imgaug.augmenters.arithmetic.compress_jpg()`. #411
+    * Refactored `JpegCompression` to use that function.
+    * [rarely breaking] Removed attribute `maximum_quality` from
+      `JpegCompression`.
+    * [rarely breaking] Removed attribute `minimum_quality` from
+      `JpegCompression`.
 
 ## Improved Segmentation Map Augmentation #302
 
