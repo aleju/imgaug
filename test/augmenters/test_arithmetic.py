@@ -60,6 +60,7 @@ class TestAdd(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = images_list
@@ -85,6 +86,7 @@ class TestAdd(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images + 1
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [images_list[0] + 1]
@@ -230,6 +232,7 @@ class TestAdd(unittest.TestCase):
         aug = iaa.Add(value=iap.Choice([0, 1]), per_channel=True)
         observed = aug.augment_image(np.zeros((1, 1, 100), dtype=np.uint8))
         uq = np.unique(observed)
+        assert observed.shape == (1, 1, 100)
         assert 0 in uq
         assert 1 in uq
         assert len(uq) == 2
@@ -240,6 +243,8 @@ class TestAdd(unittest.TestCase):
         seen = [0, 0]
         for _ in sm.xrange(400):
             observed = aug.augment_image(np.zeros((1, 1, 20), dtype=np.uint8))
+            assert observed.shape == (1, 1, 20)
+
             uq = np.unique(observed)
             per_channel = (len(uq) == 2)
             if per_channel:
@@ -495,6 +500,7 @@ class TestAddElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = images_list
@@ -520,6 +526,7 @@ class TestAddElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images + 1
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [images_list[0] + 1]
@@ -1347,6 +1354,7 @@ class TestMultiply(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = images_list
@@ -1372,6 +1380,7 @@ class TestMultiply(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 120
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [np.ones((3, 3, 1), dtype=np.uint8) * 120]
@@ -1397,6 +1406,7 @@ class TestMultiply(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
@@ -1459,6 +1469,7 @@ class TestMultiply(unittest.TestCase):
         aug = iaa.Multiply(mul=iap.Choice([0, 2]), per_channel=True)
         observed = aug.augment_image(np.ones((1, 1, 100), dtype=np.uint8))
         uq = np.unique(observed)
+        assert observed.shape == (1, 1, 100)
         assert 0 in uq
         assert 2 in uq
         assert len(uq) == 2
@@ -1469,6 +1480,8 @@ class TestMultiply(unittest.TestCase):
         seen = [0, 0]
         for _ in sm.xrange(400):
             observed = aug.augment_image(np.ones((1, 1, 20), dtype=np.uint8))
+            assert observed.shape == (1, 1, 20)
+
             uq = np.unique(observed)
             per_channel = (len(uq) == 2)
             if per_channel:
@@ -1770,6 +1783,7 @@ class TestMultiplyElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = images_list
@@ -1795,6 +1809,7 @@ class TestMultiplyElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 120
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [np.ones((3, 3, 1), dtype=np.uint8) * 120]
@@ -1820,6 +1835,7 @@ class TestMultiplyElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = np.ones((1, 3, 3, 1), dtype=np.uint8) * 80
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [np.ones((3, 3, 1), dtype=np.uint8) * 80]
@@ -1909,6 +1925,7 @@ class TestMultiplyElementwise(unittest.TestCase):
         sums = np.sum(observed, axis=2)
         values = np.unique(sums)
         assert all([(value in values) for value in [0, 1, 2, 3]])
+        assert observed.shape == (100, 100, 3)
 
     def test_per_channel_with_probability(self):
         # test channelwise with probability
@@ -1916,6 +1933,8 @@ class TestMultiplyElementwise(unittest.TestCase):
         seen = [0, 0]
         for _ in sm.xrange(400):
             observed = aug.augment_image(np.ones((20, 20, 3), dtype=np.uint8))
+            assert observed.shape == (20, 20, 3)
+
             sums = np.sum(observed, axis=2)
             values = np.unique(sums)
             all_values_found = all([(value in values) for value in [0, 1, 2, 3]])
@@ -2226,6 +2245,7 @@ class TestReplaceElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = images
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = images_list
@@ -2251,6 +2271,7 @@ class TestReplaceElementwise(unittest.TestCase):
         observed = aug.augment_images(images)
         expected = np.zeros((1, 3, 3, 1), dtype=np.uint8)
         assert np.array_equal(observed, expected)
+        assert observed.shape == (1, 3, 3, 1)
 
         observed = aug.augment_images(images_list)
         expected = [np.zeros((3, 3, 1), dtype=np.uint8)]
@@ -2339,6 +2360,8 @@ class TestReplaceElementwise(unittest.TestCase):
         seen = [0, 0]
         for _ in sm.xrange(400):
             observed = aug.augment_image(np.zeros((20, 20, 3), dtype=np.uint8))
+            assert observed.shape == (20, 20, 3)
+
             sums = np.sum(observed, axis=2)
             values = np.unique(sums)
             all_values_found = all([(value in values) for value in [0, 1, 2, 3]])

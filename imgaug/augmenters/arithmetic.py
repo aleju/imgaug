@@ -429,7 +429,7 @@ def _multiply_scalar_to_uint8(image, multiplier):
 
         for c, table in enumerate(tables):
             arr_aug = cv2.LUT(image[..., c], table)
-            result.append(arr_aug[..., np.newaxis])
+            result.append(arr_aug)
 
         return np.stack(result, axis=-1)
     else:
