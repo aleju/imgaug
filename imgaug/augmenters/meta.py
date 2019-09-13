@@ -287,10 +287,19 @@ class Augmenter(object):
     def augment_batches(self, batches, hooks=None, background=False):
         """Augment multiple batches.
 
-        In contrast to other augment functions, this function **yields**
-        batches instead of just returning a full list. This is more suited
-        for most training loops. It also supports augmentation on multiple
-        cpu cores, activated via the `background` flag.
+        In contrast to other ``augment_*`` method, this one **yields**
+        batches instead of returning a full list. This is more suited
+        for most training loops.
+
+        This method also also supports augmentation on multiple cpu cores,
+        activated via the `background` flag. If the `background` flag
+        is activated, an instance of :class:`imgaug.multicore.Pool` will
+        be spawned using all available logical CPU cores and an
+        ``output_buffer_size`` of ``C*10``, where ``C`` is the number of
+        logical CPU cores. I.e. a maximum of ``C*10`` batches will be somewhere
+        in the augmentation pipeline (or waiting to be retrieved by downstream
+        functions) before this method temporarily stops the loading of new
+        batches from `batches`.
 
         Parameters
         ----------
@@ -462,7 +471,12 @@ class Augmenter(object):
                     yield batch_normalized
 
             with multicore.Pool(self) as pool:
-                for batch_aug in pool.imap_batches(load_batches()):
+                # pylint:disable=protected-access
+                # note that pool.processes is None here
+                output_buffer_size = pool.pool._processes * 10
+
+                for batch_aug in pool.imap_batches(
+                        load_batches(), output_buffer_size=output_buffer_size):
                     idx = batch_aug.data[0]
                     assert idx in id_to_batch_orig, (
                         "Got idx %d from Pool, which is not known." % (
