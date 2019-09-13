@@ -23,8 +23,9 @@ import cv2
 import imgaug as ia
 from imgaug.imgaug import _quokka_normalize_extract, _compute_resized_shape
 from imgaug import dtypes as iadt
-from imgaug.testutils import reseed
 import imgaug.random as iarandom
+
+# TODO clean up this file
 
 
 def main():
@@ -526,70 +527,86 @@ def test__compute_resized_shape():
 
 
 def test_quokka():
+    # we are intentionally a bit looser here with atol=0.1, because apparently
+    # on some systems there are small differences in what exactly is loaded,
+    # see issue #414
+
     img = ia.quokka()
     assert img.shape == (643, 960, 3)
     assert np.allclose(
         np.average(img, axis=(0, 1)),
-        [107.93576659, 118.18765066, 122.99378564]
+        [107.93576659, 118.18765066, 122.99378564],
+        rtol=0, atol=0.1
     )
 
     img = ia.quokka(extract="square")
     assert img.shape == (643, 643, 3)
     assert np.allclose(
         np.average(img, axis=(0, 1)),
-        [111.25929196, 121.19431175, 125.71316898]
+        [111.25929196, 121.19431175, 125.71316898],
+        rtol=0, atol=0.1
     )
 
     img = ia.quokka(size=(642, 959))
     assert img.shape == (642, 959, 3)
     assert np.allclose(
         np.average(img, axis=(0, 1)),
-        [107.84615822, 118.09832412, 122.90446467]
+        [107.84615822, 118.09832412, 122.90446467],
+        rtol=0, atol=0.1
     )
 
 
 def test_quokka_square():
+    # we are intentionally a bit looser here with atol=0.1, because apparently
+    # on some systems there are small differences in what exactly is loaded,
+    # see issue #414
+
     img = ia.quokka_square()
     assert img.shape == (643, 643, 3)
     assert np.allclose(
         np.average(img, axis=(0, 1)),
-        [111.25929196, 121.19431175, 125.71316898]
+        [111.25929196, 121.19431175, 125.71316898],
+        rtol=0, atol=0.1
     )
 
 
 def test_quokka_heatmap():
+    # we are intentionally a bit looser here with atol=0.1, because apparently
+    # on some systems there are small differences in what exactly is loaded,
+    # see issue #414
+
     hm = ia.quokka_heatmap()
     assert hm.shape == (643, 960, 3)
     assert hm.arr_0to1.shape == (643, 960, 1)
-    assert np.allclose(np.average(hm.arr_0to1), 0.57618505)
+    assert np.allclose(np.average(hm.arr_0to1), 0.57618505, rtol=0, atol=1e-3)
 
     hm = ia.quokka_heatmap(extract="square")
     assert hm.shape == (643, 643, 3)
     assert hm.arr_0to1.shape == (643, 643, 1)
     # TODO this value is 0.48026073 in python 2.7, while 0.48026952 in 3.7 -- why?
-    assert np.allclose(np.average(hm.arr_0to1), 0.48026952, atol=1e-4)
+    assert np.allclose(np.average(hm.arr_0to1), 0.48026952, rtol=0, atol=1e-3)
 
     hm = ia.quokka_heatmap(size=(642, 959))
     assert hm.shape == (642, 959, 3)
     assert hm.arr_0to1.shape == (642, 959, 1)
-    assert np.allclose(np.average(hm.arr_0to1), 0.5762454)
+    assert np.allclose(np.average(hm.arr_0to1), 0.5762454, rtol=0, atol=1e-3)
 
 
 def test_quokka_segmentation_map():
     segmap = ia.quokka_segmentation_map()
     assert segmap.shape == (643, 960, 3)
     assert segmap.arr.shape == (643, 960, 1)
-    assert np.allclose(np.average(segmap.arr), 0.3016427, rtol=0, atol=1e-2)
+    assert np.allclose(np.average(segmap.arr), 0.3016427, rtol=0, atol=1e-3)
 
     segmap = ia.quokka_segmentation_map(extract="square")
     assert segmap.shape == (643, 643, 3)
     assert segmap.arr.shape == (643, 643, 1)
-    assert np.allclose(np.average(segmap.arr), 0.450353, rtol=0, atol=1e-2)
+    assert np.allclose(np.average(segmap.arr), 0.450353, rtol=0, atol=1e-3)
 
     segmap = ia.quokka_segmentation_map(size=(642, 959))
     assert segmap.shape == (642, 959, 3)
     assert segmap.arr.shape == (642, 959, 1)
-    assert np.allclose(np.average(segmap.arr), 0.30160266, rtol=0, atol=1e-2)
+    assert np.allclose(np.average(segmap.arr), 0.30160266, rtol=0, atol=1e-3)
 
 
 def test_quokka_keypoints():
