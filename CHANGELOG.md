@@ -434,6 +434,8 @@
   the standard that all pixels are given with subpixel accuracy and therefore
   any whole pixel with a maximum should denote the coordinates of that
   pixel's center. #413
+* Changed default `output_buffer_size` in `Augmenter.augment_batches()` from
+  "unlimited" to `10*C`, where `C` is the number of logical CPU cores. #417
 
 
 ## Improved Segmentation Map Augmentation #302
