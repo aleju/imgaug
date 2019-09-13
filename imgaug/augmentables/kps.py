@@ -706,9 +706,12 @@ class KeypointsOnImage(object):
         for i in sm.xrange(nb_keypoints):
             maxidx_flat = np.argmax(image[..., i])
             maxidx_ndim = np.unravel_index(maxidx_flat, (height, width))
+
             found = (image[maxidx_ndim[0], maxidx_ndim[1], i] >= threshold)
             if found:
-                keypoints.append(Keypoint(x=maxidx_ndim[1], y=maxidx_ndim[0]))
+                x = maxidx_ndim[1] + 0.5
+                y = maxidx_ndim[0] + 0.5
+                keypoints.append(Keypoint(x=x, y=y))
             else:
                 if drop_if_not_found:
                     # dont add the keypoint to the result list, i.e. drop it

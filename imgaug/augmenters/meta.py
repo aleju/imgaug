@@ -30,7 +30,6 @@ Note: WithColorspace is in ``color.py``.
 """
 from __future__ import print_function, division, absolute_import
 
-import warnings
 from abc import ABCMeta, abstractmethod
 import copy as copy_module
 import re
@@ -44,6 +43,7 @@ import six.moves as sm
 import imgaug as ia
 from .. import parameters as iap
 from .. import random as iarandom
+from .. import validation as iaval
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 
@@ -147,11 +147,51 @@ def estimate_max_number_of_channels(images):
 def copy_arrays(arrays):
     if ia.is_np_array(arrays):
         return np.copy(arrays)
-    else:
-        assert ia.is_iterable(arrays), (
-            "Expected ndarray or iterable of ndarray, got type %s." % (
-                type(arrays),))
-        return [np.copy(array) for array in arrays]
+    return [np.copy(array) for array in arrays]
+
+
+def _add_channel_axis(arrs):
+    if ia.is_np_array(arrs):
+        if arrs.ndim == 3:  # (N,H,W)
+            return arrs[..., np.newaxis]  # (N,H,W) -> (N,H,W,1)
+        return arrs
+    return [
+        arr[..., np.newaxis]  # (H,W) -> (H,W,1)
+        if arr.ndim == 2
+        else arr
+        for arr in arrs
+    ]
+
+
+def _remove_added_channel_axis(arrs_added, arrs_orig):
+    if ia.is_np_array(arrs_orig):
+        if arrs_orig.ndim == 3:  # (N,H,W)
+            if ia.is_np_array(arrs_added):
+                return arrs_added[..., 0]  # (N,H,W,1) -> (N,H,W)
+            # (N,H,W) -> (N,H,W,1) -> <augmentation> -> list of (H,W,1)
+            return [arr[..., 0] for arr in arrs_added]
+        return arrs_added
+    return [
+        arr_added[..., 0]
+        if arr_orig.ndim == 2
+        else arr_added   # (H,W,1) -> (H,W)
+        for arr_added, arr_orig
+        in zip(arrs_added, arrs_orig)
+    ]
+
+
+class _maybe_deterministic_context(object):
+    def __init__(self, augmenter):
+        self.augmenter = augmenter
+        self.old_state = None
+
+    def __enter__(self):
+        if self.augmenter.deterministic:
+            self.old_state = self.augmenter.random_state.state
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        if self.old_state is not None:
+            self.augmenter.random_state.state = self.old_state
 
 
 @six.add_metaclass(ABCMeta)
@@ -476,8 +516,6 @@ class Augmenter(object):
             batch = batch_orig.fill_from_augmented_normalized_batch(batch)
         return batch
 
-    # TODO is that used by augment_batches()?
-    # TODO should this simply be removed?
     def _is_activated_with_hooks(self, augmentables, parents, hooks):
         is_activated = (
             (hooks is None and self.activated)
@@ -566,114 +604,16 @@ class Augmenter(object):
         gaussian blurring to them.
 
         """
-        if parents is not None and len(parents) > 0 and hooks is None:
-            # This is a child call. The data has already been validated and
-            # copied. We don't need to copy it again for hooks, as these
-            # don't exist. So we can augment here fully in-place.
-            if not self.activated or len(images) == 0:
-                return images
+        with _maybe_deterministic_context(self):
+            if parents is not None and len(parents) > 0 and hooks is None:
+                # This is a child call. The data has already been validated and
+                # copied. We don't need to copy it again for hooks, as these
+                # don't exist. So we can augment here fully in-place.
+                if not self.activated or len(images) == 0:
+                    return images
 
-            if self.deterministic:
-                state_orig = self.random_state.state
-
-            images_result = self._augment_images(
-                images,
-                random_state=self.random_state,
-                parents=parents,
-                hooks=hooks
-            )
-            # move "forward" the random state, so that the next call to
-            # augment_images() will use different random values
-            # This is currently deactivated as the RNG is no longer copied
-            # for the _augment_* call.
-            # self.random_state.advance_()
-
-            if self.deterministic:
-                self.random_state.set_state_(state_orig)
-
-            return images_result
-
-        #
-        # Everything below is for non-in-place augmentation.
-        # It was either the first call (no parents) or hooks were provided.
-        #
-        if self.deterministic:
-            state_orig = self.random_state.state
-
-        if parents is None:
-            parents = []
-
-        if ia.is_np_array(images):
-            input_type = "array"
-            input_added_axis = False
-
-            assert images.ndim in [3, 4], (
-                "Expected 3d/4d array of form (N, height, width) or (N, "
-                "height, width, channels), got shape %s." % (images.shape,))
-
-            # copy the input, we don't want to augment it in-place
-            images_copy = np.copy(images)
-
-            if images_copy.ndim == 3 and images_copy.shape[-1] in [1, 3]:
-                ia.warn(
-                    "You provided a numpy array of shape %s as input to "
-                    "augment_images(), which was interpreted as (N, H, W). "
-                    "The last dimension however has value 1 or 3, which "
-                    "indicates that you provided a single image with shape "
-                    "(H, W, C) instead. If that is the case, you should use "
-                    "augment_image(image) or augment_images([image]), "
-                    "otherwise you will not get the expected "
-                    "augmentations." % (images_copy.shape,))
-
-            # for 2D input images (i.e. shape (N, H, W)), we add a channel
-            # axis (i.e. (N, H, W, 1)), so that all augmenters can rely on
-            # the input having a channel axis and don't have to add if/else
-            # statements for 2D images
-            if images_copy.ndim == 3:
-                images_copy = images_copy[..., np.newaxis]
-                input_added_axis = True
-        elif ia.is_iterable(images):
-            input_type = "list"
-            input_added_axis = []
-
-            if len(images) == 0:
-                images_copy = []
-            else:
-                assert all(image.ndim in [2, 3] for image in images), (
-                    "Expected list of images with each image having shape "
-                    "(height, width) or (height, width, channels), got "
-                    "shapes %s." % ([image.shape for image in images],))
-
-                # copy images and add channel axis for 2D images (see above,
-                # as for list inputs each image can have different shape, it
-                # is done here on a per images basis)
-                images_copy = []
-                input_added_axis = []
-                for image in images:
-                    image_copy = np.copy(image)
-                    if image.ndim == 2:
-                        image_copy = image_copy[:, :, np.newaxis]
-                        input_added_axis.append(True)
-                    else:
-                        input_added_axis.append(False)
-                    images_copy.append(image_copy)
-        else:
-            raise Exception(
-                "Expected images as one numpy array or list/tuple of numpy "
-                "arrays, got %s." % (
-                    type(images),))
-
-        if hooks is not None:
-            images_copy = hooks.preprocess(images_copy, augmenter=self,
-                                           parents=parents)
-
-        # the is_activated() call allows to use hooks that selectively
-        # deactivate specific augmenters in previously defined augmentation
-        # sequences
-        if self._is_activated_with_hooks(images_copy, parents, hooks):
-            if len(images) > 0:
                 images_result = self._augment_images(
-                    images_copy,
+                    images,
                     random_state=self.random_state,
                     parents=parents,
                     hooks=hooks
@@ -683,37 +623,75 @@ class Augmenter(object):
                 # This is currently deactivated as the RNG is no longer copied
                 # for the _augment_* call.
                 # self.random_state.advance_()
+
+                return images_result
+
+            #
+            # Everything below is for non-in-place augmentation.
+            # It was either the first call (no parents) or hooks were provided.
+            #
+            if parents is None:
+                parents = []
+
+            if ia.is_np_array(images):
+                assert images.ndim in [3, 4], (
+                    "Expected 3d/4d array of form (N, height, width) or (N, "
+                    "height, width, channels), got shape %s." % (images.shape,))
+
+                if images.ndim == 3 and images.shape[-1] in [1, 3]:
+                    ia.warn(
+                        "You provided a numpy array of shape %s as input to "
+                        "augment_images(), which was interpreted as "
+                        "(N, H, W). The last dimension however has value 1 or "
+                        "3, which indicates that you provided a single image "
+                        "with shape (H, W, C) instead. If that is the case, "
+                        "you should use augment_image(image) or "
+                        "augment_images([image]), otherwise you will not get "
+                        "the expected augmentations." % (images.shape,))
+            elif ia.is_iterable(images):
+                if images:
+                    assert all(image.ndim in [2, 3] for image in images), (
+                        "Expected list of images with each image having shape "
+                        "(height, width) or (height, width, channels), got "
+                        "shapes %s." % ([image.shape for image in images],))
             else:
-                images_result = images_copy
-        else:
+                raise Exception(
+                    "Expected images as one numpy array or list/tuple of "
+                    "numpy arrays, got %s." % (type(images),))
+
+            images_orig = images
+            images_copy = _add_channel_axis(copy_arrays(images))
+
+            if hooks is not None:
+                images_copy = hooks.preprocess(images_copy, augmenter=self,
+                                               parents=parents)
+
+            # the is_activated() call allows to use hooks that selectively
+            # deactivate specific augmenters in previously defined augmentation
+            # sequences
             images_result = images_copy
+            if self._is_activated_with_hooks(images_copy, parents, hooks):
+                # don't use "if images:" here, because `images` can be a
+                # numpy array, leading to an 'ambiguous truth' error
+                if len(images) > 0:
+                    images_result = self._augment_images(
+                        images_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # move "forward" the random state, so that the next call to
+                    # augment_images() will use different random values
+                    # This is currently deactivated as the RNG is no longer
+                    # copied for the _augment_* call.
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            images_result = hooks.postprocess(images_result, augmenter=self,
-                                              parents=parents)
+            if hooks is not None:
+                images_result = hooks.postprocess(images_result, augmenter=self,
+                                                  parents=parents)
 
-        # remove temporarily added channel axis for 2D input images
-        output_type = "list" if isinstance(images_result, list) else "array"
-        if input_type == "array":
-            if input_added_axis is True:
-                if output_type == "array":
-                    images_result = np.squeeze(images_result, axis=3)
-                else:
-                    images_result = [np.squeeze(image, axis=2)
-                                     for image in images_result]
-        else:  # input_type == "list"
-            assert len(images_result) == len(images), (
-                "INTERNAL ERROR: Expected number of images to be unchanged "
-                "after augmentation, but was changed from %d to %d." % (
-                    len(images), len(images_result)))
-            for i in sm.xrange(len(images_result)):
-                if input_added_axis[i] is True:
-                    images_result[i] = np.squeeze(images_result[i], axis=2)
-
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        return images_result
+            # remove temporarily added channel axis for 2D input images
+            return _remove_added_channel_axis(images_result, images_orig)
 
     @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
@@ -782,60 +760,44 @@ class Augmenter(object):
             Corresponding augmented heatmap(s).
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        if parents is None:
-            parents = []
+            input_was_single_instance = False
+            if isinstance(heatmaps, ia.HeatmapsOnImage):
+                input_was_single_instance = True
+                heatmaps = [heatmaps]
 
-        input_was_single_instance = False
-        if isinstance(heatmaps, ia.HeatmapsOnImage):
-            input_was_single_instance = True
-            heatmaps = [heatmaps]
+            iaval.assert_is_iterable_of(heatmaps, ia.HeatmapsOnImage)
 
-        assert ia.is_iterable(heatmaps), (
-            "Expected to get list of imgaug.HeatmapsOnImage() instances, "
-            "got %s." % (type(heatmaps),))
-        only_heatmaps = all([isinstance(heatmaps_i, ia.HeatmapsOnImage)
-                             for heatmaps_i in heatmaps])
-        assert only_heatmaps, (
-            "Expected to get list of imgaug.HeatmapsOnImage() instances, "
-            "got %s." % ([type(el) for el in heatmaps],))
-
-        # copy, but only if topmost call or hooks are provided
-        if len(parents) == 0 or hooks is not None:
-            heatmaps_copy = [heatmaps_i.deepcopy() for heatmaps_i in heatmaps]
-        else:
+            # copy, but only if topmost call or hooks are provided
             heatmaps_copy = heatmaps
+            if len(parents) == 0 or hooks is not None:
+                heatmaps_copy = [hm_i.deepcopy() for hm_i in heatmaps]
 
-        if hooks is not None:
-            heatmaps_copy = hooks.preprocess(heatmaps_copy, augmenter=self,
-                                             parents=parents)
+            if hooks is not None:
+                heatmaps_copy = hooks.preprocess(
+                    heatmaps_copy, augmenter=self, parents=parents)
 
-        if self._is_activated_with_hooks(heatmaps_copy, parents, hooks):
-            if len(heatmaps_copy) > 0:
-                heatmaps_result = self._augment_heatmaps(
-                    heatmaps_copy,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # self.random_state.advance_()
-            else:
-                heatmaps_result = heatmaps_copy
-        else:
             heatmaps_result = heatmaps_copy
+            if self._is_activated_with_hooks(heatmaps_copy, parents, hooks):
+                if len(heatmaps_copy) > 0:
+                    heatmaps_result = self._augment_heatmaps(
+                        heatmaps_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            heatmaps_result = hooks.postprocess(
-                heatmaps_result, augmenter=self, parents=parents)
+            if hooks is not None:
+                heatmaps_result = hooks.postprocess(
+                    heatmaps_result, augmenter=self, parents=parents)
 
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        if input_was_single_instance:
-            return heatmaps_result[0]
-        return heatmaps_result
+            if input_was_single_instance:
+                return heatmaps_result[0]
+            return heatmaps_result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         """Augment a batch of heatmaps in-place.
@@ -912,60 +874,44 @@ class Augmenter(object):
             Corresponding augmented segmentation map(s).
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        if parents is None:
-            parents = []
+            input_was_single_instance = False
+            if isinstance(segmaps, ia.SegmentationMapsOnImage):
+                input_was_single_instance = True
+                segmaps = [segmaps]
 
-        input_was_single_instance = False
-        if isinstance(segmaps, ia.SegmentationMapsOnImage):
-            input_was_single_instance = True
-            segmaps = [segmaps]
+            iaval.assert_is_iterable_of(segmaps, ia.SegmentationMapsOnImage)
 
-        assert ia.is_iterable(segmaps), (
-            "Expected to get list of imgaug.SegmentationMapsOnImage() "
-            "instances, got %s." % (type(segmaps),))
-        only_segmaps = all(
-            [isinstance(segmaps_i, ia.SegmentationMapsOnImage)
-             for segmaps_i in segmaps])
-        assert only_segmaps, (
-            "Expected to get list of imgaug.SegmentationMapsOnImage() "
-            "instances, got %s." % ([type(el) for el in segmaps],))
-
-        # copy, but only if topmost call or hooks are provided
-        if len(parents) == 0 or hooks is not None:
-            segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
-        else:
+            # copy, but only if topmost call or hooks are provided
             segmaps_copy = segmaps
+            if len(parents) == 0 or hooks is not None:
+                segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
 
-        if hooks is not None:
-            segmaps_copy = hooks.preprocess(segmaps_copy, augmenter=self, parents=parents)
+            if hooks is not None:
+                segmaps_copy = hooks.preprocess(
+                    segmaps_copy, augmenter=self, parents=parents)
 
-        if self._is_activated_with_hooks(segmaps_copy, parents, hooks):
-            if len(segmaps_copy) > 0:
-                segmaps_result = self._augment_segmentation_maps(
-                    segmaps_copy,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # self.random_state.advance_()
-            else:
-                segmaps_result = segmaps_copy
-        else:
             segmaps_result = segmaps_copy
+            if self._is_activated_with_hooks(segmaps_copy, parents, hooks):
+                if len(segmaps_copy) > 0:
+                    segmaps_result = self._augment_segmentation_maps(
+                        segmaps_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            segmaps_result = hooks.postprocess(segmaps_result, augmenter=self,
-                                               parents=parents)
+            if hooks is not None:
+                segmaps_result = hooks.postprocess(
+                    segmaps_result, augmenter=self, parents=parents)
 
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        if input_was_single_instance:
-            return segmaps_result[0]
-        return segmaps_result
+            if input_was_single_instance:
+                return segmaps_result[0]
+            return segmaps_result
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         """Augment a batch of segmentation in-place.
@@ -1059,65 +1005,49 @@ class Augmenter(object):
             Augmented keypoints.
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        kpsois = keypoints_on_images
 
-        if parents is None:
-            parents = []
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        input_was_single_instance = False
-        if isinstance(keypoints_on_images, ia.KeypointsOnImage):
-            input_was_single_instance = True
-            keypoints_on_images = [keypoints_on_images]
+            input_was_single_instance = False
+            if isinstance(kpsois, ia.KeypointsOnImage):
+                input_was_single_instance = True
+                kpsois = [kpsois]
 
-        assert ia.is_iterable(keypoints_on_images), (
-            "Expected to get list of imgaug.KeypointsOnImage() "
-            "instances, got %s." % (type(keypoints_on_images),))
-        only_keypoints = all(
-            [isinstance(keypoints_on_image, ia.KeypointsOnImage)
-             for keypoints_on_image in keypoints_on_images])
-        assert only_keypoints, (
-            "Expected to get list of imgaug.KeypointsOnImage() "
-            "instances, got %s." % ([type(el) for el in keypoints_on_images],))
+            iaval.assert_is_iterable_of(kpsois, ia.KeypointsOnImage)
 
-        # copy, but only if topmost call or hooks are provided
-        if len(parents) == 0 or hooks is not None:
-            keypoints_on_images_copy = [keypoints_on_image.deepcopy()
-                                        for keypoints_on_image
-                                        in keypoints_on_images]
-        else:
-            keypoints_on_images_copy = keypoints_on_images
+            # copy, but only if topmost call or hooks are provided
+            kpsois_copy = kpsois
+            if len(parents) == 0 or hooks is not None:
+                kpsois_copy = [kpsoi.deepcopy() for kpsoi in kpsois]
 
-        if hooks is not None:
-            keypoints_on_images_copy = hooks.preprocess(keypoints_on_images_copy, augmenter=self, parents=parents)
+            if hooks is not None:
+                kpsois_copy = hooks.preprocess(
+                    kpsois_copy, augmenter=self, parents=parents)
 
-        if self._is_activated_with_hooks(keypoints_on_images_copy, parents,
-                                         hooks):
-            if len(keypoints_on_images_copy) > 0:
-                keypoints_on_images_result = self._augment_keypoints(
-                    keypoints_on_images_copy,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # self.random_state.advance_()
-            else:
-                keypoints_on_images_result = keypoints_on_images_copy
-        else:
-            keypoints_on_images_result = keypoints_on_images_copy
+            kpsois_result = kpsois_copy
+            if self._is_activated_with_hooks(kpsois_copy, parents, hooks):
+                if len(kpsois_copy) > 0:
+                    kpsois_result = self._augment_keypoints(
+                        kpsois_copy,
+                        random_state=self.random_state,
+                        parents=parents,
+                        hooks=hooks
+                    )
+                    # self.random_state.advance_()
 
-        if hooks is not None:
-            keypoints_on_images_result = hooks.postprocess(
-                keypoints_on_images_result, augmenter=self, parents=parents)
+            if hooks is not None:
+                kpsois_result = hooks.postprocess(
+                    kpsois_result, augmenter=self, parents=parents)
 
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
+            if input_was_single_instance:
+                return kpsois_result[0]
+            return kpsois_result
 
-        if input_was_single_instance:
-            return keypoints_on_images_result[0]
-        return keypoints_on_images_result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         """Augment a batch of keypoints in-place.
 
         This is the internal version of :func:`Augmenter.augment_keypoints`.
@@ -1309,17 +1239,9 @@ class Augmenter(object):
         """
         from imgaug.augmentables.polys import PolygonsOnImage
 
-        def _subaugment(polygons_on_images_, random_state_, parents_, hooks_):
-            return self._augment_polygons(
-                polygons_on_images_,
-                random_state=random_state_,
-                parents=parents_,
-                hooks=hooks_
-            )
-
         return self._augment_coord_augables(
             cls_expected=PolygonsOnImage,
-            subaugment_func=_subaugment,
+            subaugment_func=self._augment_polygons,
             augables_ois=polygons_on_images,
             parents=parents,
             hooks=hooks
@@ -1390,17 +1312,9 @@ class Augmenter(object):
         """
         from imgaug.augmentables.lines import LineStringsOnImage
 
-        def _subaugment(line_strings_on_images_, random_state_, parents_, hooks_):
-            return self._augment_line_strings(
-                line_strings_on_images_,
-                random_state=random_state_,
-                parents=parents_,
-                hooks=hooks_
-            )
-
         return self._augment_coord_augables(
             cls_expected=LineStringsOnImage,
-            subaugment_func=_subaugment,
+            subaugment_func=self._augment_line_strings,
             augables_ois=line_strings_on_images,
             parents=parents,
             hooks=hooks
@@ -1444,61 +1358,45 @@ class Augmenter(object):
             Augmented augmentables.
 
         """
-        if self.deterministic:
-            state_orig = self.random_state.state
+        with _maybe_deterministic_context(self):
+            if parents is None:
+                parents = []
 
-        if parents is None:
-            parents = []
+            input_was_single_instance = False
+            if isinstance(augables_ois, cls_expected):
+                input_was_single_instance = True
+                augables_ois = [augables_ois]
 
-        input_was_single_instance = False
-        if isinstance(augables_ois, cls_expected):
-            input_was_single_instance = True
-            augables_ois = [augables_ois]
+            iaval.assert_is_iterable_of(augables_ois, cls_expected)
 
-        assert ia.is_iterable(augables_ois), (
-            "Expected to get list of %s instances, got %s." % (
-                cls_expected.__class__.__name__,
-                type(augables_ois),))
-        only_valid_types = all(
-            [isinstance(augable_oi, cls_expected)
-             for augable_oi in augables_ois])
-        assert only_valid_types, (
-            "Expected to get list of %s instances, got %s." % (
-                cls_expected.__class__.__name__,
-                [type(el) for el in augables_ois],))
+            # copy, but only if topmost call or hooks are provided
+            augables_ois_copy = augables_ois
+            if len(parents) == 0 or hooks is not None:
+                augables_ois_copy = [
+                    augable_oi.deepcopy() for augable_oi in augables_ois]
 
-        # copy, but only if topmost call or hooks are provided
-        augables_ois_copy = augables_ois
-        if len(parents) == 0 or hooks is not None:
-            augables_ois_copy = [augable_oi.deepcopy()
-                                 for augable_oi
-                                 in augables_ois]
+            if hooks is not None:
+                augables_ois_copy = hooks.preprocess(
+                    augables_ois_copy, augmenter=self, parents=parents)
 
-        if hooks is not None:
-            augables_ois_copy = hooks.preprocess(
-                augables_ois_copy, augmenter=self, parents=parents)
+            augables_ois_result = augables_ois_copy
+            if self._is_activated_with_hooks(augables_ois_copy, parents, hooks):
+                if len(augables_ois) > 0:
+                    augables_ois_result = subaugment_func(
+                        augables_ois_copy,
+                        self.random_state,
+                        parents,
+                        hooks
+                    )
+                    # self.random_state.advance_()
 
-        augables_ois_result = augables_ois_copy
-        if self._is_activated_with_hooks(augables_ois_copy, parents, hooks):
-            if len(augables_ois) > 0:
-                augables_ois_result = subaugment_func(
-                    augables_ois_copy,
-                    self.random_state,
-                    parents,
-                    hooks
-                )
-                # self.random_state.advance_()
+            if hooks is not None:
+                augables_ois_result = hooks.postprocess(
+                    augables_ois_result, augmenter=self, parents=parents)
 
-        if hooks is not None:
-            augables_ois_result = hooks.postprocess(
-                augables_ois_result, augmenter=self, parents=parents)
-
-        if self.deterministic:
-            self.random_state.set_state_(state_orig)
-
-        if input_was_single_instance:
-            return augables_ois_result[0]
-        return augables_ois_result
+            if input_was_single_instance:
+                return augables_ois_result[0]
+            return augables_ois_result
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
@@ -3044,98 +2942,45 @@ class Sequential(Augmenter, list):
                                     parents=parents, default=True)
         )
 
-    # TODO make the below functions more DRY
     def _augment_images(self, images, random_state, parents, hooks):
-        if self._is_propagating(images, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    images = self[index].augment_images(
-                        images=images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    images = augmenter.augment_images(
-                        images=images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return images
+        return self._augment_augmentables(
+            images, random_state, parents, hooks, "augment_images")
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if self._is_propagating(heatmaps, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    heatmaps = self[index].augment_heatmaps(
-                        heatmaps=heatmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    heatmaps = augmenter.augment_heatmaps(
-                        heatmaps=heatmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return heatmaps
+        return self._augment_augmentables(
+            heatmaps, random_state, parents, hooks, "augment_heatmaps")
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        if self._is_propagating(segmaps, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    segmaps = self[index].augment_segmentation_maps(
-                        segmaps=segmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    segmaps = augmenter.augment_segmentation_maps(
-                        segmaps=segmaps,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return segmaps
+        return self._augment_augmentables(
+            segmaps, random_state, parents, hooks, "augment_segmentation_maps")
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
-        if self._is_propagating(keypoints_on_images, parents, hooks):
-            if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    keypoints_on_images = self[index].augment_keypoints(
-                        keypoints_on_images=keypoints_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-            else:
-                for augmenter in self:
-                    keypoints_on_images = augmenter.augment_keypoints(
-                        keypoints_on_images=keypoints_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return keypoints_on_images
+        return self._augment_augmentables(
+            keypoints_on_images, random_state, parents, hooks,
+            "augment_keypoints")
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
-        if self._is_propagating(polygons_on_images, parents, hooks):
+        return self._augment_augmentables(
+            polygons_on_images, random_state, parents, hooks,
+            "augment_polygons")
+
+    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
+                              augfunc_name):
+        if self._is_propagating(augmentables, parents, hooks):
             if self.random_order:
-                for index in random_state.permutation(len(self)):
-                    polygons_on_images = self[index].augment_polygons(
-                        polygons_on_images=polygons_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
+                order = random_state.permutation(len(self))
             else:
-                for augmenter in self:
-                    polygons_on_images = augmenter.augment_polygons(
-                        polygons_on_images=polygons_on_images,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-        return polygons_on_images
+                order = sm.xrange(len(self))
+
+            for index in order:
+                augmentables = getattr(self[index], augfunc_name)(
+                    augmentables,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+        return augmentables
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
@@ -3303,36 +3148,41 @@ class SomeOf(Augmenter, list):
             raise Exception("Expected None or Augmenter or list of Augmenter, "
                             "got %s." % (type(children),))
 
-        if ia.is_single_number(n):
-            self.n = int(n)
-            self.n_mode = "deterministic"
-        elif n is None:
-            self.n = None
-            self.n_mode = "None"
-        elif ia.is_iterable(n):
-            assert len(n) == 2, (
-                "Expected iterable 'n' to contain exactly two values, "
-                "got %d." % (len(n),))
-            if ia.is_single_number(n[0]) and n[1] is None:
-                self.n = (int(n[0]), None)
-                self.n_mode = "(int,None)"
-            elif ia.is_single_number(n[0]) and ia.is_single_number(n[1]):
-                self.n = iap.DiscreteUniform(int(n[0]), int(n[1]))
-                self.n_mode = "stochastic"
-            else:
-                raise Exception("Expected tuple of (int, None) or (int, int), "
-                                "got %s" % ([type(el) for el in n],))
-        elif isinstance(n, iap.StochasticParameter):
-            self.n = n
-            self.n_mode = "stochastic"
-        else:
-            raise Exception("Expected int, (int, None), (int, int) or "
-                            "StochasticParameter, got %s" % (type(n),))
+        self.n, self.n_mode = self._handle_arg_n(n)
 
         assert ia.is_single_bool(random_order), (
             "Expected random_order to be boolean, got %s." % (
                 type(random_order),))
         self.random_order = random_order
+
+    @classmethod
+    def _handle_arg_n(cls, n):
+        if ia.is_single_number(n):
+            n = int(n)
+            n_mode = "deterministic"
+        elif n is None:
+            n = None
+            n_mode = "None"
+        elif ia.is_iterable(n):
+            assert len(n) == 2, (
+                "Expected iterable 'n' to contain exactly two values, "
+                "got %d." % (len(n),))
+            if ia.is_single_number(n[0]) and n[1] is None:
+                n = (int(n[0]), None)
+                n_mode = "(int,None)"
+            elif ia.is_single_number(n[0]) and ia.is_single_number(n[1]):
+                n = iap.DiscreteUniform(int(n[0]), int(n[1]))
+                n_mode = "stochastic"
+            else:
+                raise Exception("Expected tuple of (int, None) or (int, int), "
+                                "got %s" % ([type(el) for el in n],))
+        elif isinstance(n, iap.StochasticParameter):
+            n = n
+            n_mode = "stochastic"
+        else:
+            raise Exception("Expected int, (int, None), (int, int) or "
+                            "StochasticParameter, got %s" % (type(n),))
+        return n, n_mode
 
     def _get_n(self, nb_images, random_state):
         if self.n_mode == "deterministic":
@@ -3373,71 +3223,74 @@ class SomeOf(Augmenter, list):
         )
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if self._is_propagating(images, parents, hooks):
-            input_is_array = ia.is_np_array(images)
+        if not self._is_propagating(images, parents, hooks):
+            return images
 
-            # This must happen before creating the augmenter_active array,
-            # otherwise in case of determinism the number of augmented images
-            # would change the random_state's state, resulting in the order
-            # being dependent on the number of augmented images (and not be
-            # constant). By doing this first, the random state is always the
-            # same (when determinism is active), so the order is always the
-            # same.
-            augmenter_order = self._get_augmenter_order(random_state)
+        input_is_array = ia.is_np_array(images)
 
-            # create an array of active augmenters per image
-            # e.g.
-            #  [[0, 0, 1],
-            #   [1, 0, 1],
-            #   [1, 0, 0]]
-            # would signal, that augmenter 3 is active for the first image,
-            # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(images),
-                                                          random_state)
+        # This must happen before creating the augmenter_active array,
+        # otherwise in case of determinism the number of augmented images
+        # would change the random_state's state, resulting in the order
+        # being dependent on the number of augmented images (and not be
+        # constant). By doing this first, the random state is always the
+        # same (when determinism is active), so the order is always the
+        # same.
+        augmenter_order = self._get_augmenter_order(random_state)
 
-            for augmenter_index in augmenter_order:
-                active = augmenter_active[:, augmenter_index].nonzero()[0]
-                if len(active) > 0:
-                    # pick images to augment, i.e. images for which
-                    # augmenter at current index is active
-                    if input_is_array:
-                        images_to_aug = images[active]
+        # create an array of active augmenters per image
+        # e.g.
+        #  [[0, 0, 1],
+        #   [1, 0, 1],
+        #   [1, 0, 0]]
+        # would signal, that augmenter 3 is active for the first image,
+        # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
+        augmenter_active = self._get_augmenter_active(len(images),
+                                                      random_state)
+
+        for augmenter_index in augmenter_order:
+            active = augmenter_active[:, augmenter_index].nonzero()[0]
+            if len(active) > 0:
+                # pick images to augment, i.e. images for which
+                # augmenter at current index is active
+                if input_is_array:
+                    images_to_aug = images[active]
+                else:
+                    images_to_aug = [images[idx] for idx in active]
+
+                # augment the images
+                images_to_aug = self[augmenter_index].augment_images(
+                    images=images_to_aug,
+                    parents=parents + [self],
+                    hooks=hooks
+                )
+                output_is_array = ia.is_np_array(images_to_aug)
+                output_all_same_shape = len(
+                    set([img.shape for img in images_to_aug])) == 1
+
+                # Map them back to their position in the images array/list
+                # But it can happen that the augmented images have
+                # different shape(s) from the input image, as well as
+                # being suddenly a list instead of a numpy array.
+                # This is usually the case if a child augmenter has to
+                # change shapes, e.g. due to cropping (without resize
+                # afterwards). So accomodate here for that possibility.
+                if input_is_array:
+                    if not output_is_array and output_all_same_shape:
+                        images_to_aug = np.array(
+                            images_to_aug, dtype=images.dtype)
+                        output_is_array = True
+
+                    if (output_is_array
+                            and images_to_aug.shape[1:] == images.shape[1:]):
+                        images[active] = images_to_aug
                     else:
-                        images_to_aug = [images[idx] for idx in active]
-
-                    # augment the images
-                    images_to_aug = self[augmenter_index].augment_images(
-                        images=images_to_aug,
-                        parents=parents + [self],
-                        hooks=hooks
-                    )
-                    output_is_array = ia.is_np_array(images_to_aug)
-                    output_all_same_shape = len(
-                        set([img.shape for img in images_to_aug])) == 1
-
-                    # Map them back to their position in the images array/list
-                    # But it can happen that the augmented images have
-                    # different shape(s) from the input image, as well as
-                    # being suddenly a list instead of a numpy array.
-                    # This is usually the case if a child augmenter has to
-                    # change shapes, e.g. due to cropping (without resize
-                    # afterwards). So accomodate here for that possibility.
-                    if input_is_array:
-                        if not output_is_array and output_all_same_shape:
-                            images_to_aug = np.array(
-                                images_to_aug, dtype=images.dtype)
-                            output_is_array = True
-
-                        if output_is_array and images_to_aug.shape[1:] == images.shape[1:]:
-                            images[active] = images_to_aug
-                        else:
-                            images = list(images)
-                            for aug_idx, original_idx in enumerate(active):
-                                images[original_idx] = images_to_aug[aug_idx]
-                            input_is_array = False
-                    else:
+                        images = list(images)
                         for aug_idx, original_idx in enumerate(active):
                             images[original_idx] = images_to_aug[aug_idx]
+                        input_is_array = False
+                else:
+                    for aug_idx, original_idx in enumerate(active):
+                        images[original_idx] = images_to_aug[aug_idx]
 
         return images
 
@@ -3693,142 +3546,104 @@ class Sometimes(Augmenter):
         )
 
     def _augment_images(self, images, random_state, parents, hooks):
-        if self._is_propagating(images, parents, hooks):
-            input_is_np_array = ia.is_np_array(images)
-            if input_is_np_array:
-                input_dtype = images.dtype
+        input_is_np_array = ia.is_np_array(images)
+        if input_is_np_array:
+            input_dtype = images.dtype
 
-            nb_images = len(images)
-            samples = self.p.draw_samples((nb_images,),
-                                          random_state=random_state)
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_images(augmentables_, parents_, hooks_)
 
-            # create lists/arrays of images for if and else lists (one for
-            # each)
-            # note that np.where returns tuple(array([0, 5, 9, ...])) or
-            # tuple(array([]))
-            indices_then_list = np.where(samples == 1)[0]
-            indices_else_list = np.where(samples == 0)[0]
-            if isinstance(images, list):
-                images_then_list = [images[i] for i in indices_then_list]
-                images_else_list = [images[i] for i in indices_else_list]
-            else:
-                images_then_list = images[indices_then_list]
-                images_else_list = images[indices_else_list]
+        result = self._augment_augmentables(images, random_state,
+                                            parents, hooks, _augfunc)
 
-            # augment according to if and else list
-            result_then_list = images_then_list
-            result_else_list = images_else_list
-            if self.then_list is not None and len(images_then_list) > 0:
-                result_then_list = self.then_list.augment_images(
-                    images=images_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-            if self.else_list is not None and len(images_else_list) > 0:
-                result_else_list = self.else_list.augment_images(
-                    images=images_else_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            # map results of if/else lists back to their initial positions (in
-            # "images" variable)
-            result = [None] * len(images)
-            for idx_result_then_list, idx_images in enumerate(indices_then_list):
-                result[idx_images] = result_then_list[idx_result_then_list]
-            for idx_result_else_list, idx_images in enumerate(indices_else_list):
-                result[idx_images] = result_else_list[idx_result_else_list]
-
-            # If input was a list, keep the output as a list too,
-            # otherwise it was a numpy array, so make the output a numpy array
-            # too. Note here though that shapes can differ between images,
-            # e.g. when using Crop without resizing. In these cases, the
-            # output has to be a list.
+        # If input was a list, keep the output as a list too,
+        # otherwise it was a numpy array, so make the output a numpy array
+        # too. Note here though that shapes can differ between images,
+        # e.g. when using Crop without resizing. In these cases, the
+        # output has to be a list.
+        output_is_np_array = ia.is_np_array(result)
+        if input_is_np_array and not output_is_np_array:
             all_same_shape = len(set([image.shape for image in result])) == 1
-            if input_is_np_array and all_same_shape:
+            if all_same_shape:
                 result = np.array(result, dtype=input_dtype)
-        else:
-            result = images
 
         return result
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(augs_, inputs_, parents_, hooks_):
-            return augs_.augment_heatmaps(inputs_, parents_, hooks_)
-        return self._augment_non_images(heatmaps, random_state,
-                                        parents, hooks, _augfunc)
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_heatmaps(augmentables_, parents_, hooks_)
+        return self._augment_augmentables(heatmaps, random_state,
+                                          parents, hooks, _augfunc)
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents,
                                    hooks):
-        def _augfunc(augs_, inputs_, parents_, hooks_):
-            return augs_.augment_segmentation_maps(inputs_, parents_, hooks_)
-        return self._augment_non_images(segmaps, random_state,
-                                        parents, hooks, _augfunc)
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_segmentation_maps(augmentables_, parents_,
+                                                   hooks_)
+        return self._augment_augmentables(segmaps, random_state,
+                                          parents, hooks, _augfunc)
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
-        def _augfunc(augs_, inputs_, parents_, hooks_):
-            return augs_.augment_keypoints(inputs_, parents_, hooks_)
-        return self._augment_non_images(keypoints_on_images, random_state,
-                                        parents, hooks, _augfunc)
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_keypoints(augmentables_, parents_, hooks_)
+        return self._augment_augmentables(keypoints_on_images, random_state,
+                                          parents, hooks, _augfunc)
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
-        def _augfunc(augs_, inputs_, parents_, hooks_):
-            return augs_.augment_polygons(inputs_, parents_, hooks_)
-        return self._augment_non_images(polygons_on_images, random_state,
-                                        parents, hooks, _augfunc)
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_polygons(augmentables_, parents_, hooks_)
+        return self._augment_augmentables(polygons_on_images, random_state,
+                                          parents, hooks, _augfunc)
 
-    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
-        result = inputs
-        if self._is_propagating(inputs, parents, hooks):
-            nb_images = len(inputs)
-            samples = self.p.draw_samples((nb_images,),
-                                          random_state=random_state)
+    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
+                              func):
+        result = augmentables
+        if not self._is_propagating(augmentables, parents, hooks):
+            return result
 
-            # create lists/arrays of images for if and else lists (one for
-            # each)
-            # note that np.where returns tuple(array([0, 5, 9, ...])) or
-            # tuple(array([]))
-            indices_then_list = np.where(samples == 1)[0]
-            indices_else_list = np.where(samples == 0)[0]
-            images_then_list = [inputs[i] for i in indices_then_list]
-            images_else_list = [inputs[i] for i in indices_else_list]
+        nb_images = len(augmentables)
+        samples = self.p.draw_samples((nb_images,), random_state=random_state)
 
-            # augment according to if and else list
-            result_then_list = images_then_list
-            result_else_list = images_else_list
-            if self.then_list is not None and len(images_then_list) > 0:
-                result_then_list = func(self.then_list, images_then_list,
-                                        parents + [self], hooks)
-            if self.else_list is not None and len(images_else_list) > 0:
-                result_else_list = func(self.else_list, images_else_list,
-                                        parents + [self], hooks)
+        # create lists/arrays of images for if and else lists (one for each)
+        # note that np.where returns tuple(array([0, 5, 9, ...])) or
+        # tuple(array([]))
+        indices_then_list = np.where(samples == 1)[0]
+        indices_else_list = np.where(samples == 0)[0]
 
-            # map results of if/else lists back to their initial positions
-            # (in "images" variable)
-            result = [None] * len(inputs)
+        result = [None] * len(augmentables)
+        indice_lists = [indices_then_list, indices_else_list]
+        augmenter_lists = [self.then_list, self.else_list]
 
-            gen = enumerate(indices_then_list)
-            for idx_result_then_list, idx_images in gen:
-                result[idx_images] = result_then_list[idx_result_then_list]
+        # For then_list: collect augmentables to be processed by then_list
+        # augmenters, apply them to the list, then map back to the output
+        # list. Analogous for else_list.
+        # TODO maybe this would be easier if augment_*() accepted a list
+        #      that can contain Nones
+        for indices, augmenters in zip(indice_lists, augmenter_lists):
+            augmentables_this_list = [augmentables[i] for i in indices]
 
-            gen = enumerate(indices_else_list)
-            for idx_result_else_list, idx_images in gen:
-                result[idx_images] = result_else_list[idx_result_else_list]
+            result_list = augmentables_this_list
+            if augmenters is not None and len(augmenters) > 0:
+                result_list = func(
+                    augmenters,
+                    augmentables_this_list, parents + [self], hooks
+                )
+
+            for idx_augmentation, idx_output in enumerate(indices):
+                result[idx_output] = result_list[idx_augmentation]
 
         return result
 
     def _to_deterministic(self):
         aug = self.copy()
-        aug.then_list = (
-            aug.then_list.to_deterministic()
-            if aug.then_list is not None
-            else aug.then_list)
-        aug.else_list = (
-            aug.else_list.to_deterministic()
-            if aug.else_list is not None
-            else aug.else_list)
+        aug.then_list = (aug.then_list.to_deterministic()
+                         if aug.then_list is not None
+                         else aug.then_list)
+        aug.else_list = (aug.else_list.to_deterministic()
+                         if aug.else_list is not None
+                         else aug.else_list)
         aug.deterministic = True
         aug.random_state = self.random_state.derive_rng_()
         return aug
@@ -4598,122 +4413,97 @@ class AssertShape(Lambda):
             "Expected shape to have length 4, got %d with shape: %s." % (
                 len(shape), str(shape)))
 
-        def compare(observed, expected, dimension, image_index):
-            if expected is not None:
-                if ia.is_single_integer(expected):
-                    assert observed == expected, (
-                        "Expected dim %d (entry index: %s) to have value %d, "
-                        "got %d." % (dimension, image_index, expected,
-                                     observed))
-                elif isinstance(expected, tuple):
-                    assert len(expected) == 2, (
-                        "Expected tuple argument 'expected' to contain "
-                        "exactly 2 entries, got %d." % (len(expected),))
-                    assert expected[0] <= observed < expected[1], (
-                        "Expected dim %d (entry index: %s) to have value in "
-                        "interval [%d, %d), got %d." % (
-                            dimension, image_index, expected[0], expected[1],
-                            observed))
-                elif isinstance(expected, list):
-                    assert any([observed == val for val in expected]), (
-                        "Expected dim %d (entry index: %s) to have any value "
-                        "of %s, got %d." % (
-                            dimension, image_index, str(expected), observed))
-                else:
-                    raise Exception(
-                        "Invalid datatype for shape entry %d, expected each "
-                        "entry to be an integer, a tuple (with two entries) "
-                        "or a list, got %s." % (dimension, type(expected),))
-
-        def func_images(images, _random_state, _parents, _hooks):
-            if check_images:
-                if isinstance(images, list):
-                    if shape[0] is not None:
-                        compare(len(images), shape[0], 0, "ALL")
-
-                    for i in sm.xrange(len(images)):
-                        image = images[i]
-                        assert len(image.shape) == 3, (
-                            "Expected image number %d to have a shape of "
-                            "length 3, got %d (shape: %s)." % (
-                                i, len(image.shape), str(image.shape)))
-                        for j in sm.xrange(len(shape)-1):
-                            expected = shape[j+1]
-                            observed = image.shape[j]
-                            compare(observed, expected, j, i)
-                else:
-                    assert len(images.shape) == 4, (
-                        "Expected image's shape to have length 4, got %d "
-                        "(shape: %s)." % (len(images.shape),
-                                          str(images.shape)))
-                    for i in range(4):
-                        expected = shape[i]
-                        observed = images.shape[i]
-                        compare(observed, expected, i, "ALL")
-            return images
-
-        def func_heatmaps(heatmaps, _random_state, _parents, _hooks):
-            if check_heatmaps:
-                if shape[0] is not None:
-                    compare(len(heatmaps), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(heatmaps)):
-                    heatmaps_i = heatmaps[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = heatmaps_i.arr_0to1.shape[j]
-                        compare(observed, expected, j, i)
-            return heatmaps
-
-        def func_segmentation_maps(segmaps, _random_state, _parents, _hooks):
-            if check_segmentation_maps:
-                if shape[0] is not None:
-                    compare(len(segmaps), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(segmaps)):
-                    segmaps_i = segmaps[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = segmaps_i.arr.shape[j]
-                        compare(observed, expected, j, i)
-            return segmaps
-
-        def func_keypoints(keypoints_on_images, _random_state, _parents,
-                           _hooks):
-            if check_keypoints:
-                if shape[0] is not None:
-                    compare(len(keypoints_on_images), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(keypoints_on_images)):
-                    keypoints_on_image = keypoints_on_images[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = keypoints_on_image.shape[j]
-                        compare(observed, expected, j, i)
-            return keypoints_on_images
-
-        def func_polygons(polygons_on_images, _random_state, _parents, _hooks):
-            if check_polygons:
-                if shape[0] is not None:
-                    compare(len(polygons_on_images), shape[0], 0, "ALL")
-
-                for i in sm.xrange(len(polygons_on_images)):
-                    polygons_on_image = polygons_on_images[i]
-                    for j in sm.xrange(len(shape[0:2])):
-                        expected = shape[j+1]
-                        observed = polygons_on_image.shape[j]
-                        compare(observed, expected, j, i)
-            return polygons_on_images
+        self.shape = shape
+        self.is_checking_images = check_images
+        self.is_checking_heatmaps = check_heatmaps
+        self.is_checking_segmentation_maps = check_segmentation_maps
+        self.is_checking_keypoints = check_keypoints
+        self.is_checking_polygons = check_polygons
 
         super(AssertShape, self).__init__(
-            func_images=func_images,
-            func_heatmaps=func_heatmaps,
-            func_segmentation_maps=func_segmentation_maps,
-            func_keypoints=func_keypoints,
-            func_polygons=func_polygons,
+            func_images=self._check_images,
+            func_heatmaps=self._check_heatmaps,
+            func_segmentation_maps=self._check_segmentation_maps,
+            func_keypoints=self._check_keypoints,
+            func_polygons=self._check_polygons,
             name=name,
             deterministic=deterministic,
             random_state=random_state)
+
+    @classmethod
+    def _compare(cls, observed, expected, dimension, image_index):
+        if expected is not None:
+            if ia.is_single_integer(expected):
+                assert observed == expected, (
+                    "Expected dim %d (entry index: %s) to have value %d, "
+                    "got %d." % (dimension, image_index, expected,
+                                 observed))
+            elif isinstance(expected, tuple):
+                assert len(expected) == 2, (
+                    "Expected tuple argument 'expected' to contain "
+                    "exactly 2 entries, got %d." % (len(expected),))
+                assert expected[0] <= observed < expected[1], (
+                    "Expected dim %d (entry index: %s) to have value in "
+                    "interval [%d, %d), got %d." % (
+                        dimension, image_index, expected[0], expected[1],
+                        observed))
+            elif isinstance(expected, list):
+                assert any([observed == val for val in expected]), (
+                    "Expected dim %d (entry index: %s) to have any value "
+                    "of %s, got %d." % (
+                        dimension, image_index, str(expected), observed))
+            else:
+                raise Exception(
+                    "Invalid datatype for shape entry %d, expected each "
+                    "entry to be an integer, a tuple (with two entries) "
+                    "or a list, got %s." % (dimension, type(expected),))
+
+    def _check_augmentables(self, augmentables, get_shape_func,
+                            shape_target=None):
+        if shape_target is None:
+            # 0:3 so that we don't check C for most augmentables
+            shape_target = self.shape[0:3]
+
+        if self.shape[0] is not None:
+            self._compare(len(augmentables), shape_target[0], 0, "ALL")
+
+        for augm_idx, augmentable in enumerate(augmentables):
+            # note that dim_idx is here per object, dim 0 of shape target
+            # denotes "number of all objects" and was checked above
+            for dim_idx, expected in enumerate(shape_target[1:]):
+                observed = get_shape_func(augmentable)[dim_idx]
+                self._compare(observed, expected, dim_idx, augm_idx)
+
+    def _check_images(self, images, _random_state, _parents, _hooks):
+        if self.is_checking_images:
+            # set shape_target so that we check all target dimensions,
+            # including C, which isn't checked for the other methods
+            self._check_augmentables(images, lambda obj: obj.shape,
+                                     shape_target=self.shape)
+        return images
+
+    def _check_heatmaps(self, heatmaps, _random_state, _parents, _hooks):
+        if self.is_checking_heatmaps:
+            self._check_augmentables(heatmaps, lambda obj: obj.arr_0to1.shape)
+        return heatmaps
+
+    def _check_segmentation_maps(self, segmaps, _random_state, _parents,
+                                 _hooks):
+        if self.is_checking_segmentation_maps:
+            self._check_augmentables(segmaps, lambda obj: obj.arr.shape)
+        return segmaps
+
+    def _check_keypoints(self, keypoints_on_images, _random_state, _parents,
+                         _hooks):
+        if self.is_checking_keypoints:
+            self._check_augmentables(keypoints_on_images, lambda obj: obj.shape)
+        return keypoints_on_images
+
+    def _check_polygons(self, polygons_on_images, _random_state, _parents,
+                        _hooks):
+        if self.is_checking_polygons:
+            self._check_augmentables(polygons_on_images, lambda obj: obj.shape)
+        return polygons_on_images
 
 
 class ChannelShuffle(Augmenter):
@@ -4798,9 +4588,9 @@ class ChannelShuffle(Augmenter):
         p_samples = self.p.draw_samples((nb_images,),
                                         random_state=random_state)
         rss = random_state.duplicate(nb_images)
-        for i in sm.xrange(nb_images):
-            if p_samples[i] >= 1-1e-4:
-                images[i] = shuffle_channels(images[i], rss[i], self.channels)
+        for i, (image, p_i, rs) in enumerate(zip(images, p_samples, rss)):
+            if p_i >= 1-1e-4:
+                images[i] = shuffle_channels(image, rs, self.channels)
         return images
 
     def get_parameters(self):

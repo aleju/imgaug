@@ -6,13 +6,36 @@ Placing them in test/ directory seems to be against convention, so they are part
 from __future__ import print_function, division, absolute_import
 
 import random
+import copy
 
 import numpy as np
 import six.moves as sm
+# unittest.mock is not available in 2.7 (though unittest2 might contain it?)
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 import imgaug as ia
 import imgaug.random as iarandom
 from imgaug.augmentables.kps import KeypointsOnImage
+
+
+class ArgCopyingMagicMock(mock.MagicMock):
+    """A MagicMock that copies its call args/kwargs before storing the call.
+
+    This is useful for imgaug as many augmentation methods change data
+    in-place.
+
+    Taken from https://stackoverflow.com/a/23264042/3760780
+
+    """
+
+    def _mock_call(self, *args, **kwargs):
+        args_copy = copy.deepcopy(args)
+        kwargs_copy = copy.deepcopy(kwargs)
+        return super(ArgCopyingMagicMock, self)._mock_call(
+            *args_copy, **kwargs_copy)
 
 
 def create_random_images(size):

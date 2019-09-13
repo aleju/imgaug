@@ -1293,8 +1293,20 @@ class TestKMeansColorQuantization(unittest.TestCase):
     def test_max_size_is_int_and_resize_necessary(self):
         image = np.zeros((200, 100, 3), dtype=np.uint8)
         aug = self.augmenter(max_size=100)
-        mock_imresize = mock.MagicMock(
-            return_value=np.zeros((100, 50, 3), dtype=np.uint8))
+
+        class _ImresizeSideEffect(object):
+            def __init__(self):
+                self.nth_call = 0
+
+            def __call__(self, *_args, **_kwargs):
+                if self.nth_call == 0:
+                    self.nth_call += 1
+                    return np.zeros((100, 50, 3), dtype=np.uint8)
+                else:
+                    return np.zeros((200, 100, 3), dtype=np.uint8)
+
+        mock_imresize = mock.Mock()
+        mock_imresize.side_effect = _ImresizeSideEffect()
 
         fname = "imgaug.imresize_single_image"
         with mock.patch(fname, mock_imresize):
@@ -1321,13 +1333,26 @@ class TestKMeansColorQuantization(unittest.TestCase):
     def test_interpolation(self):
         image = np.zeros((200, 100, 3), dtype=np.uint8)
         aug = self.augmenter(max_size=100, interpolation="cubic")
-        mock_imresize = mock.MagicMock(
-            return_value=np.zeros((100, 50, 3), dtype=np.uint8))
+
+        class _ImresizeSideEffect(object):
+            def __init__(self):
+                self.nth_call = 0
+
+            def __call__(self, *_args, **_kwargs):
+                if self.nth_call == 0:
+                    self.nth_call += 1
+                    return np.zeros((100, 50, 3), dtype=np.uint8)
+                else:
+                    return np.zeros((200, 100, 3), dtype=np.uint8)
+
+        mock_imresize = mock.Mock()
+        mock_imresize.side_effect = _ImresizeSideEffect()
 
         fname = "imgaug.imresize_single_image"
         with mock.patch(fname, mock_imresize):
             _ = aug.augment_image(image)
 
+        assert mock_imresize.call_count == 2
         # downscaling
         # call 0, args, argument 1 (sizes)
         # call 0, kwargs, argument "interpolation"

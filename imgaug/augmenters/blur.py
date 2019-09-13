@@ -246,17 +246,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
             # ksize = ((sig - 0.8)/0.3 + 1)/0.5 + 1
 
             if ksize is None:
-                if sigma < 3.0:
-                    ksize = 3.3 * sigma  # 99% of weight
-                elif sigma < 5.0:
-                    ksize = 2.9 * sigma  # 97% of weight
-                else:
-                    ksize = 2.6 * sigma  # 95% of weight
-
-                # we use 5x5 here as the minimum size as that simplifies
-                # comparisons with gaussian_filter() in the tests
-                # TODO reduce this to 3x3
-                ksize = int(max(ksize, 5))
+                ksize = _compute_gaussian_blur_ksize(sigma)
             else:
                 assert ia.is_single_integer(ksize), (
                     "Expected 'ksize' argument to be a number, "
@@ -281,6 +271,21 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
             image = iadt.restore_dtypes_(image, dtype)
 
     return image
+
+
+def _compute_gaussian_blur_ksize(sigma):
+    if sigma < 3.0:
+        ksize = 3.3 * sigma  # 99% of weight
+    elif sigma < 5.0:
+        ksize = 2.9 * sigma  # 97% of weight
+    else:
+        ksize = 2.6 * sigma  # 95% of weight
+
+    # we use 5x5 here as the minimum size as that simplifies
+    # comparisons with gaussian_filter() in the tests
+    # TODO reduce this to 3x3
+    ksize = int(max(ksize, 5))
+    return ksize
 
 
 # TODO offer different values for sigma on x/y-axis, supported by cv2 but not

@@ -5061,7 +5061,7 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test___init___cval_is_all(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=ia.ALL)
-        assert isinstance(aug.cval, iap.DiscreteUniform)
+        assert isinstance(aug.cval, iap.Uniform)
         assert isinstance(aug.cval.a, iap.Deterministic)
         assert isinstance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
@@ -5086,7 +5086,7 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test___init___cval_is_tuple(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=(128, 255))
-        assert isinstance(aug.cval, iap.DiscreteUniform)
+        assert isinstance(aug.cval, iap.Uniform)
         assert isinstance(aug.cval.a, iap.Deterministic)
         assert isinstance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 128
@@ -6389,8 +6389,7 @@ class TestRot90(unittest.TestCase):
             img_aug,
             ia.imresize_single_image(
                 np.rot90(img_nonsquare, 1, axes=(1, 0)),
-                (5, 4),
-                interpolation="cubic"
+                (5, 4)
             )
         )
 

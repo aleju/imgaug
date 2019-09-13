@@ -590,10 +590,10 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         assert kpi2.shape == (5, 5, 3)
         assert len(kpi2.keypoints) == 2
-        assert kpi2.keypoints[0].y == 2
-        assert kpi2.keypoints[0].x == 1
-        assert kpi2.keypoints[1].y == 4
-        assert kpi2.keypoints[1].x == 3
+        assert kpi2.keypoints[0].y == 2.5
+        assert kpi2.keypoints[0].x == 1.5
+        assert kpi2.keypoints[1].y == 4.5
+        assert kpi2.keypoints[1].x == 3.5
 
     def test_from_keypoint_image_dict_as_if_not_found_thresh_20(self):
         kps_image = np.zeros((5, 5, 2), dtype=np.uint8)
@@ -608,8 +608,8 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         assert kpi2.shape == (5, 5, 3)
         assert len(kpi2.keypoints) == 2
-        assert kpi2.keypoints[0].y == 2
-        assert kpi2.keypoints[0].x == 1
+        assert kpi2.keypoints[0].y == 2.5
+        assert kpi2.keypoints[0].x == 1.5
         assert kpi2.keypoints[1].y == -2
         assert kpi2.keypoints[1].x == -1
 
@@ -626,8 +626,8 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         assert kpi2.shape == (5, 5, 3)
         assert len(kpi2.keypoints) == 2
-        assert kpi2.keypoints[0].y == 2
-        assert kpi2.keypoints[0].x == 1
+        assert kpi2.keypoints[0].y == 2.5
+        assert kpi2.keypoints[0].x == 1.5
         assert kpi2.keypoints[1].y == -2
         assert kpi2.keypoints[1].x == -1
 
@@ -644,8 +644,8 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         assert kpi2.shape == (5, 5, 3)
         assert len(kpi2.keypoints) == 1
-        assert kpi2.keypoints[0].y == 2
-        assert kpi2.keypoints[0].x == 1
+        assert kpi2.keypoints[0].y == 2.5
+        assert kpi2.keypoints[0].x == 1.5
 
     def test_from_keypoint_image_bad_datatype_as_if_not_found(self):
         kps_image = np.zeros((5, 5, 2), dtype=np.uint8)

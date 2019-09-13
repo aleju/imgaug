@@ -1911,6 +1911,40 @@ class TestAugmenter(unittest.TestCase):
                     translations_kps[8-1] -= 1
                     assert np.array_equal(translations_imgs, translations_kps)
 
+    def test_augment_keypoints_aligned_despite_nongeometric_image_ops(self):
+        # Verify for keypoints that adding augmentations that only
+        # affect images doesn't lead to misalignments between image
+        # and keypoint transformations
+        augs = iaa.Sequential([
+            iaa.Fliplr(0.5),
+            iaa.AdditiveGaussianNoise(scale=(0.01, 0.1)),
+            iaa.Affine(translate_px={"x": (-10, 10), "y": (-10, 10)},
+                       order=0, mode="constant", cval=0),
+            iaa.AddElementwise((0, 1)),
+            iaa.Flipud(0.5)
+        ], random_order=True)
+
+        kps = [ia.Keypoint(x=15.5, y=12.5), ia.Keypoint(x=23.5, y=20.5),
+               ia.Keypoint(x=61.5, y=36.5), ia.Keypoint(x=47.5, y=32.5)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(50, 80, 4))
+        image = kpsoi.to_keypoint_image(size=1)
+        images = np.tile(image[np.newaxis, ...], (20, 1, 1, 1))
+
+        for _ in sm.xrange(50):
+            images_aug, kpsois_aug = augs(images=images,
+                                          keypoints=[kpsoi]*len(images))
+
+            for image_aug, kpsoi_aug in zip(images_aug, kpsois_aug):
+                kpsoi_recovered = ia.KeypointsOnImage.from_keypoint_image(
+                    image_aug, nb_channels=4, threshold=100
+                )
+
+                for kp, kp_image in zip(kpsoi_aug.keypoints,
+                                        kpsoi_recovered.keypoints):
+                    distance = np.sqrt((kp.x - kp_image.x)**2
+                                       + (kp.y - kp_image.y)**2)
+                    assert distance <= 1
+
     def test_augment_bounding_boxes(self):
         aug = _DummyAugmenterBBs()
         bb = ia.BoundingBox(x1=1, y1=4, x2=2, y2=5)
