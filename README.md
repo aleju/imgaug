@@ -85,6 +85,7 @@ It converts a set of input images into a new, much larger set of slightly altere
 5. [Example Images](#example_images)
 6. [Code Examples](#code_examples)
 7. [List of augmenters](#list_of_augmenters)
+8. [Citation](#citation)
 
 
 <a name="features"/>
@@ -1230,3 +1231,38 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | CloudLayer(IM, IFE, ICS, AMIN, AMUL, ASPXM, AFE, S, DMUL) | Adds a single layer of clouds to an image. `IM` is the mean intensity of the clouds, `IFE` a frequency noise exponent for the intensities (leading to non-uniform colors), `ICS` controls the variance of a gaussian for intensity sampling, `AM` is the minimum opacity of the clouds (values >0 are typical of fog), `AMUL` a multiplier for opacity values, `ASPXM` controls the minimum grid size at which to sample opacity values, `AFE` is a frequency noise exponent for opacity values, `S` controls the sparsity of clouds and `DMUL` is a cloud density multiplier. This interface is not final and will likely change in the future. |
 | Snowflakes(D, DU, FS, FSU, A, S) | Adds snowflakes with density `D`, density uniformity `DU`, snowflake size `FS`, snowflake size uniformity `FSU`, falling angle `A` and speed `S` to an image. One to three layers of snowflakes are added, hence the values should be stochastic. |
 | SnowflakesLayer(D, DU, FS, FSU, A, S, BSF, BSL) | Adds a single layer of snowflakes to an image. See augmenter `Snowflakes`. `BSF` and `BSL` control a gaussian blur applied to the snowflakes. |
+
+
+<a name="citation"/>
+
+## Citation
+
+If this library has helped you during your research, feel free to cite it:
+```latex
+@misc{imgaug,
+  author = {Jung, Alexander B.
+            and Wada, Kentaro
+            and Crall, Jon
+            and Tanaka, Satoshi
+            and Graving, Jake
+            and Yadav, Sarthak
+            and Banerjee, Joy
+            and Vecsei, Gábor
+            and Kraft, Adam
+            and Borovec, Jirka
+            and Vallentin, Christian
+            and Zhydenko, Semen
+            and Pfeiffer, Kilian
+            and Cook, Ben
+            and Fernández, Ismael
+            and Weng Chi-Hung
+            and Ayala-Acevedo, Abner
+            and Meudec, Raphael
+            and Laporte, Matias
+            and others},
+  title = {{imgaug}},
+  howpublished = "\url{https://github.com/aleju/imgaug}",
+  year = {2019},
+  note = "[Online; accessed 14-Sept-2019]"
+}
+```
