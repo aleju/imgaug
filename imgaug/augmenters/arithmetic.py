@@ -343,6 +343,9 @@ def multiply_scalar(image, multiplier):
         * ``float128``: no
         * ``bool``: limited; tested (1)
 
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
+              +/-inf.
+
         Note: tests were only conducted for rather small multipliers, around
         ``-10.0`` to ``+10.0``.
 
@@ -353,9 +356,6 @@ def multiply_scalar(image, multiplier):
         samples to be within the value range of ``float16``, as it has the
         same number of bytes (two) as ``uint16``. This is done to make
         overflows less likely to occur.
-
-        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
-              +/-inf.
 
     Parameters
     ----------
@@ -512,6 +512,9 @@ def multiply_elementwise(image, multipliers):
         * ``float128``: no
         * ``bool``: limited; tested (1)
 
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
+
         Note: tests were only conducted for rather small multipliers, around
         ``-10.0`` to ``+10.0``.
 
@@ -522,9 +525,6 @@ def multiply_elementwise(image, multipliers):
         samples to be within the value range of ``float16``, as it has the
         same number of bytes (two) as ``uint16``. This is done to make
         overflows less likely to occur.
-
-        - (1) Non-uint8 dtypes can overflow. For floats, this can result
-              in +/-inf.
 
     Parameters
     ----------
@@ -1035,7 +1035,7 @@ class Add(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.add`.
+        See :func:`imgaug.augmenters.arithmetic.add_scalar`.
 
     Parameters
     ----------

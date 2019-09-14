@@ -2931,14 +2931,14 @@ class ElasticTransformation(meta.Augmenter):
         * ``float128``: no
         * ``bool``: yes; tested (1) (7)
 
-        (1) Always handled by ``cv2``.
-        (2) Always handled by ``scipy``.
-        (3) Only supported for ``order != 0``. Will fail for ``order=0``.
-        (4) Mapped internally to ``float64`` when ``order=1``.
-        (5) Mapped internally to ``int16`` when ``order>=2``.
-        (6) Handled by ``cv2`` when ``order=0`` or ``order=1``, otherwise by
-            ``scipy``.
-        (7) Mapped internally to ``float32``.
+        - (1) Always handled by ``cv2``.
+        - (2) Always handled by ``scipy``.
+        - (3) Only supported for ``order != 0``. Will fail for ``order=0``.
+        - (4) Mapped internally to ``float64`` when ``order=1``.
+        - (5) Mapped internally to ``int16`` when ``order>=2``.
+        - (6) Handled by ``cv2`` when ``order=0`` or ``order=1``, otherwise by
+              ``scipy``.
+        - (7) Mapped internally to ``float32``.
 
     Parameters
     ----------
@@ -3373,7 +3373,7 @@ class ElasticTransformation(meta.Augmenter):
 
         dtype support::
 
-            if (backend="scipy" and order=0):
+            if (backend="scipy" and order=0)::
 
                 * ``uint8``: yes
                 * ``uint16``: yes
@@ -3394,9 +3394,9 @@ class ElasticTransformation(meta.Augmenter):
                       with <max_value>
                 - (3) causes: 'data type no supported'
 
-            if (backend="scipy" and order>0):
+            if (backend="scipy" and order>0)::
 
-                * ``uint8``:  yes (1)
+                * ``uint8``: yes (1)
                 * ``uint16``: yes (1)
                 * ``uint32``: yes (1)
                 * ``uint64``: yes (1)
@@ -3414,7 +3414,7 @@ class ElasticTransformation(meta.Augmenter):
                       interpolation
                 - (2) causes: 'data type no supported'
 
-            if (backend="cv2" and order=0):
+            if (backend="cv2" and order=0)::
 
                 * ``uint8``: yes
                 * ``uint16``: yes
@@ -3435,7 +3435,7 @@ class ElasticTransformation(meta.Augmenter):
                 - (3) causes: src data type = 13 is not supported
                 - (4) causes: src data type = 0 is not supported
 
-            if (backend="cv2" and order=1):
+            if (backend="cv2" and order=1)::
 
                 * ``uint8``: yes
                 * ``uint16``: yes
@@ -3458,7 +3458,7 @@ class ElasticTransformation(meta.Augmenter):
                 - (3) causes: src data type = 13 is not supported
                 - (4) causes: src data type = 0 is not supported
 
-            if (backend="cv2" and order>=2):
+            if (backend="cv2" and order>=2)::
 
                 * ``uint8``: yes
                 * ``uint16``: yes
