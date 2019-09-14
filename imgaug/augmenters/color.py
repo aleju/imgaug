@@ -190,7 +190,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
 
     dtype support::
 
-        * ``uint8``: yes; indirectly tested
+        * ``uint8``: yes; fully tested
         * ``uint16``: no
         * ``uint32``: no
         * ``uint64``: no
@@ -323,19 +323,7 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
 
     dtype support::
 
-        * ``uint8``: yes; indirectly tested
-        * ``uint16``: no
-        * ``uint32``: no
-        * ``uint64``: no
-        * ``int8``: no
-        * ``int16``: no
-        * ``int32``: no
-        * ``int64``: no
-        * ``float16``: no
-        * ``float32``: no
-        * ``float64``: no
-        * ``float128``: no
-        * ``bool``: no
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
