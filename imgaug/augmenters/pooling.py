@@ -25,6 +25,7 @@ from __future__ import print_function, division, absolute_import
 from abc import ABCMeta, abstractmethod
 
 import six
+import numpy as np
 
 from . import meta
 import imgaug as ia
@@ -62,7 +63,10 @@ class _AbstractPoolingBase(meta.Augmenter):
         else:
             kernel_sizes_w = self.kernel_size[1].draw_samples(
                 (nb_images,), random_state=rss[1])
-        return kernel_sizes_h, kernel_sizes_w
+        return (
+            np.clip(kernel_sizes_h, 1, None),
+            np.clip(kernel_sizes_w, 1, None)
+        )
 
     def _augment_images(self, images, random_state, parents, hooks):
         if not self.keep_size:
@@ -75,15 +79,39 @@ class _AbstractPoolingBase(meta.Augmenter):
         for i, (image, ksize_h, ksize_w) in gen:
             if ksize_h >= 2 or ksize_w >= 2:
                 image_pooled = self._pool_image(
-                    image,
-                    max(ksize_h, 1), max(ksize_w, 1)
-                )
+                    image, ksize_h, ksize_w)
                 if self.keep_size:
                     image_pooled = ia.imresize_single_image(
                         image_pooled, image.shape[0:2])
                 images[i] = image_pooled
 
         return images
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
+        if self.keep_size:
+            return keypoints_on_images
+
+        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
+            keypoints_on_images, random_state)
+
+        gen = enumerate(zip(keypoints_on_images, kernel_sizes_h,
+                            kernel_sizes_w))
+        for i, (kpsoi, ksize_h, ksize_w) in gen:
+            if ksize_h >= 2 or ksize_w >= 2:
+                new_shape = tuple([
+                    int(np.ceil(kpsoi.shape[0] / ksize_h)),
+                    int(np.ceil(kpsoi.shape[1] / ksize_w)),
+                ] + list(kpsoi.shape[2:]))
+
+                keypoints_on_images[i] = kpsoi.on(new_shape)
+
+        return keypoints_on_images
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.kernel_size, self.keep_size]
