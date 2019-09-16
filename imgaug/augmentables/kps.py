@@ -381,6 +381,34 @@ class Keypoint(object):
         return "Keypoint(x=%.8f, y=%.8f)" % (self.x, self.y)
 
 
+class Keypoints(object):
+    """
+    A vectorized backend representing multiple keypoints
+    """
+    def __init__(self, data):
+        self._data = np.asarray(data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, index):
+        xy = self._data[index]
+        return Keypoint(*xy)
+
+    def deepcopy(self, data=None):
+        if data is None:
+            data = self._data.copy()
+        return Keypoints(data)
+
+    def shift(self, x=0, y=0):
+        offset = np.array([[x, y]])
+        return self.deepcopy(self._data + offset)
+
+    def project(self, from_shape, to_shape):
+        _augdata = project_coords(self._data, from_shape, to_shape)
+        return self.deepcopy(_augdata)
+
+
 class KeypointsOnImage(object):
     """Container for all keypoints on a single image.
 
@@ -445,8 +473,11 @@ class KeypointsOnImage(object):
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
         else:
-            keypoints = [kp.project(self.shape, shape)
-                         for kp in self.keypoints]
+            if isinstance(self.keypoints, Keypoints):
+                keypoints = self.keypoints.project(self.shape, shape)
+            else:
+                keypoints = [kp.project(self.shape, shape)
+                             for kp in self.keypoints]
             return self.deepcopy(keypoints, shape)
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3,
@@ -511,7 +542,10 @@ class KeypointsOnImage(object):
             Keypoints after moving them.
 
         """
-        keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
+        if isinstance(self.keypoints, Keypoints):
+            keypoints = self.keypoints.shift(x=x, y=y)
+        else:
+            keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
         return self.deepcopy(keypoints)
 
     @ia.deprecated(alt_func="KeypointsOnImage.to_xy_array()")
@@ -539,10 +573,13 @@ class KeypointsOnImage(object):
             the x/y-coordinates.
 
         """
-        result = np.zeros((len(self.keypoints), 2), dtype=np.float32)
-        for i, keypoint in enumerate(self.keypoints):
-            result[i, 0] = keypoint.x
-            result[i, 1] = keypoint.y
+        if isinstance(self.keypoints, Keypoints):
+            result = self.keypoints._data
+        else:
+            result = np.zeros((len(self.keypoints), 2), dtype=np.float32)
+            for i, keypoint in enumerate(self.keypoints):
+                result[i, 0] = keypoint.x
+                result[i, 1] = keypoint.y
         return result
 
     @staticmethod
@@ -922,7 +959,10 @@ class KeypointsOnImage(object):
         """
         # for some reason deepcopy is way slower here than manual copy
         if keypoints is None:
-            keypoints = [kp.deepcopy() for kp in self.keypoints]
+            if isinstance(self.keypoints, Keypoints):
+                keypoints = self.keypoints.deepcopy()
+            else:
+                keypoints = [kp.deepcopy() for kp in self.keypoints]
         if shape is None:
             shape = tuple(self.shape)
         return KeypointsOnImage(keypoints, shape)
