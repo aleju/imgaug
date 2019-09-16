@@ -392,8 +392,8 @@ class Keypoints(object):
         return len(self._data)
 
     def __getitem__(self, index):
-        xy = self._data[index]
-        return Keypoint(*xy)
+        x, y = self._data[index].tolist()
+        return Keypoint(x, y)
 
     def deepcopy(self, data=None):
         if data is None:
