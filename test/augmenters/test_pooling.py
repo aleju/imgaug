@@ -16,6 +16,7 @@ import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug.testutils import reseed
@@ -29,11 +30,30 @@ class _TestPoolingAugmentersBase(object):
     def augmenter(self):
         raise NotImplementedError()
 
+    @mock.patch("imgaug.augmenters.pooling._AbstractPoolingBase."
+                "_augment_hms_and_segmaps")
+    def test_augment_segmaps(self, mock_aug_segmaps):
+        from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+        arr = np.int32([
+            [1, 2, 3],
+            [4, 5, 6]
+        ])
+        segmap = SegmentationMapsOnImage(arr, shape=(6, 6, 3))
+        rng = iarandom.RNG(0)
+        aug = self.augmenter(2, keep_size=False, random_state=rng)
+
+        _ = aug.augment_segmentation_maps(segmap)
+
+        assert mock_aug_segmaps.call_count == 1
+        # call 0, args, arg 0, segmap 0 within segmaps list
+        assert np.array_equal(
+            mock_aug_segmaps.call_args_list[0][0][0][0].arr,
+            segmap.arr)
+
     def _test_augment_keypoints__kernel_size_is_noop(self, kernel_size):
         from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
         kps = [Keypoint(x=1.5, y=5.5), Keypoint(x=5.5, y=1.5)]
         kpsoi = KeypointsOnImage(kps, shape=(6, 6, 3))
-
         aug = self.augmenter(kernel_size)
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
@@ -48,6 +68,26 @@ class _TestPoolingAugmentersBase(object):
 
     def test_augment_keypoints__kernel_size_is_one(self):
         self._test_augment_keypoints__kernel_size_is_noop(1)
+
+    def _test_augment_heatmaps__kernel_size_is_noop(self, kernel_size):
+        from imgaug.augmentables.heatmaps import HeatmapsOnImage
+        arr = np.float32([
+            [0.5, 0.6, 0.7],
+            [0.4, 0.5, 0.6]
+        ])
+        heatmaps = HeatmapsOnImage(arr, shape=(6, 6, 3))
+        aug = self.augmenter(kernel_size)
+
+        heatmaps_aug = aug.augment_heatmaps(heatmaps)
+
+        assert heatmaps_aug.shape == (6, 6, 3)
+        assert np.allclose(heatmaps_aug.arr_0to1, arr[..., np.newaxis])
+
+    def test_augment_heatmaps__kernel_size_is_zero(self):
+        self._test_augment_heatmaps__kernel_size_is_noop(0)
+
+    def test_augment_heatmaps__kernel_size_is_one(self):
+        self._test_augment_heatmaps__kernel_size_is_noop(1)
 
     def test_augment_keypoints__kernel_size_is_two__keep_size(self):
         from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
@@ -74,6 +114,37 @@ class _TestPoolingAugmentersBase(object):
         assert np.allclose(kpsoi_aug.to_xy_array(),
                            [[1.5/2, 5.5/2],
                             [5.5/2, 1.5/2]])
+
+    def test_augment_heatmaps__kernel_size_is_two__keep_size(self):
+        from imgaug.augmentables.heatmaps import HeatmapsOnImage
+        arr = np.float32([
+            [0.5, 0.6, 0.7],
+            [0.4, 0.5, 0.6]
+        ])
+        heatmaps = HeatmapsOnImage(arr, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=True)
+
+        heatmaps_aug = aug.augment_heatmaps(heatmaps)
+
+        assert heatmaps_aug.shape == (6, 6, 3)
+        assert np.allclose(heatmaps_aug.arr_0to1, arr[..., np.newaxis])
+
+    def test_augment_heatmaps__kernel_size_is_two__no_keep_size(self):
+        from imgaug.augmentables.heatmaps import HeatmapsOnImage
+        arr = np.float32([
+            [0.5, 0.6, 0.7],
+            [0.4, 0.5, 0.6]
+        ])
+        heatmaps = HeatmapsOnImage(arr, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=False)
+
+        heatmaps_aug = aug.augment_heatmaps(heatmaps)
+
+        # heatmap aug is only supposed to update the image shape as the library
+        # can handle heatmaps of different size than the image, so heatmap
+        # array stays the same
+        assert heatmaps_aug.shape == (3, 3, 3)
+        assert np.allclose(heatmaps_aug.arr_0to1, arr[..., np.newaxis])
 
     def test_augment_keypoints__kernel_size_differs(self):
         from imgaug.augmentables.kps import Keypoint, KeypointsOnImage

@@ -87,6 +87,34 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return images
 
+    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
+        return self._augment_hms_and_segmaps(heatmaps, random_state)
+
+    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
+        return self._augment_hms_and_segmaps(segmaps, random_state)
+
+    def _augment_hms_and_segmaps(self, augmentables, random_state):
+        if self.keep_size:
+            return augmentables
+
+        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
+            augmentables, random_state)
+
+        gen = enumerate(zip(augmentables, kernel_sizes_h, kernel_sizes_w))
+        for i, (augmentable, ksize_h, ksize_w) in gen:
+            if ksize_h >= 2 or ksize_w >= 2:
+                # we only update the shape of the underlying image here,
+                # because the library can handle heatmaps/segmaps that are
+                # larger/smaller than the corresponding image
+                new_shape = tuple([
+                    int(np.ceil(augmentable.shape[0] / ksize_h)),
+                    int(np.ceil(augmentable.shape[1] / ksize_w)),
+                ] + list(augmentable.shape[2:]))
+
+                augmentable.shape = new_shape
+
+        return augmentables
+
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
         if self.keep_size:
@@ -120,7 +148,6 @@ class _AbstractPoolingBase(meta.Augmenter):
 # TODO rename kernel size parameters in all augmenters to kernel_size
 # TODO add per_channel
 # TODO add upscaling interpolation mode?
-# TODO add dtype support
 class AveragePooling(_AbstractPoolingBase):
     """
     Apply average pooling to images.
@@ -130,14 +157,18 @@ class AveragePooling(_AbstractPoolingBase):
     size. Optionally, the augmenter will automatically re-upscale the image
     to the input size (by default this is activated).
 
-    This augmenter does not affect heatmaps, segmentation maps or
-    coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
-
     Note that this augmenter is very similar to ``AverageBlur``.
     ``AverageBlur`` applies averaging within windows of given kernel size
     *without* striding, while ``AveragePooling`` applies striding corresponding
     to the kernel size, with optional upscaling afterwards. The upscaling
     is configured to create "pixelated"/"blocky" images by default.
+
+    .. note ::
+
+        During heatmap or segmentation map augmentation, the respective
+        arrays are not changed, only the shapes of the underlying images
+        are updated. This is because imgaug can handle maps/maks that are
+        larger/smaller than their corresponding image.
 
     dtype support::
 
@@ -228,7 +259,7 @@ class AveragePooling(_AbstractPoolingBase):
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
         return ia.avg_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+            (kernel_size_h, kernel_size_w)
         )
 
 
@@ -241,10 +272,14 @@ class MaxPooling(_AbstractPoolingBase):
     size. Optionally, the augmenter will automatically re-upscale the image
     to the input size (by default this is activated).
 
-    The maximum within each pixel window is always taken channelwise.
+    The maximum within each pixel window is always taken channelwise..
 
-    This augmenter does not affect heatmaps, segmentation maps or
-    coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
+    .. note ::
+
+        During heatmap or segmentation map augmentation, the respective
+        arrays are not changed, only the shapes of the underlying images
+        are updated. This is because imgaug can handle maps/maks that are
+        larger/smaller than their corresponding image.
 
     dtype support::
 
@@ -337,7 +372,7 @@ class MaxPooling(_AbstractPoolingBase):
         #      to reflection padding
         return ia.max_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+            (kernel_size_h, kernel_size_w)
         )
 
 
@@ -352,8 +387,12 @@ class MinPooling(_AbstractPoolingBase):
 
     The minimum within each pixel window is always taken channelwise.
 
-    This augmenter does not affect heatmaps, segmentation maps or
-    coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
+    .. note ::
+
+        During heatmap or segmentation map augmentation, the respective
+        arrays are not changed, only the shapes of the underlying images
+        are updated. This is because imgaug can handle maps/maks that are
+        larger/smaller than their corresponding image.
 
     dtype support::
 
@@ -446,7 +485,7 @@ class MinPooling(_AbstractPoolingBase):
         #      to reflection padding
         return ia.min_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+            (kernel_size_h, kernel_size_w)
         )
 
 
@@ -461,8 +500,12 @@ class MedianPooling(_AbstractPoolingBase):
 
     The median within each pixel window is always taken channelwise.
 
-    This augmenter does not affect heatmaps, segmentation maps or
-    coordinates-based augmentables (e.g. keypoints, bounding boxes, ...).
+    .. note ::
+
+        During heatmap or segmentation map augmentation, the respective
+        arrays are not changed, only the shapes of the underlying images
+        are updated. This is because imgaug can handle maps/maks that are
+        larger/smaller than their corresponding image.
 
     dtype support::
 
@@ -555,5 +598,5 @@ class MedianPooling(_AbstractPoolingBase):
         #      to reflection padding
         return ia.median_pool(
             image,
-            (max(kernel_size_h, 1), max(kernel_size_w, 1))
+            (kernel_size_h, kernel_size_w)
         )
