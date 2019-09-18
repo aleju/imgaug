@@ -174,12 +174,12 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
     cv2_bad_order = order not in [0, 1, 3]
     if order == 0:
         cv2_bad_dtype = (
-                arr.dtype.name
-                not in _VALID_DTYPES_CV2_ORDER_0)
+            arr.dtype.name
+            not in _VALID_DTYPES_CV2_ORDER_0)
     else:
         cv2_bad_dtype = (
-                arr.dtype.name
-                not in _VALID_DTYPES_CV2_ORDER_NOT_0
+            arr.dtype.name
+            not in _VALID_DTYPES_CV2_ORDER_NOT_0
         )
     cv2_impossible = cv2_bad_order or cv2_bad_dtype
     use_skimage = (
@@ -299,7 +299,10 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
             borderMode=mode,
             borderValue=cval
         )
-        image_warped = np.atleast_3d(image_warped)
+
+        # cv2 warp drops last axis if shape is (H, W, 1)
+        if image_warped.ndim == 2:
+            image_warped = image_warped[..., np.newaxis]
     else:
         # warp each channel on its own, re-add channel axis, then stack
         # the result from a list of [H, W, 1] to (H, W, C).
@@ -313,14 +316,9 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
                 borderValue=tuple([cval[0]])
             )
             for c in sm.xrange(nb_channels)]
-        image_warped = np.dstack([
-            warped_i[..., np.newaxis] for warped_i in image_warped])
+        image_warped = np.stack(image_warped, axis=-1)
 
-    # cv2 warp drops last axis if shape is (H, W, 1)
-    if image_warped.ndim == 2:
-        image_warped = image_warped[..., np.newaxis]
-
-    if input_dtype == np.bool_:
+    if input_dtype.name == "bool":
         image_warped = image_warped > 0.5
     elif input_dtype.name in ["int8", "float16"]:
         image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
