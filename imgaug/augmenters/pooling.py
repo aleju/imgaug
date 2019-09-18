@@ -32,6 +32,25 @@ import imgaug as ia
 from .. import parameters as iap
 
 
+def _compute_shape_after_pooling(image_shape, ksize_h, ksize_w):
+    height, width = image_shape[0:2]
+
+    if height == 0:
+        height = 1
+    if width == 0:
+        width = 1
+
+    if height % ksize_h > 0:
+        height += ksize_h - (height % ksize_h)
+    if width % ksize_w > 0:
+        width += ksize_w - (width % ksize_w)
+
+    return tuple([
+        height//ksize_h,
+        width//ksize_w,
+    ] + list(image_shape[2:]))
+
+
 @six.add_metaclass(ABCMeta)
 class _AbstractPoolingBase(meta.Augmenter):
     # TODO add floats as ksize denoting fractions of image sizes
@@ -106,10 +125,8 @@ class _AbstractPoolingBase(meta.Augmenter):
                 # we only update the shape of the underlying image here,
                 # because the library can handle heatmaps/segmaps that are
                 # larger/smaller than the corresponding image
-                new_shape = tuple([
-                    int(np.ceil(augmentable.shape[0] / ksize_h)),
-                    int(np.ceil(augmentable.shape[1] / ksize_w)),
-                ] + list(augmentable.shape[2:]))
+                new_shape = _compute_shape_after_pooling(
+                    augmentable.shape, ksize_h, ksize_w)
 
                 augmentable.shape = new_shape
 
@@ -127,10 +144,8 @@ class _AbstractPoolingBase(meta.Augmenter):
                             kernel_sizes_w))
         for i, (kpsoi, ksize_h, ksize_w) in gen:
             if ksize_h >= 2 or ksize_w >= 2:
-                new_shape = tuple([
-                    int(np.ceil(kpsoi.shape[0] / ksize_h)),
-                    int(np.ceil(kpsoi.shape[1] / ksize_w)),
-                ] + list(kpsoi.shape[2:]))
+                new_shape = _compute_shape_after_pooling(
+                    kpsoi.shape, ksize_h, ksize_w)
 
                 keypoints_on_images[i] = kpsoi.on(new_shape)
 
