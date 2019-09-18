@@ -119,8 +119,8 @@ class _AbstractPoolingBase(meta.Augmenter):
         kernel_sizes_h, kernel_sizes_w = self._draw_samples(
             augmentables, random_state)
 
-        gen = enumerate(zip(augmentables, kernel_sizes_h, kernel_sizes_w))
-        for i, (augmentable, ksize_h, ksize_w) in gen:
+        gen = zip(augmentables, kernel_sizes_h, kernel_sizes_w)
+        for augmentable, ksize_h, ksize_w in gen:
             if ksize_h >= 2 or ksize_w >= 2:
                 # we only update the shape of the underlying image here,
                 # because the library can handle heatmaps/segmaps that are
