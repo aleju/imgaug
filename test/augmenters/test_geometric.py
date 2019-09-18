@@ -2384,6 +2384,25 @@ class TestAffine_other(unittest.TestCase):
                 assert np.allclose(hm_aug_arr[:, 2:3, :], 0.0, rtol=0,
                                    atol=0.025)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for fit_output in [False, True]:
+            for shape in shapes:
+                with self.subTest(shape=shape, fit_output=fit_output):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.Affine(rotate=45, fit_output=fit_output)
+
+                    image_aug = aug(image=image)
+
+                    assert image_aug.shape == shape
+
 
 # TODO migrate to unittest and split up tests or remove AffineCv2
 def test_AffineCv2():

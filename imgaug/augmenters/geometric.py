@@ -159,6 +159,15 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
     if ia.is_single_integer(cval):
         cval = [cval] * len(arr.shape[2])
 
+    has_zero_channels = (arr.ndim == 3 and arr.shape[-1] == 0)
+    assert not has_zero_channels, (
+        "Got a 3d-array with 0 channels (shape %s). Expected either a 2d array "
+        "or >=1 channels" % (arr.shape,))
+
+    # no changes to arrays with zero height/width
+    if arr.shape[0] == 0 or arr.shape[1] == 0:
+        return arr
+
     min_value, _center_value, max_value = \
         iadt.get_value_range_of_dtype(arr.dtype)
 
@@ -321,6 +330,10 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
 
 def _compute_affine_warp_output_shape(matrix, input_shape):
     height, width = input_shape[:2]
+
+    if height == 0 or width == 0:
+        return matrix, input_shape
+
     # determine shape of output image
     corners = np.array([
         [0, 0],
