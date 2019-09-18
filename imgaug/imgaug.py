@@ -1678,6 +1678,13 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 
         cval = max(min(cval, max_value), min_value)
 
+        # Note that copyMakeBorder() hangs/runs endlessly if arr has an
+        # axis of size 0 and mode is "reflect".
+        # Numpy also complains in these cases if mode is not "constant".
+        has_zero_sized_axis = any([axis == 0 for axis in arr.shape])
+        if has_zero_sized_axis:
+            mode = "constant"
+
         mapping_mode_np_to_cv2 = {
             "constant": cv2.BORDER_CONSTANT,
             "edge": cv2.BORDER_REPLICATE,
@@ -2103,6 +2110,13 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
         pad_cval = cval
 
     _assert_two_or_three_dims(arr)
+    channel_axis_is_zero = (arr.ndim == 3 and arr.shape[-1] == 0)
+
+    # block_reduce() crashes if channel axis is 0. It could probably be
+    # squeezed away, but then how to add a zero-sized axis later on?
+    assert not channel_axis_is_zero, (
+        "Cannot pool a 3d-array with 0 channels. Got shape %s." % (arr.shape,))
+
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
         and [is_single_integer(val) and val >= 1 for val in block_size]
@@ -2128,9 +2142,10 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
     )
 
     input_dtype = arr.dtype
+
     arr_reduced = skimage.measure.block_reduce(arr, tuple(block_size), func,
                                                cval=cval)
-    if preserve_dtype and arr_reduced.dtype.type != input_dtype:
+    if preserve_dtype and arr_reduced.dtype.name != input_dtype.name:
         arr_reduced = arr_reduced.astype(input_dtype)
     return arr_reduced
 
