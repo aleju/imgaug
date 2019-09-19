@@ -2612,9 +2612,13 @@ class PerspectiveTransform(meta.Augmenter):
             elif input_dtype.name in ["bool", "float16"]:
                 image = image.astype(np.float32)
 
-            # cv2.warpPerspective only supports <=4 channels
+            # cv2.warpPerspective only supports <=4 channels and errors
+            # on axes with size zero
             nb_channels = image.shape[2]
-            if nb_channels <= 4:
+            has_zero_sized_axis = any([axis == 0 for axis in image.shape])
+            if has_zero_sized_axis:
+                warped = image
+            elif nb_channels <= 4:
                 warped = cv2.warpPerspective(
                     image,
                     matrix,
@@ -2640,7 +2644,7 @@ class PerspectiveTransform(meta.Augmenter):
                 ]
                 warped = np.stack(warped, axis=-1)
 
-            if self.keep_size:
+            if self.keep_size and not has_zero_sized_axis:
                 h, w = image.shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w))
 
@@ -2702,32 +2706,37 @@ class PerspectiveTransform(meta.Augmenter):
                 cval_i = samples.cvals[i]
 
             nb_channels = arr.shape[2]
+            image_has_zero_sized_axis = any([axis == 0 for axis
+                                             in augmentable_i.shape])
+            map_has_zero_sized_axis = any([axis == 0 for axis in arr.shape])
 
-            warped = [
-                cv2.warpPerspective(
-                    arr[..., c],
-                    matrix,
-                    (max_width, max_height),
-                    borderValue=cval_i,
-                    borderMode=mode_i,
-                    flags=flags
-                )
-                for c in sm.xrange(nb_channels)
-            ]
-            warped = np.stack(warped, axis=-1)
+            if not image_has_zero_sized_axis:
+                if not map_has_zero_sized_axis:
+                    warped = [
+                        cv2.warpPerspective(
+                            arr[..., c],
+                            matrix,
+                            (max_width, max_height),
+                            borderValue=cval_i,
+                            borderMode=mode_i,
+                            flags=flags
+                        )
+                        for c in sm.xrange(nb_channels)
+                    ]
+                    warped = np.stack(warped, axis=-1)
 
-            setattr(augmentable_i, arr_attr_name, warped)
+                    setattr(augmentable_i, arr_attr_name, warped)
 
-            if self.keep_size:
-                h, w = arr.shape[0:2]
-                augmentable_i = augmentable_i.resize((h, w))
-            else:
-                new_shape = (
-                    max_heights_imgs[i], max_widths_imgs[i]
-                ) + augmentable_i.shape[2:]
-                augmentable_i.shape = new_shape
+                if self.keep_size:
+                    h, w = arr.shape[0:2]
+                    augmentable_i = augmentable_i.resize((h, w))
+                else:
+                    new_shape = (
+                        max_heights_imgs[i], max_widths_imgs[i]
+                    ) + augmentable_i.shape[2:]
+                    augmentable_i.shape = new_shape
 
-            result[i] = augmentable_i
+                result[i] = augmentable_i
 
         return result
 
@@ -2741,23 +2750,26 @@ class PerspectiveTransform(meta.Augmenter):
                             samples.max_widths))
 
         for i, (matrix, max_height, max_width) in gen:
-            keypoints_on_image = keypoints_on_images[i]
-            new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
-            if not keypoints_on_image.keypoints:
-                warped_kps = keypoints_on_image.deepcopy(shape=new_shape)
-            else:
-                kps_arr = keypoints_on_image.to_xy_array()
-                warped = cv2.perspectiveTransform(
-                    np.array([kps_arr], dtype=np.float32), matrix)
-                warped = warped[0]
-                warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
-                              for kp, coords
-                              in zip(keypoints_on_image.keypoints, warped)]
-                warped_kps = keypoints_on_image.deepcopy(keypoints=warped_kps,
-                                                         shape=new_shape)
-            if self.keep_size:
-                warped_kps = warped_kps.on(keypoints_on_image.shape)
-            result[i] = warped_kps
+            kpsoi = keypoints_on_images[i]
+            image_has_zero_sized_axis = any([axis == 0 for axis in kpsoi.shape])
+
+            if not image_has_zero_sized_axis:
+                new_shape = (max_height, max_width) + kpsoi.shape[2:]
+                if not kpsoi.keypoints:
+                    warped_kps = kpsoi.deepcopy(shape=new_shape)
+                else:
+                    kps_arr = kpsoi.to_xy_array()
+                    warped = cv2.perspectiveTransform(
+                        np.array([kps_arr], dtype=np.float32), matrix)
+                    warped = warped[0]
+                    warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
+                                  for kp, coords
+                                  in zip(kpsoi.keypoints, warped)]
+                    warped_kps = kpsoi.deepcopy(keypoints=warped_kps,
+                                                shape=new_shape)
+                if self.keep_size:
+                    warped_kps = warped_kps.on(kpsoi.shape)
+                result[i] = warped_kps
 
         return result
 

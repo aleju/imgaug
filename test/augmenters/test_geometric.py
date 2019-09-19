@@ -4869,6 +4869,31 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert (img_aug255 == 255).all()
         assert not (img_aug0 == 255).all()
 
+    # ---------
+    # zero-sized axes
+    # ---------
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            for keep_size in [False, True]:
+                with self.subTest(shape=shape, keep_size=keep_size):
+                    for _ in sm.xrange(3):
+                        image = np.zeros(shape, dtype=np.uint8)
+                        aug = iaa.PerspectiveTransform(scale=0.01)
+
+                        image_aug = aug(image=image)
+
+                        assert image_aug.shape == shape
+
     # --------
     # get_parameters
     # --------
@@ -4979,6 +5004,7 @@ class TestPerspectiveTransform(unittest.TestCase):
                     assert (
                         np.sum(_isclose(image_aug, expected)) / expected.size
                     ) > 0.7
+
 
 class _elastic_trans_temp_thresholds(object):
     def __init__(self, alpha, sigma):
