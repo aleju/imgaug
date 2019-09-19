@@ -4113,7 +4113,7 @@ class TestPiecewiseAffine(unittest.TestCase):
         assert len(observed.keypoints) == 0
 
     # ---------
-    # remaining polygons polygons
+    # remaining polygons tests
     # ---------
     def test_polygons_outside_of_image(self):
         # points outside of image
@@ -4137,6 +4137,29 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         assert observed.shape == (10, 10, 3)
         assert len(observed.polygons) == 0
+
+    # ---------
+    # zero-sized axes
+    # ---------
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=2, nb_cols=2)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == shape
 
     # ---------
     # other methods

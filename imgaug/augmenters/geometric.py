@@ -2066,11 +2066,10 @@ class PiecewiseAffine(meta.Augmenter):
 
         for i, image in enumerate(images):
             rs_image = rss[i]
-            h, w = image.shape[0:2]
 
             transformer = self._get_transformer(
-                h, w, samples.nb_rows[i], samples.nb_cols[i],
-                rs_image)
+                image.shape, image.shape, samples.nb_rows[i],
+                samples.nb_cols[i], rs_image)
 
             if transformer is not None:
                 input_dtype = image.dtype
@@ -2122,9 +2121,9 @@ class PiecewiseAffine(meta.Augmenter):
             arr = getattr(augmentable, arr_attr_name)
 
             rs_image = rss[i]
-            h, w = arr.shape[0:2]
             transformer = self._get_transformer(
-                h, w, samples.nb_rows[i], samples.nb_cols[i], rs_image)
+                arr.shape, augmentable.shape, samples.nb_rows[i],
+                samples.nb_cols[i], rs_image)
 
             if transformer is not None:
                 arr_warped = tf.warp(
@@ -2174,7 +2173,8 @@ class PiecewiseAffine(meta.Augmenter):
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(
-                h, w, samples.nb_rows[i], samples.nb_cols[i], rs_image)
+                kpsoi.shape, kpsoi.shape, samples.nb_rows[i],
+                samples.nb_cols[i], rs_image)
 
             if transformer is None or len(kpsoi.keypoints) == 0:
                 result.append(kpsoi)
@@ -2268,7 +2268,8 @@ class PiecewiseAffine(meta.Augmenter):
             nb_rows=nb_rows_samples, nb_cols=nb_cols_samples,
             order=order_samples, cval=cval_samples, mode=mode_samples)
 
-    def _get_transformer(self, h, w, nb_rows, nb_cols, random_state):
+    def _get_transformer(self, augmentable_shape, image_shape, nb_rows,
+                         nb_cols, random_state):
         # get coords on y and x axis of points to move around
         # these coordinates are supposed to be at the centers of each cell
         # (otherwise the first coordinate would be at (0, 0) and could hardly
@@ -2279,8 +2280,8 @@ class PiecewiseAffine(meta.Augmenter):
         nb_rows = max(nb_rows, 2)
         nb_cols = max(nb_cols, 2)
 
-        y = np.linspace(0, h, nb_rows)
-        x = np.linspace(0, w, nb_cols)
+        y = np.linspace(0, augmentable_shape[0], nb_rows)
+        x = np.linspace(0, augmentable_shape[1], nb_cols)
 
         # (H, W) and (H, W) for H=rows, W=cols
         xx_src, yy_src = np.meshgrid(x, y)
@@ -2295,9 +2296,11 @@ class PiecewiseAffine(meta.Augmenter):
         if nb_nonzero == 0:
             return None
         else:
+            # FIXME this needs to incorporate the image_shape in case
+            #       of absolute_scale=True
             if not self.absolute_scale:
-                jitter_img[:, 0] = jitter_img[:, 0] * h
-                jitter_img[:, 1] = jitter_img[:, 1] * w
+                jitter_img[:, 0] = jitter_img[:, 0] * augmentable_shape[0]
+                jitter_img[:, 1] = jitter_img[:, 1] * augmentable_shape[1]
             points_dest = np.copy(points_src)
             points_dest[:, 0] = points_dest[:, 0] + jitter_img[:, 0]
             points_dest[:, 1] = points_dest[:, 1] + jitter_img[:, 1]
@@ -2307,12 +2310,34 @@ class PiecewiseAffine(meta.Augmenter):
             # outside of the image plane and these would be replaced by
             # (-1, -1), which would not conform with the behaviour of the
             # other augmenters.
-            points_dest[:, 0] = np.clip(points_dest[:, 0], 0, h-1)
-            points_dest[:, 1] = np.clip(points_dest[:, 1], 0, w-1)
+            points_dest[:, 0] = np.clip(points_dest[:, 0],
+                                        0, augmentable_shape[0]-1)
+            points_dest[:, 1] = np.clip(points_dest[:, 1],
+                                        0, augmentable_shape[1]-1)
 
-            matrix = tf.PiecewiseAffineTransform()
-            matrix.estimate(points_src[:, ::-1], points_dest[:, ::-1])
-            return matrix
+            # tf.warp() results in qhull error if the points are identical,
+            # which is mainly the case if any axis is 0
+            has_low_axis = any([axis <= 1 for axis in augmentable_shape[0:2]])
+            has_zero_channels = (
+                (
+                    augmentable_shape is not None
+                    and len(augmentable_shape) == 3
+                    and augmentable_shape[-1] == 0
+                )
+                or
+                (
+                    image_shape is not None
+                    and len(image_shape) == 3
+                    and image_shape[-1] == 0
+                )
+            )
+
+            if has_low_axis or has_zero_channels:
+                return None
+            else:
+                matrix = tf.PiecewiseAffineTransform()
+                matrix.estimate(points_src[:, ::-1], points_dest[:, ::-1])
+                return matrix
 
     def get_parameters(self):
         return [
