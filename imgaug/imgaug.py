@@ -1389,14 +1389,6 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     if len(images) == 0:
         return images
 
-    # verify that all input images have height/width > 0
-    no_zero_size_images = all([
-        image.shape[0] > 0 and image.shape[1] > 0 for image in images])
-    assert no_zero_size_images, (
-        "Cannot resize images, because at least one image has a height and/or "
-        "width of zero. Observed shapes were: %s." % (
-            str([image.shape for image in images]),))
-
     # verify that sizes contains only values >0
     if is_single_number(sizes) and sizes <= 0:
         raise Exception(
@@ -1458,6 +1450,18 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     if height == im_height and width == im_width:
         return np.copy(images)
+
+    # place this after the (h==h' and w==w') check so that images with
+    # zero-sized don't result in errors if the aren't actually resized
+    # verify that all input images have height/width > 0
+    has_zero_size_axes = all([
+        any([axis == 0 for axis in image.shape])
+        for image in images])
+    assert not has_zero_size_axes, (
+        "Cannot resize images, because at least one image has a height and/or "
+        "width and/or number of channels of zero. "
+        "Observed shapes were: %s." % (
+            str([image.shape for image in images]),))
 
     ip = interpolation
     assert ip is None or ip in IMRESIZE_VALID_INTERPOLATIONS, (
