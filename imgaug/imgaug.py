@@ -1394,16 +1394,6 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         raise Exception(
             "Cannot resize to the target size %.8f, because the value is zero "
             "or lower than zero." % (sizes,))
-    elif isinstance(sizes, tuple) and (sizes[0] <= 0 or sizes[1] <= 0):
-        sizes_str = [
-            ("int %d" % (size_i,)
-                if is_single_integer(size_i)
-                else "float %.8f" % (size_i,))
-            for size_i in sizes
-        ]
-        raise Exception(
-            "Cannot resize to the target sizes (%s). At least one value is "
-            "zero or lower than zero." % (", ".join(sizes_str),))
 
     # change after the validation to make the above error messages match the
     # original input
@@ -1454,7 +1444,8 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     # return empty array if input array contains zero-sized axes
     # note that None==0 is not True (for case nb_channels=None)
     if 0 in [height_target, width_target, nb_channels]:
-        shape_out = tuple([height_target, width_target] + list(shape[2:]))
+        shape_out = tuple([shape[0], height_target, width_target]
+                          + list(shape[3:]))
         return np.zeros(shape_out, dtype=images.dtype)
 
     # place this after the (h==h' and w==w') check so that images with
