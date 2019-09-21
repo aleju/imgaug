@@ -1391,9 +1391,9 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
     # verify that sizes contains only values >0
     if is_single_number(sizes) and sizes <= 0:
-        raise Exception(
-            "Cannot resize to the target size %.8f, because the value is zero "
-            "or lower than zero." % (sizes,))
+        raise ValueError(
+            "If 'sizes' is given as a single number, it is expected to "
+            "be >= 0, got %.8f." % (sizes,))
 
     # change after the validation to make the above error messages match the
     # original input
@@ -1401,11 +1401,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         sizes = (sizes, sizes)
     else:
         assert len(sizes) == 2, (
-            "Expected 'sizes' tuple with exactly two entries, "
-            "got %d entries." % (len(sizes),))
-        assert all([is_single_number(val) for val in sizes]), (
-            "Expected 'sizes' tuple with two ints or floats, "
-            "got types %s." % (str([type(val) for val in sizes]),))
+            "If 'sizes' is given as a tuple, it is expected be a tuple of two "
+            "entries, got %d entries." % (len(sizes),))
+        assert all([is_single_number(val) and val >= 0 for val in sizes]), (
+            "If 'sizes' is given as a tuple, it is expected be a tuple of two "
+            "ints or two floats, each >= 0, got types %s with values %s." % (
+                str([type(val) for val in sizes]), str(sizes)))
 
     # if input is a list, call this function N times for N images
     # but check beforehand if all images have the same shape, then just
