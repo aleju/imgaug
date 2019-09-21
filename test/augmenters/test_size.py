@@ -1740,6 +1740,50 @@ class TestPad(unittest.TestCase):
         assert seen[3] == 0
         assert 250 - 50 < seen[4] < 250 + 50
 
+    def test_zero_sized_axes_no_keep_size(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Pad(px=1, keep_size=False)
+
+                image_aug = aug(image=image)
+
+                expected_height = shape[0] + 2
+                expected_width = shape[1] + 2
+                expected_shape = tuple([expected_height, expected_width]
+                                       + list(shape[2:]))
+                assert image_aug.shape == expected_shape
+
+    def test_zero_sized_axes_keep_size(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Pad(px=1, keep_size=True)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_pad_other_dtypes_bool_by_int_without_keep_size(self):
         aug = iaa.Pad(px=(1, 0, 0, 0), keep_size=False)
         mask = np.zeros((4, 3), dtype=bool)
