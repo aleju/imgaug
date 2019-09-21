@@ -32,61 +32,61 @@ class Test_blend_alpha(unittest.TestCase):
         reseed()
 
     def test_alpha_is_1(self):
-        img_fg = np.full((3, 3, 1), 0, dtype=bool)
-        img_bg = np.full((3, 3, 1), 1, dtype=bool)
+        img_fg = np.full((3, 3, 1), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3, 1), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, 1.0, eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3, 1)
         assert np.all(img_blend == 0)
 
     def test_alpha_is_1_2d_arrays(self):
-        img_fg = np.full((3, 3), 0, dtype=bool)
-        img_bg = np.full((3, 3), 1, dtype=bool)
+        img_fg = np.full((3, 3), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, 1.0, eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3)
         assert np.all(img_blend == 0)
 
     def test_alpha_is_0(self):
-        img_fg = np.full((3, 3, 1), 0, dtype=bool)
-        img_bg = np.full((3, 3, 1), 1, dtype=bool)
+        img_fg = np.full((3, 3, 1), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3, 1), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3, 1)
-        assert np.all(img_blend == 1)
+        assert np.all(img_blend == 255)
 
     def test_alpha_is_0_2d_arrays(self):
-        img_fg = np.full((3, 3), 0, dtype=bool)
-        img_bg = np.full((3, 3), 1, dtype=bool)
+        img_fg = np.full((3, 3), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3)
-        assert np.all(img_blend == 1)
+        assert np.all(img_blend == 255)
 
     def test_alpha_is_030(self):
-        img_fg = np.full((3, 3, 1), 0, dtype=bool)
-        img_bg = np.full((3, 3, 1), 1, dtype=bool)
+        img_fg = np.full((3, 3, 1), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3, 1), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, 0.3, eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3, 1)
-        assert np.all(img_blend == 1)
+        assert np.allclose(img_blend, 0.7*255, atol=1.01, rtol=0)
 
     def test_alpha_is_030_2d_arrays(self):
-        img_fg = np.full((3, 3), 0, dtype=bool)
-        img_bg = np.full((3, 3), 1, dtype=bool)
+        img_fg = np.full((3, 3), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, 0.3, eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3)
-        assert np.all(img_blend == 1)
+        assert np.allclose(img_blend, 0.7*255, atol=1.01, rtol=0)
 
     def test_channelwise_alpha(self):
-        img_fg = np.full((3, 3, 2), 0, dtype=bool)
-        img_bg = np.full((3, 3, 2), 1, dtype=bool)
+        img_fg = np.full((3, 3, 2), 0, dtype=np.uint8)
+        img_bg = np.full((3, 3, 2), 255, dtype=np.uint8)
         img_blend = blend.blend_alpha(img_fg, img_bg, [1.0, 0.0], eps=0)
-        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.dtype.name == "uint8"
         assert img_blend.shape == (3, 3, 2)
         assert np.all(img_blend[:, :, 0] == 0)
-        assert np.all(img_blend[:, :, 1] == 1)
+        assert np.all(img_blend[:, :, 1] == 255)
 
     def test_zero_sized_axes(self):
         shapes = [
@@ -128,6 +128,22 @@ class Test_blend_alpha(unittest.TestCase):
                 assert np.all(image_aug == 0)
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+    def test_other_dtypes_bool(self):
+        img_fg = np.full((3, 3, 1), 0, dtype=bool)
+        img_bg = np.full((3, 3, 1), 1, dtype=bool)
+        img_blend = blend.blend_alpha(img_fg, img_bg, 0.3, eps=0)
+        assert img_blend.dtype.name == "bool"
+        assert img_blend.shape == (3, 3, 1)
+        assert np.all(img_blend == 1)
+
+    def test_other_dtypes_bool_2d_arrays(self):
+        img_fg = np.full((3, 3), 0, dtype=bool)
+        img_bg = np.full((3, 3), 1, dtype=bool)
+        img_blend = blend.blend_alpha(img_fg, img_bg, 0.3, eps=0)
+        assert img_blend.dtype.name == "bool"
+        assert img_blend.shape == (3, 3)
+        assert np.all(img_blend == 1)
 
     # TODO split this up into multiple tests
     def test_other_dtypes_uint_int(self):
