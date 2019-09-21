@@ -179,6 +179,22 @@ class Test_change_colorspace_(unittest.TestCase):
 
                 assert np.array_equal(image_out, expected)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.change_colorspace_(
+                    np.copy(image), from_colorspace="RGB", to_colorspace="BGR")
+
+                assert image_aug.shape == image.shape
+
     @classmethod
     def _generate_expected_image(cls, image, from_colorspace, to_colorspace):
         cv_vars = colorlib._CSPACE_OPENCV_CONV_VARS
