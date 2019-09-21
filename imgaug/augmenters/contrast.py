@@ -1011,6 +1011,9 @@ class AllChannelsCLAHE(meta.Augmenter):
         gen = enumerate(zip(images, clip_limit, tile_grid_size_px_h,
                             tile_grid_size_px_w, per_channel))
         for i, (image, clip_limit_i, tgs_px_h_i, tgs_px_w_i, pchannel_i) in gen:
+            if image.size == 0:
+                continue
+
             nb_channels = image.shape[2]
             c_param = 0
             image_warped = []
