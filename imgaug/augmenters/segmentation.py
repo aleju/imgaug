@@ -246,6 +246,11 @@ class Superpixels(meta.Augmenter):
         n_segments_samples = np.clip(n_segments_samples, 1, None)
 
         for i, (image, rs) in enumerate(zip(images, rss[1:])):
+            if image.size == 0:
+                # Image with 0-sized axis, nothing to change.
+                # Placing this before the sampling step should be fine.
+                continue
+
             replace_samples = self.p_replace.draw_samples(
                 (n_segments_samples[i],), random_state=rs)
 
