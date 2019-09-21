@@ -94,7 +94,7 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=100,
             color_false=10)
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
 
         # input image has shape (H,W,1)
         image = np.zeros((5, 5, 1), dtype=np.uint8)
@@ -114,7 +114,7 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=100,
             color_false=10)
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
 
         # input image has shape (H,W,3)
         image = np.zeros((5, 5, 3), dtype=np.uint8)
@@ -134,7 +134,7 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=100,
             color_false=10)
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
 
         # input image has shape (H,W,4)
         image = np.zeros((5, 5, 4), dtype=np.uint8)
