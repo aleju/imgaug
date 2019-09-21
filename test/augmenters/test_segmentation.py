@@ -938,7 +938,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
 
 
 # TODO verify behaviours when image height/width is zero
-class TestRegularGridPointSampler(unittest.TestCase):
+class TestRegularGridPointsSampler(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -1087,7 +1087,7 @@ class TestRegularGridPointSampler(unittest.TestCase):
         assert sampler.__str__() == sampler.__repr__() == expected
 
 
-class TestRelativeRegularGridPointSampler(unittest.TestCase):
+class TestRelativeRegularGridPointsSampler(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -1509,7 +1509,7 @@ class TestUniformPointsSampler(unittest.TestCase):
         assert sampler.__str__() == sampler.__repr__() == expected
 
 
-class TestSubsamplingPointSampler(unittest.TestCase):
+class TestSubsamplingPointsSampler(unittest.TestCase):
     def setUp(self):
         reseed()
 
