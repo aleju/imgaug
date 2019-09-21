@@ -2995,6 +2995,30 @@ class TestPadToFixedSize(unittest.TestCase):
         assert observed.shape == (32, 32, 3)
         assert np.array_equal(observed.arr, expected)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PadToFixedSize(height=1, width=1)
+
+                image_aug = aug(image=image)
+
+                expected_height = 1
+                expected_width = 1
+                expected_shape = tuple([expected_height, expected_width]
+                                       + list(shape[2:]))
+                assert image_aug.shape == expected_shape
+
     def test_other_dtypes_bool(self):
         aug = iaa.PadToFixedSize(height=4, width=3, position="center-top")
         mask = np.zeros((4, 3), dtype=bool)
