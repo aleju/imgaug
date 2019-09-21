@@ -108,6 +108,21 @@ class Test_blur_gaussian_(unittest.TestCase):
                 assert np.isclose(cargs[1]["sigmaY"], sigma)
                 assert cargs[1]["borderType"] == cv2.BORDER_REFLECT_101
 
+    def test_more_than_four_channels(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.blur_gaussian_(np.copy(image), 1.0)
+
+                assert image_aug.shape == image.shape
+
     def test_zero_sized_axes(self):
         shapes = [
             (0, 0),
@@ -889,6 +904,21 @@ class TestAverageBlur(unittest.TestCase):
         # higher sum than nb_iterations
         assert np.all([v > 0 for v in nb_seen.values()])
 
+    def test_more_than_four_channels(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.AverageBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_zero_sized_axes(self):
         shapes = [
             (0, 0),
@@ -1180,6 +1210,21 @@ class TestMedianBlur(unittest.TestCase):
             if all(seen):
                 break
         assert np.all(seen)
+
+    def test_more_than_four_channels(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.MedianBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
 
     def test_zero_sized_axes(self):
         shapes = [
