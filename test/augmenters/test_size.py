@@ -3805,3 +3805,31 @@ class TestKeepSizeByResize(unittest.TestCase):
 
         assert segmaps_oi_aug.arr.shape == (3, 4, 1)
         assert np.array_equal(segmaps_oi_aug.arr, segmaps_oi.arr[1:, :, :])
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.KeepSizeByResize(
+                    iaa.CropToFixedSize(height=1, width=1)
+                )
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
