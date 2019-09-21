@@ -1271,7 +1271,8 @@ class CropAndPad(meta.Augmenter):
             "got %d, %d, %d, %d (top, right, bottom, left)." % (
                 crop_top, crop_right, crop_bottom, crop_left))
 
-        if crop_top + crop_bottom >= height:
+        any_crop_y = (crop_top > 0 or crop_bottom > 0)
+        if any_crop_y and crop_top + crop_bottom >= height:
             ia.warn(
                 "Expected generated crop amounts in CropAndPad for top and "
                 "bottom image side to be less than the image's height, but "
@@ -1281,7 +1282,8 @@ class CropAndPad(meta.Augmenter):
                     crop_top, crop_bottom, height)
             )
 
-        if crop_left + crop_right >= width:
+        any_crop_x = (crop_left > 0 or crop_right > 0)
+        if any_crop_x and crop_left + crop_right >= width:
             ia.warn(
                 "Expected generated crop amounts in CropAndPad for left and "
                 "right image side to be less than the image's width, but "
