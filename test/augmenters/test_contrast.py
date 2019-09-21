@@ -1737,6 +1737,23 @@ class TestCLAHE(unittest.TestCase):
                         break
                 assert all_same
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.CLAHE()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         clahe = iaa.CLAHE(
             clip_limit=1,
