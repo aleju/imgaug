@@ -173,11 +173,11 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     isize = max(isize, 4)
     dt_blend = np.dtype("f%d" % (isize,))
 
-    if alpha.dtype != dt_blend:
+    if alpha.dtype.name != dt_blend.name:
         alpha = alpha.astype(dt_blend)
-    if image_fg.dtype != dt_blend:
+    if image_fg.dtype.name != dt_blend.name:
         image_fg = image_fg.astype(dt_blend)
-    if image_bg.dtype != dt_blend:
+    if image_bg.dtype.name != dt_blend.name:
         image_bg = image_bg.astype(dt_blend)
 
     # the following is equivalent to
