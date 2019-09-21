@@ -365,7 +365,11 @@ class Alpha(meta.Augmenter):
                 nb_channels_i = image_first.shape[2]
                 alphas_i = alphas[i, 0:nb_channels_i]
             else:
-                alphas_i = alphas[i, 0]
+                # We catch here the case of alphas[i] being empty, which can
+                # happen if all images have 0 channels.
+                # In that case the alpha value doesn't matter as the image
+                # contains zero values anyways.
+                alphas_i = alphas[i, 0] if alphas[i].size > 0 else 0
 
             result[i] = blend_alpha(image_first, image_second, alphas_i,
                                     eps=self.epsilon)
