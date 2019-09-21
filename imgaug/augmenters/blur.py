@@ -635,7 +635,8 @@ class MedianBlur(meta.Augmenter):
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
         for i, (image, ki) in enumerate(zip(images, samples)):
-            if ki > 1:
+            has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+            if ki > 1 and not has_zero_sized_axes:
                 ki = ki + 1 if ki % 2 == 0 else ki
                 image_aug = cv2.medianBlur(image, ki)
                 # cv2.medianBlur() removes channel axis for single-channel

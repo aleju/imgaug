@@ -1181,6 +1181,25 @@ class TestMedianBlur(unittest.TestCase):
                 break
         assert np.all(seen)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.MedianBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_keypoints_not_changed(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                ia.Keypoint(x=2, y=2)]
