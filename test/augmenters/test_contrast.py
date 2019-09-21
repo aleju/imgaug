@@ -564,6 +564,46 @@ class TestLogContrast(unittest.TestCase):
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.LogContrast(gain=2)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.LogContrast(gain=2)
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_other_dtypes_uint_int(self):
         # support before 1.17:
         #   [np.uint8, np.uint16, np.uint32, np.uint64,
