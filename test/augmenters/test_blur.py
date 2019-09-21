@@ -1216,6 +1216,27 @@ class TestMedianBlur(unittest.TestCase):
         assert keypoints_equal(observed, expected)
 
 
+# TODO extend these tests
+class TestBilateralBlur(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.BilateralBlur(3)(image=image)
+
+                assert image_aug.shape == image.shape
+
+
 class TestMotionBlur(unittest.TestCase):
     def setUp(self):
         reseed()

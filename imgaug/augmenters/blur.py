@@ -780,7 +780,8 @@ class BilateralBlur(meta.Augmenter):
         gen = enumerate(zip(images, samples_d, samples_sigma_color,
                             samples_sigma_space))
         for i, (image, di, sigma_color_i, sigma_space_i) in gen:
-            if di != 1:
+            has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+            if di != 1 and not has_zero_sized_axes:
                 images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
                                                 sigma_space_i)
         return images
