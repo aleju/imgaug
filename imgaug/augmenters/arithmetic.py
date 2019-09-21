@@ -3077,7 +3077,11 @@ class Invert(meta.Augmenter):
                 image[..., mask] = invert(image[..., mask],
                                           self.min_value, self.max_value)
             else:
-                if p_samples_i[0] > 0.5:
+                # p_samples_i.size == 0 is the case when the channel axis
+                # has value 0 and hence p_samples_i[0] fails. By still
+                # calling invert() in these cases instead of changing nothing
+                # we allow the unittests for Invert to also test invert().
+                if p_samples_i.size == 0 or p_samples_i[0] > 0.5:
                     image[:, :, :] = invert(image, self.min_value,
                                             self.max_value)
 
