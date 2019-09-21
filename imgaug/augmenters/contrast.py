@@ -228,6 +228,9 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         Array with adjusted contrast.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
