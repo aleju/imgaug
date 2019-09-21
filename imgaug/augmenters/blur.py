@@ -160,7 +160,8 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
         The blurred image. Same shape and dtype as the input.
 
     """
-    if sigma > 0 + eps:
+    has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+    if sigma > 0 + eps and not has_zero_sized_axes:
         dtype = image.dtype
 
         iadt.gate_dtypes(image,

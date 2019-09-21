@@ -108,6 +108,25 @@ class Test_blur_gaussian_(unittest.TestCase):
                 assert np.isclose(cargs[1]["sigmaY"], sigma)
                 assert cargs[1]["borderType"] == cv2.BORDER_REFLECT_101
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.blur_gaussian_(np.copy(image), 1.0)
+
+                assert image_aug.shape == image.shape
+
     def test_backends_called(self):
         def side_effect_cv2(image, ksize, sigmaX, sigmaY, borderType):
             return image + 1
