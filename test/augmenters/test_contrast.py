@@ -2019,6 +2019,23 @@ class TestHistogramEqualization(unittest.TestCase):
                 result2 = aug_det.augment_image(img)
                 assert np.array_equal(result1, result2)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.HistogramEqualization()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         aug = iaa.HistogramEqualization(
             from_colorspace=iaa.CSPACE_BGR,
