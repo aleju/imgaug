@@ -5775,6 +5775,31 @@ class TestElasticTransformation(unittest.TestCase):
         assert segmaps_aug.arr.shape == (40, 40, 1)
         assert (same / img_aug_mask.size) >= 0.94
 
+    # ---------
+    # zero-sized axes
+    # ---------
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            for keep_size in [False, True]:
+                with self.subTest(shape=shape, keep_size=keep_size):
+                    for _ in sm.xrange(3):
+                        image = np.zeros(shape, dtype=np.uint8)
+                        aug = iaa.ElasticTransformation(alpha=2.0, sigma=2.0)
+
+                        image_aug = aug(image=image)
+
+                        assert image_aug.shape == shape
+
     # -----------
     # get_parameters
     # -----------

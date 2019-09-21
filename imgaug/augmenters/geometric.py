@@ -3253,11 +3253,16 @@ class ElasticTransformation(meta.Augmenter):
         gen = enumerate(zip(augmentables, samples.alphas, samples.sigmas,
                             samples.random_states))
         for i, (augmentable, alpha, sigma, random_state_i) in gen:
+            # note that we do not have to check for zero-sized axes here,
+            # because _generate_shift_maps(), _map_coordinates(), .resize()
+            # and np.clip() are all known to handle arrays with zero-sized axes
+
             cval_i = cval if cval is not None else samples.cvals[i]
             mode_i = mode if mode is not None else samples.modes[i]
             order_i = order if order is not None else samples.orders[i]
 
             arr = getattr(augmentable, arr_attr_name)
+
             if arr.shape[0:2] == augmentable.shape[0:2]:
                 dx, dy = self._generate_shift_maps(
                     arr.shape[0:2],
@@ -3314,7 +3319,8 @@ class ElasticTransformation(meta.Augmenter):
         gen = enumerate(zip(keypoints_on_images, samples.alphas, samples.sigmas,
                             samples.orders, samples.random_states))
         for i, (kpsoi, alpha, sigma, order, random_state_i) in gen:
-            if not kpsoi.keypoints:
+            image_has_zero_sized_axes = any([axis == 0 for axis in kpsoi.shape])
+            if not kpsoi.keypoints or image_has_zero_sized_axes:
                 # ElasticTransformation does not change the shape, hence we can
                 # skip the below steps
                 continue
@@ -3530,6 +3536,9 @@ class ElasticTransformation(meta.Augmenter):
                 - (4) causes: src data type = 0 is not supported
 
         """
+        if any([axis == 0 for axis in image.shape]):
+            return np.copy(image)
+
         if order == 0 and image.dtype.name in ["uint64", "int64"]:
             raise Exception(
                 "dtypes uint64 and int64 are only supported in "
