@@ -647,11 +647,21 @@ class MedianBlur(meta.Augmenter):
             has_zero_sized_axes = any([axis == 0 for axis in image.shape])
             if ki > 1 and not has_zero_sized_axes:
                 ki = ki + 1 if ki % 2 == 0 else ki
-                image_aug = cv2.medianBlur(image, ki)
-                # cv2.medianBlur() removes channel axis for single-channel
-                # images
-                if image_aug.ndim == 2:
-                    image_aug = image_aug[..., np.newaxis]
+                if image.ndim == 2 or image.shape[-1] <= 512:
+                    image_aug = cv2.medianBlur(image, ki)
+                    # cv2.medianBlur() removes channel axis for single-channel
+                    # images
+                    if image_aug.ndim == 2:
+                        image_aug = image_aug[..., np.newaxis]
+                else:
+                    # TODO this is quite inefficient
+                    # handling more than 512 channels in cv2.medainBlur()
+                    channels = [
+                        cv2.medianBlur(image[..., c], ki)
+                        for c in sm.xrange(image.shape[-1])
+                    ]
+                    image_aug = np.stack(channels, axis=-1)
+
                 images[i] = image_aug
         return images
 
