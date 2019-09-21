@@ -1005,6 +1005,10 @@ def compress_jpeg(image, compression):
     if is_single_channel:
         image = image[..., 0]
 
+    assert has_no_channels or is_single_channel or image.shape[-1] == 3, (
+        "Expected either a grayscale image of shape (H,W) or (H,W,1) or an "
+        "RGB image of shape (H,W,3). Got shape %s." % (image.shape,))
+
     # Map from compression to quality used by PIL
     # We have valid compressions from 0 to 100, i.e. 101 possible
     # values
