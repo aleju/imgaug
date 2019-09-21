@@ -1321,6 +1321,9 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
             augmenter=self)
 
         for i, image in enumerate(images):
+            if image.size == 0:
+                continue
+
             image_warped = [cv2.equalizeHist(image[..., c])
                             for c in sm.xrange(image.shape[2])]
             image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
