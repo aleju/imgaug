@@ -89,6 +89,9 @@ def add_scalar(image, value):
         Image with value added to it.
 
     """
+    if any([axis == 0 for axis in image.shape]):
+        return np.copy(image)
+
     iadt.gate_dtypes(
         image,
         allowed=["bool",
@@ -1143,7 +1146,8 @@ class Add(meta.Augmenter):
             if per_channel_samples_i > 0.5:
                 value = value_samples_i[0:nb_channels]
             else:
-                value = value_samples_i[0]
+                # the if/else here catches the case of the channel axis being 0
+                value = value_samples_i[0] if value_samples_i.size > 0 else []
 
             images[i] = add_scalar(image, value)
 
