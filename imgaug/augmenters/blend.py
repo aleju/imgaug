@@ -111,11 +111,10 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         "Background image was float128, but blend_alpha() cannot handle that "
         "dtype.")
 
-    # TODO add test for this
-    input_was_2d = (len(image_fg.shape) == 2)
+    input_was_2d = (image_fg.ndim == 2)
     if input_was_2d:
-        image_fg = np.atleast_3d(image_fg)
-        image_bg = np.atleast_3d(image_bg)
+        image_fg = image_fg[..., np.newaxis]
+        image_bg = image_bg[..., np.newaxis]
 
     input_was_bool = False
     if image_fg.dtype.kind == "b":
