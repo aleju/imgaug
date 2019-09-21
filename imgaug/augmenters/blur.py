@@ -524,11 +524,13 @@ class AverageBlur(meta.Augmenter):
         for i, (image, kh, kw) in gen:
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
-            if not kernel_impossible and not kernel_does_nothing:
+            has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+            if (not kernel_impossible and not kernel_does_nothing
+                    and not has_zero_sized_axes):
                 input_dtype = image.dtype
-                if image.dtype in [np.bool_, np.float16]:
+                if image.dtype.name in ["bool", "float16"]:
                     image = image.astype(np.float32, copy=False)
-                elif image.dtype == np.int8:
+                elif image.dtype.name == "int8":
                     image = image.astype(np.int16, copy=False)
 
                 image_aug = cv2.blur(image, (kh, kw))
@@ -536,9 +538,9 @@ class AverageBlur(meta.Augmenter):
                 if image_aug.ndim == 2:
                     image_aug = image_aug[..., np.newaxis]
 
-                if input_dtype == np.bool_:
+                if input_dtype.name == "bool":
                     image_aug = image_aug > 0.5
-                elif input_dtype in [np.int8, np.float16]:
+                elif input_dtype.name in ["int8", "float16"]:
                     image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
                 images[i] = image_aug
