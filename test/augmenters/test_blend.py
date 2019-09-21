@@ -39,12 +39,28 @@ class Test_blend_alpha(unittest.TestCase):
         assert img_blend.shape == (3, 3, 1)
         assert np.all(img_blend == 0)
 
+    def test_alpha_is_1_2d_arrays(self):
+        img_fg = np.full((3, 3), 0, dtype=bool)
+        img_bg = np.full((3, 3), 1, dtype=bool)
+        img_blend = blend.blend_alpha(img_fg, img_bg, 1.0, eps=0)
+        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.shape == (3, 3)
+        assert np.all(img_blend == 0)
+
     def test_alpha_is_0(self):
         img_fg = np.full((3, 3, 1), 0, dtype=bool)
         img_bg = np.full((3, 3, 1), 1, dtype=bool)
         img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
         assert img_blend.dtype.name == np.dtype(np.bool_)
         assert img_blend.shape == (3, 3, 1)
+        assert np.all(img_blend == 1)
+
+    def test_alpha_is_0_2d_arrays(self):
+        img_fg = np.full((3, 3), 0, dtype=bool)
+        img_bg = np.full((3, 3), 1, dtype=bool)
+        img_blend = blend.blend_alpha(img_fg, img_bg, 0.0, eps=0)
+        assert img_blend.dtype.name == np.dtype(np.bool_)
+        assert img_blend.shape == (3, 3)
         assert np.all(img_blend == 1)
 
     def test_alpha_is_030(self):
