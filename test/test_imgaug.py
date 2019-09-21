@@ -922,32 +922,20 @@ def test_imresize_many_images():
     assert len(observed) == 0
 
     # test images with zero height/width
-    images = [np.zeros((0, 4, 3), dtype=np.uint8)]
-    got_exception = False
-    try:
-        _ = ia.imresize_many_images(images, sizes=(2, 2))
-    except Exception as exc:
-        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
-        got_exception = True
-    assert got_exception
-
-    images = [np.zeros((4, 0, 3), dtype=np.uint8)]
-    got_exception = False
-    try:
-        _ = ia.imresize_many_images(images, sizes=(2, 2))
-    except Exception as exc:
-        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
-        got_exception = True
-    assert got_exception
-
-    images = [np.zeros((0, 0, 3), dtype=np.uint8)]
-    got_exception = False
-    try:
-        _ = ia.imresize_many_images(images, sizes=(2, 2))
-    except Exception as exc:
-        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
-        got_exception = True
-    assert got_exception
+    shapes = [(0, 4, 3), (4, 0, 3), (0, 0, 3)]
+    for shape in shapes:
+        images = [np.zeros(shape, dtype=np.uint8)]
+        got_exception = False
+        try:
+            _ = ia.imresize_many_images(images, sizes=(2, 2))
+        except Exception as exc:
+            assert (
+                "Cannot resize images, because at least one image has a height "
+                "and/or width and/or number of channels of zero."
+                in str(exc)
+            )
+            got_exception = True
+        assert got_exception
 
     # test invalid sizes
     sizes_all = [(-1, 2), (0, 2)]

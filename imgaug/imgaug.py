@@ -1437,26 +1437,30 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     assert images.ndim in [3, 4], "Expected array of shape (N, H, W, [C]), " \
                                   "got shape %s" % (str(shape),)
     nb_images = shape[0]
-    im_height, im_width = shape[1], shape[2]
+    height_image, width_image = shape[1], shape[2]
     nb_channels = shape[3] if images.ndim > 3 else None
 
-    height, width = sizes[0], sizes[1]
-    height = (int(np.round(im_height * height))
-              if is_single_float(height)
-              else height)
-    width = (int(np.round(im_width * width))
-             if is_single_float(width)
-             else width)
+    height_target, width_target = sizes[0], sizes[1]
+    height_target = (int(np.round(height_image * height_target))
+                     if is_single_float(height_target)
+                     else height_target)
+    width_target = (int(np.round(width_image * width_target))
+                    if is_single_float(width_target)
+                    else width_target)
 
-    if height == im_height and width == im_width:
+    if height_target == height_image and width_target == width_image:
         return np.copy(images)
+
+    # return empty array if input array contains zero-sized axes
+    # note that None==0 is not True (for case nb_channels=None)
+    if 0 in [height_target, width_target, nb_channels]:
+        shape_out = tuple([height_target, width_target] + list(shape[2:]))
+        return np.zeros(shape_out, dtype=images.dtype)
 
     # place this after the (h==h' and w==w') check so that images with
     # zero-sized don't result in errors if the aren't actually resized
     # verify that all input images have height/width > 0
-    has_zero_size_axes = all([
-        any([axis == 0 for axis in image.shape])
-        for image in images])
+    has_zero_size_axes = any([axis == 0 for axis in images.shape[1:]])
     assert not has_zero_size_axes, (
         "Cannot resize images, because at least one image has a height and/or "
         "width and/or number of channels of zero. "
@@ -1473,7 +1477,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         )
     )
     if ip is None:
-        if height > im_height or width > im_width:
+        if height_target > height_image or width_target > width_image:
             ip = cv2.INTER_AREA
         else:
             ip = cv2.INTER_LINEAR
@@ -1511,20 +1515,23 @@ def imresize_many_images(images, sizes=None, interpolation=None):
                         "float96", "float128", "float256"],
             augmenter=None)
 
-    result_shape = (nb_images, height, width)
+    result_shape = (nb_images, height_target, width_target)
     if nb_channels is not None:
         result_shape = result_shape + (nb_channels,)
     result = np.zeros(result_shape, dtype=images.dtype)
     for i, image in enumerate(images):
         input_dtype = image.dtype
-        if image.dtype.type == np.bool_:
+        input_dtype_name = input_dtype.name
+
+        if input_dtype_name == "bool":
             image = image.astype(np.uint8) * 255
-        elif image.dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
+        elif input_dtype_name == "int8" and ip != cv2.INTER_NEAREST:
             image = image.astype(np.int16)
-        elif image.dtype.type == np.float16:
+        elif input_dtype_name == "float16":
             image = image.astype(np.float32)
 
-        result_img = cv2.resize(image, (width, height), interpolation=ip)
+        result_img = cv2.resize(
+            image, (width_target, height_target), interpolation=ip)
         assert result_img.dtype.name == image.dtype.name, (
             "Expected cv2.resize() to keep the input dtype '%s', but got "
             "'%s'. This is an internal error. Please report." % (
@@ -1538,13 +1545,13 @@ def imresize_many_images(images, sizes=None, interpolation=None):
                 and nb_channels == 1):
             result_img = result_img[:, :, np.newaxis]
 
-        if input_dtype.type == np.bool_:
+        if input_dtype_name == "bool":
             result_img = result_img > 127
-        elif input_dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
+        elif input_dtype_name == "int8" and ip != cv2.INTER_NEAREST:
             # TODO somehow better avoid circular imports here
             from . import dtypes as iadt
             result_img = iadt.restore_dtypes_(result_img, np.int8)
-        elif input_dtype.type == np.float16:
+        elif input_dtype_name == "float16":
             # TODO see above
             from . import dtypes as iadt
             result_img = iadt.restore_dtypes_(result_img, np.float16)
