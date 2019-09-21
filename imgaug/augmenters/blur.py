@@ -533,10 +533,19 @@ class AverageBlur(meta.Augmenter):
                 elif image.dtype.name == "int8":
                     image = image.astype(np.int16, copy=False)
 
-                image_aug = cv2.blur(image, (kh, kw))
-                # cv2.blur() removes channel axis for single-channel images
-                if image_aug.ndim == 2:
-                    image_aug = image_aug[..., np.newaxis]
+                if image.ndim == 2 or image.shape[-1] <= 512:
+                    image_aug = cv2.blur(image, (kh, kw))
+                    # cv2.blur() removes channel axis for single-channel images
+                    if image_aug.ndim == 2:
+                        image_aug = image_aug[..., np.newaxis]
+                else:
+                    # TODO this is quite inefficient
+                    # handling more than 512 channels in cv2.blur()
+                    channels = [
+                        cv2.blur(image[..., c], (kh, kw))
+                        for c in sm.xrange(image.shape[-1])
+                    ]
+                    image_aug = np.stack(channels, axis=-1)
 
                 if input_dtype.name == "bool":
                     image_aug = image_aug > 0.5
