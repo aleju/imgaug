@@ -3383,6 +3383,36 @@ class TestCropToFixedSize(unittest.TestCase):
         assert observed.shape == (32, 32, 3)
         assert np.array_equal(observed.arr, expected)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.CropToFixedSize(height=1, width=1)
+
+                image_aug = aug(image=image)
+
+                expected_height = 0 if shape[0] == 0 else 1
+                expected_width = 0 if shape[1] == 0 else 1
+                expected_shape = tuple([expected_height, expected_width]
+                                       + list(shape[2:]))
+                assert image_aug.shape == expected_shape
+
     def test_other_dtypes_bool(self):
         aug = iaa.CropToFixedSize(height=2, width=3, position="center-top")
         mask = np.zeros((2, 3), dtype=bool)
