@@ -148,13 +148,13 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
             alpha = np.tile(alpha, (1, 1, image_fg.shape[2]))
 
     if not input_was_bool:
-        if input_was_2d:
-            image_fg = image_fg[..., 0]
-            image_bg = image_bg[..., 0]
-
         if np.all(alpha >= 1.0 - eps):
+            if input_was_2d:
+                image_fg = image_fg[..., 0]
             return np.copy(image_fg)
         elif np.all(alpha <= eps):
+            if input_was_2d:
+                image_bg = image_bg[..., 0]
             return np.copy(image_bg)
 
     # for efficiency reaons, only test one value of alpha here, even if alpha
