@@ -584,6 +584,22 @@ class TestCanny(unittest.TestCase):
                 break
         assert np.all(seen.values())
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Canny(alpha=1)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         alpha = iap.Deterministic(0.2)
         hysteresis_thresholds = iap.Deterministic(10)
