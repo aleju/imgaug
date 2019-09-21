@@ -377,6 +377,9 @@ def multiply_scalar(image, multiplier):
         Image, multiplied by `multiplier`.
 
     """
+    if any([axis == 0 for axis in image.shape]):
+        return np.copy(image)
+
     iadt.gate_dtypes(
         image,
         allowed=["bool",
@@ -1701,7 +1704,8 @@ class Multiply(meta.Augmenter):
             if per_channel_samples_i > 0.5:
                 mul = mul_samples_i[0:nb_channels]
             else:
-                mul = mul_samples_i[0]
+                # the if/else here catches the case of the channel axis being 0
+                mul = mul_samples_i[0] if mul_samples_i.size > 0 else []
             images[i] = multiply_scalar(image, mul)
 
         return images
