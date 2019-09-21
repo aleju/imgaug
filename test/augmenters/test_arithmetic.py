@@ -740,6 +740,47 @@ class TestAddElementwise(unittest.TestCase):
         assert 150 < seen[0] < 250
         assert 150 < seen[1] < 250
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.AddElementwise(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.AddElementwise(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         # test get_parameters()
         aug = iaa.AddElementwise(value=1, per_channel=False)
