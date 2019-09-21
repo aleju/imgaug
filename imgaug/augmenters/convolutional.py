@@ -160,12 +160,18 @@ class Convolve(meta.Augmenter):
         rss = random_state.duplicate(len(images))
 
         for i, image in enumerate(images):
-            _height, _width, nb_channels = images[i].shape
+            _height, _width, nb_channels = image.shape
+
+            # currently we don't have to worry here about alignemnt with
+            # non-image data and therefore can just place this before any
+            # sampling
+            if any([axis == 0 for axis in image.shape]):
+                continue
 
             input_dtype = image.dtype
-            if image.dtype.type in [np.bool_, np.float16]:
+            if image.dtype.name in ["bool", "float16"]:
                 image = image.astype(np.float32, copy=False)
-            elif image.dtype.type == np.int8:
+            elif image.dtype.name == "int8":
                 image = image.astype(np.int16, copy=False)
 
             if self.matrix_type == "None":
@@ -201,6 +207,8 @@ class Convolve(meta.Augmenter):
             else:
                 raise Exception("Invalid matrix type")
 
+            # TODO check if sampled matrices are identical over channels
+            #      and then just apply once. (does that really help wrt speed?)
             image_aug = image
             for channel in sm.xrange(nb_channels):
                 if matrices[channel] is not None:
@@ -212,9 +220,9 @@ class Convolve(meta.Augmenter):
                         matrices[channel]
                     )
 
-            if input_dtype == np.bool_:
+            if input_dtype.name == "bool":
                 image_aug = image_aug > 0.5
-            elif input_dtype in [np.int8, np.float16]:
+            elif input_dtype.name in ["int8", "float16"]:
                 image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
             images[i] = image_aug

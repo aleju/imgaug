@@ -194,6 +194,26 @@ class TestConvolve(unittest.TestCase):
             got_exception = True
         assert got_exception
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Convolve(matrix=np.float32([[1]]))
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         matrix = np.int32([[1]])
         aug = iaa.Convolve(matrix=matrix)
