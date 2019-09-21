@@ -6678,6 +6678,72 @@ class TestRot90(unittest.TestCase):
         assert len(psoi_aug.polygons) == 0
         assert psoi_aug.shape == (8, 4, 3)
 
+    def test_zero_sized_axes_k_0_or_2(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            for keep_size in [False, True]:
+                with self.subTest(shape=shape, keep_size=keep_size):
+                    for _ in sm.xrange(10):
+                        image = np.zeros(shape, dtype=np.uint8)
+                        aug = iaa.Rot90([0, 2], keep_size=keep_size)
+
+                        image_aug = aug(image=image)
+
+                        assert image_aug.shape == shape
+
+    def test_zero_sized_axes_k_1_or_3_no_keep_size(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                for _ in sm.xrange(10):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.Rot90([1, 3], keep_size=False)
+
+                    image_aug = aug(image=image)
+
+                    shape_expected = tuple([shape[1], shape[0]]
+                                           + list(shape[2:]))
+                    assert image_aug.shape == shape_expected
+
+    def test_zero_sized_axes_k_1_or_3_keep_size(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                for _ in sm.xrange(10):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.Rot90([1, 3], keep_size=True)
+
+                    image_aug = aug(image=image)
+
+                    assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         aug = iaa.Rot90([1, 3], keep_size=False)
         assert aug.get_parameters()[0] == aug.k

@@ -3800,7 +3800,7 @@ class Rot90(meta.Augmenter):
         return arrs_aug
 
     def _augment_images(self, images, random_state, parents, hooks):
-        resize_func = partial(ia.imresize_single_image)
+        resize_func = ia.imresize_single_image
         images_aug, _ = self._augment_arrays(images, random_state, resize_func)
         return images_aug
 
