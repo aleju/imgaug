@@ -294,6 +294,45 @@ class _TestPoolingAugmentersBase(object):
         assert psoi_aug.shape == (2, 2, 3)
         assert len(psoi_aug.polygons) == 0
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = self.augmenter(3)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = self.augmenter(3)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         aug = self.augmenter(2)
         params = aug.get_parameters()
@@ -303,9 +342,12 @@ class _TestPoolingAugmentersBase(object):
         assert params[0][0].value == 2
         assert params[0][1] is None
 
+    def subTest(self, *args, **kwargs):
+        raise NotImplementedError
+
 
 # TODO add test that checks the padding behaviour
-class TestAveragePooling(_TestPoolingAugmentersBase, unittest.TestCase):
+class TestAveragePooling(unittest.TestCase, _TestPoolingAugmentersBase):
     @property
     def augmenter(self):
         return iaa.AveragePooling
@@ -485,7 +527,7 @@ class TestAveragePooling(_TestPoolingAugmentersBase, unittest.TestCase):
 # We don't have many tests here, because MaxPooling and AveragePooling derive
 # from the same base class, i.e. they share most of the methods, which are then
 # tested via TestAveragePooling.
-class TestMaxPooling(_TestPoolingAugmentersBase, unittest.TestCase):
+class TestMaxPooling(unittest.TestCase, _TestPoolingAugmentersBase):
     @property
     def augmenter(self):
         return iaa.MaxPooling
@@ -531,7 +573,7 @@ class TestMaxPooling(_TestPoolingAugmentersBase, unittest.TestCase):
 # We don't have many tests here, because MinPooling and AveragePooling derive
 # from the same base class, i.e. they share most of the methods, which are then
 # tested via TestAveragePooling.
-class TestMinPooling(_TestPoolingAugmentersBase, unittest.TestCase):
+class TestMinPooling(unittest.TestCase, _TestPoolingAugmentersBase):
     @property
     def augmenter(self):
         return iaa.MinPooling
@@ -577,7 +619,7 @@ class TestMinPooling(_TestPoolingAugmentersBase, unittest.TestCase):
 # We don't have many tests here, because MedianPooling and AveragePooling
 # derive from the same base class, i.e. they share most of the methods, which
 # are then tested via TestAveragePooling.
-class TestMedianPool(_TestPoolingAugmentersBase, unittest.TestCase):
+class TestMedianPool(unittest.TestCase, _TestPoolingAugmentersBase):
     @property
     def augmenter(self):
         return iaa.MedianPooling
