@@ -2098,6 +2098,9 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
         Array after pooling.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # TODO find better way to avoid circular import
     from . import dtypes as iadt
     iadt.gate_dtypes(arr,
@@ -2116,12 +2119,6 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
         pad_cval = cval
 
     _assert_two_or_three_dims(arr)
-    channel_axis_is_zero = (arr.ndim == 3 and arr.shape[-1] == 0)
-
-    # block_reduce() crashes if channel axis is 0. It could probably be
-    # squeezed away, but then how to add a zero-sized axis later on?
-    assert not channel_axis_is_zero, (
-        "Cannot pool a 3d-array with 0 channels. Got shape %s." % (arr.shape,))
 
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \
