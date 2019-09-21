@@ -418,41 +418,56 @@ class Test_segment_voronoi(unittest.TestCase):
 
         assert np.array_equal(image_seg, image)
 
-    def test_image_with_zero_height(self):
-        image = np.zeros((0, 4, 3), dtype=np.uint8)
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
         cell_coordinates = np.float32([
             [1.0, 1.0],
             [3.0, 1.0]
         ])
         replace_mask = np.array([True, True], dtype=bool)
 
-        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
 
-        assert np.array_equal(image_seg, image)
+                image_aug = iaa.segment_voronoi(image, cell_coordinates,
+                                                replace_mask)
 
-    def test_image_with_zero_width(self):
-        image = np.zeros((4, 0, 3), dtype=np.uint8)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
         cell_coordinates = np.float32([
             [1.0, 1.0],
             [3.0, 1.0]
         ])
         replace_mask = np.array([True, True], dtype=bool)
 
-        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
 
-        assert np.array_equal(image_seg, image)
+                image_aug = iaa.segment_voronoi(image, cell_coordinates,
+                                                replace_mask)
 
-    def test_image_with_zero_size(self):
-        image = np.zeros((0, 0), dtype=np.uint8)
-        cell_coordinates = np.float32([
-            [1.0, 1.0],
-            [3.0, 1.0]
-        ])
-        replace_mask = np.array([True, True], dtype=bool)
-
-        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
-
-        assert np.array_equal(image_seg, image)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
 
 class TestVoronoi(unittest.TestCase):
