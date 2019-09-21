@@ -3656,3 +3656,20 @@ class TestJpegCompression(unittest.TestCase):
         hm = ia.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.JpegCompression(100)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape

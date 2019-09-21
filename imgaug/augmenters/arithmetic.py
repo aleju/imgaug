@@ -978,6 +978,9 @@ def compress_jpeg(image, compression):
         the result into a new array. Same shape and dtype as the input.
 
     """
+    if any([axis == 0 for axis in image.shape[0:2]]):
+        return np.copy(image)
+
     # The value range 1 to 95 is suggested by PIL's save() documentation
     # Values above 95 seem to not make sense (no improvement in visual
     # quality, but large file size).
