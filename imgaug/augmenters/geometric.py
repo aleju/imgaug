@@ -3319,11 +3319,6 @@ class ElasticTransformation(meta.Augmenter):
         gen = enumerate(zip(keypoints_on_images, samples.alphas, samples.sigmas,
                             samples.orders, samples.random_states))
         for i, (kpsoi, alpha, sigma, order, random_state_i) in gen:
-            image_has_zero_sized_axes = any([axis == 0 for axis in kpsoi.shape])
-            if not kpsoi.keypoints or image_has_zero_sized_axes:
-                # ElasticTransformation does not change the shape, hence we can
-                # skip the below steps
-                continue
             h, w = kpsoi.shape[0:2]
             dx, dy = self._generate_shift_maps(
                 kpsoi.shape[0:2],
@@ -3331,6 +3326,18 @@ class ElasticTransformation(meta.Augmenter):
                 sigma=sigma,
                 random_state=random_state_i
             )
+
+            # TODO add test for keypoint alignment when keypoints are empty
+            # Note: this block must be placed after _generate_shift_maps() to
+            # keep samples aligned
+            # Note: we should stop for zero-sized axes early here, event though
+            # there is a height/width check for each keypoint, because the
+            # channel number can also be zero
+            image_has_zero_sized_axes = any([axis == 0 for axis in kpsoi.shape])
+            if not kpsoi.keypoints or image_has_zero_sized_axes:
+                # ElasticTransformation does not change the shape, hence we can
+                # skip the below steps
+                continue
 
             kps_aug = []
             for kp in kpsoi.keypoints:
