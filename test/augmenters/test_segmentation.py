@@ -695,6 +695,49 @@ class TestVoronoi(unittest.TestCase):
         assert not same_between_a1_a2
         assert same_between_b1_b2
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        sampler = iaa.RegularGridPointsSampler(50, 50)
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.Voronoi(sampler, p_replace=1)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        sampler = iaa.RegularGridPointsSampler(50, 50)
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.Voronoi(sampler, p_replace=1)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         sampler = iaa.RegularGridPointsSampler(1, 1)
         aug = iaa.Voronoi(sampler, p_replace=0.5, max_size=None,
