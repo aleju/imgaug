@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import sys
+import warnings
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
     import unittest2 as unittest
@@ -2517,6 +2518,84 @@ class TestCrop(unittest.TestCase):
         assert seen[2] == 0
         assert seen[3] == 0
         assert 250 - 50 < seen[4] < 250 + 50
+
+    def test_zero_sized_axes_no_keep_size(self):
+        # we also use height/width 2 here, because a height/width of 1 is
+        # actually not changed due to prevent_zero_size
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Crop(px=1, keep_size=False)
+
+                with warnings.catch_warnings(record=True) as caught_warnings:
+                    image_aug = aug(image=image)
+
+                # we don't check the number of warnings here as it varies by
+                # shape
+                for warning in caught_warnings:
+                    assert (
+                        "crop amounts in CropAndPad"
+                        in str(warning.message)
+                    )
+
+                expected_height = 0 if shape[0] == 0 else 1
+                expected_width = 0 if shape[1] == 0 else 1
+                expected_shape = tuple([expected_height, expected_width]
+                                       + list(shape[2:]))
+                assert image_aug.shape == expected_shape
+
+    def test_zero_sized_axes_keep_size(self):
+        # we also use height/width 2 here, because a height/width of 1 is
+        # actually not changed due to prevent_zero_size
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Crop(px=1, keep_size=True)
+
+                with warnings.catch_warnings(record=True) as caught_warnings:
+                    image_aug = aug(image=image)
+
+                # we don't check the number of warnings here as it varies by
+                # shape
+                for warning in caught_warnings:
+                    assert (
+                        "crop amounts in CropAndPad"
+                        in str(warning.message)
+                    )
+
+                assert image_aug.shape == image.shape
 
     def test_other_dtypes_bool(self):
         aug = iaa.Crop(px=(1, 0, 0, 0), keep_size=False)
