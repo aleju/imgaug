@@ -1712,7 +1712,11 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
             in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
         )
 
-        if not bad_datatype_cv2 and not bad_mode_cv2:
+        # OpenCV turns the channel axis for arrays with 0 channels to 512
+        # TODO add direct test for this. indirectly tested via Pad
+        bad_shape_cv2 = (arr.ndim == 3 and arr.shape[-1] == 0)
+
+        if not bad_datatype_cv2 and not bad_mode_cv2 and not bad_shape_cv2:
             cval = (
                 float(cval)
                 if arr.dtype.kind == "f"
