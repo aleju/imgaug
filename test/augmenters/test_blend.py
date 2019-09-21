@@ -1455,3 +1455,44 @@ class TestAlphaElementwise(unittest.TestCase):
         observed = aug.augment_polygons([self.psoi], hooks=hooks)[0]
         assert observed.polygons[0].exterior_almost_equals(
             self.psoi.polygons[0])
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 0, dtype=np.uint8)
+                aug = iaa.Alpha(1.0, iaa.Add(1), iaa.Add(100))
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 0, dtype=np.uint8)
+                aug = iaa.Alpha(1.0, iaa.Add(1), iaa.Add(100))
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
