@@ -159,13 +159,8 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
     if ia.is_single_integer(cval):
         cval = [cval] * len(arr.shape[2])
 
-    has_zero_channels = (arr.ndim == 3 and arr.shape[-1] == 0)
-    assert not has_zero_channels, (
-        "Got a 3d-array with 0 channels (shape %s). Expected either a 2d array "
-        "or >=1 channels" % (arr.shape,))
-
-    # no changes to arrays with zero height/width
-    if arr.shape[0] == 0 or arr.shape[1] == 0:
+    # no changes to zero-sized arrays
+    if arr.size == 0:
         return arr
 
     min_value, _center_value, max_value = \
@@ -1047,6 +1042,11 @@ class Affine(meta.Augmenter):
 
         gen = zip(augmentables, arrs_aug, matrices, samples.order)
         for augmentable_i, arr_aug, matrix, order_i in gen:
+            # skip augmented HM/SM arrs for which the images were not
+            # augmented due to being zero-sized
+            if 0 in augmentable_i.shape:
+                continue
+
             # order=3 matches cubic interpolation and can cause values to go
             # outside of the range [0.0, 1.0] not clear whether 4+ also do that
             # We don't clip here for Segmentation Maps, because for these
@@ -1076,7 +1076,9 @@ class Affine(meta.Augmenter):
                 i, keypoints_on_image.shape, self.fit_output)
 
             kps = keypoints_on_image.keypoints
-            if not _is_identity_matrix(matrix) and not keypoints_on_image.empty:
+            if (not _is_identity_matrix(matrix)
+                    and not keypoints_on_image.empty
+                    and not (0 in keypoints_on_image.shape)):
                 coords = keypoints_on_image.to_xy_array()
                 coords_aug = tf.matrix_transform(coords, matrix.params)
                 kps = [kp.deepcopy(x=coords[0], y=coords[1])
@@ -2615,7 +2617,7 @@ class PerspectiveTransform(meta.Augmenter):
             # cv2.warpPerspective only supports <=4 channels and errors
             # on axes with size zero
             nb_channels = image.shape[2]
-            has_zero_sized_axis = any([axis == 0 for axis in image.shape])
+            has_zero_sized_axis = (image.size == 0)
             if has_zero_sized_axis:
                 warped = image
             elif nb_channels <= 4:
@@ -2706,9 +2708,8 @@ class PerspectiveTransform(meta.Augmenter):
                 cval_i = samples.cvals[i]
 
             nb_channels = arr.shape[2]
-            image_has_zero_sized_axis = any([axis == 0 for axis
-                                             in augmentable_i.shape])
-            map_has_zero_sized_axis = any([axis == 0 for axis in arr.shape])
+            image_has_zero_sized_axis = (0 in augmentable_i.shape)
+            map_has_zero_sized_axis = (arr.size == 0)
 
             if not image_has_zero_sized_axis:
                 if not map_has_zero_sized_axis:
@@ -2751,7 +2752,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i, (matrix, max_height, max_width) in gen:
             kpsoi = keypoints_on_images[i]
-            image_has_zero_sized_axis = any([axis == 0 for axis in kpsoi.shape])
+            image_has_zero_sized_axis = (0 in kpsoi.shape)
 
             if not image_has_zero_sized_axis:
                 new_shape = (max_height, max_width) + kpsoi.shape[2:]
@@ -3333,7 +3334,7 @@ class ElasticTransformation(meta.Augmenter):
             # Note: we should stop for zero-sized axes early here, event though
             # there is a height/width check for each keypoint, because the
             # channel number can also be zero
-            image_has_zero_sized_axes = any([axis == 0 for axis in kpsoi.shape])
+            image_has_zero_sized_axes = (0 in kpsoi.shape)
             if not kpsoi.keypoints or image_has_zero_sized_axes:
                 # ElasticTransformation does not change the shape, hence we can
                 # skip the below steps
@@ -3543,7 +3544,7 @@ class ElasticTransformation(meta.Augmenter):
                 - (4) causes: src data type = 0 is not supported
 
         """
-        if any([axis == 0 for axis in image.shape]):
+        if image.size == 0:
             return np.copy(image)
 
         if order == 0 and image.dtype.name in ["uint64", "int64"]:
