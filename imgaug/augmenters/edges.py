@@ -437,7 +437,7 @@ class Canny(meta.Augmenter):
                 "channel numbers that are 1, 3 or 4. Got %d.") % (
                     image.shape[-1],)
 
-            has_zero_sized_axes = any([axis == 0 for axis in image.shape[0:2]])
+            has_zero_sized_axes = (0 in image.shape[0:2])
             if alpha > 0 and sobel > 1 and not has_zero_sized_axes:
                 image_canny = cv2.Canny(
                     image[:, :, 0:3],

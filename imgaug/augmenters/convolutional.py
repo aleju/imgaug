@@ -165,7 +165,7 @@ class Convolve(meta.Augmenter):
             # currently we don't have to worry here about alignemnt with
             # non-image data and therefore can just place this before any
             # sampling
-            if any([axis == 0 for axis in image.shape]):
+            if image.size == 0:
                 continue
 
             input_dtype = image.dtype

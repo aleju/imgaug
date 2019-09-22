@@ -650,7 +650,7 @@ class LogContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, gain=1, per_channel=False,
-                name=None, deterministic=False, random_state=None):
+                 name=None, deterministic=False, random_state=None):
         # TODO add inv parameter?
         params1d = [iap.handle_continuous_param(
             gain, "gain", value_range=(0, None), tuple_to_uniform=True,
@@ -828,7 +828,7 @@ class _IntensityChannelBasedApplier(object):
                     ..., chan_idx:chan_idx+1]
                 images_after_color_conversion[target_idx] = image_new_cs
 
-        # apply CLAHE channelwise
+        # apply function channelwise
         images_aug = func(images_normalized, rss[1])
 
         # denormalize

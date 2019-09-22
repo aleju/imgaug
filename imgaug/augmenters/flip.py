@@ -742,7 +742,7 @@ def _fliplr_sliced(arr):
 def _fliplr_cv2(arr):
     # cv2.flip() returns None for arrays with zero height or width
     # and turns channels=0 to channels=512
-    if any([axis == 0 for axis in arr.shape]):
+    if arr.size == 0:
         return np.copy(arr)
 
     # cv2.flip() fails for more than 512 channels
