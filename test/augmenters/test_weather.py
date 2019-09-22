@@ -141,6 +141,24 @@ class TestFastSnowyLandscape(unittest.TestCase):
         observed = aug.augment_image(image)
         assert np.array_equal(observed, expected)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.FastSnowyLandscape(100, 1.5,
+                                             from_colorspace="RGB")
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
 
 # only a very rough test here currently, because the augmenter is fairly hard
 # to test
@@ -176,6 +194,46 @@ class TestClouds(unittest.TestCase):
     def test_very_roughly_no_channel(self):
         self._test_very_roughly(None)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Clouds()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Clouds()
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug > 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
 
 # only a very rough test here currently, because the augmenter is fairly hard
 # to test
@@ -210,6 +268,46 @@ class TestFog(unittest.TestCase):
 
     def test_very_roughly_no_channel(self):
         self._test_very_roughly(None)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Fog()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Fog()
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug > 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
 
 # only a very rough test here currently, because the augmenter is fairly hard
@@ -274,6 +372,23 @@ class TestSnowflakes(unittest.TestCase):
 
     def test_very_roughly_no_channels(self):
         self._test_very_roughly(None)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Snowflakes()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
     @classmethod
     def _measure_uniformity(cls, image, patch_size=5, n_patches=100):

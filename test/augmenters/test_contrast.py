@@ -105,6 +105,46 @@ class TestGammaContrast(unittest.TestCase):
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.GammaContrast(0.5)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.GammaContrast(0.5)
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_other_dtypes_uint_int(self):
         dts = [np.uint8, np.uint16, np.uint32, np.uint64,
                np.int8, np.int16, np.int32, np.int64]
@@ -316,6 +356,46 @@ class TestSigmoidContrast(unittest.TestCase):
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.SigmoidContrast(gain=10, cutoff=0.5)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.SigmoidContrast(gain=10, cutoff=1.0)
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_other_dtypes_uint_int(self):
         dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
                   np.int8, np.int16, np.int32, np.int64]
@@ -484,6 +564,46 @@ class TestLogContrast(unittest.TestCase):
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.LogContrast(gain=2)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.LogContrast(gain=2)
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_other_dtypes_uint_int(self):
         # support before 1.17:
         #   [np.uint8, np.uint16, np.uint32, np.uint64,
@@ -634,6 +754,46 @@ class TestLinearContrast(unittest.TestCase):
         heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.LinearContrast(alpha=2)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.LinearContrast(alpha=2)
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
     # test for other dtypes are in Test_adjust_contrast_linear
 
@@ -1024,6 +1184,46 @@ class TestAllChannelsCLAHE(unittest.TestCase):
         heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(3, 3, 3))
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.AllChannelsCLAHE()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.AllChannelsCLAHE()
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
     def test_get_parameters(self):
         aug = iaa.AllChannelsCLAHE(
@@ -1537,6 +1737,23 @@ class TestCLAHE(unittest.TestCase):
                         break
                 assert all_same
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.CLAHE()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         clahe = iaa.CLAHE(
             clip_limit=1,
@@ -1668,6 +1885,46 @@ class TestAllChannelsHistogramEqualization(unittest.TestCase):
         heatmaps_aug = aug.augment_heatmaps([heatmaps])[0]
         assert np.allclose(heatmaps.arr_0to1, heatmaps_aug.arr_0to1)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.AllChannelsHistogramEqualization()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.AllChannelsHistogramEqualization()
+
+                image_aug = aug(image=image)
+
+                assert np.any(image_aug != 128)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         aug = iaa.AllChannelsHistogramEqualization()
         params = aug.get_parameters()
@@ -1761,6 +2018,23 @@ class TestHistogramEqualization(unittest.TestCase):
                 result1 = aug_det.augment_image(img)
                 result2 = aug_det.augment_image(img)
                 assert np.array_equal(result1, result2)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 129, dtype=np.uint8)
+                aug = iaa.HistogramEqualization()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
     def test_get_parameters(self):
         aug = iaa.HistogramEqualization(

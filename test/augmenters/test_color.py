@@ -20,6 +20,7 @@ import six.moves as sm
 import cv2
 
 import imgaug as ia
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug.augmenters.meta as meta
@@ -178,6 +179,22 @@ class Test_change_colorspace_(unittest.TestCase):
                     expected = np.tile(expected[..., np.newaxis], (1, 1, 3))
 
                 assert np.array_equal(image_out, expected)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.change_colorspace_(
+                    np.copy(image), from_colorspace="RGB", to_colorspace="BGR")
+
+                assert image_aug.shape == image.shape
 
     @classmethod
     def _generate_expected_image(cls, image, from_colorspace, to_colorspace):
@@ -635,8 +652,8 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
             assert np.all(diff <= 1)
 
     def test_augment_images__deterministic(self):
-        rs = np.random.RandomState(1)
-        images = rs.randint(0, 255, size=(32, 4, 4, 3), dtype=np.uint8)
+        rs = iarandom.RNG(1)
+        images = rs.integers(0, 255, size=(32, 4, 4, 3), dtype=np.uint8)
 
         for deterministic in [False, True]:
             aug = iaa.MultiplyHueAndSaturation(mul=(0.1, 5.0),
@@ -1512,8 +1529,8 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
         assert got_exception
 
     def test_quantization_is_deterministic(self):
-        rs = np.random.RandomState(1)
-        image = rs.randint(0, 255, (100, 100, 3)).astype(np.uint8)
+        rs = iarandom.RNG(1)
+        image = rs.integers(0, 255, (100, 100, 3)).astype(np.uint8)
 
         # simulate multiple calls, each one of them should produce the
         # same quantization
@@ -1523,6 +1540,45 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
 
         for image_quantized in images_quantized[1:]:
             assert np.array_equal(image_quantized, images_quantized[0])
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.quantize_colors_kmeans(image, 2)
+
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.quantize_colors_kmeans(image, 2)
+
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
 
 class UniformColorQuantization(TestKMeansColorQuantization):
@@ -1746,3 +1802,41 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             assert "[2..256]" in str(exc)
             got_exception = True
         assert got_exception
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.quantize_colors_uniform(image, 2)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.quantize_colors_uniform(image, 2)
+
+                assert np.any(image_aug > 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape

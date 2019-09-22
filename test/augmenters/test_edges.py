@@ -94,7 +94,7 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=100,
             color_false=10)
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
 
         # input image has shape (H,W,1)
         image = np.zeros((5, 5, 1), dtype=np.uint8)
@@ -114,7 +114,7 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=100,
             color_false=10)
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
 
         # input image has shape (H,W,3)
         image = np.zeros((5, 5, 3), dtype=np.uint8)
@@ -134,7 +134,7 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=100,
             color_false=10)
-        random_state = np.random.RandomState(42)
+        random_state = iarandom.RNG(42)
 
         # input image has shape (H,W,4)
         image = np.zeros((5, 5, 4), dtype=np.uint8)
@@ -583,6 +583,22 @@ class TestCanny(unittest.TestCase):
             if all(seen.values()):
                 break
         assert np.all(seen.values())
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Canny(alpha=1)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
 
     def test_get_parameters(self):
         alpha = iap.Deterministic(0.2)

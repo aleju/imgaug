@@ -444,7 +444,7 @@ class CloudLayer(meta.Augmenter):
                                      exponent, random_state):
         intensity_details_generator = iap.FrequencyNoise(
             exponent=exponent,
-            size_px_max=max(height, width),
+            size_px_max=max(height, width, 1),  # 1 here for case H, W being 0
             upscale_method="cubic"
         )
         intensity_details = intensity_details_generator.draw_samples(

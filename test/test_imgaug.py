@@ -922,35 +922,23 @@ def test_imresize_many_images():
     assert len(observed) == 0
 
     # test images with zero height/width
-    images = [np.zeros((0, 4, 3), dtype=np.uint8)]
-    got_exception = False
-    try:
-        _ = ia.imresize_many_images(images, sizes=(2, 2))
-    except Exception as exc:
-        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
-        got_exception = True
-    assert got_exception
-
-    images = [np.zeros((4, 0, 3), dtype=np.uint8)]
-    got_exception = False
-    try:
-        _ = ia.imresize_many_images(images, sizes=(2, 2))
-    except Exception as exc:
-        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
-        got_exception = True
-    assert got_exception
-
-    images = [np.zeros((0, 0, 3), dtype=np.uint8)]
-    got_exception = False
-    try:
-        _ = ia.imresize_many_images(images, sizes=(2, 2))
-    except Exception as exc:
-        assert "Cannot resize images, because at least one image has a height and/or width of zero." in str(exc)
-        got_exception = True
-    assert got_exception
+    shapes = [(0, 4, 3), (4, 0, 3), (0, 0, 3)]
+    for shape in shapes:
+        images = [np.zeros(shape, dtype=np.uint8)]
+        got_exception = False
+        try:
+            _ = ia.imresize_many_images(images, sizes=(2, 2))
+        except Exception as exc:
+            assert (
+                "Cannot resize images, because at least one image has a height "
+                "and/or width and/or number of channels of zero."
+                in str(exc)
+            )
+            got_exception = True
+        assert got_exception
 
     # test invalid sizes
-    sizes_all = [(-1, 2), (0, 2)]
+    sizes_all = [(-1, 2)]
     sizes_all = sizes_all\
         + [(float(a), b) for a, b in sizes_all]\
         + [(a, float(b)) for a, b in sizes_all]\
@@ -962,14 +950,14 @@ def test_imresize_many_images():
     sizes_all = sizes_all\
         + [(b, a) for a, b in sizes_all]
     sizes_all = sizes_all\
-        + [-1.0, 0.0, -1, 0]
+        + [-1.0, -1]
     for sizes in sizes_all:
         images = [np.zeros((4, 4, 3), dtype=np.uint8)]
         got_exception = False
         try:
             _ = ia.imresize_many_images(images, sizes=sizes)
         except Exception as exc:
-            assert "value is zero or lower than zero." in str(exc)
+            assert ">= 0" in str(exc)
             got_exception = True
         assert got_exception
 

@@ -108,6 +108,40 @@ class Test_blur_gaussian_(unittest.TestCase):
                 assert np.isclose(cargs[1]["sigmaY"], sigma)
                 assert cargs[1]["borderType"] == cv2.BORDER_REFLECT_101
 
+    def test_more_than_four_channels(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.blur_gaussian_(np.copy(image), 1.0)
+
+                assert image_aug.shape == image.shape
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.blur_gaussian_(np.copy(image), 1.0)
+
+                assert image_aug.shape == image.shape
+
     def test_backends_called(self):
         def side_effect_cv2(image, ksize, sigmaX, sigmaY, borderType):
             return image + 1
@@ -870,6 +904,40 @@ class TestAverageBlur(unittest.TestCase):
         # higher sum than nb_iterations
         assert np.all([v > 0 for v in nb_seen.values()])
 
+    def test_more_than_four_channels(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.AverageBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.AverageBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_keypoints_dont_change(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                ia.Keypoint(x=2, y=2)]
@@ -1143,6 +1211,40 @@ class TestMedianBlur(unittest.TestCase):
                 break
         assert np.all(seen)
 
+    def test_more_than_four_channels(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.MedianBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.MedianBlur(k=3)(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_keypoints_not_changed(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                ia.Keypoint(x=2, y=2)]
@@ -1157,6 +1259,27 @@ class TestMedianBlur(unittest.TestCase):
         observed = aug_det.augment_keypoints(kpsoi)
         expected = kpsoi
         assert keypoints_equal(observed, expected)
+
+
+# TODO extend these tests
+class TestBilateralBlur(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.BilateralBlur(3)(image=image)
+
+                assert image_aug.shape == image.shape
 
 
 class TestMotionBlur(unittest.TestCase):

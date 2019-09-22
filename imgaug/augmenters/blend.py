@@ -98,11 +98,11 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
 
     """
     assert image_fg.shape == image_bg.shape, (
-        "Expected oreground and background images to have the same shape. "
+        "Expected foreground and background images to have the same shape. "
         "Got %s and %s." % (image_fg.shape, image_bg.shape))
     assert image_fg.dtype.kind == image_bg.dtype.kind, (
-        "Expected oreground and background images to have the same dtype kind. "
-        "Got %s and %s." % (image_fg.dtype.kind, image_bg.dtype.kind))
+        "Expected foreground and background images to have the same dtype "
+        "kind. Got %s and %s." % (image_fg.dtype.kind, image_bg.dtype.kind))
     # TODO switch to gate_dtypes()
     assert image_fg.dtype.name not in ["float128"], (
         "Foreground image was float128, but blend_alpha() cannot handle that "
@@ -111,11 +111,10 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         "Background image was float128, but blend_alpha() cannot handle that "
         "dtype.")
 
-    # TODO add test for this
-    input_was_2d = (len(image_fg.shape) == 2)
+    input_was_2d = (image_fg.ndim == 2)
     if input_was_2d:
-        image_fg = np.atleast_3d(image_fg)
-        image_bg = np.atleast_3d(image_bg)
+        image_fg = image_fg[..., np.newaxis]
+        image_bg = image_bg[..., np.newaxis]
 
     input_was_bool = False
     if image_fg.dtype.kind == "b":
@@ -150,15 +149,20 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
 
     if not input_was_bool:
         if np.all(alpha >= 1.0 - eps):
+            if input_was_2d:
+                image_fg = image_fg[..., 0]
             return np.copy(image_fg)
         elif np.all(alpha <= eps):
+            if input_was_2d:
+                image_bg = image_bg[..., 0]
             return np.copy(image_bg)
 
     # for efficiency reaons, only test one value of alpha here, even if alpha
     # is much larger
-    assert 0 <= alpha.item(0) <= 1.0, (
-        "Expected 'alpha' value(s) to be in the interval [0.0, 1.0]. "
-        "Got min %.4f and max %.4f." % (np.min(alpha), np.max(alpha)))
+    if alpha.size > 0:
+        assert 0 <= alpha.item(0) <= 1.0, (
+            "Expected 'alpha' value(s) to be in the interval [0.0, 1.0]. "
+            "Got min %.4f and max %.4f." % (np.min(alpha), np.max(alpha)))
 
     dt_images = iadt.get_minimal_dtype([image_fg, image_bg])
 
@@ -170,11 +174,11 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     isize = max(isize, 4)
     dt_blend = np.dtype("f%d" % (isize,))
 
-    if alpha.dtype != dt_blend:
+    if alpha.dtype.name != dt_blend.name:
         alpha = alpha.astype(dt_blend)
-    if image_fg.dtype != dt_blend:
+    if image_fg.dtype.name != dt_blend.name:
         image_fg = image_fg.astype(dt_blend)
-    if image_bg.dtype != dt_blend:
+    if image_bg.dtype.name != dt_blend.name:
         image_bg = image_bg.astype(dt_blend)
 
     # the following is equivalent to
@@ -362,7 +366,11 @@ class Alpha(meta.Augmenter):
                 nb_channels_i = image_first.shape[2]
                 alphas_i = alphas[i, 0:nb_channels_i]
             else:
-                alphas_i = alphas[i, 0]
+                # We catch here the case of alphas[i] being empty, which can
+                # happen if all images have 0 channels.
+                # In that case the alpha value doesn't matter as the image
+                # contains zero values anyways.
+                alphas_i = alphas[i, 0] if alphas[i].size > 0 else 0
 
             result[i] = blend_alpha(image_first, image_second, alphas_i,
                                     eps=self.epsilon)
@@ -421,9 +429,14 @@ class Alpha(meta.Augmenter):
                     augmentables[i].shape[2]
                     if len(augmentables[i].shape) >= 3
                     else 1)
-                alpha = np.average(alphas[i, 0:nb_channels_i])
+                alphas_i = alphas[i, 0:nb_channels_i]
+                # the condition is required here if all images have a channel
+                # axis of size 0
+                alpha = np.average(alphas_i) if alphas_i.size > 0 else 1.0
             else:
-                alpha = alphas[i, 0]
+                # the condition is required here if all images have a channel
+                # axis of size 0
+                alpha = alphas[i, 0] if alphas.size > 0 else 1.0
             assert 0 <= alpha <= 1.0, (
                 "Expected 'alpha' to be in the interval [0.0, 1.0]. "
                 "Got %.4f." % (alpha,))
@@ -696,10 +709,12 @@ class AlphaElementwise(Alpha):
             mask = self.factor.draw_samples((height, width), random_state=rng)
             mask = np.tile(mask[..., np.newaxis], (1, 1, nb_channels))
 
-        assert 0 <= mask.item(0) <= 1.0, (
-            "Expected 'factor' samples to be in the interval "
-            "[0.0, 1.0]. Got min %.4f and max %.4f." % (
-                np.min(mask), np.max(mask),))
+        # mask has no elements if height or width is 0
+        if mask.size > 0:
+            assert 0 <= mask.item(0) <= 1.0, (
+                "Expected 'factor' samples to be in the interval "
+                "[0.0, 1.0]. Got min %.4f and max %.4f." % (
+                    np.min(mask), np.max(mask),))
 
         return mask
 
@@ -745,11 +760,11 @@ class AlphaElementwise(Alpha):
             # (+clip for cubic interpolation). We can use none-NN interpolation
             # for segmaps here as this is just the mask and not the segmap
             # array.
+            mask_3d = np.atleast_3d(mask_image)
+            mask_avg = (
+                np.average(mask_3d, axis=2) if mask_3d.shape[2] > 0 else 1.0)
             mask_arr = iadt.clip_(
-                ia.imresize_single_image(
-                    np.average(np.atleast_3d(mask_image), axis=2),
-                    (h_arr, w_arr)
-                ),
+                ia.imresize_single_image(mask_avg, (h_arr, w_arr)),
                 0, 1.0)
 
             mask_arr_binarized = (mask_arr >= 0.5)
@@ -839,7 +854,9 @@ class AlphaElementwise(Alpha):
                     x_int = int(np.round(coord[0]))
                     y_int = int(np.round(coord[1]))
                     if 0 <= y_int < h_img and 0 <= x_int < w_img:
-                        alpha = np.average(mask_image[y_int, x_int, :])
+                        alphas_i = mask_image[y_int, x_int, :]
+                        alpha = (
+                            np.average(alphas_i) if alphas_i.size > 0 else 1.0)
                         if alpha > 0.5:
                             coords_aug.append(coord_first)
                         else:
@@ -853,7 +870,8 @@ class AlphaElementwise(Alpha):
                 # used.
                 # Note that we ensured above that _keypoint_mode must be
                 # _MODE_EITHER_OR if it wasn't _MODE_POINTWISE.
-                mask_image_avg = np.average(mask_image)
+                mask_image_avg = (
+                    np.average(mask_image) if mask_image.size > 0 else 1.0)
                 if mask_image_avg > 0.5:
                     coords_aug = coords_first
                 else:

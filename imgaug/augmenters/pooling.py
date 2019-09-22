@@ -33,12 +33,10 @@ from .. import parameters as iap
 
 
 def _compute_shape_after_pooling(image_shape, ksize_h, ksize_w):
-    height, width = image_shape[0:2]
+    if any([axis == 0 for axis in image_shape]):
+        return image_shape
 
-    if height == 0:
-        height = 1
-    if width == 0:
-        width = 1
+    height, width = image_shape[0:2]
 
     if height % ksize_h > 0:
         height += ksize_h - (height % ksize_h)

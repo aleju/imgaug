@@ -36,20 +36,31 @@ import imgaug as ia
 from .. import parameters as iap
 
 
-def _crop_trbl_to_xyxy(shape, top, right, bottom, left):
+def _crop_trbl_to_xyxy(shape, top, right, bottom, left, prevent_zero_size=True):
+    if prevent_zero_size:
+        top, right, bottom, left = _crop_prevent_zero_size(
+            shape[0], shape[1], top, right, bottom, left)
+
     height, width = shape[0:2]
     x1 = left
     x2 = width - right
     y1 = top
     y2 = height - bottom
+
+    # these steps prevent negative sizes
+    # if x2==x1 or y2==y1 then the output arr has size 0 for the respective axis
+    # note that if height/width of arr is zero, then y2==y1 or x2==x1, which
+    # is still valid, even if height/width is zero and results in a zero-sized
+    # axis
+    x2 = max(x2, x1)
+    y2 = max(y2, y1)
+
     return x1, y1, x2, y2
 
 
 def _crop_arr_(arr, top, right, bottom, left, prevent_zero_size=True):
-    if prevent_zero_size:
-        top, right, bottom, left = _crop_prevent_zero_size(
-            arr.shape[0], arr.shape[1], top, right, bottom, left)
-    x1, y1, x2, y2 = _crop_trbl_to_xyxy(arr.shape, top, right, bottom, left)
+    x1, y1, x2, y2 = _crop_trbl_to_xyxy(arr.shape, top, right, bottom, left,
+                                        prevent_zero_size=prevent_zero_size)
     return arr[y1:y2, x1:x2, ...]
 
 
@@ -129,9 +140,16 @@ def _crop_and_pad_hms_or_segmaps_(augmentable, croppings_img,
 
 
 def _crop_and_pad_kpsoi(kpsoi, croppings_img, paddings_img, keep_size):
+    # using the trbl function instead of croppings_img has the advantage
+    # of incorporating prevent_zero_size, dealing with zero-sized input image
+    # axis and dealing the negative crop amounts
+    x1, y1, _x2, _y2 = _crop_trbl_to_xyxy(kpsoi.shape, *croppings_img)
+    crop_left = x1
+    crop_top = y1
+
     shifted = kpsoi.shift(
-        x=-croppings_img[3]+paddings_img[3],
-        y=-croppings_img[0]+paddings_img[0])
+        x=-crop_left+paddings_img[3],
+        y=-crop_top+paddings_img[0])
     shifted.shape = _compute_shape_after_crop_and_pad(
             kpsoi.shape, croppings_img, paddings_img)
     if keep_size:
@@ -167,19 +185,6 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
             regain_bottom = crop_bottom
             regain_top += diff
 
-        assert regain_top <= crop_top, (
-            "Failed to get regain_top<=crop_top for height %d, width %d, "
-            "crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
-            "regain_top %d." % (
-                height, width, crop_top, crop_right, crop_bottom, crop_left,
-                regain_top))
-        assert regain_bottom <= crop_bottom, (
-            "Failed to get regain_bottom<=crop_bottom for height %d, width "
-            "%d, crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
-            "regain_bottom %d." % (
-                height, width, crop_top, crop_right, crop_bottom, crop_left,
-                regain_bottom))
-
         crop_top = crop_top - regain_top
         crop_bottom = crop_bottom - regain_bottom
 
@@ -199,23 +204,12 @@ def _crop_prevent_zero_size(height, width, crop_top, crop_right, crop_bottom,
             regain_left = crop_left
             regain_right += diff
 
-        assert regain_right <= crop_right, (
-            "Failed to get regain_right<=crop_right for height %d, width %d, "
-            "crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
-            "regain_right %d." % (
-                height, width, crop_top, crop_right, crop_bottom, crop_left,
-                regain_right))
-        assert regain_left <= crop_left, (
-            "Failed to get regain_left<=crop_left for height %d, width %d, "
-            "crop_top %d, crop_right %d, crop_bottom %d, crop_left %d,"
-            "regain_left %d." % (
-                height, width, crop_top, crop_right, crop_bottom, crop_left,
-                regain_left))
-
         crop_right = crop_right - regain_right
         crop_left = crop_left - regain_left
 
-    return crop_top, crop_right, crop_bottom, crop_left
+    return (
+        max(crop_top, 0), max(crop_right, 0), max(crop_bottom, 0),
+        max(crop_left, 0))
 
 
 def _project_size_changes(trbl, from_shape, to_shape):
@@ -1274,16 +1268,30 @@ class CropAndPad(meta.Augmenter):
             and crop_bottom >= 0
             and crop_left >= 0), (
             "Expected to generate only crop amounts >=0, "
-            "got %d, %d, %d, %d (top, right, botto, left)." % (
+            "got %d, %d, %d, %d (top, right, bottom, left)." % (
                 crop_top, crop_right, crop_bottom, crop_left))
-        assert crop_top + crop_bottom < height, (
-            "Expected generated crop amounts at top/bottom to not exceed "
-            "image height, got %d and %d vs. image height %d." % (
-                crop_top, crop_bottom, height))
-        assert crop_right + crop_left < width, (
-            "Expected generated crop amounts at left/right to not exceed "
-            "image width, got %d and %d vs. image width %d." % (
-                crop_left, crop_right, width))
+
+        any_crop_y = (crop_top > 0 or crop_bottom > 0)
+        if any_crop_y and crop_top + crop_bottom >= height:
+            ia.warn(
+                "Expected generated crop amounts in CropAndPad for top and "
+                "bottom image side to be less than the image's height, but "
+                "got %d (top) and %d (bottom) vs. image height %d. This will "
+                "result in an image with output height=1 (if input height "
+                "was >=1) or output height=0 (if input height was 0)." % (
+                    crop_top, crop_bottom, height)
+            )
+
+        any_crop_x = (crop_left > 0 or crop_right > 0)
+        if any_crop_x and crop_left + crop_right >= width:
+            ia.warn(
+                "Expected generated crop amounts in CropAndPad for left and "
+                "right image side to be less than the image's width, but "
+                "got %d (left) and %d (right) vs. image width %d. This will "
+                "result in an image with output width=1 (if input width "
+                "was >=1) or output width=0 (if input width was 0)." % (
+                    crop_left, crop_right, width)
+            )
 
         return _CropAndPadSamplingResult(
             crop_top=crop_top,

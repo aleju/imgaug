@@ -248,6 +248,12 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
                 return image
         return None
 
+    # cv2 does not support height/width 0
+    # we don't check here if the channel axis is zero-sized as for colorspace
+    # transformations it should never be 0
+    if 0 in image.shape[0:2]:
+        return image
+
     iadt.gate_dtypes(
         image,
         allowed=["uint8"],
@@ -1290,6 +1296,9 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         gen = enumerate(zip(images_hsv, hues, saturations))
         for i, (image_hsv, hue_i, saturation_i) in gen:
+            if image_hsv.size == 0:
+                continue
+
             if self.backend == "cv2":
                 image_hsv = self._transform_image_cv2(
                     image_hsv, hue_i, saturation_i)

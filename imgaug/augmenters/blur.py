@@ -160,7 +160,8 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
         The blurred image. Same shape and dtype as the input.
 
     """
-    if sigma > 0 + eps:
+    has_zero_sized_axes = (image.size == 0)
+    if sigma > 0 + eps and not has_zero_sized_axes:
         dtype = image.dtype
 
         iadt.gate_dtypes(image,
@@ -523,21 +524,32 @@ class AverageBlur(meta.Augmenter):
         for i, (image, kh, kw) in gen:
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
-            if not kernel_impossible and not kernel_does_nothing:
+            has_zero_sized_axes = (image.size == 0)
+            if (not kernel_impossible and not kernel_does_nothing
+                    and not has_zero_sized_axes):
                 input_dtype = image.dtype
-                if image.dtype in [np.bool_, np.float16]:
+                if image.dtype.name in ["bool", "float16"]:
                     image = image.astype(np.float32, copy=False)
-                elif image.dtype == np.int8:
+                elif image.dtype.name == "int8":
                     image = image.astype(np.int16, copy=False)
 
-                image_aug = cv2.blur(image, (kh, kw))
-                # cv2.blur() removes channel axis for single-channel images
-                if image_aug.ndim == 2:
-                    image_aug = image_aug[..., np.newaxis]
+                if image.ndim == 2 or image.shape[-1] <= 512:
+                    image_aug = cv2.blur(image, (kh, kw))
+                    # cv2.blur() removes channel axis for single-channel images
+                    if image_aug.ndim == 2:
+                        image_aug = image_aug[..., np.newaxis]
+                else:
+                    # TODO this is quite inefficient
+                    # handling more than 512 channels in cv2.blur()
+                    channels = [
+                        cv2.blur(image[..., c], (kh, kw))
+                        for c in sm.xrange(image.shape[-1])
+                    ]
+                    image_aug = np.stack(channels, axis=-1)
 
-                if input_dtype == np.bool_:
+                if input_dtype.name == "bool":
                     image_aug = image_aug > 0.5
-                elif input_dtype in [np.int8, np.float16]:
+                elif input_dtype.name in ["int8", "float16"]:
                     image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
                 images[i] = image_aug
@@ -632,13 +644,24 @@ class MedianBlur(meta.Augmenter):
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
         for i, (image, ki) in enumerate(zip(images, samples)):
-            if ki > 1:
+            has_zero_sized_axes = (image.size == 0)
+            if ki > 1 and not has_zero_sized_axes:
                 ki = ki + 1 if ki % 2 == 0 else ki
-                image_aug = cv2.medianBlur(image, ki)
-                # cv2.medianBlur() removes channel axis for single-channel
-                # images
-                if image_aug.ndim == 2:
-                    image_aug = image_aug[..., np.newaxis]
+                if image.ndim == 2 or image.shape[-1] <= 512:
+                    image_aug = cv2.medianBlur(image, ki)
+                    # cv2.medianBlur() removes channel axis for single-channel
+                    # images
+                    if image_aug.ndim == 2:
+                        image_aug = image_aug[..., np.newaxis]
+                else:
+                    # TODO this is quite inefficient
+                    # handling more than 512 channels in cv2.medainBlur()
+                    channels = [
+                        cv2.medianBlur(image[..., c], ki)
+                        for c in sm.xrange(image.shape[-1])
+                    ]
+                    image_aug = np.stack(channels, axis=-1)
+
                 images[i] = image_aug
         return images
 
@@ -776,7 +799,8 @@ class BilateralBlur(meta.Augmenter):
         gen = enumerate(zip(images, samples_d, samples_sigma_color,
                             samples_sigma_space))
         for i, (image, di, sigma_color_i, sigma_space_i) in gen:
-            if di != 1:
+            has_zero_sized_axes = (image.size == 0)
+            if di != 1 and not has_zero_sized_axes:
                 images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
                                                 sigma_space_i)
         return images

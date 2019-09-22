@@ -1389,29 +1389,11 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     if len(images) == 0:
         return images
 
-    # verify that all input images have height/width > 0
-    no_zero_size_images = all([
-        image.shape[0] > 0 and image.shape[1] > 0 for image in images])
-    assert no_zero_size_images, (
-        "Cannot resize images, because at least one image has a height and/or "
-        "width of zero. Observed shapes were: %s." % (
-            str([image.shape for image in images]),))
-
     # verify that sizes contains only values >0
     if is_single_number(sizes) and sizes <= 0:
-        raise Exception(
-            "Cannot resize to the target size %.8f, because the value is zero "
-            "or lower than zero." % (sizes,))
-    elif isinstance(sizes, tuple) and (sizes[0] <= 0 or sizes[1] <= 0):
-        sizes_str = [
-            ("int %d" % (size_i,)
-                if is_single_integer(size_i)
-                else "float %.8f" % (size_i,))
-            for size_i in sizes
-        ]
-        raise Exception(
-            "Cannot resize to the target sizes (%s). At least one value is "
-            "zero or lower than zero." % (", ".join(sizes_str),))
+        raise ValueError(
+            "If 'sizes' is given as a single number, it is expected to "
+            "be >= 0, got %.8f." % (sizes,))
 
     # change after the validation to make the above error messages match the
     # original input
@@ -1419,11 +1401,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         sizes = (sizes, sizes)
     else:
         assert len(sizes) == 2, (
-            "Expected 'sizes' tuple with exactly two entries, "
-            "got %d entries." % (len(sizes),))
-        assert all([is_single_number(val) for val in sizes]), (
-            "Expected 'sizes' tuple with two ints or floats, "
-            "got types %s." % (str([type(val) for val in sizes]),))
+            "If 'sizes' is given as a tuple, it is expected be a tuple of two "
+            "entries, got %d entries." % (len(sizes),))
+        assert all([is_single_number(val) and val >= 0 for val in sizes]), (
+            "If 'sizes' is given as a tuple, it is expected be a tuple of two "
+            "ints or two floats, each >= 0, got types %s with values %s." % (
+                str([type(val) for val in sizes]), str(sizes)))
 
     # if input is a list, call this function N times for N images
     # but check beforehand if all images have the same shape, then just
@@ -1445,19 +1428,36 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     assert images.ndim in [3, 4], "Expected array of shape (N, H, W, [C]), " \
                                   "got shape %s" % (str(shape),)
     nb_images = shape[0]
-    im_height, im_width = shape[1], shape[2]
+    height_image, width_image = shape[1], shape[2]
     nb_channels = shape[3] if images.ndim > 3 else None
 
-    height, width = sizes[0], sizes[1]
-    height = (int(np.round(im_height * height))
-              if is_single_float(height)
-              else height)
-    width = (int(np.round(im_width * width))
-             if is_single_float(width)
-             else width)
+    height_target, width_target = sizes[0], sizes[1]
+    height_target = (int(np.round(height_image * height_target))
+                     if is_single_float(height_target)
+                     else height_target)
+    width_target = (int(np.round(width_image * width_target))
+                    if is_single_float(width_target)
+                    else width_target)
 
-    if height == im_height and width == im_width:
+    if height_target == height_image and width_target == width_image:
         return np.copy(images)
+
+    # return empty array if input array contains zero-sized axes
+    # note that None==0 is not True (for case nb_channels=None)
+    if 0 in [height_target, width_target, nb_channels]:
+        shape_out = tuple([shape[0], height_target, width_target]
+                          + list(shape[3:]))
+        return np.zeros(shape_out, dtype=images.dtype)
+
+    # place this after the (h==h' and w==w') check so that images with
+    # zero-sized don't result in errors if the aren't actually resized
+    # verify that all input images have height/width > 0
+    has_zero_size_axes = any([axis == 0 for axis in images.shape[1:]])
+    assert not has_zero_size_axes, (
+        "Cannot resize images, because at least one image has a height and/or "
+        "width and/or number of channels of zero. "
+        "Observed shapes were: %s." % (
+            str([image.shape for image in images]),))
 
     ip = interpolation
     assert ip is None or ip in IMRESIZE_VALID_INTERPOLATIONS, (
@@ -1469,7 +1469,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         )
     )
     if ip is None:
-        if height > im_height or width > im_width:
+        if height_target > height_image or width_target > width_image:
             ip = cv2.INTER_AREA
         else:
             ip = cv2.INTER_LINEAR
@@ -1507,20 +1507,30 @@ def imresize_many_images(images, sizes=None, interpolation=None):
                         "float96", "float128", "float256"],
             augmenter=None)
 
-    result_shape = (nb_images, height, width)
+    result_shape = (nb_images, height_target, width_target)
     if nb_channels is not None:
         result_shape = result_shape + (nb_channels,)
     result = np.zeros(result_shape, dtype=images.dtype)
     for i, image in enumerate(images):
         input_dtype = image.dtype
-        if image.dtype.type == np.bool_:
+        input_dtype_name = input_dtype.name
+
+        if input_dtype_name == "bool":
             image = image.astype(np.uint8) * 255
-        elif image.dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
+        elif input_dtype_name == "int8" and ip != cv2.INTER_NEAREST:
             image = image.astype(np.int16)
-        elif image.dtype.type == np.float16:
+        elif input_dtype_name == "float16":
             image = image.astype(np.float32)
 
-        result_img = cv2.resize(image, (width, height), interpolation=ip)
+        if nb_channels is not None and nb_channels > 512:
+            channels = [
+                cv2.resize(image[..., c], (width_target, height_target),
+                           interpolation=ip) for c in sm.xrange(nb_channels)]
+            result_img = np.stack(channels, axis=-1)
+        else:
+            result_img = cv2.resize(
+                image, (width_target, height_target), interpolation=ip)
+
         assert result_img.dtype.name == image.dtype.name, (
             "Expected cv2.resize() to keep the input dtype '%s', but got "
             "'%s'. This is an internal error. Please report." % (
@@ -1534,13 +1544,13 @@ def imresize_many_images(images, sizes=None, interpolation=None):
                 and nb_channels == 1):
             result_img = result_img[:, :, np.newaxis]
 
-        if input_dtype.type == np.bool_:
+        if input_dtype_name == "bool":
             result_img = result_img > 127
-        elif input_dtype.type == np.int8 and ip != cv2.INTER_NEAREST:
+        elif input_dtype_name == "int8" and ip != cv2.INTER_NEAREST:
             # TODO somehow better avoid circular imports here
             from . import dtypes as iadt
             result_img = iadt.restore_dtypes_(result_img, np.int8)
-        elif input_dtype.type == np.float16:
+        elif input_dtype_name == "float16":
             # TODO see above
             from . import dtypes as iadt
             result_img = iadt.restore_dtypes_(result_img, np.float16)
@@ -1710,7 +1720,11 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
             in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
         )
 
-        if not bad_datatype_cv2 and not bad_mode_cv2:
+        # OpenCV turns the channel axis for arrays with 0 channels to 512
+        # TODO add direct test for this. indirectly tested via Pad
+        bad_shape_cv2 = (arr.ndim == 3 and arr.shape[-1] == 0)
+
+        if not bad_datatype_cv2 and not bad_mode_cv2 and not bad_shape_cv2:
             cval = (
                 float(cval)
                 if arr.dtype.kind == "f"
@@ -2092,6 +2106,9 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
         Array after pooling.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # TODO find better way to avoid circular import
     from . import dtypes as iadt
     iadt.gate_dtypes(arr,
@@ -2110,12 +2127,6 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
         pad_cval = cval
 
     _assert_two_or_three_dims(arr)
-    channel_axis_is_zero = (arr.ndim == 3 and arr.shape[-1] == 0)
-
-    # block_reduce() crashes if channel axis is 0. It could probably be
-    # squeezed away, but then how to add a zero-sized axis later on?
-    assert not channel_axis_is_zero, (
-        "Cannot pool a 3d-array with 0 channels. Got shape %s." % (arr.shape,))
 
     is_valid_int = is_single_integer(block_size) and block_size >= 1
     is_valid_tuple = is_iterable(block_size) and len(block_size) in [2, 3] \

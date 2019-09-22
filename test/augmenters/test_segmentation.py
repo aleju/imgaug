@@ -143,6 +143,45 @@ class TestSuperpixels(unittest.TestCase):
             got_exception = True
         assert got_exception
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.Superpixels(p_replace=1.0, n_segments=10)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.Superpixels(p_replace=1.0, n_segments=10)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         aug = iaa.Superpixels(
             p_replace=0.5, n_segments=2, max_size=100, interpolation="nearest")
@@ -379,41 +418,56 @@ class Test_segment_voronoi(unittest.TestCase):
 
         assert np.array_equal(image_seg, image)
 
-    def test_image_with_zero_height(self):
-        image = np.zeros((0, 4, 3), dtype=np.uint8)
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
         cell_coordinates = np.float32([
             [1.0, 1.0],
             [3.0, 1.0]
         ])
         replace_mask = np.array([True, True], dtype=bool)
 
-        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
 
-        assert np.array_equal(image_seg, image)
+                image_aug = iaa.segment_voronoi(image, cell_coordinates,
+                                                replace_mask)
 
-    def test_image_with_zero_width(self):
-        image = np.zeros((4, 0, 3), dtype=np.uint8)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
         cell_coordinates = np.float32([
             [1.0, 1.0],
             [3.0, 1.0]
         ])
         replace_mask = np.array([True, True], dtype=bool)
 
-        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
 
-        assert np.array_equal(image_seg, image)
+                image_aug = iaa.segment_voronoi(image, cell_coordinates,
+                                                replace_mask)
 
-    def test_image_with_zero_size(self):
-        image = np.zeros((0, 0), dtype=np.uint8)
-        cell_coordinates = np.float32([
-            [1.0, 1.0],
-            [3.0, 1.0]
-        ])
-        replace_mask = np.array([True, True], dtype=bool)
-
-        image_seg = iaa.segment_voronoi(image, cell_coordinates, replace_mask)
-
-        assert np.array_equal(image_seg, image)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
 
 class TestVoronoi(unittest.TestCase):
@@ -641,6 +695,49 @@ class TestVoronoi(unittest.TestCase):
         assert not same_between_a1_a2
         assert same_between_b1_b2
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        sampler = iaa.RegularGridPointsSampler(50, 50)
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.Voronoi(sampler, p_replace=1)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        sampler = iaa.RegularGridPointsSampler(50, 50)
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.full(shape, 128, dtype=np.uint8)
+                aug = iaa.Voronoi(sampler, p_replace=1)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
     def test_get_parameters(self):
         sampler = iaa.RegularGridPointsSampler(1, 1)
         aug = iaa.Voronoi(sampler, p_replace=0.5, max_size=None,
@@ -668,7 +765,7 @@ def _array_lists_elementwise_identical(arrs1, arrs2):
 
 class TestUniformVoronoi(unittest.TestCase):
     def test___init___(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
 
         mock_voronoi = mock.MagicMock()
         mock_voronoi.return_value = mock_voronoi
@@ -717,7 +814,7 @@ class TestUniformVoronoi(unittest.TestCase):
 
 class TestRegularGridVoronoi(unittest.TestCase):
     def test___init___(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
 
         mock_voronoi = mock.MagicMock()
         mock_voronoi.return_value = mock_voronoi
@@ -779,7 +876,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
 
 class TestRelativeRegularGridVoronoi(unittest.TestCase):
     def test___init___(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
 
         mock_voronoi = mock.MagicMock()
         mock_voronoi.return_value = mock_voronoi
@@ -841,7 +938,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
 
 
 # TODO verify behaviours when image height/width is zero
-class TestRegularGridPointSampler(unittest.TestCase):
+class TestRegularGridPointsSampler(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -855,33 +952,33 @@ class TestRegularGridPointSampler(unittest.TestCase):
     def test_sample_single_point(self):
         image = np.zeros((10, 20, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, 1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 1
         assert np.allclose(points[0], [10.0, 5.0])
 
     def test_sample_points(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(2, 2)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 4
         assert np.allclose(points, [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [0.0, 10.0],
-            [10.0, 10.0]
+            [2.5, 2.5],
+            [7.5, 2.5],
+            [2.5, 7.5],
+            [7.5, 7.5]
         ])
 
     def test_sample_points_stochastic(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, iap.Choice([1, 2]))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
         ])
         matches_two_points = np.allclose(points, [
-            [0.0, 5.0],
-            [10.0, 5.0]
+            [2.5, 5.0],
+            [7.5, 5.0]
         ])
 
         assert len(points) in [1, 2]
@@ -890,7 +987,7 @@ class TestRegularGridPointSampler(unittest.TestCase):
     def test_sample_points_cols_is_zero(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(iap.Deterministic(0), 1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -902,7 +999,7 @@ class TestRegularGridPointSampler(unittest.TestCase):
     def test_sample_points_rows_is_zero(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, iap.Deterministic(0))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -914,7 +1011,7 @@ class TestRegularGridPointSampler(unittest.TestCase):
     def test_sample_points_rows_is_more_than_image_height(self):
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(2, 1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [0.5, 0.5]
@@ -926,7 +1023,7 @@ class TestRegularGridPointSampler(unittest.TestCase):
     def test_sample_points_cols_is_more_than_image_width(self):
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, 2)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [0.5, 0.5]
@@ -934,6 +1031,40 @@ class TestRegularGridPointSampler(unittest.TestCase):
 
         assert len(points) == 1
         assert matches_single_point
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                sampler = iaa.RegularGridPointsSampler(1, 1)
+
+                points = sampler.sample_points([image], iarandom.RNG(1))[0]
+
+                assert len(points) == 1
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                sampler = iaa.RegularGridPointsSampler(1, 1)
+
+                points = sampler.sample_points([image], iarandom.RNG(1))[0]
+
+                assert len(points) == 1
 
     def test_determinism(self):
         image = np.zeros((500, 500, 1), dtype=np.uint8)
@@ -956,7 +1087,7 @@ class TestRegularGridPointSampler(unittest.TestCase):
         assert sampler.__str__() == sampler.__repr__() == expected
 
 
-class TestRelativeRegularGridPointSampler(unittest.TestCase):
+class TestRelativeRegularGridPointsSampler(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -970,34 +1101,34 @@ class TestRelativeRegularGridPointSampler(unittest.TestCase):
     def test_sample_single_point(self):
         image = np.zeros((10, 20, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.001, 0.001)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 1
         assert np.allclose(points[0], [10.0, 5.0])
 
     def test_sample_points(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.2, 0.2)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 4
         assert np.allclose(points, [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [0.0, 10.0],
-            [10.0, 10.0]
+            [2.5, 2.5],
+            [7.5, 2.5],
+            [2.5, 7.5],
+            [7.5, 7.5]
         ])
 
     def test_sample_points_stochastic(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.1,
                                                        iap.Choice([0.1, 0.2]))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
         ])
         matches_two_points = np.allclose(points, [
-            [0.0, 5.0],
-            [10.0, 5.0]
+            [2.5, 5.0],
+            [7.5, 5.0]
         ])
 
         assert len(points) in [1, 2]
@@ -1007,7 +1138,7 @@ class TestRelativeRegularGridPointSampler(unittest.TestCase):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(iap.Deterministic(0.001),
                                                        0.1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -1020,7 +1151,7 @@ class TestRelativeRegularGridPointSampler(unittest.TestCase):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.1,
                                                        iap.Deterministic(0.001))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -1038,6 +1169,40 @@ class TestRelativeRegularGridPointSampler(unittest.TestCase):
 
         assert points_seed1_1.shape == points_seed1_2.shape
         assert points_seed1_1.shape != points_seed2_1.shape
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                sampler = iaa.RelativeRegularGridPointsSampler(0.01, 0.01)
+
+                points = sampler.sample_points([image], iarandom.RNG(1))[0]
+
+                assert len(points) == 1
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                sampler = iaa.RelativeRegularGridPointsSampler(0.01, 0.01)
+
+                points = sampler.sample_points([image], iarandom.RNG(1))[0]
+
+                assert len(points) == 1
 
     def test_conversion_to_string(self):
         sampler = iaa.RelativeRegularGridPointsSampler(0.01, (0.01, 0.05))
@@ -1301,13 +1466,50 @@ class TestUniformPointsSampler(unittest.TestCase):
         assert np.allclose(observed_s1_1, observed_s1_2)
         assert not np.allclose(observed_s1_1, observed_s2_1)
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                sampler = iaa.UniformPointsSampler(1)
+
+                points = sampler.sample_points([image], iarandom.RNG(1))[0]
+
+                # TODO this is not the same as for
+                #      (Relative)RegularGridPointsSampler, which returns in
+                #      this case 0 points
+                assert len(points) == 1
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                sampler = iaa.UniformPointsSampler(1)
+
+                points = sampler.sample_points([image], iarandom.RNG(1))[0]
+
+                assert len(points) == 1
+
     def test_conversion_to_string(self):
         sampler = iaa.UniformPointsSampler(10)
         expected = "UniformPointsSampler(Deterministic(int 10))"
         assert sampler.__str__() == sampler.__repr__() == expected
 
 
-class TestSubsamplingPointSampler(unittest.TestCase):
+class TestSubsamplingPointsSampler(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -1339,10 +1541,10 @@ class TestSubsamplingPointSampler(unittest.TestCase):
 
         assert len(observed) == 4
         assert np.allclose(observed, [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [0.0, 10.0],
-            [10.0, 10.0]
+            [2.5, 2.5],
+            [7.5, 2.5],
+            [2.5, 7.5],
+            [7.5, 7.5]
         ])
 
     def test_max_is_below_point_count(self):

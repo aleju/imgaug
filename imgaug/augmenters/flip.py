@@ -23,6 +23,7 @@ from __future__ import print_function, division, absolute_import
 
 import numpy as np
 import cv2
+import six.moves as sm
 
 from . import meta
 from .. import parameters as iap
@@ -725,6 +726,10 @@ def fliplr(arr):
     Create a ``4x4`` array and flip it horizontally.
 
     """
+    # we don't check here if #channels > 512, because the cv2 function also
+    # kinda works with that, it is very rare to happen and would induce an
+    # additional check (with significant relative impact on runtime considering
+    # flipping is already ultra fast)
     if arr.dtype.name in _FLIPLR_DTYPES_CV2:
         return _fliplr_cv2(arr)
     return _fliplr_sliced(arr)
@@ -736,10 +741,18 @@ def _fliplr_sliced(arr):
 
 def _fliplr_cv2(arr):
     # cv2.flip() returns None for arrays with zero height or width
-    if arr.shape[0] == 0 or arr.shape[1] == 0:
+    # and turns channels=0 to channels=512
+    if arr.size == 0:
         return np.copy(arr)
 
-    result = cv2.flip(arr, 1)
+    # cv2.flip() fails for more than 512 channels
+    if arr.ndim == 3 and arr.shape[-1] > 512:
+        # TODO this is quite inefficient right now
+        channels = [cv2.flip(arr[..., c], 1) for c in sm.xrange(arr.shape[-1])]
+        result = np.stack(channels, axis=-1)
+    else:
+        result = cv2.flip(arr, 1)
+
     if result.ndim == 2 and arr.ndim == 3:
         return result[..., np.newaxis]
     return result

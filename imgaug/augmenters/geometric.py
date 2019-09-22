@@ -159,18 +159,22 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
     if ia.is_single_integer(cval):
         cval = [cval] * len(arr.shape[2])
 
+    # no changes to zero-sized arrays
+    if arr.size == 0:
+        return arr
+
     min_value, _center_value, max_value = \
         iadt.get_value_range_of_dtype(arr.dtype)
 
     cv2_bad_order = order not in [0, 1, 3]
     if order == 0:
         cv2_bad_dtype = (
-                arr.dtype.name
-                not in _VALID_DTYPES_CV2_ORDER_0)
+            arr.dtype.name
+            not in _VALID_DTYPES_CV2_ORDER_0)
     else:
         cv2_bad_dtype = (
-                arr.dtype.name
-                not in _VALID_DTYPES_CV2_ORDER_NOT_0
+            arr.dtype.name
+            not in _VALID_DTYPES_CV2_ORDER_NOT_0
         )
     cv2_impossible = cv2_bad_order or cv2_bad_dtype
     use_skimage = (
@@ -290,7 +294,10 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
             borderMode=mode,
             borderValue=cval
         )
-        image_warped = np.atleast_3d(image_warped)
+
+        # cv2 warp drops last axis if shape is (H, W, 1)
+        if image_warped.ndim == 2:
+            image_warped = image_warped[..., np.newaxis]
     else:
         # warp each channel on its own, re-add channel axis, then stack
         # the result from a list of [H, W, 1] to (H, W, C).
@@ -304,14 +311,9 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
                 borderValue=tuple([cval[0]])
             )
             for c in sm.xrange(nb_channels)]
-        image_warped = np.dstack([
-            warped_i[..., np.newaxis] for warped_i in image_warped])
+        image_warped = np.stack(image_warped, axis=-1)
 
-    # cv2 warp drops last axis if shape is (H, W, 1)
-    if image_warped.ndim == 2:
-        image_warped = image_warped[..., np.newaxis]
-
-    if input_dtype == np.bool_:
+    if input_dtype.name == "bool":
         image_warped = image_warped > 0.5
     elif input_dtype.name in ["int8", "float16"]:
         image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
@@ -321,6 +323,10 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
 
 def _compute_affine_warp_output_shape(matrix, input_shape):
     height, width = input_shape[:2]
+
+    if height == 0 or width == 0:
+        return matrix, input_shape
+
     # determine shape of output image
     corners = np.array([
         [0, 0],
@@ -1036,6 +1042,11 @@ class Affine(meta.Augmenter):
 
         gen = zip(augmentables, arrs_aug, matrices, samples.order)
         for augmentable_i, arr_aug, matrix, order_i in gen:
+            # skip augmented HM/SM arrs for which the images were not
+            # augmented due to being zero-sized
+            if 0 in augmentable_i.shape:
+                continue
+
             # order=3 matches cubic interpolation and can cause values to go
             # outside of the range [0.0, 1.0] not clear whether 4+ also do that
             # We don't clip here for Segmentation Maps, because for these
@@ -1065,7 +1076,9 @@ class Affine(meta.Augmenter):
                 i, keypoints_on_image.shape, self.fit_output)
 
             kps = keypoints_on_image.keypoints
-            if not _is_identity_matrix(matrix) and not keypoints_on_image.empty:
+            if (not _is_identity_matrix(matrix)
+                    and not keypoints_on_image.empty
+                    and not (0 in keypoints_on_image.shape)):
                 coords = keypoints_on_image.to_xy_array()
                 coords_aug = tf.matrix_transform(coords, matrix.params)
                 kps = [kp.deepcopy(x=coords[0], y=coords[1])
@@ -2055,11 +2068,10 @@ class PiecewiseAffine(meta.Augmenter):
 
         for i, image in enumerate(images):
             rs_image = rss[i]
-            h, w = image.shape[0:2]
 
             transformer = self._get_transformer(
-                h, w, samples.nb_rows[i], samples.nb_cols[i],
-                rs_image)
+                image.shape, image.shape, samples.nb_rows[i],
+                samples.nb_cols[i], rs_image)
 
             if transformer is not None:
                 input_dtype = image.dtype
@@ -2111,9 +2123,9 @@ class PiecewiseAffine(meta.Augmenter):
             arr = getattr(augmentable, arr_attr_name)
 
             rs_image = rss[i]
-            h, w = arr.shape[0:2]
             transformer = self._get_transformer(
-                h, w, samples.nb_rows[i], samples.nb_cols[i], rs_image)
+                arr.shape, augmentable.shape, samples.nb_rows[i],
+                samples.nb_cols[i], rs_image)
 
             if transformer is not None:
                 arr_warped = tf.warp(
@@ -2163,7 +2175,8 @@ class PiecewiseAffine(meta.Augmenter):
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(
-                h, w, samples.nb_rows[i], samples.nb_cols[i], rs_image)
+                kpsoi.shape, kpsoi.shape, samples.nb_rows[i],
+                samples.nb_cols[i], rs_image)
 
             if transformer is None or len(kpsoi.keypoints) == 0:
                 result.append(kpsoi)
@@ -2257,7 +2270,8 @@ class PiecewiseAffine(meta.Augmenter):
             nb_rows=nb_rows_samples, nb_cols=nb_cols_samples,
             order=order_samples, cval=cval_samples, mode=mode_samples)
 
-    def _get_transformer(self, h, w, nb_rows, nb_cols, random_state):
+    def _get_transformer(self, augmentable_shape, image_shape, nb_rows,
+                         nb_cols, random_state):
         # get coords on y and x axis of points to move around
         # these coordinates are supposed to be at the centers of each cell
         # (otherwise the first coordinate would be at (0, 0) and could hardly
@@ -2268,8 +2282,8 @@ class PiecewiseAffine(meta.Augmenter):
         nb_rows = max(nb_rows, 2)
         nb_cols = max(nb_cols, 2)
 
-        y = np.linspace(0, h, nb_rows)
-        x = np.linspace(0, w, nb_cols)
+        y = np.linspace(0, augmentable_shape[0], nb_rows)
+        x = np.linspace(0, augmentable_shape[1], nb_cols)
 
         # (H, W) and (H, W) for H=rows, W=cols
         xx_src, yy_src = np.meshgrid(x, y)
@@ -2284,9 +2298,11 @@ class PiecewiseAffine(meta.Augmenter):
         if nb_nonzero == 0:
             return None
         else:
+            # FIXME this needs to incorporate the image_shape in case
+            #       of absolute_scale=True
             if not self.absolute_scale:
-                jitter_img[:, 0] = jitter_img[:, 0] * h
-                jitter_img[:, 1] = jitter_img[:, 1] * w
+                jitter_img[:, 0] = jitter_img[:, 0] * augmentable_shape[0]
+                jitter_img[:, 1] = jitter_img[:, 1] * augmentable_shape[1]
             points_dest = np.copy(points_src)
             points_dest[:, 0] = points_dest[:, 0] + jitter_img[:, 0]
             points_dest[:, 1] = points_dest[:, 1] + jitter_img[:, 1]
@@ -2296,12 +2312,34 @@ class PiecewiseAffine(meta.Augmenter):
             # outside of the image plane and these would be replaced by
             # (-1, -1), which would not conform with the behaviour of the
             # other augmenters.
-            points_dest[:, 0] = np.clip(points_dest[:, 0], 0, h-1)
-            points_dest[:, 1] = np.clip(points_dest[:, 1], 0, w-1)
+            points_dest[:, 0] = np.clip(points_dest[:, 0],
+                                        0, augmentable_shape[0]-1)
+            points_dest[:, 1] = np.clip(points_dest[:, 1],
+                                        0, augmentable_shape[1]-1)
 
-            matrix = tf.PiecewiseAffineTransform()
-            matrix.estimate(points_src[:, ::-1], points_dest[:, ::-1])
-            return matrix
+            # tf.warp() results in qhull error if the points are identical,
+            # which is mainly the case if any axis is 0
+            has_low_axis = any([axis <= 1 for axis in augmentable_shape[0:2]])
+            has_zero_channels = (
+                (
+                    augmentable_shape is not None
+                    and len(augmentable_shape) == 3
+                    and augmentable_shape[-1] == 0
+                )
+                or
+                (
+                    image_shape is not None
+                    and len(image_shape) == 3
+                    and image_shape[-1] == 0
+                )
+            )
+
+            if has_low_axis or has_zero_channels:
+                return None
+            else:
+                matrix = tf.PiecewiseAffineTransform()
+                matrix.estimate(points_src[:, ::-1], points_dest[:, ::-1])
+                return matrix
 
     def get_parameters(self):
         return [
@@ -2576,9 +2614,13 @@ class PerspectiveTransform(meta.Augmenter):
             elif input_dtype.name in ["bool", "float16"]:
                 image = image.astype(np.float32)
 
-            # cv2.warpPerspective only supports <=4 channels
+            # cv2.warpPerspective only supports <=4 channels and errors
+            # on axes with size zero
             nb_channels = image.shape[2]
-            if nb_channels <= 4:
+            has_zero_sized_axis = (image.size == 0)
+            if has_zero_sized_axis:
+                warped = image
+            elif nb_channels <= 4:
                 warped = cv2.warpPerspective(
                     image,
                     matrix,
@@ -2604,7 +2646,7 @@ class PerspectiveTransform(meta.Augmenter):
                 ]
                 warped = np.stack(warped, axis=-1)
 
-            if self.keep_size:
+            if self.keep_size and not has_zero_sized_axis:
                 h, w = image.shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w))
 
@@ -2666,32 +2708,36 @@ class PerspectiveTransform(meta.Augmenter):
                 cval_i = samples.cvals[i]
 
             nb_channels = arr.shape[2]
+            image_has_zero_sized_axis = (0 in augmentable_i.shape)
+            map_has_zero_sized_axis = (arr.size == 0)
 
-            warped = [
-                cv2.warpPerspective(
-                    arr[..., c],
-                    matrix,
-                    (max_width, max_height),
-                    borderValue=cval_i,
-                    borderMode=mode_i,
-                    flags=flags
-                )
-                for c in sm.xrange(nb_channels)
-            ]
-            warped = np.stack(warped, axis=-1)
+            if not image_has_zero_sized_axis:
+                if not map_has_zero_sized_axis:
+                    warped = [
+                        cv2.warpPerspective(
+                            arr[..., c],
+                            matrix,
+                            (max_width, max_height),
+                            borderValue=cval_i,
+                            borderMode=mode_i,
+                            flags=flags
+                        )
+                        for c in sm.xrange(nb_channels)
+                    ]
+                    warped = np.stack(warped, axis=-1)
 
-            setattr(augmentable_i, arr_attr_name, warped)
+                    setattr(augmentable_i, arr_attr_name, warped)
 
-            if self.keep_size:
-                h, w = arr.shape[0:2]
-                augmentable_i = augmentable_i.resize((h, w))
-            else:
-                new_shape = (
-                    max_heights_imgs[i], max_widths_imgs[i]
-                ) + augmentable_i.shape[2:]
-                augmentable_i.shape = new_shape
+                if self.keep_size:
+                    h, w = arr.shape[0:2]
+                    augmentable_i = augmentable_i.resize((h, w))
+                else:
+                    new_shape = (
+                        max_heights_imgs[i], max_widths_imgs[i]
+                    ) + augmentable_i.shape[2:]
+                    augmentable_i.shape = new_shape
 
-            result[i] = augmentable_i
+                result[i] = augmentable_i
 
         return result
 
@@ -2705,23 +2751,26 @@ class PerspectiveTransform(meta.Augmenter):
                             samples.max_widths))
 
         for i, (matrix, max_height, max_width) in gen:
-            keypoints_on_image = keypoints_on_images[i]
-            new_shape = (max_height, max_width) + keypoints_on_image.shape[2:]
-            if not keypoints_on_image.keypoints:
-                warped_kps = keypoints_on_image.deepcopy(shape=new_shape)
-            else:
-                kps_arr = keypoints_on_image.to_xy_array()
-                warped = cv2.perspectiveTransform(
-                    np.array([kps_arr], dtype=np.float32), matrix)
-                warped = warped[0]
-                warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
-                              for kp, coords
-                              in zip(keypoints_on_image.keypoints, warped)]
-                warped_kps = keypoints_on_image.deepcopy(keypoints=warped_kps,
-                                                         shape=new_shape)
-            if self.keep_size:
-                warped_kps = warped_kps.on(keypoints_on_image.shape)
-            result[i] = warped_kps
+            kpsoi = keypoints_on_images[i]
+            image_has_zero_sized_axis = (0 in kpsoi.shape)
+
+            if not image_has_zero_sized_axis:
+                new_shape = (max_height, max_width) + kpsoi.shape[2:]
+                if not kpsoi.keypoints:
+                    warped_kps = kpsoi.deepcopy(shape=new_shape)
+                else:
+                    kps_arr = kpsoi.to_xy_array()
+                    warped = cv2.perspectiveTransform(
+                        np.array([kps_arr], dtype=np.float32), matrix)
+                    warped = warped[0]
+                    warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
+                                  for kp, coords
+                                  in zip(kpsoi.keypoints, warped)]
+                    warped_kps = kpsoi.deepcopy(keypoints=warped_kps,
+                                                shape=new_shape)
+                if self.keep_size:
+                    warped_kps = warped_kps.on(kpsoi.shape)
+                result[i] = warped_kps
 
         return result
 
@@ -3205,11 +3254,16 @@ class ElasticTransformation(meta.Augmenter):
         gen = enumerate(zip(augmentables, samples.alphas, samples.sigmas,
                             samples.random_states))
         for i, (augmentable, alpha, sigma, random_state_i) in gen:
+            # note that we do not have to check for zero-sized axes here,
+            # because _generate_shift_maps(), _map_coordinates(), .resize()
+            # and np.clip() are all known to handle arrays with zero-sized axes
+
             cval_i = cval if cval is not None else samples.cvals[i]
             mode_i = mode if mode is not None else samples.modes[i]
             order_i = order if order is not None else samples.orders[i]
 
             arr = getattr(augmentable, arr_attr_name)
+
             if arr.shape[0:2] == augmentable.shape[0:2]:
                 dx, dy = self._generate_shift_maps(
                     arr.shape[0:2],
@@ -3266,10 +3320,6 @@ class ElasticTransformation(meta.Augmenter):
         gen = enumerate(zip(keypoints_on_images, samples.alphas, samples.sigmas,
                             samples.orders, samples.random_states))
         for i, (kpsoi, alpha, sigma, order, random_state_i) in gen:
-            if not kpsoi.keypoints:
-                # ElasticTransformation does not change the shape, hence we can
-                # skip the below steps
-                continue
             h, w = kpsoi.shape[0:2]
             dx, dy = self._generate_shift_maps(
                 kpsoi.shape[0:2],
@@ -3277,6 +3327,18 @@ class ElasticTransformation(meta.Augmenter):
                 sigma=sigma,
                 random_state=random_state_i
             )
+
+            # TODO add test for keypoint alignment when keypoints are empty
+            # Note: this block must be placed after _generate_shift_maps() to
+            # keep samples aligned
+            # Note: we should stop for zero-sized axes early here, event though
+            # there is a height/width check for each keypoint, because the
+            # channel number can also be zero
+            image_has_zero_sized_axes = (0 in kpsoi.shape)
+            if not kpsoi.keypoints or image_has_zero_sized_axes:
+                # ElasticTransformation does not change the shape, hence we can
+                # skip the below steps
+                continue
 
             kps_aug = []
             for kp in kpsoi.keypoints:
@@ -3482,6 +3544,9 @@ class ElasticTransformation(meta.Augmenter):
                 - (4) causes: src data type = 0 is not supported
 
         """
+        if image.size == 0:
+            return np.copy(image)
+
         if order == 0 and image.dtype.name in ["uint64", "int64"]:
             raise Exception(
                 "dtypes uint64 and int64 are only supported in "
@@ -3736,7 +3801,7 @@ class Rot90(meta.Augmenter):
         return arrs_aug
 
     def _augment_images(self, images, random_state, parents, hooks):
-        resize_func = partial(ia.imresize_single_image)
+        resize_func = ia.imresize_single_image
         images_aug, _ = self._augment_arrays(images, random_state, resize_func)
         return images_aug
 

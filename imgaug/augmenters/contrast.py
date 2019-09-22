@@ -141,6 +141,9 @@ def adjust_contrast_gamma(arr, gamma):
         Array with adjusted contrast.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
@@ -225,6 +228,9 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         Array with adjusted contrast.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
@@ -310,6 +316,9 @@ def adjust_contrast_log(arr, gain):
         Array with adjusted contrast.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
@@ -379,6 +388,9 @@ def adjust_contrast_linear(arr, alpha):
         Array with adjusted contrast.
 
     """
+    if arr.size == 0:
+        return np.copy(arr)
+
     # int8 is also possible according to docs
     # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
     # like `d` was 0 for CV_8S, causing that to fail
@@ -638,7 +650,7 @@ class LogContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, gain=1, per_channel=False,
-                name=None, deterministic=False, random_state=None):
+                 name=None, deterministic=False, random_state=None):
         # TODO add inv parameter?
         params1d = [iap.handle_continuous_param(
             gain, "gain", value_range=(0, None), tuple_to_uniform=True,
@@ -816,7 +828,7 @@ class _IntensityChannelBasedApplier(object):
                     ..., chan_idx:chan_idx+1]
                 images_after_color_conversion[target_idx] = image_new_cs
 
-        # apply CLAHE channelwise
+        # apply function channelwise
         images_aug = func(images_normalized, rss[1])
 
         # denormalize
@@ -999,6 +1011,9 @@ class AllChannelsCLAHE(meta.Augmenter):
         gen = enumerate(zip(images, clip_limit, tile_grid_size_px_h,
                             tile_grid_size_px_w, per_channel))
         for i, (image, clip_limit_i, tgs_px_h_i, tgs_px_w_i, pchannel_i) in gen:
+            if image.size == 0:
+                continue
+
             nb_channels = image.shape[2]
             c_param = 0
             image_warped = []
@@ -1306,6 +1321,9 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
             augmenter=self)
 
         for i, image in enumerate(images):
+            if image.size == 0:
+                continue
+
             image_warped = [cv2.equalizeHist(image[..., c])
                             for c in sm.xrange(image.shape[2])]
             image_warped = np.array(image_warped, dtype=image_warped[0].dtype)

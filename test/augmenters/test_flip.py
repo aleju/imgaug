@@ -388,6 +388,32 @@ class _TestFliplrAndFlipudBase(object):
         with self.assertRaises(Exception):
             _ = self.create_aug(p="test")
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = self.create_aug(1.0)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         aug = self.create_aug(p=0.5)
         params = aug.get_parameters()
@@ -674,6 +700,9 @@ class Test_fliplr(unittest.TestCase):
     def test__fliplr_sliced_3d_four_channels(self):
         self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 4)
 
+    def test__fliplr_sliced_3d_513_channels(self):
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 513)
+
     @classmethod
     def _test__fliplr_subfunc_n_channels(cls, func, nb_channels):
         arr = np.uint8([
@@ -713,6 +742,32 @@ class Test_fliplr(unittest.TestCase):
         assert arr_flipped.dtype.name == "uint8"
         assert arr_flipped.shape == (4, 0, 1)
 
+    def test_zero_channels_arr_cv2(self):
+        arr = np.zeros((4, 1, 0), dtype=np.uint8)
+        arr_flipped = fliplib._fliplr_cv2(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (4, 1, 0)
+
+    def test_513_channels_arr_cv2(self):
+        arr = np.zeros((1, 2, 513), dtype=np.uint8)
+        arr[:, 0, :] = 0
+        arr[:, 1, :] = 255
+        arr[0, 0, 0] = 1
+        arr[0, 1, 0] = 254
+        arr[0, 0, 512] = 2
+        arr[0, 1, 512] = 253
+
+        arr_flipped = fliplib._fliplr_cv2(arr)
+
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (1, 2, 513)
+        assert arr_flipped[0, 1, 0] == 1
+        assert arr_flipped[0, 0, 0] == 254
+        assert arr_flipped[0, 1, 512] == 2
+        assert arr_flipped[0, 0, 512] == 253
+        assert np.all(arr_flipped[0, 0, 1:-2] == 255)
+        assert np.all(arr_flipped[0, 1, 1:-2] == 0)
+
     def test_zero_height_arr_sliced(self):
         arr = np.zeros((0, 4, 1), dtype=np.uint8)
         arr_flipped = fliplib._fliplr_sliced(arr)
@@ -724,6 +779,32 @@ class Test_fliplr(unittest.TestCase):
         arr_flipped = fliplib._fliplr_sliced(arr)
         assert arr_flipped.dtype.name == "uint8"
         assert arr_flipped.shape == (4, 0, 1)
+
+    def test_zero_channels_arr_sliced(self):
+        arr = np.zeros((4, 1, 0), dtype=np.uint8)
+        arr_flipped = fliplib._fliplr_sliced(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (4, 1, 0)
+
+    def test_513_channels_arr_sliced(self):
+        arr = np.zeros((1, 2, 513), dtype=np.uint8)
+        arr[:, 0, :] = 0
+        arr[:, 1, :] = 255
+        arr[0, 0, 0] = 1
+        arr[0, 1, 0] = 254
+        arr[0, 0, 512] = 2
+        arr[0, 1, 512] = 253
+
+        arr_flipped = fliplib._fliplr_sliced(arr)
+
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (1, 2, 513)
+        assert arr_flipped[0, 1, 0] == 1
+        assert arr_flipped[0, 0, 0] == 254
+        assert arr_flipped[0, 1, 512] == 2
+        assert arr_flipped[0, 0, 512] == 253
+        assert np.all(arr_flipped[0, 0, 1:-2] == 255)
+        assert np.all(arr_flipped[0, 1, 1:-2] == 0)
 
     def test_bool_faithful(self):
         arr = np.array([[False, False, True]], dtype=bool)
@@ -845,6 +926,12 @@ class Test_flipud(unittest.TestCase):
         arr_flipped = fliplib.flipud(arr)
         assert arr_flipped.dtype.name == "uint8"
         assert arr_flipped.shape == (0, 4, 1)
+
+    def test_zero_channels_arr(self):
+        arr = np.zeros((4, 1, 0), dtype=np.uint8)
+        arr_flipped = fliplib.flipud(arr)
+        assert arr_flipped.dtype.name == "uint8"
+        assert arr_flipped.shape == (4, 1, 0)
 
     def test_bool_faithful(self):
         arr = np.array([[False], [False], [True]], dtype=bool)

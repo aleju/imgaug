@@ -254,6 +254,47 @@ class TestAdd(unittest.TestCase):
         assert 150 < seen[0] < 250
         assert 150 < seen[1] < 250
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Add(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Add(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         # test get_parameters()
         aug = iaa.Add(value=1, per_channel=False)
@@ -698,6 +739,47 @@ class TestAddElementwise(unittest.TestCase):
                 seen[1] += 1
         assert 150 < seen[0] < 250
         assert 150 < seen[1] < 250
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.AddElementwise(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.AddElementwise(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
 
     def test_get_parameters(self):
         # test get_parameters()
@@ -1507,6 +1589,47 @@ class TestMultiply(unittest.TestCase):
             got_exception = True
         assert got_exception
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.ones(shape, dtype=np.uint8)
+                aug = iaa.Multiply(1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 2)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.ones(shape, dtype=np.uint8)
+                aug = iaa.Multiply(2)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 2)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         # test get_parameters()
         aug = iaa.Multiply(mul=1, per_channel=False)
@@ -1961,6 +2084,47 @@ class TestMultiplyElementwise(unittest.TestCase):
             got_exception = True
         assert got_exception
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.ones(shape, dtype=np.uint8)
+                aug = iaa.MultiplyElementwise(2)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 2)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.ones(shape, dtype=np.uint8)
+                aug = iaa.MultiplyElementwise(2)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 2)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         # test get_parameters()
         aug = iaa.MultiplyElementwise(mul=1, per_channel=False)
@@ -2387,6 +2551,47 @@ class TestReplaceElementwise(unittest.TestCase):
         except Exception:
             got_exception = True
         assert got_exception
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.ReplaceElementwise(1.0, 1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.ReplaceElementwise(1.0, 1)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 1)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
 
     def test_get_parameters(self):
         # test get_parameters()
@@ -3029,6 +3234,47 @@ class TestInvert(unittest.TestCase):
             got_exception = True
         assert got_exception
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Invert(1.0)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 255)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Invert(1.0)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 255)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
+
     def test_get_parameters(self):
         # test get_parameters()
         aug = iaa.Invert(p=0.5, per_channel=False, min_value=10, max_value=20)
@@ -3410,3 +3656,20 @@ class TestJpegCompression(unittest.TestCase):
         hm = ia.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.JpegCompression(100)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == image.shape
