@@ -89,7 +89,7 @@ def add_scalar(image, value):
         Image with value added to it.
 
     """
-    if any([axis == 0 for axis in image.shape]):
+    if image.size == 0:
         return np.copy(image)
 
     iadt.gate_dtypes(
@@ -377,7 +377,7 @@ def multiply_scalar(image, multiplier):
         Image, multiplied by `multiplier`.
 
     """
-    if any([axis == 0 for axis in image.shape]):
+    if image.size == 0:
         return np.copy(image)
 
     iadt.gate_dtypes(
@@ -978,7 +978,7 @@ def compress_jpeg(image, compression):
         the result into a new array. Same shape and dtype as the input.
 
     """
-    if any([axis == 0 for axis in image.shape[0:2]]):
+    if image.size == 0:
         return np.copy(image)
 
     # The value range 1 to 95 is suggested by PIL's save() documentation
