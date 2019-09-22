@@ -1522,8 +1522,15 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         elif input_dtype_name == "float16":
             image = image.astype(np.float32)
 
-        result_img = cv2.resize(
-            image, (width_target, height_target), interpolation=ip)
+        if nb_channels is not None and nb_channels > 512:
+            channels = [
+                cv2.resize(image[..., c], (width_target, height_target),
+                           interpolation=ip) for c in sm.xrange(nb_channels)]
+            result_img = np.stack(channels, axis=-1)
+        else:
+            result_img = cv2.resize(
+                image, (width_target, height_target), interpolation=ip)
+
         assert result_img.dtype.name == image.dtype.name, (
             "Expected cv2.resize() to keep the input dtype '%s', but got "
             "'%s'. This is an internal error. Please report." % (
