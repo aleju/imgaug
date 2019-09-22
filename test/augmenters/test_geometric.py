@@ -2355,7 +2355,7 @@ class TestAffine_other_dtypes(unittest.TestCase):
 
 class TestAffine_other(unittest.TestCase):
     def test_unusual_channel_numbers(self):
-        nb_channels_lst = [4, 5]
+        nb_channels_lst = [4, 5, 512, 513]
         orders = [0, 1, 3]
         backends = ["auto", "skimage", "cv2"]
         for nb_channels, order, backend in itertools.product(nb_channels_lst,
@@ -2401,6 +2401,7 @@ class TestAffine_other(unittest.TestCase):
 
                     image_aug = aug(image=image)
 
+                    assert image_aug.dtype.name == "uint8"
                     assert image_aug.shape == shape
 
 
@@ -4159,6 +4160,7 @@ class TestPiecewiseAffine(unittest.TestCase):
 
                 image_aug = aug(image=image)
 
+                assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
 
     # ---------
@@ -4870,6 +4872,28 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert not (img_aug0 == 255).all()
 
     # ---------
+    # unusual channel numbers
+    # ---------
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PerspectiveTransform(scale=0.01)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    # ---------
     # zero-sized axes
     # ---------
     def test_zero_sized_axes(self):
@@ -4892,6 +4916,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
                         image_aug = aug(image=image)
 
+                        assert image_aug.dtype.name == "uint8"
                         assert image_aug.shape == shape
 
     # --------
@@ -5776,6 +5801,28 @@ class TestElasticTransformation(unittest.TestCase):
         assert (same / img_aug_mask.size) >= 0.94
 
     # ---------
+    # unusual channel numbers
+    # ---------
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.ElasticTransformation(alpha=2.0, sigma=2.0)
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    # ---------
     # zero-sized axes
     # ---------
     def test_zero_sized_axes(self):
@@ -5798,6 +5845,7 @@ class TestElasticTransformation(unittest.TestCase):
 
                         image_aug = aug(image=image)
 
+                        assert image_aug.dtype.name == "uint8"
                         assert image_aug.shape == shape
 
     # -----------
@@ -6677,6 +6725,26 @@ class TestRot90(unittest.TestCase):
 
         assert len(psoi_aug.polygons) == 0
         assert psoi_aug.shape == (8, 4, 3)
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Rot90(k=1)
+
+                image_aug = aug(image=image)
+
+                shape_expected = tuple([shape[1], shape[0]] + list(shape[2:]))
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape_expected
 
     def test_zero_sized_axes_k_0_or_2(self):
         shapes = [
