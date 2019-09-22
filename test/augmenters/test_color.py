@@ -20,6 +20,7 @@ import six.moves as sm
 import cv2
 
 import imgaug as ia
+import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug.augmenters.meta as meta
@@ -651,8 +652,8 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
             assert np.all(diff <= 1)
 
     def test_augment_images__deterministic(self):
-        rs = np.random.RandomState(1)
-        images = rs.randint(0, 255, size=(32, 4, 4, 3), dtype=np.uint8)
+        rs = iarandom.RNG(1)
+        images = rs.integers(0, 255, size=(32, 4, 4, 3), dtype=np.uint8)
 
         for deterministic in [False, True]:
             aug = iaa.MultiplyHueAndSaturation(mul=(0.1, 5.0),
@@ -1528,8 +1529,8 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
         assert got_exception
 
     def test_quantization_is_deterministic(self):
-        rs = np.random.RandomState(1)
-        image = rs.randint(0, 255, (100, 100, 3)).astype(np.uint8)
+        rs = iarandom.RNG(1)
+        image = rs.integers(0, 255, (100, 100, 3)).astype(np.uint8)
 
         # simulate multiple calls, each one of them should produce the
         # same quantization

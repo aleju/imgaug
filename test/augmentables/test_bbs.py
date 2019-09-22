@@ -17,6 +17,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug as ia
+import imgaug.random as iarandom
 
 
 class TestBoundingBox(unittest.TestCase):
@@ -608,19 +609,19 @@ class TestBoundingBox(unittest.TestCase):
         assert "Cannot draw bounding box" in str(context.exception)
 
     def test_extract_from_image(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3)
         image_sub = bb.extract_from_image(image)
         assert np.array_equal(image_sub, image[1:3, 1:3, :])
 
     def test_extract_from_image_no_channels(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10))
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3)
         image_sub = bb.extract_from_image(image)
         assert np.array_equal(image_sub, image[1:3, 1:3])
 
     def test_extract_from_image_bb_partially_out_of_image(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
 
         bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11)
         image_sub = bb.extract_from_image(image)
@@ -633,7 +634,7 @@ class TestBoundingBox(unittest.TestCase):
         assert np.array_equal(image_sub, image_pad[8:11, 8:11, :])
 
     def test_extract_from_image_bb_partially_out_of_image_no_channels(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10))
 
         bb = ia.BoundingBox(y1=8, y2=11, x1=8, x2=11)
         image_sub = bb.extract_from_image(image)
@@ -646,7 +647,7 @@ class TestBoundingBox(unittest.TestCase):
         assert np.array_equal(image_sub, image_pad[8:11, 8:11])
 
     def test_extract_from_image_bb_partially_out_of_image_top_left(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
 
         bb = ia.BoundingBox(y1=-1, y2=3, x1=-1, x2=4)
         image_sub = bb.extract_from_image(image)
@@ -659,7 +660,7 @@ class TestBoundingBox(unittest.TestCase):
         assert np.array_equal(image_sub, image_pad[0:4, 0:5, :])
 
     def test_extract_from_image_float_coords(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
 
         bb = ia.BoundingBox(y1=1, y2=1.99999, x1=1, x2=1.99999)
         image_sub = bb.extract_from_image(image)
@@ -667,7 +668,7 @@ class TestBoundingBox(unittest.TestCase):
         assert np.array_equal(image_sub, image[1:1+1, 1:1+1, :])
 
     def test_extract_from_image_bb_height_is_zero(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
 
         bb = ia.BoundingBox(y1=1, y2=1, x1=2, x2=4)
         image_sub = bb.extract_from_image(image)
@@ -675,7 +676,7 @@ class TestBoundingBox(unittest.TestCase):
         assert np.array_equal(image_sub, image[1:1+1, 2:4, :])
 
     def test_extract_from_image_bb_width_is_zero(self):
-        image = np.random.RandomState(1234).randint(0, 255, size=(10, 10, 3))
+        image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
 
         bb = ia.BoundingBox(y1=1, y2=1, x1=2, x2=2)
         image_sub = bb.extract_from_image(image)

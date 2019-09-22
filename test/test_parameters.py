@@ -24,6 +24,7 @@ import scipy
 import scipy.special
 
 import imgaug as ia
+import imgaug.random as iarandom
 from imgaug import parameters as iap
 from imgaug.testutils import reseed
 
@@ -986,9 +987,9 @@ class TestBinomial(unittest.TestCase):
         param = iap.Binomial(0.5)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.array_equal(samples1, samples2)
 
@@ -1143,9 +1144,9 @@ class TestChoice(unittest.TestCase):
         param = iap.Choice([-1, 0, 1, 2, 3])
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.array_equal(samples1, samples2)
 
@@ -1276,9 +1277,9 @@ class TestDiscreteUniform(unittest.TestCase):
         param = iap.Uniform(-1, 1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.array_equal(samples1, samples2)
 
@@ -1307,7 +1308,7 @@ class TestPoisson(unittest.TestCase):
         param = iap.Poisson(1)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = np.random.RandomState(1234).poisson(
+        samples_direct = iarandom.RNG(1234).poisson(
             lam=1, size=(100, 1000))
         assert samples.shape == (100, 1000)
 
@@ -1321,9 +1322,9 @@ class TestPoisson(unittest.TestCase):
         param = iap.Poisson(1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.array_equal(samples1, samples2)
 
@@ -1351,7 +1352,7 @@ class TestNormal(unittest.TestCase):
         param = iap.Normal(0, 1)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = np.random.RandomState(1234).normal(loc=0, scale=1,
+        samples_direct = iarandom.RNG(1234).normal(loc=0, scale=1,
                                                             size=(100, 1000))
         samples = np.clip(samples, -1, 1)
         samples_direct = np.clip(samples_direct, -1, 1)
@@ -1401,9 +1402,9 @@ class TestNormal(unittest.TestCase):
         param = iap.Normal(0, 1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -1535,7 +1536,7 @@ class TestLaplace(unittest.TestCase):
         param = iap.Laplace(0, 1)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = np.random.RandomState(1234).laplace(loc=0, scale=1,
+        samples_direct = iarandom.RNG(1234).laplace(loc=0, scale=1,
                                                              size=(100, 1000))
 
         assert samples.shape == (100, 1000)
@@ -1598,9 +1599,9 @@ class TestLaplace(unittest.TestCase):
         param = iap.Laplace(0, 1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -1630,7 +1631,7 @@ class TestChiSquare(unittest.TestCase):
         param = iap.ChiSquare(1)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = np.random.RandomState(1234).chisquare(df=1,
+        samples_direct = iarandom.RNG(1234).chisquare(df=1,
                                                                size=(100, 1000))
 
         assert samples.shape == (100, 1000)
@@ -1686,9 +1687,9 @@ class TestChiSquare(unittest.TestCase):
         param = iap.ChiSquare(1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -1718,7 +1719,7 @@ class TestWeibull(unittest.TestCase):
         param = iap.Weibull(1)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = np.random.RandomState(1234).weibull(a=1,
+        samples_direct = iarandom.RNG(1234).weibull(a=1,
                                                              size=(100, 1000))
 
         assert samples.shape == (100, 1000)
@@ -1803,9 +1804,9 @@ class TestWeibull(unittest.TestCase):
         param = iap.Weibull(1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -1928,9 +1929,9 @@ class TestUniform(unittest.TestCase):
         param = iap.Uniform(-1.0, 1.0)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -1983,7 +1984,7 @@ class TestBeta(unittest.TestCase):
         param = iap.Beta(0.5, 0.5)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = np.random.RandomState(1234).beta(
+        samples_direct = iarandom.RNG(1234).beta(
             a=0.5, b=0.5, size=(100, 1000))
 
         nb_bins = 10
@@ -2047,9 +2048,9 @@ class TestBeta(unittest.TestCase):
         param = iap.Beta(0.5, 0.5)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -2082,8 +2083,8 @@ class TestDeterministic(unittest.TestCase):
             with self.subTest(value=value):
                 param = iap.Deterministic(value)
 
-                rs1 = np.random.RandomState(123456)
-                rs2 = np.random.RandomState(123456)
+                rs1 = iarandom.RNG(123456)
+                rs2 = iarandom.RNG(123456)
 
                 samples1 = param.draw_samples(20, random_state=rs1)
                 samples2 = param.draw_samples(20, random_state=rs2)
@@ -2444,9 +2445,9 @@ class TestFromLowerResolution(unittest.TestCase):
         param = iap.FromLowerResolution(iap.Binomial(0.5), size_px=2)
 
         samples1 = param.draw_samples((10, 5, 1),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5, 1),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.allclose(samples1, samples2)
 
@@ -2549,9 +2550,9 @@ class TestClip(unittest.TestCase):
         param = iap.Clip(iap.Choice([0, 2]), -1, 1)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.array_equal(samples1, samples2)
 
@@ -2651,9 +2652,9 @@ class TestDiscretize(unittest.TestCase):
         param = iap.Discretize(param_orig)
 
         samples1 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((10, 5),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert np.array_equal(samples1, samples2)
 
@@ -3513,9 +3514,9 @@ class TestRandomSign(unittest.TestCase):
         param = iap.RandomSign(iap.Choice([1, 2]))
 
         samples1 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert samples1.shape == (100, 10)
         assert samples2.shape == (100, 10)
@@ -3636,9 +3637,9 @@ class TestForceSign(unittest.TestCase):
                               mode="invert")
 
         samples1 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert samples1.shape == (100, 10)
         assert samples2.shape == (100, 10)
@@ -3842,9 +3843,9 @@ class TestIterativeNoiseAggregator(unittest.TestCase):
             iap.Choice([0, 50]), iterations=5, aggregation_method="avg")
 
         samples1 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert samples1.shape == (100, 10)
         assert samples2.shape == (100, 10)
@@ -4050,9 +4051,9 @@ class TestSigmoid(unittest.TestCase):
             activated=True)
 
         samples1 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
         samples2 = param.draw_samples((100, 10),
-                                      random_state=np.random.RandomState(1234))
+                                      random_state=iarandom.RNG(1234))
 
         assert samples1.shape == (100, 10)
         assert samples2.shape == (100, 10)

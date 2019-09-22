@@ -765,7 +765,7 @@ def _array_lists_elementwise_identical(arrs1, arrs2):
 
 class TestUniformVoronoi(unittest.TestCase):
     def test___init___(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
 
         mock_voronoi = mock.MagicMock()
         mock_voronoi.return_value = mock_voronoi
@@ -814,7 +814,7 @@ class TestUniformVoronoi(unittest.TestCase):
 
 class TestRegularGridVoronoi(unittest.TestCase):
     def test___init___(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
 
         mock_voronoi = mock.MagicMock()
         mock_voronoi.return_value = mock_voronoi
@@ -876,7 +876,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
 
 class TestRelativeRegularGridVoronoi(unittest.TestCase):
     def test___init___(self):
-        rs = np.random.RandomState(10)
+        rs = iarandom.RNG(10)
 
         mock_voronoi = mock.MagicMock()
         mock_voronoi.return_value = mock_voronoi
@@ -952,14 +952,14 @@ class TestRegularGridPointsSampler(unittest.TestCase):
     def test_sample_single_point(self):
         image = np.zeros((10, 20, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, 1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 1
         assert np.allclose(points[0], [10.0, 5.0])
 
     def test_sample_points(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(2, 2)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 4
         assert np.allclose(points, [
             [2.5, 2.5],
@@ -971,7 +971,7 @@ class TestRegularGridPointsSampler(unittest.TestCase):
     def test_sample_points_stochastic(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, iap.Choice([1, 2]))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -987,7 +987,7 @@ class TestRegularGridPointsSampler(unittest.TestCase):
     def test_sample_points_cols_is_zero(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(iap.Deterministic(0), 1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -999,7 +999,7 @@ class TestRegularGridPointsSampler(unittest.TestCase):
     def test_sample_points_rows_is_zero(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, iap.Deterministic(0))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -1011,7 +1011,7 @@ class TestRegularGridPointsSampler(unittest.TestCase):
     def test_sample_points_rows_is_more_than_image_height(self):
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(2, 1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [0.5, 0.5]
@@ -1023,7 +1023,7 @@ class TestRegularGridPointsSampler(unittest.TestCase):
     def test_sample_points_cols_is_more_than_image_width(self):
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         sampler = iaa.RegularGridPointsSampler(1, 2)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [0.5, 0.5]
@@ -1101,14 +1101,14 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
     def test_sample_single_point(self):
         image = np.zeros((10, 20, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.001, 0.001)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 1
         assert np.allclose(points[0], [10.0, 5.0])
 
     def test_sample_points(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.2, 0.2)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
         assert len(points) == 4
         assert np.allclose(points, [
             [2.5, 2.5],
@@ -1121,7 +1121,7 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.1,
                                                        iap.Choice([0.1, 0.2]))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -1138,7 +1138,7 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(iap.Deterministic(0.001),
                                                        0.1)
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
@@ -1151,7 +1151,7 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         sampler = iaa.RelativeRegularGridPointsSampler(0.1,
                                                        iap.Deterministic(0.001))
-        points = sampler.sample_points([image], np.random.RandomState(1))[0]
+        points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
         matches_single_point = np.allclose(points, [
             [5.0, 5.0]
