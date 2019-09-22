@@ -4644,6 +4644,50 @@ class TestSequential(unittest.TestCase):
         assert np.all(seen)
     """
 
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            for random_order in [False, True]:
+                with self.subTest(shape=shape):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.Sequential([iaa.Noop()],
+                                         random_order=random_order)
+
+                    image_aug = aug(image=image)
+
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            for random_order in [False, True]:
+                with self.subTest(shape=shape):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.Sequential([iaa.Noop()],
+                                         random_order=random_order)
+
+                    image_aug = aug(image=image)
+
+                    assert np.all(image_aug == 0)
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape
+
     def test_add_to_empty_sequential(self):
         aug = iaa.Sequential()
         aug.add(iaa.Fliplr(1.0))
@@ -5232,6 +5276,50 @@ class TestSomeOf(unittest.TestCase):
             observed = aug.augment_image(image)
             assert ia.is_np_array(observed)
             assert observed.shape in expected_shapes
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            for random_order in [False, True]:
+                with self.subTest(shape=shape):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.SomeOf(
+                        1, [iaa.Noop()], random_order=random_order)
+
+                    image_aug = aug(image=image)
+
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            for random_order in [False, True]:
+                with self.subTest(shape=shape):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.SomeOf(
+                        1, [iaa.Noop()], random_order=random_order)
+
+                    image_aug = aug(image=image)
+
+                    assert np.all(image_aug == 0)
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape
 
     def test_other_dtypes_via_noop__bool(self):
         for random_order in [False, True]:
@@ -5961,6 +6049,46 @@ class TestSometimes(unittest.TestCase):
         observed2 = aug.augment_image(image, hooks=hooks)
         assert np.array_equal(observed1, image + 10)
         assert np.array_equal(observed2, image)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Sometimes(1.0, iaa.Noop())
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (1, 1, 4),
+            (1, 1, 5),
+            (1, 1, 512),
+            (1, 1, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Sometimes(1.0, iaa.Noop())
+
+                image_aug = aug(image=image)
+
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
     def test_get_parameters(self):
         aug = iaa.Sometimes(0.75)
