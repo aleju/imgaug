@@ -160,7 +160,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
         The blurred image. Same shape and dtype as the input.
 
     """
-    has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+    has_zero_sized_axes = (image.size == 0)
     if sigma > 0 + eps and not has_zero_sized_axes:
         dtype = image.dtype
 
@@ -524,7 +524,7 @@ class AverageBlur(meta.Augmenter):
         for i, (image, kh, kw) in gen:
             kernel_impossible = (kh == 0 or kw == 0)
             kernel_does_nothing = (kh == 1 and kw == 1)
-            has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+            has_zero_sized_axes = (image.size == 0)
             if (not kernel_impossible and not kernel_does_nothing
                     and not has_zero_sized_axes):
                 input_dtype = image.dtype
@@ -644,7 +644,7 @@ class MedianBlur(meta.Augmenter):
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
         for i, (image, ki) in enumerate(zip(images, samples)):
-            has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+            has_zero_sized_axes = (image.size == 0)
             if ki > 1 and not has_zero_sized_axes:
                 ki = ki + 1 if ki % 2 == 0 else ki
                 if image.ndim == 2 or image.shape[-1] <= 512:
@@ -799,7 +799,7 @@ class BilateralBlur(meta.Augmenter):
         gen = enumerate(zip(images, samples_d, samples_sigma_color,
                             samples_sigma_space))
         for i, (image, di, sigma_color_i, sigma_space_i) in gen:
-            has_zero_sized_axes = any([axis == 0 for axis in image.shape])
+            has_zero_sized_axes = (image.size == 0)
             if di != 1 and not has_zero_sized_axes:
                 images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
                                                 sigma_space_i)
