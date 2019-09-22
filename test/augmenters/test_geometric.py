@@ -3589,6 +3589,23 @@ class TestPiecewiseAffine(unittest.TestCase):
             > np.average(self.image[~self.mask])
         )
 
+    def test_scale_is_small_image_absolute_scale(self):
+        aug = iaa.PiecewiseAffine(scale=1, nb_rows=12, nb_cols=4,
+                                  absolute_scale=True)
+
+        observed = aug.augment_image(self.image)
+
+        assert (
+            100.0
+            < np.average(observed[self.mask])
+            < np.average(self.image[self.mask])
+        )
+        assert (
+            100.0-75.0
+            > np.average(observed[~self.mask])
+            > np.average(self.image[~self.mask])
+        )
+
     def test_scale_is_small_heatmaps(self):
         # basic test, heatmaps
         aug = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -3628,6 +3645,14 @@ class TestPiecewiseAffine(unittest.TestCase):
     def test_scale_is_zero_image(self):
         # scale 0
         aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4)
+
+        observed = aug.augment_image(self.image)
+
+        assert np.array_equal(observed, self.image)
+
+    def test_scale_is_zero_image_absolute_scale(self):
+        aug = iaa.PiecewiseAffine(scale=0, nb_rows=12, nb_cols=4,
+                                  absolute_scale=True)
 
         observed = aug.augment_image(self.image)
 
@@ -3706,6 +3731,20 @@ class TestPiecewiseAffine(unittest.TestCase):
             < np.average(observed2[~self.mask])
         )
 
+    def test_scale_stronger_values_should_increase_changes_images_abs(self):
+        aug1 = iaa.PiecewiseAffine(scale=1, nb_rows=12, nb_cols=4,
+                                   absolute_scale=True)
+        aug2 = iaa.PiecewiseAffine(scale=10, nb_rows=12, nb_cols=4,
+                                   absolute_scale=True)
+
+        observed1 = aug1.augment_image(self.image)
+        observed2 = aug2.augment_image(self.image)
+
+        assert (
+            np.average(observed1[~self.mask])
+            < np.average(observed2[~self.mask])
+        )
+
     def test_scale_stronger_values_should_increase_changes_heatmaps(self):
         # stronger scale should lead to stronger changes, heatmaps
         aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -3714,6 +3753,26 @@ class TestPiecewiseAffine(unittest.TestCase):
         observed1 = aug1.augment_heatmaps([self.heatmaps])[0]
         observed2 = aug2.augment_heatmaps([self.heatmaps])[0]
         
+        observed1_arr = observed1.get_arr()
+        observed2_arr = observed2.get_arr()
+        assert observed1.shape == self.heatmaps.shape
+        assert observed2.shape == self.heatmaps.shape
+        _assert_same_min_max(observed1, self.heatmaps)
+        _assert_same_min_max(observed2, self.heatmaps)
+        assert (
+            np.average(observed1_arr[~self.mask])
+            < np.average(observed2_arr[~self.mask])
+        )
+
+    def test_scale_stronger_values_should_increase_changes_heatmaps_abs(self):
+        aug1 = iaa.PiecewiseAffine(scale=1, nb_rows=12, nb_cols=4,
+                                   absolute_scale=True)
+        aug2 = iaa.PiecewiseAffine(scale=10, nb_rows=12, nb_cols=4,
+                                   absolute_scale=True)
+
+        observed1 = aug1.augment_heatmaps([self.heatmaps])[0]
+        observed2 = aug2.augment_heatmaps([self.heatmaps])[0]
+
         observed1_arr = observed1.get_arr()
         observed2_arr = observed2.get_arr()
         assert observed1.shape == self.heatmaps.shape
@@ -3797,6 +3856,33 @@ class TestPiecewiseAffine(unittest.TestCase):
         assert hm_aug.shape == (60, 80, 3)
         assert hm_aug.arr_0to1.shape == (30, 40+10, 1)
         assert (same / img_aug_mask.size) >= 0.9  # seems to be 0.948 actually
+
+    def test_scale_alignment_between_images_and_smaller_heatmaps_abs(self):
+        # image is 60x80, so a scale of 8 is about 0.1*max(60,80)
+        aug = iaa.PiecewiseAffine(scale=8, nb_rows=12, nb_cols=4,
+                                  absolute_scale=True)
+        aug_det = aug.to_deterministic()
+
+        heatmaps_small = ia.HeatmapsOnImage(
+            (
+                ia.imresize_single_image(
+                    self.image, (30, 40+10), interpolation="cubic"
+                ) / 255.0
+            ).astype(np.float32),
+            shape=(60, 80, 3)
+        )
+
+        img_aug = aug_det.augment_image(self.image)
+        hm_aug = aug_det.augment_heatmaps([heatmaps_small])[0]
+
+        img_aug_mask = img_aug > 255*0.1
+        hm_aug_mask = ia.imresize_single_image(
+            hm_aug.arr_0to1, (60, 80), interpolation="cubic"
+        ) > 0.1
+        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+        assert hm_aug.shape == (60, 80, 3)
+        assert hm_aug.arr_0to1.shape == (30, 40+10, 1)
+        assert (same / img_aug_mask.size) >= 0.9  # seems to be 0.930 actually
 
     def test_scale_alignment_between_images_and_smaller_segmaps(self):
         # strong scale, measure alignment between images and segmaps
@@ -4157,6 +4243,28 @@ class TestPiecewiseAffine(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
                 aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=2, nb_cols=2)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_zero_sized_axes_absolute_scale(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PiecewiseAffine(scale=5, nb_rows=2, nb_cols=2,
+                                          absolute_scale=True)
 
                 image_aug = aug(image=image)
 
