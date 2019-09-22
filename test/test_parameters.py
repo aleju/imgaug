@@ -203,9 +203,12 @@ class Test_handle_continuous_param(unittest.TestCase):
 
     def test_value_inside_value_range_and_value_range_given_as_callable(self):
         # single value within value range given as callable
+        def _value_range(x):
+            return -1 < x < 1
+
         result = iap.handle_continuous_param(
             1, "[test18]",
-            value_range=lambda x: -1 < x < 1,
+            value_range=_value_range,
             tuple_to_uniform=True,
             list_to_choice=True)
         self.assertTrue(isinstance(result, iap.Deterministic))
@@ -380,9 +383,12 @@ class Test_handle_discrete_param(unittest.TestCase):
 
     def test_value_inside_value_range_given_as_callable(self):
         # single value within value range given as callable
+        def _value_range(x):
+            return -1 < x < 1
+
         result = iap.handle_discrete_param(
             1, "[test18]",
-            value_range=lambda x: -1 < x < 1,
+            value_range=_value_range,
             tuple_to_uniform=True,
             list_to_choice=True)
         self.assertTrue(isinstance(result, iap.Deterministic))
