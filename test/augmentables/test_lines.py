@@ -2179,18 +2179,28 @@ class TestLineStringsOnImage(unittest.TestCase):
         assert observed.shape == (200, 201, 3)
 
     def test___repr__(self):
-        self._test_str_repr(lambda obj: obj.__repr__())
+        def _func(obj):
+            return obj.__repr__()
+
+        self._test_str_repr(_func)
 
     def test___str__(self):
-        self._test_str_repr(lambda obj: obj.__str__())
+        def _func(obj):
+            return obj.__str__()
+
+        self._test_str_repr(_func)
 
     def test___repr___empty_list_of_line_strings(self):
-        self._test_str_repr_empty_list_of_line_strings(
-            lambda obj: obj.__repr__())
+        def _func(obj):
+            return obj.__repr__()
+
+        self._test_str_repr_empty_list_of_line_strings(_func)
 
     def test___str___empty_list_of_line_strings(self):
-        self._test_str_repr_empty_list_of_line_strings(
-            lambda obj: obj.__str__())
+        def _func(obj):
+            return obj.__str__()
+
+        self._test_str_repr_empty_list_of_line_strings(_func)
 
     @classmethod
     def _test_str_repr(cls, func):

@@ -2393,6 +2393,19 @@ class TestAugmenter_augment_batches(unittest.TestCase):
         keypoint = ia.Keypoint(x=2, y=1)
         keypoints = [ia.KeypointsOnImage([keypoint], shape=image.shape + (1,))]
 
+        def _lambda_func_images(images, random_state, parents, hooks):
+            return images
+
+        def _lambda_func_keypoints(keypoints_on_images, random_state,
+                                   parents, hooks):
+            return keypoints_on_images
+
+        def _assertlambda_func_images(images, random_state, parents, hooks):
+            return True
+
+        def _assertlambda_func_keypoints(keypoints_on_images, random_state, parents, hooks):
+            return True
+
         augs = [
             iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
             iaa.SomeOf(1, [iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
@@ -2402,15 +2415,13 @@ class TestAugmenter_augment_batches(unittest.TestCase):
             iaa.WithChannels([0], iaa.Add((-50, 50))),
             iaa.Noop(name="Noop-nochange"),
             iaa.Lambda(
-                func_images=lambda images, random_state, parents, hooks: images,
-                func_keypoints=lambda keypoints_on_images, random_state,
-                parents, hooks: keypoints_on_images,
+                func_images=_lambda_func_images,
+                func_keypoints=_lambda_func_keypoints,
                 name="Lambda-nochange"
             ),
             iaa.AssertLambda(
-                func_images=lambda images, random_state, parents, hooks: True,
-                func_keypoints=lambda keypoints_on_images, random_state,
-                parents, hooks: True,
+                func_images=_assertlambda_func_images,
+                func_keypoints=_assertlambda_func_keypoints,
                 name="AssertLambda-nochange"
             ),
             iaa.AssertShape(
@@ -3746,32 +3757,37 @@ class TestAugmenter_find_augmenters(unittest.TestCase):
         return seq1, seq2
 
     def test_find_by_list_of_names(self):
-        func = lambda aug, parents: aug.name in ["Seq", "Seq2"]
+        def _func(aug, parents):
+            return aug.name in ["Seq", "Seq2"]
+
         seq1, seq2 = self.seq
 
-        augs = seq1.find_augmenters(func)
+        augs = seq1.find_augmenters(_func)
 
         assert len(augs) == 2
         assert augs[0] == seq1
         assert augs[1] == seq2
 
     def test_use_parents_arg(self):
-        func = lambda aug, parents: (
+        def _func(aug, parents):
+            return (
                 aug.name in ["Seq", "Seq2"]
                 and len(parents) > 0
-        )
+            )
         seq1, seq2 = self.seq
 
-        augs = seq1.find_augmenters(func)
+        augs = seq1.find_augmenters(_func)
 
         assert len(augs) == 1
         assert augs[0] == seq2
 
     def test_find_by_list_of_names_flat_false(self):
-        func = lambda aug, parents: aug.name in ["Seq", "Seq2"]
+        def _func(aug, parents):
+            return aug.name in ["Seq", "Seq2"]
+
         seq1, seq2 = self.seq
 
-        augs = seq1.find_augmenters(func, flat=False)
+        augs = seq1.find_augmenters(_func, flat=False)
 
         assert len(augs) == 2
         assert augs[0] == seq1
@@ -3793,20 +3809,24 @@ class TestAugmenter_remove(unittest.TestCase):
         return seq1
 
     def test_remove_by_name(self):
-        augs = self.seq
-        func = lambda aug, parents: aug.name == "Seq2"
+        def _func(aug, parents):
+            return aug.name == "Seq2"
 
-        augs = augs.remove_augmenters(func)
+        augs = self.seq
+
+        augs = augs.remove_augmenters(_func)
 
         seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
         assert len(seqs) == 1
         assert seqs[0].name == "Seq"
 
     def test_remove_by_name_and_parents_arg(self):
-        augs = self.seq
-        func = lambda aug, parents: aug.name == "Seq2" and len(parents) == 0
+        def _func(aug, parents):
+            return aug.name == "Seq2" and len(parents) == 0
 
-        augs = augs.remove_augmenters(func)
+        augs = self.seq
+
+        augs = augs.remove_augmenters(_func)
 
         seqs = augs.find_augmenters_by_name(r"Seq.*", regex=True)
         assert len(seqs) == 2
@@ -3814,20 +3834,24 @@ class TestAugmenter_remove(unittest.TestCase):
         assert seqs[1].name == "Seq2"
 
     def test_remove_all_without_inplace_removal(self):
-        augs = self.seq
-        func = lambda aug, parents: True
+        def _func(aug, parents):
+            return True
 
-        augs = augs.remove_augmenters(func)
+        augs = self.seq
+
+        augs = augs.remove_augmenters(_func)
 
         assert augs is not None
         assert isinstance(augs, iaa.Noop)
 
     def test_remove_all_with_inplace_removal(self):
+        def _func(aug, parents):
+            return aug.name == "Seq"
+
         augs = self.seq
-        func = lambda aug, parents: aug.name == "Seq"
         got_exception = False
         try:
-            _ = augs.remove_augmenters(func, copy=False)
+            _ = augs.remove_augmenters(_func, copy=False)
         except Exception as exc:
             got_exception = True
             expected = (
@@ -3837,10 +3861,12 @@ class TestAugmenter_remove(unittest.TestCase):
         assert got_exception
 
     def test_remove_all_without_inplace_removal_and_no_noop(self):
-        augs = self.seq
-        func = lambda aug, parents: True
+        def _func(aug, parents):
+            return True
 
-        augs = augs.remove_augmenters(func, noop_if_topmost=False)
+        augs = self.seq
+
+        augs = augs.remove_augmenters(_func, noop_if_topmost=False)
 
         assert augs is None
 
@@ -3878,6 +3904,9 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
         return target
 
     def test_matching_position(self):
+        def _func(aug, parents):
+            return aug.name == "blur"
+
         images = self.images
         source = self.source
         target = self.target
@@ -3885,8 +3914,7 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
 
         target_cprs = target.copy_random_state(source, matching="position")
 
-        source_alt = source.remove_augmenters(
-            lambda aug, parents: aug.name == "blur")
+        source_alt = source.remove_augmenters(_func)
         images_aug_source = source_alt.augment_images(images)
         images_aug_target = target_cprs.augment_images(images)
 
@@ -3897,6 +3925,9 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
         assert np.array_equal(images_aug_source, images_aug_target)
 
     def test_matching_position_copy_determinism(self):
+        def _func(aug, parents):
+            return aug.name == "blur"
+
         images = self.images
         source = self.source
         target = self.target
@@ -3906,8 +3937,7 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
         target_cprs = target.copy_random_state(
             source, matching="position", copy_determinism=True)
 
-        source_alt = source.remove_augmenters(
-            lambda aug, parents: aug.name == "blur")
+        source_alt = source.remove_augmenters(_func)
         images_aug_source = source_alt.augment_images(images)
         images_aug_target = target_cprs.augment_images(images)
 
@@ -3915,6 +3945,9 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
         assert np.array_equal(images_aug_source, images_aug_target)
 
     def test_matching_name(self):
+        def _func(aug, parents):
+            return aug.name == "blur"
+
         images = self.images
         source = self.source
         target = self.target
@@ -3922,21 +3955,22 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
 
         target_cprs = target.copy_random_state(source, matching="name")
 
-        source_alt = source.remove_augmenters(
-            lambda aug, parents: aug.name == "blur")
+        source_alt = source.remove_augmenters(_func)
         images_aug_source = source_alt.augment_images(images)
         images_aug_target = target_cprs.augment_images(images)
 
         assert np.array_equal(images_aug_source, images_aug_target)
 
     def test_matching_name_copy_determinism(self):
+        def _func(aug, parents):
+            return aug.name == "blur"
+
         images = self.images
         source = self.source
         target = self.target
         source.localize_random_state_()
 
-        source_alt = source.remove_augmenters(
-            lambda aug, parents: aug.name == "blur")
+        source_alt = source.remove_augmenters(_func)
         source_det = source_alt.to_deterministic()
 
         target_cprs_det = target.copy_random_state(

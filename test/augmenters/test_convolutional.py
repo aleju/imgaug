@@ -47,8 +47,10 @@ class TestConvolve(unittest.TestCase):
         assert np.array_equal(observed, self.img)
 
     def test_matrix_is_lambda_none(self):
-        aug = iaa.Convolve(
-            matrix=lambda _img, nb_channels, random_state: [None])
+        def _matrix_generator(_img, _nb_channels, _random_state):
+            return [None]
+
+        aug = iaa.Convolve(matrix=_matrix_generator)
         observed = aug.augment_image(self.img)
         assert np.array_equal(observed, self.img)
 
@@ -59,8 +61,10 @@ class TestConvolve(unittest.TestCase):
         assert np.array_equal(observed, self.img)
 
     def test_matrix_is_lambda_1x1_identity(self):
-        aug = iaa.Convolve(
-            matrix=lambda _img, nb_channels, random_state: np.float32([[1]]))
+        def _matrix_generator(_img, _nb_channels, _random_state):
+            return np.float32([[1]])
+
+        aug = iaa.Convolve(matrix=_matrix_generator)
         observed = aug.augment_image(self.img)
         assert np.array_equal(observed, self.img)
 
@@ -75,12 +79,13 @@ class TestConvolve(unittest.TestCase):
         assert np.array_equal(observed, self.img)
 
     def test_matrix_is_lambda_3x3_identity(self):
-        m = np.float32([
-            [0, 0, 0],
-            [0, 1, 0],
-            [0, 0, 0]
-        ])
-        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        def _matrix_generator(_img, _nb_channels, _random_state):
+            return np.float32([
+                [0, 0, 0],
+                [0, 1, 0],
+                [0, 0, 0]
+            ])
+        aug = iaa.Convolve(matrix=_matrix_generator)
         observed = aug.augment_image(self.img)
         assert np.array_equal(observed, self.img)
 
@@ -95,12 +100,14 @@ class TestConvolve(unittest.TestCase):
         assert np.array_equal(observed, 2*self.img)
 
     def test_matrix_is_lambda_3x3_two_in_center(self):
-        m = np.float32([
-            [0, 0, 0],
-            [0, 2, 0],
-            [0, 0, 0]
-        ])
-        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        def _matrix_generator(_img, _nb_channels, _random_state):
+            return np.float32([
+                [0, 0, 0],
+                [0, 2, 0],
+                [0, 0, 0]
+            ])
+
+        aug = iaa.Convolve(matrix=_matrix_generator)
         observed = aug.augment_image(self.img)
         assert np.array_equal(observed, 2*self.img)
 
@@ -116,12 +123,14 @@ class TestConvolve(unittest.TestCase):
         assert np.array_equal(observed, 2*img3)
 
     def test_matrix_is_lambda_3x3_two_in_center_3_channels(self):
-        m = np.float32([
-            [0, 0, 0],
-            [0, 2, 0],
-            [0, 0, 0]
-        ])
-        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        def _matrix_generator(_img, _nb_channels, _random_state):
+            return np.float32([
+                [0, 0, 0],
+                [0, 2, 0],
+                [0, 0, 0]
+            ])
+
+        aug = iaa.Convolve(matrix=_matrix_generator)
         img3 = np.tile(self.img[..., np.newaxis], (1, 1, 3))  # 3 channels
         observed = aug.augment_image(img3)
         assert np.array_equal(observed, 2*img3)
@@ -143,33 +152,35 @@ class TestConvolve(unittest.TestCase):
         assert np.array_equal(observed, expected)
 
     def test_matrix_is_lambda_3x3_with_multiple_nonzero_values(self):
-        m = np.float32([
-            [0, -1, 0],
-            [0, 10, 0],
-            [0, 0, 0]
-        ])
+        def _matrix_generator(_img, _nb_channels, _random_state):
+            return np.float32([
+                [0, -1, 0],
+                [0, 10, 0],
+                [0, 0, 0]
+            ])
+
         expected = np.uint8([
             [10*1+(-1)*4, 10*2+(-1)*5, 10*3+(-1)*6],
             [10*4+(-1)*1, 10*5+(-1)*2, 10*6+(-1)*3],
             [10*7+(-1)*4, 10*8+(-1)*5, 10*9+(-1)*6]
         ])
 
-        aug = iaa.Convolve(matrix=lambda _img, nb_channels, random_state: m)
+        aug = iaa.Convolve(matrix=_matrix_generator)
         observed = aug.augment_image(self.img)
         assert np.array_equal(observed, expected)
 
     def test_lambda_with_changing_matrices(self):
         # changing matrices when using callable
+        def _matrix_generator(_img, _nb_channels, random_state):
+            return np.float32([[
+                iarandom.polyfill_integers(random_state, 0, 5)
+            ]])
+
         expected = []
         for i in sm.xrange(5):
             expected.append(self.img * i)
 
-        aug = iaa.Convolve(
-            matrix=lambda _img, nb_channels, random_state:
-                np.float32([[
-                    iarandom.polyfill_integers(random_state, 0, 5)
-                ]])
-        )
+        aug = iaa.Convolve(matrix=_matrix_generator)
         seen = [False] * 5
         for _ in sm.xrange(200):
             observed = aug.augment_image(self.img)

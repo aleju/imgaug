@@ -1259,10 +1259,13 @@ class TestKMeansColorQuantization(unittest.TestCase):
                               image)
 
     def test_from_colorspace(self):
+        def _noop(img):
+            return img
+
         aug = self.augmenter(from_colorspace="BGR")
         mock_change_colorspace = mock.MagicMock()
         mock_change_colorspace.return_value = mock_change_colorspace
-        mock_change_colorspace.augment_image.side_effect = lambda img: img
+        mock_change_colorspace.augment_image.side_effect = _noop
         mock_change_colorspace._draw_samples.return_value = (None, ["foo"])
 
         fname = "imgaug.augmenters.color.ChangeColorspace"
@@ -1635,6 +1638,9 @@ class UniformColorQuantization(TestKMeansColorQuantization):
         assert np.array_equal(observed, expected)
 
     def test_from_colorspace(self):
+        def _noop(img):
+            return img
+
         # Actual to_colorspace doesn't matter here as it is overwritten
         # via return_value. Important is just to set it to a non-None value
         # so that a colorspace conversion actually happens.
@@ -1642,7 +1648,7 @@ class UniformColorQuantization(TestKMeansColorQuantization):
                              to_colorspace="Lab")
         mock_change_colorspace = mock.MagicMock()
         mock_change_colorspace.return_value = mock_change_colorspace
-        mock_change_colorspace.augment_image.side_effect = lambda img: img
+        mock_change_colorspace.augment_image.side_effect = _noop
         mock_change_colorspace._draw_samples.return_value = (None, ["foo"])
 
         fname = "imgaug.augmenters.color.ChangeColorspace"
