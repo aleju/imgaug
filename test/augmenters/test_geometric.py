@@ -6024,6 +6024,12 @@ class TestRot90(unittest.TestCase):
         assert aug.k.a[0] == 1
         assert aug.k.a[1] == 3
 
+    def test___init___k_is_all(self):
+        aug = iaa.Rot90(ia.ALL)
+        assert isinstance(aug.k, iap.Choice)
+        assert len(aug.k.a) == 4
+        assert aug.k.a == [0, 1, 2, 3]
+
     def test_images_k_is_0_and_4(self):
         for k in [0, 4]:
             with self.subTest(k=k):

@@ -3700,9 +3700,13 @@ class Rot90(meta.Augmenter):
                  random_state=None):
         super(Rot90, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
+
+        if k == ia.ALL:
+            k = [0, 1, 2, 3]
         self.k = iap.handle_discrete_param(
             k, "k", value_range=None, tuple_to_uniform=True,
             list_to_choice=True, allow_floats=False)
+
         self.keep_size = keep_size
 
     def _draw_samples(self, nb_images, random_state):
