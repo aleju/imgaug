@@ -658,7 +658,7 @@ class Test_normalize_generator_(_Base):
 
     @unittest.skipIf(not IS_NP_117_OR_HIGHER,
                      "BitGenerator does not exist in numpy <=1.16")
-    def test_called_with_generator(self):
+    def test_called_with_bit_generator(self):
         bgen = iarandom.BIT_GENERATOR(np.random.SeedSequence(0))
 
         result = iarandom.normalize_generator_(bgen)
