@@ -1224,8 +1224,14 @@ class RegularGridPointsSampler(IPointsSampler):
         widths = np.int32([image.shape[1] for image in images])
         # We clip intentionally not to H-1 or W-1 here. If e.g. an image has
         # a width of 1, we want to get a maximum of 1 column of coordinates.
-        n_rows_lst = np.clip(n_rows_lst, 1, heights)
-        n_cols_lst = np.clip(n_cols_lst, 1, widths)
+        # Note that we use two clips here instead of e.g. clip(., 1, height),
+        # because images can have height/width zero and in these cases numpy
+        # prefers the smaller value in clip(). But currently we want to get
+        # at least 1 point for such images.
+        n_rows_lst = np.clip(n_rows_lst, None, heights)
+        n_cols_lst = np.clip(n_cols_lst, None, widths)
+        n_rows_lst = np.clip(n_rows_lst, 1, None)
+        n_cols_lst = np.clip(n_cols_lst, 1, None)
         return n_rows_lst, n_cols_lst
 
     @classmethod
@@ -1242,15 +1248,21 @@ class RegularGridPointsSampler(IPointsSampler):
         # We do not have to subtract 1 here from height/width as these are
         # subpixel coordinates. Technically, we could also place the cell
         # centers outside of the image plane.
-        if n_rows == 1:
-            yy = np.float32([float(height)/2])
+        y_spacing = height / n_rows
+        y_start = 0.0 + y_spacing/2
+        y_end = height - y_spacing/2
+        if y_start - 1e-4 <= y_end <= y_start + 1e-4:
+            yy = np.float32([y_start])
         else:
-            yy = np.linspace(0.0, height, num=n_rows)
+            yy = np.linspace(y_start, y_end, num=n_rows)
 
-        if n_cols == 1:
-            xx = np.float32([float(width)/2])
+        x_spacing = width / n_cols
+        x_start = 0.0 + x_spacing/2
+        x_end = width - x_spacing/2
+        if x_start - 1e-4 <= x_end <= x_start + 1e-4:
+            xx = np.float32([x_start])
         else:
-            xx = np.linspace(0.0, width, num=n_cols)
+            xx = np.linspace(x_start, x_end, num=n_cols)
 
         xx, yy = np.meshgrid(xx, yy)
         grid = np.vstack([xx.ravel(), yy.ravel()]).T

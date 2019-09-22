@@ -962,10 +962,10 @@ class TestRegularGridPointsSampler(unittest.TestCase):
         points = sampler.sample_points([image], np.random.RandomState(1))[0]
         assert len(points) == 4
         assert np.allclose(points, [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [0.0, 10.0],
-            [10.0, 10.0]
+            [2.5, 2.5],
+            [7.5, 2.5],
+            [2.5, 7.5],
+            [7.5, 7.5]
         ])
 
     def test_sample_points_stochastic(self):
@@ -977,8 +977,8 @@ class TestRegularGridPointsSampler(unittest.TestCase):
             [5.0, 5.0]
         ])
         matches_two_points = np.allclose(points, [
-            [0.0, 5.0],
-            [10.0, 5.0]
+            [2.5, 5.0],
+            [7.5, 5.0]
         ])
 
         assert len(points) in [1, 2]
@@ -1047,7 +1047,7 @@ class TestRegularGridPointsSampler(unittest.TestCase):
 
                 points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
-                assert len(points) == 0
+                assert len(points) == 1
 
     def test_unusual_channel_numbers(self):
         shapes = [
@@ -1111,10 +1111,10 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
         points = sampler.sample_points([image], np.random.RandomState(1))[0]
         assert len(points) == 4
         assert np.allclose(points, [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [0.0, 10.0],
-            [10.0, 10.0]
+            [2.5, 2.5],
+            [7.5, 2.5],
+            [2.5, 7.5],
+            [7.5, 7.5]
         ])
 
     def test_sample_points_stochastic(self):
@@ -1127,8 +1127,8 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
             [5.0, 5.0]
         ])
         matches_two_points = np.allclose(points, [
-            [0.0, 5.0],
-            [10.0, 5.0]
+            [2.5, 5.0],
+            [7.5, 5.0]
         ])
 
         assert len(points) in [1, 2]
@@ -1185,7 +1185,7 @@ class TestRelativeRegularGridPointsSampler(unittest.TestCase):
 
                 points = sampler.sample_points([image], iarandom.RNG(1))[0]
 
-                assert len(points) == 0
+                assert len(points) == 1
 
     def test_unusual_channel_numbers(self):
         shapes = [
@@ -1541,10 +1541,10 @@ class TestSubsamplingPointsSampler(unittest.TestCase):
 
         assert len(observed) == 4
         assert np.allclose(observed, [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [0.0, 10.0],
-            [10.0, 10.0]
+            [2.5, 2.5],
+            [7.5, 2.5],
+            [2.5, 7.5],
+            [7.5, 7.5]
         ])
 
     def test_max_is_below_point_count(self):
