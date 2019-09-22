@@ -2298,11 +2298,20 @@ class PiecewiseAffine(meta.Augmenter):
         if nb_nonzero == 0:
             return None
         else:
-            # FIXME this needs to incorporate the image_shape in case
-            #       of absolute_scale=True
-            if not self.absolute_scale:
-                jitter_img[:, 0] = jitter_img[:, 0] * augmentable_shape[0]
-                jitter_img[:, 1] = jitter_img[:, 1] * augmentable_shape[1]
+            if self.absolute_scale:
+                if image_shape[0] > 0:
+                    jitter_img[:, 0] = jitter_img[:, 0] / image_shape[0]
+                else:
+                    jitter_img[:, 0] = 0.0
+
+                if image_shape[1] > 0:
+                    jitter_img[:, 1] = jitter_img[:, 1] / image_shape[1]
+                else:
+                    jitter_img[:, 1] = 0.0
+
+            jitter_img[:, 0] = jitter_img[:, 0] * augmentable_shape[0]
+            jitter_img[:, 1] = jitter_img[:, 1] * augmentable_shape[1]
+
             points_dest = np.copy(points_src)
             points_dest[:, 0] = points_dest[:, 0] + jitter_img[:, 0]
             points_dest[:, 1] = points_dest[:, 1] + jitter_img[:, 1]
