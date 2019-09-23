@@ -2001,7 +2001,7 @@ class PadToFixedSize(meta.Augmenter):
 #      values imagewise via a callback in in CropAndPad?
 # TODO add crop() function in imgaug, similar to pad
 class CropToFixedSize(meta.Augmenter):
-    """Crop images down to a predefined  maximum width and/or height.
+    """Crop images down to a predefined maximum width and/or height.
 
     If images are already at the maximum width/height or are smaller, they
     will not be cropped. Note that this also means that images will not be
@@ -2462,7 +2462,6 @@ class KeepSizeByResize(meta.Augmenter):
                 nb_shapes = len(set([image.shape for image in result]))
                 if nb_shapes == 1:
                     result = np.array(result, dtype=images.dtype)
-
         else:
             result = images
         return result
