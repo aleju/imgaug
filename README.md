@@ -85,6 +85,7 @@ It converts a set of input images into a new, much larger set of slightly altere
 5. [Example Images](#example_images)
 6. [Code Examples](#code_examples)
 7. [List of augmenters](#list_of_augmenters)
+8. [Citation](#citation)
 
 
 <a name="features"/>
@@ -194,6 +195,8 @@ repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
 
 ## Recent Changes
 
+* **0.3.0**: Reworked segmentation map augmentation, adapted to numpy 1.17+
+  random number sampling API, several new augmenters.
 * **0.2.9**: Added polygon augmentation, added line string augmentation,
   simplified augmentation interface.
 * **0.2.8**: Improved performance, dtype support and multicore augmentation.
@@ -346,17 +349,31 @@ here.
 </tr>
 <tr><td colspan="5"><strong>color</strong></td></tr>
 <tr>
+<td colspan="1"><sub>MultiplyHueAndSaturation</sub></td>
+<td colspan="1"><sub>MultiplyHue</sub></td>
+<td colspan="1"><sub>MultiplySaturation</sub></td>
 <td colspan="1"><sub>AddToHueAndSaturation</sub></td>
+<td colspan="1"><sub>AddToHue</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/multiplyhueandsaturation.gif" height="148" width="100" alt="MultiplyHueAndSaturation"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/multiplyhue.gif" height="148" width="100" alt="MultiplyHue"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/multiplysaturation.gif" height="148" width="100" alt="MultiplySaturation"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/addtohueandsaturation.gif" height="148" width="100" alt="AddToHueAndSaturation"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/addtohue.gif" height="148" width="100" alt="AddToHue"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>AddToSaturation</sub></td>
 <td colspan="1"><sub>Grayscale</sub></td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<td colspan="1"><sub>KMeansColorQuantization<br/>(to_colorspace=RGB)</sub></td>
+<td colspan="1"><sub>UniformColorQuantization<br/>(to_colorspace=RGB)</sub></td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/addtohueandsaturation.gif" height="148" width="100" alt="AddToHueAndSaturation"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/addtosaturation.gif" height="148" width="100" alt="AddToSaturation"></td>
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/grayscale.gif" height="148" width="100" alt="Grayscale"></td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/kmeanscolorquantization_to_colorspace_rgb.gif" height="148" width="100" alt="KMeansColorQuantization to_colorspace=RGB"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/uniformcolorquantization_to_colorspace_rgb.gif" height="148" width="100" alt="UniformColorQuantization to_colorspace=RGB"></td>
 <td>&nbsp;</td>
 </tr>
 <tr><td colspan="5"><strong>contrast</strong></td></tr>
@@ -417,6 +434,21 @@ here.
 <td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/directededgedetect_alpha_1.gif" height="148" width="100" alt="DirectedEdgeDetect alpha=1"></td>
 <td>&nbsp;</td>
 </tr>
+<tr><td colspan="5"><strong>edges</strong></td></tr>
+<tr>
+<td colspan="1"><sub>Canny</sub></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/canny.gif" height="148" width="100" alt="Canny"></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
 <tr><td colspan="5"><strong>flip</strong></td></tr>
 <tr>
 <td colspan="2"><sub>Fliplr</sub></td>
@@ -469,17 +501,46 @@ here.
 <td colspan="2"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/rot90.gif" height="148" width="300" alt="Rot90"></td>
 <td>&nbsp;</td>
 </tr>
+<tr><td colspan="5"><strong>pooling</strong></td></tr>
+<tr>
+<td colspan="1"><sub>AveragePooling</sub></td>
+<td colspan="1"><sub>MaxPooling</sub></td>
+<td colspan="1"><sub>MinPooling</sub></td>
+<td colspan="1"><sub>MedianPooling</sub></td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/averagepooling.gif" height="148" width="100" alt="AveragePooling"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/maxpooling.gif" height="148" width="100" alt="MaxPooling"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/minpooling.gif" height="148" width="100" alt="MinPooling"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/medianpooling.gif" height="148" width="100" alt="MedianPooling"></td>
+<td>&nbsp;</td>
+</tr>
 <tr><td colspan="5"><strong>segmentation</strong></td></tr>
 <tr>
 <td colspan="1"><sub>Superpixels<br/>(p_replace=1)</sub></td>
 <td colspan="1"><sub>Superpixels<br/>(n_segments=100)</sub></td>
+<td colspan="1"><sub>UniformVoronoi</sub></td>
+<td colspan="1"><sub>RegularGridVoronoi: rows/cols<br/>(p_drop_points=0)</sub></td>
+<td colspan="1"><sub>RegularGridVoronoi: p_drop_points<br/>(n_rows=n_cols=30)</sub></td>
+</tr>
+<tr>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/superpixels_p_replace_1.gif" height="148" width="100" alt="Superpixels p_replace=1"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/superpixels_n_segments_100.gif" height="148" width="100" alt="Superpixels n_segments=100"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/uniformvoronoi.gif" height="148" width="100" alt="UniformVoronoi"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/regulargridvoronoi_rows_cols_p_drop_points_0.gif" height="148" width="100" alt="RegularGridVoronoi: rows/cols p_drop_points=0"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/regulargridvoronoi_p_drop_points_n_rows_n_cols_30.gif" height="148" width="100" alt="RegularGridVoronoi: p_drop_points n_rows=n_cols=30"></td>
+</tr>
+<tr>
+<td colspan="1"><sub>RegularGridVoronoi: p_replace<br/>(n_rows=n_cols=16)</sub></td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/superpixels_p_replace_1.gif" height="148" width="100" alt="Superpixels p_replace=1"></td>
-<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/superpixels_n_segments_100.gif" height="148" width="100" alt="Superpixels n_segments=100"></td>
+<td colspan="1"><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/augmenter_videos/regulargridvoronoi_p_replace_n_rows_n_cols_16.gif" height="148" width="100" alt="RegularGridVoronoi: p_replace n_rows=n_cols=16"></td>
+<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
@@ -1082,6 +1143,13 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | DirectedEdgeDetect(A, D) | Runs a directed edge detection kernel over each image, which detects each from direction `D` (default: random direction from 0 to 360 degrees, chosen per image). Mixes the result with the original image using alpha `A`. |
 
 
+**edges**
+
+| Augmenter | Description |
+| --- | --- |
+| Canny(A, HT, SK, C) | Applies canny edge detection to each image with hysteresis thresholds `HT` and sobel kernel size `SK`. Converts binary image to color using class `C`. Alpha blends with input image using factor `A`. |
+
+
 **flip**
 
 | Augmenter | Description |
@@ -1119,11 +1187,25 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | ChannelShuffle(P, C) | Permutes the order of the color channels for `P` percent of all images. Shuffles by default all channels, but may restrict to a subset using `C` (list of channel indices). |
 
 
+**pooling**
+
+| Augmenter | Description |
+| --- | --- |
+| AveragePooling(K, KS) | Average-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
+| MaxPooling(K, KS) | Max-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
+| MinPooling(K, KS) | Min-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
+| MedianPooling(K, KS) | Median-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
+
+
 **segmentation**
 
 | Augmenter | Description |
 | --- | --- |
-| Superpixels(P, N, M) | Generates N superpixels of the image at (max) resolution M and resizes back to the original size. Then `P` percent of all superpixel areas in the original image are replaced by the superpixel. (1-P) percent remain unaltered. |
+| Superpixels(P, N, M) | Generates `N` superpixels of the image at (max) resolution `M` and resizes back to the original size. Then `P` percent of all superpixel areas in the original image are replaced by the superpixel. `(1-P)` percent remain unaltered. |
+| Voronoi(PS, P, M) | Queries point sampler `PS` to get coordinates of Voronoi cells. Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
+| UniformVoronoi(N, P, M) | Places `N` Voronoi cells randomly on each image. Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
+| RegularGridVoronoi(H, W, P, M) | Places a regular grid of `HxW` (height x width) Voronoi cells on each image. Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
+| RelativeRegularGridVoronoi(HPC, WPC, P, M) | Places a regular grid of `HPC*H x WPC*W` Voronoi cells on each image (`H`, `W` are the image height and width). Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
 
 
 **size**
@@ -1149,3 +1231,38 @@ or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per ima
 | CloudLayer(IM, IFE, ICS, AMIN, AMUL, ASPXM, AFE, S, DMUL) | Adds a single layer of clouds to an image. `IM` is the mean intensity of the clouds, `IFE` a frequency noise exponent for the intensities (leading to non-uniform colors), `ICS` controls the variance of a gaussian for intensity sampling, `AM` is the minimum opacity of the clouds (values >0 are typical of fog), `AMUL` a multiplier for opacity values, `ASPXM` controls the minimum grid size at which to sample opacity values, `AFE` is a frequency noise exponent for opacity values, `S` controls the sparsity of clouds and `DMUL` is a cloud density multiplier. This interface is not final and will likely change in the future. |
 | Snowflakes(D, DU, FS, FSU, A, S) | Adds snowflakes with density `D`, density uniformity `DU`, snowflake size `FS`, snowflake size uniformity `FSU`, falling angle `A` and speed `S` to an image. One to three layers of snowflakes are added, hence the values should be stochastic. |
 | SnowflakesLayer(D, DU, FS, FSU, A, S, BSF, BSL) | Adds a single layer of snowflakes to an image. See augmenter `Snowflakes`. `BSF` and `BSL` control a gaussian blur applied to the snowflakes. |
+
+
+<a name="citation"/>
+
+## Citation
+
+If this library has helped you during your research, feel free to cite it:
+```latex
+@misc{imgaug,
+  author = {Jung, Alexander B.
+            and Wada, Kentaro
+            and Crall, Jon
+            and Tanaka, Satoshi
+            and Graving, Jake
+            and Yadav, Sarthak
+            and Banerjee, Joy
+            and Vecsei, Gábor
+            and Kraft, Adam
+            and Borovec, Jirka
+            and Vallentin, Christian
+            and Zhydenko, Semen
+            and Pfeiffer, Kilian
+            and Cook, Ben
+            and Fernández, Ismael
+            and Weng Chi-Hung
+            and Ayala-Acevedo, Abner
+            and Meudec, Raphael
+            and Laporte, Matias
+            and others},
+  title = {{imgaug}},
+  howpublished = "\url{https://github.com/aleju/imgaug}",
+  year = {2019},
+  note = "[Online; accessed 14-Sept-2019]"
+}
+```
