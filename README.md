@@ -201,7 +201,7 @@ repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
   simplified augmentation interface.
 * **0.2.8**: Improved performance, dtype support and multicore augmentation.
 
-See [changelog](CHANGELOG.md) for more details.
+See [changelogs/](changelogs/) for more details.
 
 
 <a name="example_images"/>

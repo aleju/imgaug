@@ -6,11 +6,11 @@ maps in a variety of different ways."""
 
 setup(
     name="imgaug",
-    version="0.2.9",
+    version="0.3.0",
     author="Alexander Jung",
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
-    download_url="https://github.com/aleju/imgaug/archive/0.2.9.tar.gz",
+    download_url="https://github.com/aleju/imgaug/archive/0.3.0.tar.gz",
     install_requires=[
         "six",
         "numpy>=1.15",
