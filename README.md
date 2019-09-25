@@ -1337,8 +1337,8 @@ If this library has helped you during your research, feel free to cite it:
             and Laporte, Matias
             and others},
   title = {{imgaug}},
-  howpublished = "\url{https://github.com/aleju/imgaug}",
+  howpublished = {\url{https://github.com/aleju/imgaug}},
   year = {2019},
-  note = "[Online; accessed 14-Sept-2019]"
+  note = {Online; accessed 25-Sept-2019}
 }
 ```
