@@ -2542,7 +2542,7 @@ class Augmenter(object):
         ``A2`` is removed inplace from ``[A1, A2]``, then the children lists
         of ``IfElse(...)`` must also change to ``[A1], [B1, B2, B3]``. This
         is used in
-        :func:`imgaug.augmeneters.meta.Augmenter.remove_augmenters_inplace`.
+        :func:`imgaug.augmeneters.meta.Augmenter.remove_augmenters_`.
 
         Returns
         -------
@@ -2704,6 +2704,8 @@ class Augmenter(object):
             return self.find_augmenters(
                 lambda aug, parents: aug.name in names, flat=flat)
 
+    # TODO remove copy arg
+    # TODO allow first arg to be string name, class type or func
     def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
         """Remove this augmenter or children that match a condition.
 
@@ -2765,11 +2767,17 @@ class Augmenter(object):
                 return None
         else:
             aug = self if not copy else self.deepcopy()
-            aug.remove_augmenters_inplace(func, parents=[])
+            aug.remove_augmenters_(func, parents=[])
             return aug
 
-    # TODO rename to remove_augmenters_()
+    @ia.deprecated("remove_augmenters_")
     def remove_augmenters_inplace(self, func, parents=None):
+        """Old name for :func:`imgaug.meta.Augmenter.remove_augmenters_`."""
+        self.remove_augmenters_(func=func, parents=parents)
+
+    # TODO allow first arg to be string name, class type or func
+    # TODO remove parents arg + add _remove_augmenters_() with parents arg
+    def remove_augmenters_(self, func, parents=None):
         """Remove in-place children of this augmenter that match a condition.
 
         This is functionally identical to
@@ -2795,7 +2803,7 @@ class Augmenter(object):
         >>>     iaa.Fliplr(0.5, name="fliplr"),
         >>>    iaa.Flipud(0.5, name="flipud"),
         >>> ])
-        >>> seq.remove_augmenters_inplace(lambda a, parents: a.name == "fliplr")
+        >>> seq.remove_augmenters_(lambda a, parents: a.name == "fliplr")
 
         This removes the augmenter ``Fliplr`` from the ``Sequential``
         object's children.
@@ -2813,7 +2821,7 @@ class Augmenter(object):
                 del lst[i - count_removed]
 
             for aug in lst:
-                aug.remove_augmenters_inplace(func, subparents)
+                aug.remove_augmenters_(func, subparents)
 
     def copy(self):
         """Create a shallow copy of this Augmenter instance.
