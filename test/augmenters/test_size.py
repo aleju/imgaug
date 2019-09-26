@@ -707,6 +707,47 @@ class TestResize(unittest.TestCase):
         assert params[0].value == 1
         assert params[1].value == "nearest"
 
+    def test_dtypes_roughly(self):
+        # most of the dtype testing is done for imresize_many_images()
+        # so we focus here on a rough test that merely checks if the dtype
+        # does not change
+
+        # these dtypes should be kept in sync with imresize_many_images()
+        dtypes = [
+            "uint8",
+            "uint16",
+            "int8",
+            "int16",
+            "float16",
+            "float32",
+            "float64",
+            "bool"
+        ]
+
+        for dt in dtypes:
+            for ip in ["nearest", "cubic"]:
+                aug = iaa.Resize({"height": 10, "width": 20}, interpolation=ip)
+                for is_list in [False, True]:
+                    with self.subTest(dtype=dt, interpolation=ip,
+                                      is_list=is_list):
+                        image = np.full((9, 19, 3), 1, dtype=dt)
+                        images = [image, image]
+                        if not is_list:
+                            images = np.array(images, dtype=dt)
+
+                        images_aug = aug(images=images)
+
+                        if is_list:
+                            assert isinstance(images_aug, list)
+                        else:
+                            assert ia.is_np_array(images_aug)
+
+                        assert len(images_aug) == 2
+                        for image_aug in images_aug:
+                            assert image_aug.dtype.name == dt
+                            assert image_aug.shape == (10, 20, 3)
+                            assert np.all(image_aug >= 1 - 1e-4)
+
 
 class TestPad(unittest.TestCase):
     def setUp(self):
