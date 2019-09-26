@@ -2192,16 +2192,23 @@ class Augmenter(object):
         aug.deterministic = True
         return aug
 
-    # TODO mark this as in-place
+    @ia.deprecated("imgaug.augmenters.meta.Augmenter.seed_")
     def reseed(self, random_state=None, deterministic_too=False):
-        """Reseed this augmenter and all of its children.
+        """Old name of :func:`imgaug.augmenters.meta.Augmenter.seed_`."""
+        self.seed_(entropy=random_state, deterministic_too=deterministic_too)
+
+    # TODO mark this as in-place
+    def seed_(self, entropy=None, deterministic_too=False):
+        """Seed this augmenter and all of its children.
 
         This method assigns a new random number generator to the
         augmenter and all of its children (if it has any). The new random
-        number generator is derived from the provided one or from the
-        global random number generator.
+        number generator is *derived* from the provided seed or RNG -- or from
+        the global random number generator if ``None`` was provided.
+        Note that as child RNGs are *derived*, they do not all use the same
+        seed.
 
-        If this augmenter or any child augmenter had a random numer generator
+        If this augmenter or any child augmenter had a random number generator
         that pointed to the global random state, it will automatically be
         replaced with a local random state. This is similar to what
         :func:`imgaug.augmenters.meta.Augmenter.localize_random_state`
@@ -2220,7 +2227,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        entropy : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator that is used to derive new
             random number generators for this augmenter and its children.
             If an ``int`` is provided, it will be interpreted as a seed.
@@ -2232,25 +2239,39 @@ class Augmenter(object):
             is deterministic. This is the case both when this augmenter
             object is ``A`` or one of its children is ``A``.
 
+        Examples
+        --------
+        >>> import imgaug.augmenters as iaa
+        >>> aug = iaa.Sequential([
+        >>>     iaa.Crop(px=(0, 10)),
+        >>>     iaa.Crop(px=(0, 10))
+        >>> ])
+        >>> aug.seed_(1)
+
+        Seed an augmentation sequence containing two crop operations. Even
+        though the same seed was used, the two operations will still sample
+        different pixel amounts to crop as the child-specific seed is merely
+        derived from the provided seed.
+
         """
         assert isinstance(deterministic_too, bool), (
             "Expected 'deterministic_too' to be a boolean, got type %s." % (
                 deterministic_too))
 
-        if random_state is None:
+        if entropy is None:
             random_state = iarandom.RNG.create_pseudo_random_()
         else:
-            random_state = iarandom.RNG(random_state)
+            random_state = iarandom.RNG(entropy)
 
         if not self.deterministic or deterministic_too:
-            # note that deriving advances the RNG, so child augmenters get a
-            # different RNG state
+            # note that derive_rng_() (used below) advances the RNG, so
+            # child augmenters get a different RNG state
             self.random_state = random_state.copy()
 
         for lst in self.get_children_lists():
             for aug in lst:
-                aug.reseed(random_state=random_state.derive_rng_(),
-                           deterministic_too=deterministic_too)
+                aug.seed_(entropy=random_state.derive_rng_(),
+                          deterministic_too=deterministic_too)
 
     def localize_random_state(self, recursive=True):
         """Assign augmenter-specific RNGs to this augmenter and its children.

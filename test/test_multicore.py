@@ -592,10 +592,10 @@ class Test_Pool_initialize_worker(unittest.TestCase):
 
         assert mock_time_ns.call_count == 1
         assert mock_ia_seed.call_count == 1
-        assert augseq.reseed.call_count == 1
+        assert augseq.seed_.call_count == 1
 
         seed_global = mock_ia_seed.call_args_list[0][0][0]
-        seed_local = augseq.reseed.call_args_list[0][0][0]
+        seed_local = augseq.seed_.call_args_list[0][0][0]
         assert seed_global != seed_local
 
     @mock.patch.object(sys, 'version_info')
@@ -620,10 +620,10 @@ class Test_Pool_initialize_worker(unittest.TestCase):
 
         assert mock_time.call_count == 1
         assert mock_ia_seed.call_count == 1
-        assert augseq.reseed.call_count == 1
+        assert augseq.seed_.call_count == 1
 
         seed_global = mock_ia_seed.call_args_list[0][0][0]
-        seed_local = augseq.reseed.call_args_list[0][0][0]
+        seed_local = augseq.seed_.call_args_list[0][0][0]
         assert seed_global != seed_local
 
     @mock.patch("imgaug.random.seed")
@@ -635,9 +635,9 @@ class Test_Pool_initialize_worker(unittest.TestCase):
         multicore._Pool_initialize_worker(augseq, None)
 
         seed_global_call_1 = mock_ia_seed.call_args_list[0][0][0]
-        seed_local_call_1 = augseq.reseed.call_args_list[0][0][0]
+        seed_local_call_1 = augseq.seed_.call_args_list[0][0][0]
         seed_global_call_2 = mock_ia_seed.call_args_list[0][0][0]
-        seed_local_call_2 = augseq.reseed.call_args_list[0][0][0]
+        seed_local_call_2 = augseq.seed_.call_args_list[0][0][0]
         assert (
             seed_global_call_1
             != seed_local_call_1
@@ -647,7 +647,7 @@ class Test_Pool_initialize_worker(unittest.TestCase):
             seed_global_call_1, seed_local_call_1,
             seed_global_call_2, seed_local_call_2)
         assert mock_ia_seed.call_count == 2
-        assert augseq.reseed.call_count == 2
+        assert augseq.seed_.call_count == 2
 
 
 # This should already be part of the Pool tests, but according to codecov
@@ -703,7 +703,7 @@ class Test_Pool_worker(unittest.TestCase):
         assert augseq.augment_batch.call_count == 1
         augseq.augment_batch.assert_called_once_with(batch)
         mock_ia_seed.assert_called_once_with(seed_global_expected)
-        augseq.reseed.assert_called_once_with(seed_local_expected)
+        augseq.seed_.assert_called_once_with(seed_local_expected)
 
 
 # This should already be part of the Pool tests, but according to codecov
