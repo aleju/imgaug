@@ -778,6 +778,46 @@ class BoundingBox(object):
             Keypoint(x=self.x1, y=self.y2)
         ]
 
+    def coords_almost_equals(self, other, max_distance=1e-4):
+        """Estimate if this and another BB have almost identical coordinates.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.polys.BoundingBox or iterable
+            The other bounding box with which to compare this one.
+            If this is an ``iterable``, it is assumed to represent the top-left
+            and bottom-right coordinates of that bounding box, given as e.g.
+            an ``(2,2)`` ndarray or an ``(4,)`` ndarray or as a similar list.
+
+        max_distance : number, optional
+            The maximum euclidean distance between a corner on one bounding
+            box and the closest corner on the other bounding box. If the
+            distance is exceeded for any such pair, the two BBs are not
+            viewed as equal.
+
+        Returns
+        -------
+        bool
+            Whether the two bounding boxes have almost identical corner
+            coordinates.
+
+        """
+        if ia.is_np_array(other):
+            # we use flat here in case other is (N,2) instead of (4,)
+            coords_b = other.flat
+        elif ia.is_iterable(other):
+            coords_b = list(ia.flatten(other))
+        else:
+            assert isinstance(other, BoundingBox), (
+                "Expected 'other' to be an iterable containing two "
+                "(x,y)-coordinate pairs or a BoundingBox. "
+                "Got type %s." % (type(other),))
+            coords_b = other.coords.flat
+
+        coords_a = self.coords
+
+        return np.allclose(coords_a.flat, coords_b, atol=max_distance, rtol=0)
+
     def copy(self, x1=None, y1=None, x2=None, y2=None, label=None):
         """Create a shallow copy of this BoundingBox instance.
 

@@ -1007,7 +1007,7 @@ class Polygon(object):
             The maximum euclidean distance between a point on one polygon and
             the closest point on the other polygon. If the distance is exceeded
             for any such pair, the two exteriors are not viewed as equal. The
-            points are other the points contained in the polygon's exterior
+            points are either the points contained in the polygon's exterior
             ndarray or interpolated points between these.
 
         points_per_edge : int, optional

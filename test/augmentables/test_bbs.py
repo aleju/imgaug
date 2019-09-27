@@ -710,6 +710,78 @@ class TestBoundingBox(unittest.TestCase):
         assert kps[3].y == 3
         assert kps[3].x == 1
 
+    def test_coords_almost_equals(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        equal = bb.coords_almost_equals(other)
+
+        assert equal
+
+    def test_coords_almost_equals__unequal(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1+1, y1=3+1, x2=1+1, y2=3+1)
+
+        equal = bb.coords_almost_equals(other)
+
+        assert not equal
+
+    def test_coords_almost_equals__dist_below_max_distance(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3+1e-5)
+
+        equal = bb.coords_almost_equals(other, max_distance=1e-4)
+
+        assert equal
+
+    def test_coords_almost_equals__dist_above_max_distance(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3+1e-3)
+
+        equal = bb.coords_almost_equals(other, max_distance=1e-4)
+
+        assert not equal
+
+    def test_coords_almost_equals__input_is_array(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = np.float32([[1, 3], [1, 3]])
+
+        equal = bb.coords_almost_equals(other)
+
+        assert equal
+
+    def test_coords_almost_equals__input_is_array_not_equal(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = np.float32([[1, 3], [1, 3+0.5]])
+
+        equal = bb.coords_almost_equals(other)
+
+        assert not equal
+
+    def test_coords_almost_equals__input_is_list(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = [[1, 3], [1, 3]]
+
+        equal = bb.coords_almost_equals(other)
+
+        assert equal
+
+    def test_coords_almost_equals__input_is_list_not_equal(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = [[1, 3], [1, 3+0.5]]
+
+        equal = bb.coords_almost_equals(other)
+
+        assert not equal
+
+    def test_coords_almost_equals__bad_datatype(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        with self.assertRaises(AssertionError) as cm:
+            _ = bb.coords_almost_equals(False)
+
+        assert "Expected 'other'" in str(cm.exception)
+
     def test_copy(self):
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label="test")
 
