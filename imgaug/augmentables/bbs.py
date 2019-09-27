@@ -783,7 +783,7 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        other : imgaug.augmentables.polys.BoundingBox or iterable
+        other : imgaug.augmentables.bbs.BoundingBox or iterable
             The other bounding box with which to compare this one.
             If this is an ``iterable``, it is assumed to represent the top-left
             and bottom-right coordinates of that bounding box, given as e.g.
@@ -827,7 +827,7 @@ class BoundingBox(object):
 
         Parameters
         ----------
-        other : imgaug.augmentables.polys.BoundingBox or iterable
+        other : imgaug.augmentables.bbs.BoundingBox or iterable
             The other object to compare against. Expected to be a
             ``BoundingBox``.
 
