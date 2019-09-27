@@ -1046,9 +1046,8 @@ class Polygon(object):
 
         Parameters
         ----------
-        other : imgaug.augmentables.polys.Polygon or any
-            The object to compare against. If not a :class:`Polygon`,
-            ``False`` will always be returned.
+        other : imgaug.augmentables.polys.Polygon
+            The other object to compare against. Expected to be a ``Polygon``.
 
         max_distance : float, optional
             See
@@ -1061,19 +1060,12 @@ class Polygon(object):
         Returns
         -------
         bool
-            Whether the two polygons can be viewed as equal. In the case of
-            the exteriors this is an approximate test.
+            ``True`` if the coordinates are almost equal and additionally
+            the labels are equal. Otherwise ``False``.
 
         """
-        if not isinstance(other, Polygon):
+        if self.label != other.label:
             return False
-        if self.label is not None or other.label is not None:
-            if self.label is None:
-                return False
-            if other.label is None:
-                return False
-            if self.label != other.label:
-                return False
         return self.exterior_almost_equals(
             other, max_distance=max_distance, points_per_edge=points_per_edge)
 

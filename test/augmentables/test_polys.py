@@ -1935,10 +1935,6 @@ class TestPolygon_almost_equals(unittest.TestCase):
         poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
         assert not poly_a.almost_equals(poly_b)
 
-    def test_other_polygon_is_wrong_datatype(self):
-        poly_a = ia.Polygon([(0, 0)])
-        assert not poly_a.almost_equals("foo")
-
 
 # TODO add test for _convert_points_to_shapely_line_string
 

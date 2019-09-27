@@ -782,6 +782,48 @@ class TestBoundingBox(unittest.TestCase):
 
         assert "Expected 'other'" in str(cm.exception)
 
+    @mock.patch("imgaug.augmentables.bbs.BoundingBox.coords_almost_equals")
+    def test_almost_equals(self, mock_cae):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        equal = bb.almost_equals(other, max_distance=1)
+
+        assert equal
+        mock_cae.assert_called_once_with(other, max_distance=1)
+
+    def test_almost_equals__labels_none_vs_string(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        equal = bb.almost_equals(other)
+
+        assert not equal
+
+    def test_almost_equals__labels_different_strings(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="bar")
+
+        equal = bb.almost_equals(other)
+
+        assert not equal
+
+    def test_almost_equals__same_string(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+
+        equal = bb.almost_equals(other)
+
+        assert equal
+
+    def test_almost_equals__distance_above_threshold(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3+1e-1, label="foo")
+
+        equal = bb.almost_equals(other, max_distance=1e-2)
+
+        assert not equal
+
     def test_copy(self):
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label="test")
 

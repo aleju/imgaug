@@ -818,6 +818,34 @@ class BoundingBox(object):
 
         return np.allclose(coords_a.flat, coords_b, atol=max_distance, rtol=0)
 
+    def almost_equals(self, other, max_distance=1e-4):
+        """Compare this and another BB's label and coordinates.
+
+        This is the same as
+        :func:`imgaug.augmentables.bbs.BoundingBox.coords_almost_equals` but
+        additionally compares the labels.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.polys.BoundingBox or iterable
+            The other object to compare against. Expected to be a
+            ``BoundingBox``.
+
+        max_distance : number, optional
+            See
+            :func:`imgaug.augmentables.bbs.BoundingBox.coords_almost_equals`.
+
+        Returns
+        -------
+        bool
+            ``True`` if the coordinates are almost equal and additionally
+            the labels are equal. Otherwise ``False``.
+
+        """
+        if self.label != other.label:
+            return False
+        return self.coords_almost_equals(other, max_distance=max_distance)
+
     def copy(self, x1=None, y1=None, x2=None, y2=None, label=None):
         """Create a shallow copy of this BoundingBox instance.
 
