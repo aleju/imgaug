@@ -83,6 +83,21 @@ class Keypoint(object):
         self.y = y
 
     @property
+    def coords(self):
+        """Get the xy-coordinates as an ``(N,2)`` ndarray.
+
+        Returns
+        -------
+        ndarray
+            An ``(N, 2)`` ``float32`` ndarray with ``N=1`` containing the
+            coordinates of this keypoints.
+
+        """
+        arr = np.empty((1, 2), dtype=np.float32)
+        arr[0, :] = [self.x, self.y]
+        return arr
+
+    @property
     def x_int(self):
         """Get the keypoint's x-coordinate, rounded to the closest integer.
 

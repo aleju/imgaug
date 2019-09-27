@@ -35,6 +35,11 @@ class TestKeypoint(unittest.TestCase):
         assert np.isclose(kp.y, 1.5)
         assert np.isclose(kp.x, 2.5)
 
+    def test_coords(self):
+        kp = ia.Keypoint(x=1, y=1.5)
+        coords = kp.coords
+        assert np.allclose(coords, [1, 1.5], atol=1e-8, rtol=0)
+
     def test_x_int(self):
         kp = ia.Keypoint(y=1, x=2)
         assert kp.x == 2

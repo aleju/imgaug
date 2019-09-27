@@ -13,3 +13,4 @@
 * Added method `Polygon.coords_almost_equals(other)`. Alias for
   `Polygon.exterior_almost_equals(other)`.
 * Added property `Polygon.coords`. Alias for `Polygon.exterior`.
+* Added property `Keypoint.coords`.
