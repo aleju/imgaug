@@ -237,6 +237,21 @@ class TestKeypoint(unittest.TestCase):
 
 
 class TestKeypointsOnImage(unittest.TestCase):
+    def test_items(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(40, 50, 3))
+
+        items = kpsoi.items
+
+        assert items == kps
+
+    def test_items_empty(self):
+        kpsoi = ia.KeypointsOnImage([], shape=(40, 50, 3))
+
+        items = kpsoi.items
+
+        assert items == []
+
     def test_height(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))

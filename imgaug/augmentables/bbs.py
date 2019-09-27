@@ -957,6 +957,18 @@ class BoundingBoxesOnImage(object):
         self.bounding_boxes = bounding_boxes
         self.shape = normalize_shape(shape)
 
+    @property
+    def items(self):
+        """Get the bounding boxes in this container.
+
+        Returns
+        -------
+        list of BoundingBox
+            Bounding boxes within this container.
+
+        """
+        return self.bounding_boxes
+
     # TODO remove this? here it is image height, but in BoundingBox it is
     #      bounding box height
     @property

@@ -2013,6 +2013,27 @@ class TestPolygonsOnImage___init__(unittest.TestCase):
         assert poly_oi.shape == (10, 11)
 
 
+class TestPolygonsOnImage_items(unittest.TestCase):
+    def test_with_two_polygons(self):
+        poly1 = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        poly2 = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        psoi = ia.PolygonsOnImage(
+            [poly1, poly2],
+            shape=(10, 10, 3)
+        )
+
+        items = psoi.items
+
+        assert items == [poly1, poly2]
+
+    def test_items_empty(self):
+        psoi = ia.PolygonsOnImage([], shape=(40, 50, 3))
+
+        items = psoi.items
+
+        assert items == []
+
+
 class TestPolygonsOnImage_empty(unittest.TestCase):
     def test_with_multiple_polygons(self):
         poly_oi = ia.PolygonsOnImage(

@@ -407,6 +407,18 @@ class KeypointsOnImage(object):
         self.shape = normalize_shape(shape)
 
     @property
+    def items(self):
+        """Get the keypoints in this container.
+
+        Returns
+        -------
+        list of Keypoint
+            Keypoints within this container.
+
+        """
+        return self.keypoints
+
+    @property
     def height(self):
         return self.shape[0]
 

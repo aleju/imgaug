@@ -1157,6 +1157,18 @@ class PolygonsOnImage(object):
         self.shape = normalize_shape(shape)
 
     @property
+    def items(self):
+        """Get the polygons in this container.
+
+        Returns
+        -------
+        list of Polygon
+            Polygons within this container.
+
+        """
+        return self.polygons
+
+    @property
     def empty(self):
         """Estimate whether this object contains zero polygons.
 

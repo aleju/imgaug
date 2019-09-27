@@ -7,3 +7,6 @@
 * Added method `BoundingBox.almost_equals(other)`.
 * Changed method `Polygon.almost_equals(other)` to no longer verify the
   datatype. It is assumed now that the input is a Polygon.
+* Added property `items` to `KeypointsOnImage`, `BoundingBoxesOnImage`,
+  `PolygonsOnImage`, `LineStringsOnImage`. The property returns the
+  keypoints/BBs/polygons/LineStrings contained by that instance.

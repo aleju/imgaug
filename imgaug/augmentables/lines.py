@@ -1555,6 +1555,18 @@ class LineStringsOnImage(object):
         self.shape = normalize_shape(shape)
 
     @property
+    def items(self):
+        """Get the line strings in this container.
+
+        Returns
+        -------
+        list of LineString
+            Line strings within this container.
+
+        """
+        return self.line_strings
+
+    @property
     def empty(self):
         """Estimate whether this object contains zero line strings.
 

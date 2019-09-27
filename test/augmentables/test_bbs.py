@@ -908,6 +908,22 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert bbsoi.bounding_boxes == [bb1, bb2]
         assert bbsoi.shape == (40, 50, 3)
 
+    def test_items(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        items = bbsoi.items
+
+        assert items == [bb1, bb2]
+
+    def test_items_empty(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(40, 50, 3))
+
+        items = bbsoi.items
+
+        assert items == []
+
     def test_height(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
