@@ -976,6 +976,34 @@ class Polygon(object):
                                in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
 
+    def coords_almost_equals(self, other, max_distance=1e-4,
+                             points_per_edge=8):
+        """Alias for :func:`Polygon.exterior_almost_equals`.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.polys.Polygon or (N,2) ndarray or list of tuple
+            See
+            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        max_distance : number, optional
+            See
+            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        points_per_edge : int, optional
+            See
+            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        Returns
+        -------
+        bool
+            Whether the two polygon's exteriors can be viewed as equal
+            (approximate test).
+
+        """
+        return self.exterior_almost_equals(
+            other, max_distance=max_distance, points_per_edge=points_per_edge)
+
     def exterior_almost_equals(self, other, max_distance=1e-4,
                                points_per_edge=8):
         """Estimate if this and another polygon's exterior are almost identical.

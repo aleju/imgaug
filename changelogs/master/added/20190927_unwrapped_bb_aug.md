@@ -10,3 +10,5 @@
 * Added property `items` to `KeypointsOnImage`, `BoundingBoxesOnImage`,
   `PolygonsOnImage`, `LineStringsOnImage`. The property returns the
   keypoints/BBs/polygons/LineStrings contained by that instance.
+* Added method `Polygon.coords_almost_equals(other)`. Alias for
+  `Polygon.exterior_almost_equals(other)`.

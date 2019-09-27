@@ -1677,6 +1677,33 @@ class TestPolygon___repr___and___str__(unittest.TestCase):
         assert poly.__str__() == expected
 
 
+class TestPolygon_coords_almost_equals(unittest.TestCase):
+    @mock.patch("imgaug.augmentables.polys.Polygon.exterior_almost_equals")
+    def test_calls_exterior_almost_equals(self, mock_eae):
+        mock_eae.return_value = "foo"
+        poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        poly_b = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        result = poly_a.coords_almost_equals(poly_b)
+
+        assert result == "foo"
+        mock_eae.assert_called_once_with(poly_b, max_distance=1e-4,
+                                         points_per_edge=8)
+
+    @mock.patch("imgaug.augmentables.polys.Polygon.exterior_almost_equals")
+    def test_calls_exterior_almost_equals__no_defaults(self, mock_eae):
+        mock_eae.return_value = "foo"
+        poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        poly_b = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        result = poly_a.coords_almost_equals(poly_b, max_distance=1,
+                                             points_per_edge=2)
+
+        assert result == "foo"
+        mock_eae.assert_called_once_with(poly_b, max_distance=1,
+                                         points_per_edge=2)
+
+
 class TestPolygon_exterior_almost_equals(unittest.TestCase):
     def test_exactly_same_exterior(self):
         # exactly same exterior
