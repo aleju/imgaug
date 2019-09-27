@@ -224,6 +224,70 @@ class TestKeypoint(unittest.TestCase):
                 in kps_manhatten
             ])
 
+    def test_coords_almost_equals(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert equal
+
+    def test_coords_almost_equals__unequal(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5+10.0)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert not equal
+
+    def test_coords_almost_equals__distance_below_threshold(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5+1e-2)
+
+        equal = kp1.coords_almost_equals(kp2, max_distance=1e-1)
+
+        assert equal
+
+    def test_coords_almost_equals__distance_exceeds_threshold(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5+1e-2)
+
+        equal = kp1.coords_almost_equals(kp2, max_distance=1e-3)
+
+        assert not equal
+
+    def test_coords_almost_equals__array(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = np.float32([1, 1.5])
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert equal
+
+    def test_coords_almost_equals__array_unequal(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = np.float32([1, 1.5+1.0])
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert not equal
+
+    def test_coords_almost_equals__tuple(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = (1, 1.5)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert equal
+
+    def test_coords_almost_equals__tuple_unequal(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = (1, 1.5+1.0)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert not equal
+
     def test_string_conversion_ints(self):
         kp = ia.Keypoint(y=1, x=2)
         assert (
