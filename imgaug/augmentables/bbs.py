@@ -54,6 +54,22 @@ class BoundingBox(object):
         self.label = label
 
     @property
+    def coords(self):
+        """Get the top-left and bottom-right coordinates as one array.
+
+        Returns
+        -------
+        ndarray
+            A ``(N, 2)`` numpy array with ``N=2`` containing the top-left
+            and bottom-right coordinates.
+
+        """
+        arr = np.empty((2, 2), dtype=np.float32)
+        arr[0, :] = (self.x1, self.y1)
+        arr[1, :] = (self.x2, self.y2)
+        return arr
+
+    @property
     def x1_int(self):
         """Get the x-coordinate of the top left corner as an integer.
 

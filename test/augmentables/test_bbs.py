@@ -59,6 +59,18 @@ class TestBoundingBox(unittest.TestCase):
         assert bb.y2 == 30
         assert bb.x2 == 40
 
+    def test_coords_property_ints(self):
+        bb = ia.BoundingBox(x1=10, y1=20, x2=30, y2=40)
+        coords = bb.coords
+        assert np.allclose(coords, [[10, 20], [30, 40]],
+                           atol=1e-4, rtol=0)
+
+    def test_coords_property_floats(self):
+        bb = ia.BoundingBox(x1=10.1, y1=20.2, x2=30.3, y2=40.4)
+        coords = bb.coords
+        assert np.allclose(coords, [[10.1, 20.2], [30.3, 40.4]],
+                           atol=1e-4, rtol=0)
+
     def test_xy_int_properties(self):
         bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         assert bb.y1_int == 10
