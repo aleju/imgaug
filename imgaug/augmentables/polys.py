@@ -87,6 +87,19 @@ class Polygon(object):
         self.label = label
 
     @property
+    def coords(self):
+        """Alias for attribute ``exterior``.
+
+        Returns
+        -------
+        ndarray
+            An ``(N, 2)`` ``float32`` ndarray containing the coordinates of
+            this polygon. This identical to the attribute ``exterior``.
+
+        """
+        return self.exterior
+
+    @property
     def xx(self):
         """Get the x-coordinates of all points on the exterior.
 

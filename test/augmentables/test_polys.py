@@ -135,6 +135,12 @@ class TestPolygon___init__(unittest.TestCase):
         assert poly.label == "test"
 
 
+class TestPolygon_coords(unittest.TestCase):
+    def test_with_three_points(self):
+        poly = ia.Polygon([(0, 0), (1, 0.5), (1.5, 2.0)])
+        assert poly.coords is poly.exterior
+
+
 class TestPolygon_xx(unittest.TestCase):
     def test_filled_polygon(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1.5, 0), (4.1, 1), (2.9, 2.0)])
