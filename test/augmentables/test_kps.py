@@ -288,6 +288,17 @@ class TestKeypoint(unittest.TestCase):
 
         assert not equal
 
+    @mock.patch("imgaug.augmentables.kps.Keypoint.coords_almost_equals")
+    def test_almost_equals(self, mock_cae):
+        mock_cae.return_value = "foo"
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5)
+
+        result = kp1.almost_equals(kp2, max_distance=2)
+
+        assert result == "foo"
+        mock_cae.assert_called_once_with(kp2, max_distance=2)
+
     def test_string_conversion_ints(self):
         kp = ia.Keypoint(y=1, x=2)
         assert (

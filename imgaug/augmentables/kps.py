@@ -382,6 +382,32 @@ class Keypoint(object):
 
         return np.allclose(coords_a.flat, coords_b, atol=max_distance, rtol=0)
 
+    def almost_equals(self, other, max_distance=1e-4):
+        """Compare this and another KP's coordinates.
+
+        .. note ::
+
+            This method is currently identical to ``coords_almost_equals``.
+            It exists for consistency with ``BoundingBox`` and ``Polygons``.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.kps.Keypoint or iterable
+            The other object to compare against. Expected to be a
+            ``Keypoint``.
+
+        max_distance : number, optional
+            See
+            :func:`imgaug.augmentables.kps.Keypoint.coords_almost_equals`.
+
+        Returns
+        -------
+        bool
+            ``True`` if the coordinates are almost equal. Otherwise ``False``.
+
+        """
+        return self.coords_almost_equals(other, max_distance=max_distance)
+
     def copy(self, x=None, y=None):
         """Create a shallow copy of the keypoint instance.
 
