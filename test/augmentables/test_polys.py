@@ -1807,7 +1807,7 @@ class TestPolygon_exterior_almost_equals(unittest.TestCase):
         poly_b = ia.Polygon([(0, 0), (1, 0)])
         assert not poly_a.exterior_almost_equals(poly_b)
 
-    def test_one_polygon_one_point_other_two_points(self):
+    def test_one_polygon_one_point_other_two_points_2(self):
         poly_a = ia.Polygon([(0, 0)])
         poly_b = ia.Polygon([(0, 0), (1, 0)])
         assert not poly_a.exterior_almost_equals(poly_b)
