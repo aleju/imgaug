@@ -7216,21 +7216,30 @@ class TestChannelShuffle(unittest.TestCase):
         kpsoi = ia.KeypointsOnImage([
             ia.Keypoint(x=3, y=1), ia.Keypoint(x=2, y=4)
         ], shape=(10, 10, 3))
+
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
-        assert kpsoi_aug.shape == (10, 10, 3)
-        assert np.allclose(kpsoi_aug.keypoints[0].x, 3)
-        assert np.allclose(kpsoi_aug.keypoints[0].y, 1)
-        assert np.allclose(kpsoi_aug.keypoints[1].x, 2)
-        assert np.allclose(kpsoi_aug.keypoints[1].y, 4)
+
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
 
     def test_polygons_must_not_change(self):
         aug = iaa.ChannelShuffle(p=1.0)
         psoi = ia.PolygonsOnImage([
             ia.Polygon([(0, 0), (5, 0), (5, 5)])
         ], shape=(10, 10, 3))
+
         psoi_aug = aug.augment_polygons(psoi)
-        assert psoi_aug.shape == (10, 10, 3)
-        assert psoi_aug.polygons[0].exterior_almost_equals(psoi.polygons[0])
+
+        assert_cbaois_equal(psoi_aug, psoi)
+
+    def test_bounding_boxes_must_not_change(self):
+        aug = iaa.ChannelShuffle(p=1.0)
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)
+        ], shape=(10, 10, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, bbsoi)
 
     def test_zero_sized_axes(self):
         shapes = [
