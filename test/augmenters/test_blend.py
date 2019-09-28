@@ -22,7 +22,8 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import blend
-from imgaug.testutils import keypoints_equal, reseed
+from imgaug.testutils import (
+    keypoints_equal, reseed, assert_cbaois_equal, shift_cbaoi)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
@@ -776,29 +777,12 @@ class TestAlpha(unittest.TestCase):
     # covers keypoints, polygons and bounding boxes.
 
     @classmethod
-    def _compare_cbaois(cls, observed, expected):
-        assert len(observed) == 1
-        assert len(observed[0].items) == len(expected.items)
-        assert observed[0].shape == expected.shape
-        for item_a, item_b in zip(observed[0].items, expected.items):
-            assert item_a.coords_almost_equals(item_b)
-        if isinstance(expected, ia.PolygonsOnImage):
-            for item in observed[0].items:
-                assert item.is_valid
-
-    @classmethod
-    def _shift_cbaoi(cls, cbaoi, top=0, right=0, bottom=0, left=0):
-        if isinstance(cbaoi, ia.KeypointsOnImage):
-            return cbaoi.shift(x=left-right, y=top-bottom)
-        return cbaoi.shift(top=top, right=right, bottom=bottom, left=left)
-
-    @classmethod
     def _test_cba_factor_is_1(cls, augf_name, cbaoi):
         aug = iaa.Alpha(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        cls._compare_cbaois(observed, cbaoi)
+        assert_cbaois_equal(observed[0], cbaoi)
 
     @classmethod
     def _test_cba_factor_is_0501(cls, augf_name, cbaoi):
@@ -806,7 +790,7 @@ class TestAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        cls._compare_cbaois(observed, cbaoi)
+        assert_cbaois_equal(observed[0], cbaoi)
 
     @classmethod
     def _test_cba_factor_is_0(cls, augf_name, cbaoi):
@@ -814,8 +798,8 @@ class TestAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = cls._shift_cbaoi(cbaoi, left=1)
-        cls._compare_cbaois(observed, expected)
+        expected = shift_cbaoi(cbaoi, left=1)
+        assert_cbaois_equal(observed[0], expected)
 
     @classmethod
     def _test_cba_factor_is_0499(cls, augf_name, cbaoi):
@@ -823,8 +807,8 @@ class TestAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = cls._shift_cbaoi(cbaoi, left=1)
-        cls._compare_cbaois(observed, expected)
+        expected = shift_cbaoi(cbaoi, left=1)
+        assert_cbaois_equal(observed[0], expected)
 
     @classmethod
     def _test_cba_factor_is_1_and_per_channel(cls, augf_name, cbaoi):
@@ -836,7 +820,7 @@ class TestAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        cls._compare_cbaois(observed, cbaoi)
+        assert_cbaois_equal(observed[0], cbaoi)
 
     @classmethod
     def _test_cba_factor_is_0_and_per_channel(cls, augf_name, cbaoi):
@@ -848,8 +832,8 @@ class TestAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = cls._shift_cbaoi(cbaoi, left=1)
-        cls._compare_cbaois(observed, expected)
+        expected = shift_cbaoi(cbaoi, left=1)
+        assert_cbaois_equal(observed[0], expected)
 
     @classmethod
     def _test_cba_factor_is_choice_around_050_and_per_channel(
@@ -860,7 +844,7 @@ class TestAlpha(unittest.TestCase):
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
         expected_same = cbaoi.deepcopy()
-        expected_shifted = cls._shift_cbaoi(cbaoi, left=1)
+        expected_shifted = shift_cbaoi(cbaoi, left=1)
         seen = [0, 0, 0]
         for _ in sm.xrange(200):
             observed = getattr(aug, augf_name)([cbaoi])[0]
@@ -1378,23 +1362,6 @@ class TestAlphaElementwise(unittest.TestCase):
             "augment_bounding_boxes", self.bbsoi)
 
     @classmethod
-    def _compare_cbaois(cls, observed, expected):
-        assert len(observed) == 1
-        assert len(observed[0].items) == len(expected.items)
-        assert observed[0].shape == expected.shape
-        for item_a, item_b in zip(observed[0].items, expected.items):
-            assert item_a.coords_almost_equals(item_b)
-        if isinstance(expected, ia.PolygonsOnImage):
-            for item in observed[0].items:
-                assert item.is_valid
-
-    @classmethod
-    def _shift_cbaoi(cls, cbaoi, top=0, right=0, bottom=0, left=0):
-        if isinstance(cbaoi, ia.KeypointsOnImage):
-            return cbaoi.shift(x=left-right, y=top-bottom)
-        return cbaoi.shift(top=top, right=right, bottom=bottom, left=left)
-
-    @classmethod
     def _test_cba_factor_is_1(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             1.0,
@@ -1403,7 +1370,7 @@ class TestAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        cls._compare_cbaois(observed, cbaoi)
+        assert_cbaois_equal(observed[0], cbaoi)
 
     @classmethod
     def _test_cba_factor_is_0501(cls, augf_name, cbaoi):
@@ -1414,7 +1381,7 @@ class TestAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        cls._compare_cbaois(observed, cbaoi)
+        assert_cbaois_equal(observed[0], cbaoi)
 
     @classmethod
     def _test_cba_factor_is_0(cls, augf_name, cbaoi):
@@ -1425,8 +1392,8 @@ class TestAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = cls._shift_cbaoi(cbaoi, left=1)
-        cls._compare_cbaois(observed, expected)
+        expected = shift_cbaoi(cbaoi, left=1)
+        assert_cbaois_equal(observed[0], expected)
 
     @classmethod
     def _test_cba_factor_is_0499(cls, augf_name, cbaoi):
@@ -1437,8 +1404,8 @@ class TestAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = cls._shift_cbaoi(cbaoi, left=1)
-        cls._compare_cbaois(observed, expected)
+        expected = shift_cbaoi(cbaoi, left=1)
+        assert_cbaois_equal(observed[0], expected)
 
     @classmethod
     def _test_cba_factor_is_1_and_per_channel(cls, augf_name, cbaoi):
@@ -1450,7 +1417,7 @@ class TestAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        cls._compare_cbaois(observed, cbaoi)
+        assert_cbaois_equal(observed[0], cbaoi)
 
     @classmethod
     def _test_cba_factor_is_0_and_per_channel(cls, augf_name, cbaoi):
@@ -1462,8 +1429,8 @@ class TestAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = cls._shift_cbaoi(cbaoi, left=1)
-        cls._compare_cbaois(observed, expected)
+        expected = shift_cbaoi(cbaoi, left=1)
+        assert_cbaois_equal(observed[0], expected)
 
     @classmethod
     def _test_cba_factor_is_choice_around_050_and_per_channel(
@@ -1475,7 +1442,7 @@ class TestAlphaElementwise(unittest.TestCase):
             per_channel=True)
 
         expected_same = cbaoi.deepcopy()
-        expected_shifted = cls._shift_cbaoi(cbaoi, left=1)
+        expected_shifted = shift_cbaoi(cbaoi, left=1)
 
         nb_iterations = 400
         seen = [0, 0, 0]

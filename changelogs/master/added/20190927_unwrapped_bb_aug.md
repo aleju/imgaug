@@ -16,3 +16,5 @@
 * Added property `Keypoint.coords`.
 * Added method `Keypoint.coords_almost_equals(other)`.
 * Added method `Keypoint.almost_equals(other)`.
+* Added method `imgaug.testutils.assert_cbaois_equal()`.
+* Added method `imgaug.testutils.shift_cbaoi()`.
