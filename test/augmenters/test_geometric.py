@@ -3980,18 +3980,11 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
 
-        assert kpsoi_aug.shape == (14, 14, 3)
-        assert np.allclose(kpsoi_aug.keypoints[0].x, 5)
-        assert np.allclose(kpsoi_aug.keypoints[0].y, 3)
-        assert np.allclose(kpsoi_aug.keypoints[1].x, 3)
-        assert np.allclose(kpsoi_aug.keypoints[1].y, 8)
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
 
     def test_scale_is_zero_polygons(self):
         # scale 0
         aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
-        img = np.zeros((100, 80), dtype=np.uint8)
-        img[:, 10-5:10+5] = 255
-        img[:, 70-5:70+5] = 255
         exterior = [(10, 10),
                     (70, 10), (70, 20), (70, 30), (70, 40),
                     (70, 50), (70, 60), (70, 70), (70, 80),
@@ -4001,15 +3994,22 @@ class TestPiecewiseAffine(unittest.TestCase):
                     (10, 40), (10, 30), (10, 20), (10, 10)]
         poly = ia.Polygon(exterior)
         psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
-                                  shape=img.shape)
+                                  shape=(100, 80))
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == img.shape
-        assert observed.polygons[0].exterior_almost_equals(psoi.polygons[0])
-        assert observed.polygons[1].exterior_almost_equals(psoi.polygons[1])
-        assert observed.polygons[0].is_valid
-        assert observed.polygons[1].is_valid
+        assert_cbaois_equal(observed, psoi)
+
+    def test_scale_is_zero_bounding_boxes(self):
+        # scale 0
+        aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
+        bb = ia.BoundingBox(x1=10, y1=10, x2=70, y2=20)
+        bbsoi = ia.BoundingBoxesOnImage([bb, bb.shift(left=1, top=1)],
+                                        shape=(100, 80))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     def test_scale_stronger_values_should_increase_changes_images(self):
         # stronger scale should lead to stronger changes
@@ -4266,7 +4266,6 @@ class TestPiecewiseAffine(unittest.TestCase):
         psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
                                   shape=img.shape)
 
-        # alignment
         aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
         aug_det = aug.to_deterministic()
 
@@ -4281,6 +4280,41 @@ class TestPiecewiseAffine(unittest.TestCase):
                     x = int(np.round(point_aug[0]))
                     y = int(np.round(point_aug[1]))
                     assert observed_img[y, x] > 0
+
+    def test_scale_alignment_between_images_and_bounding_boxes(self):
+        img = np.zeros((100, 80), dtype=np.uint8)
+        s = 0
+        img[10-s:10+s+1, 20-s:20+s+1] = 255
+        img[60-s:60+s+1, 70-s:70+s+1] = 255
+        bb = ia.BoundingBox(y1=10, x1=20, y2=60, x2=70)
+        bbsoi = ia.BoundingBoxesOnImage([bb], shape=img.shape)
+
+        aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
+
+        observed_imgs, observed_bbsois = aug(
+            images=[img], bounding_boxes=[bbsoi])
+
+        for observed_img, observed_bbsoi in zip(observed_imgs, observed_bbsois):
+            assert observed_bbsoi.shape == img.shape
+
+            observed_img_x = np.max(observed_img, axis=0)
+            observed_img_y = np.max(observed_img, axis=1)
+
+            nonz_x = np.nonzero(observed_img_x)[0]
+            nonz_y = np.nonzero(observed_img_y)[0]
+
+            img_x1 = min(nonz_x)
+            img_x2 = max(nonz_x)
+            img_y1 = min(nonz_y)
+            img_y2 = max(nonz_y)
+            expected = ia.BoundingBox(x1=img_x1, y1=img_y1,
+                                      x2=img_x2, y2=img_y2)
+
+            for bb_aug in observed_bbsoi.bounding_boxes:
+                # we don't expect perfect IoU here, because the actual
+                # underlying KP aug used distance maps
+                # most IoUs seem to end up in the range 0.9-0.95
+                assert bb_aug.iou(expected) > 0.8
 
     def test_scale_is_list(self):
         aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -4478,9 +4512,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         kps = [ia.Keypoint(x=-10, y=-20)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(10, 10, 3))
 
-        observed = aug.augment_keypoints([kpsoi])
+        observed = aug.augment_keypoints(kpsoi)
 
-        assert keypoints_equal([kpsoi], observed)
+        assert_cbaois_equal(observed, kpsoi)
 
     def test_keypoints_empty(self):
         # empty keypoints
@@ -4489,14 +4523,12 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        assert observed.shape == (10, 10, 3)
-        assert len(observed.keypoints) == 0
+        assert_cbaois_equal(observed, kpsoi)
 
     # ---------
     # remaining polygons tests
     # ---------
     def test_polygons_outside_of_image(self):
-        # points outside of image
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
         exterior = [(-10, -10), (110, -10), (110, 90), (-10, 90)]
         poly = ia.Polygon(exterior)
@@ -4504,19 +4536,35 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (10, 10, 3)
-        assert observed.polygons[0].exterior_almost_equals(poly)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, psoi)
 
     def test_empty_polygons(self):
-        # empty PolygonsOnImage
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
         psoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (10, 10, 3)
-        assert len(observed.polygons) == 0
+        assert_cbaois_equal(observed, psoi)
+
+    # ---------
+    # remaining bounding box tests
+    # ---------
+    def test_bounding_boxes_outside_of_image(self):
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
+        bbs = ia.BoundingBox(x1=-10, y1=-10, x2=15, y2=15)
+        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(10, 10, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(10, 10, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     # ---------
     # zero-sized axes
