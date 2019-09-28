@@ -23,7 +23,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
-from imgaug.testutils import keypoints_equal, reseed
+from imgaug.testutils import keypoints_equal, reseed, assert_cbaois_equal
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters.flip as fliplib
@@ -106,6 +106,16 @@ class _TestFliplrAndFlipudBase(object):
     def psoi_flipped(self):
         pass
 
+    @property
+    @abstractproperty
+    def bbsoi(self):
+        pass
+
+    @property
+    @abstractproperty
+    def bbsoi_flipped(self):
+        pass
+
     @abstractmethod
     def create_aug(self, *args, **kwargs):
         pass
@@ -135,44 +145,31 @@ class _TestFliplrAndFlipudBase(object):
             assert np.array_equal(observed, expected)
 
     def test_keypoints_p_is_0(self):
-        aug = self.create_aug(0)
-
-        for _ in sm.xrange(3):
-            observed = aug.augment_keypoints(self.kpsoi)
-            expected = self.kpsoi
-            assert keypoints_equal(observed, expected)
+        self._test_cbaoi_p_is_0("augment_keypoints", self.kpsoi, False)
 
     def test_keypoints_p_is_0__deterministic(self):
-        aug = self.create_aug(0).to_deterministic()
-
-        for _ in sm.xrange(3):
-            observed = aug.augment_keypoints(self.kpsoi)
-            expected = self.kpsoi
-            assert keypoints_equal(observed, expected)
+        self._test_cbaoi_p_is_0("augment_keypoints", self.kpsoi, True)
 
     def test_polygons_p_is_0(self):
-        aug = self.create_aug(0)
-
-        for _ in sm.xrange(3):
-            observed = aug.augment_polygons(self.psoi)
-            assert len(observed) == 1
-            assert len(observed[0].polygons) == 1
-            assert observed[0].shape == self.psoi[0].shape
-            assert observed[0].polygons[0].exterior_almost_equals(
-                self.psoi[0].polygons[0])
-            assert observed[0].polygons[0].is_valid
+        self._test_cbaoi_p_is_0("augment_polygons", self.psoi, False)
 
     def test_polygons_p_is_0__deterministic(self):
-        aug = self.create_aug(0).to_deterministic()
+        self._test_cbaoi_p_is_0("augment_polygons", self.psoi, True)
+
+    def test_bounding_boxes_p_is_0(self):
+        self._test_cbaoi_p_is_0("augment_bounding_boxes", self.bbsoi, False)
+
+    def test_bounding_boxes_p_is_0__deterministic(self):
+        self._test_cbaoi_p_is_0("augment_bounding_boxes", self.bbsoi, True)
+
+    def _test_cbaoi_p_is_0(self, augf_name, cbaoi, deterministic):
+        aug = self.create_aug(0)
+        if deterministic:
+            aug = aug.to_deterministic()
 
         for _ in sm.xrange(3):
-            observed = aug.augment_polygons(self.psoi)
-            assert len(observed) == 1
-            assert len(observed[0].polygons) == 1
-            assert observed[0].shape == self.psoi[0].shape
-            assert observed[0].polygons[0].exterior_almost_equals(
-                self.psoi[0].polygons[0])
-            assert observed[0].polygons[0].is_valid
+            observed = getattr(aug, augf_name)(cbaoi)
+            assert_cbaois_equal(observed, cbaoi)
 
     def test_heatmaps_p_is_0(self):
         aug = self.create_aug(0)
@@ -208,44 +205,38 @@ class _TestFliplrAndFlipudBase(object):
             assert np.array_equal(observed, expected)
 
     def test_keypoints_p_is_1(self):
-        aug = self.create_aug(1.0)
-
-        for _ in sm.xrange(3):
-            observed = aug.augment_keypoints(self.kpsoi)
-            expected = self.kpsoi_flipped
-            assert keypoints_equal(observed, expected)
+        self._test_cbaoi_p_is_1(
+            "augment_keypoints", self.kpsoi, self.kpsoi_flipped, False)
 
     def test_keypoints_p_is_1__deterministic(self):
-        aug = self.create_aug(1.0).to_deterministic()
-
-        for _ in sm.xrange(3):
-            observed = aug.augment_keypoints(self.kpsoi)
-            expected = self.kpsoi_flipped
-            assert keypoints_equal(observed, expected)
+        self._test_cbaoi_p_is_1(
+            "augment_keypoints", self.kpsoi, self.kpsoi_flipped, True)
 
     def test_polygons_p_is_1(self):
-        aug = self.create_aug(1.0)
-
-        for _ in sm.xrange(3):
-            observed = aug.augment_polygons(self.psoi)
-            assert len(observed) == 1
-            assert len(observed[0].polygons) == 1
-            assert observed[0].shape == self.psoi[0].shape
-            assert observed[0].polygons[0].exterior_almost_equals(
-                self.psoi_flipped[0].polygons[0])
-            assert observed[0].polygons[0].is_valid
+        self._test_cbaoi_p_is_1(
+            "augment_polygons", self.psoi, self.psoi_flipped, False)
 
     def test_polygons_p_is_1__deterministic(self):
-        aug = self.create_aug(1.0).to_deterministic()
+        self._test_cbaoi_p_is_1(
+            "augment_polygons", self.psoi, self.psoi_flipped, True)
+
+    def test_bounding_boxes_p_is_1(self):
+        self._test_cbaoi_p_is_1(
+            "augment_bounding_boxes", self.bbsoi, self.bbsoi_flipped, False)
+
+    def test_bounding_boxes_p_is_1__deterministic(self):
+        self._test_cbaoi_p_is_1(
+            "augment_bounding_boxes", self.bbsoi, self.bbsoi_flipped, True)
+
+    def _test_cbaoi_p_is_1(self, augf_name, cbaoi, cbaoi_flipped,
+                           deterministic):
+        aug = self.create_aug(1.0)
+        if deterministic:
+            aug = aug.to_deterministic()
 
         for _ in sm.xrange(3):
-            observed = aug.augment_polygons(self.psoi)
-            assert len(observed) == 1
-            assert len(observed[0].polygons) == 1
-            assert observed[0].shape == self.psoi[0].shape
-            assert observed[0].polygons[0].exterior_almost_equals(
-                self.psoi_flipped[0].polygons[0])
-            assert observed[0].polygons[0].is_valid
+            observed = getattr(aug, augf_name)(cbaoi)
+            assert_cbaois_equal(observed, cbaoi_flipped)
 
     def test_heatmaps_p_is_1(self):
         aug = self.create_aug(1.0)
@@ -292,56 +283,56 @@ class _TestFliplrAndFlipudBase(object):
         assert nb_images_flipped_det in [0, nb_iterations]
 
     def test_keypoints_p_is_050(self):
-        aug = self.create_aug(0.5)
-
-        nb_iterations = 1000
-        nb_keypoints_flipped = 0
-        for _ in sm.xrange(nb_iterations):
-            observed = aug.augment_keypoints(self.kpsoi)
-            if keypoints_equal(observed, self.kpsoi_flipped):
-                nb_keypoints_flipped += 1
-
-        assert np.isclose(nb_keypoints_flipped/nb_iterations,
-                          0.5, rtol=0, atol=0.1)
+        self._test_cbaoi_p_is_050(
+            "augment_keypoints", self.kpsoi, self.kpsoi_flipped)
 
     def test_keypoints_p_is_050__deterministic(self):
-        aug = self.create_aug(0.5).to_deterministic()
-
-        nb_iterations = 10
-        nb_keypoints_flipped_det = 0
-        for _ in sm.xrange(nb_iterations):
-            observed = aug.augment_keypoints(self.kpsoi)
-            if keypoints_equal(observed, self.kpsoi_flipped):
-                nb_keypoints_flipped_det += 1
-
-        assert nb_keypoints_flipped_det in [0, nb_iterations]
+        self._test_cbaoi_p_is_050__deterministic(
+            "augment_keypoints", self.kpsoi, self.kpsoi_flipped)
 
     def test_polygons_p_is_050(self):
+        self._test_cbaoi_p_is_050(
+            "augment_polygons", self.psoi, self.psoi_flipped)
+
+    def test_polygons_p_is_050__deterministic(self):
+        self._test_cbaoi_p_is_050__deterministic(
+            "augment_polygons", self.psoi, self.psoi_flipped)
+
+    def test_bounding_boxes_p_is_050(self):
+        self._test_cbaoi_p_is_050(
+            "augment_bounding_boxes", self.bbsoi, self.bbsoi_flipped)
+
+    def test_bounding_boxes_p_is_050__deterministic(self):
+        self._test_cbaoi_p_is_050__deterministic(
+            "augment_bounding_boxes", self.bbsoi, self.bbsoi_flipped)
+
+    def _test_cbaoi_p_is_050(self, augf_name, cbaoi, cbaoi_flipped):
         aug = self.create_aug(0.5)
 
         nb_iterations = 250
-        nb_polygons_flipped = 0
+        nb_cbaoi_flipped = 0
         for _ in sm.xrange(nb_iterations):
-            observed = aug.augment_polygons(self.psoi)
-            if observed[0].polygons[0].exterior_almost_equals(
-                    self.psoi_flipped[0].polygons[0]):
-                nb_polygons_flipped += 1
+            observed = getattr(aug, augf_name)(cbaoi)
+            if np.allclose(observed[0].items[0].coords,
+                           cbaoi_flipped[0].items[0].coords):
+                nb_cbaoi_flipped += 1
 
-        assert np.isclose(nb_polygons_flipped/nb_iterations,
+        assert np.isclose(nb_cbaoi_flipped/nb_iterations,
                           0.5, rtol=0, atol=0.2)
 
-    def test_polygons_p_is_050__deterministic(self):
+    def _test_cbaoi_p_is_050__deterministic(self, augf_name, cbaoi,
+                                            cbaoi_flipped):
         aug = self.create_aug(0.5).to_deterministic()
 
         nb_iterations = 10
-        nb_polygons_flipped_det = 0
+        nb_cbaoi_flipped = 0
         for _ in sm.xrange(nb_iterations):
-            observed = aug.augment_polygons(self.psoi)
-            if observed[0].polygons[0].exterior_almost_equals(
-                    self.psoi_flipped[0].polygons[0]):
-                nb_polygons_flipped_det += 1
+            observed = getattr(aug, augf_name)(cbaoi)
+            if np.allclose(observed[0].items[0].coords,
+                           cbaoi_flipped[0].items[0].coords):
+                nb_cbaoi_flipped += 1
 
-        assert nb_polygons_flipped_det in [0, nb_iterations]
+        assert nb_cbaoi_flipped in [0, nb_iterations]
 
     def test_list_of_images_p_is_050(self):
         images_multi = [self.image, self.image]
@@ -539,6 +530,16 @@ class TestFliplr(_TestFliplrAndFlipudBase, unittest.TestCase):
         polygons = [ia.Polygon([(3-0, 0), (3-2, 0), (3-2, 2)])]
         return [ia.PolygonsOnImage(polygons, shape=self.image.shape)]
 
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_flipped(self):
+        bbs = [ia.BoundingBox(x1=3-0, y1=1, x2=3-2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
     def create_aug(self, *args, **kwargs):
         return iaa.Fliplr(*args, **kwargs)
 
@@ -630,6 +631,16 @@ class TestFlipud(_TestFliplrAndFlipudBase, unittest.TestCase):
     def psoi_flipped(self):
         polygons = [ia.Polygon([(0, 3-0), (2, 3-0), (2, 3-2)])]
         return [ia.PolygonsOnImage(polygons, shape=self.image.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_flipped(self):
+        bbs = [ia.BoundingBox(x1=0, y1=3-1, x2=2, y2=3-3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
 
     def create_aug(self, *args, **kwargs):
         return iaa.Flipud(*args, **kwargs)
