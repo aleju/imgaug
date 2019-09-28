@@ -936,6 +936,36 @@ class TestAffine_translate(unittest.TestCase):
         kps = [ia.Keypoint(x=1, y=2)]
         return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
 
+    @property
+    def psoi(self):
+        polys = [ia.Polygon([(0, 0), (2, 0), (2, 2)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def psoi_1px_right(self):
+        polys = [ia.Polygon([(0+1, 0), (2+1, 0), (2+1, 2)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def psoi_1px_bottom(self):
+        polys = [ia.Polygon([(0, 0+1), (2, 0+1), (2, 2+1)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_1px_right(self):
+        bbs = [ia.BoundingBox(x1=0+1, y1=1, x2=2+1, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_1px_bottom(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1+1, x2=2, y2=3+1)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
     # ---------------------
     # translate: move one pixel to the right
     # ---------------------
@@ -975,21 +1005,45 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_right])
 
     def test_keypoints_translate_1px_right(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                         shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 1, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, False)
 
     def test_keypoints_translate_1px_right__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                         shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 1, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_1px_right(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 1, "y": 0},
+            self.psoi, self.psoi_1px_right, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+    def test_polygons_translate_1px_right__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 1, "y": 0},
+            self.psoi, self.psoi_1px_right, True)
+
+    def test_bounding_boxes_translate_1px_right(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 1, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, False)
+
+    def test_bounding_boxes_translate_1px_right__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 1, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, True)
+
+    @classmethod
+    def _test_cba_translate_px(cls, augf_name, px, cbaoi, cbaoi_scaled,
+                               deterministic):
+        aug = iaa.Affine(scale=1.0, translate_px=px, rotate=0, shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_scaled)
 
     def test_image_translate_1px_right_skimage(self):
         # move one pixel to the right
@@ -1079,21 +1133,34 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_bottom])
 
     def test_keypoints_translate_1px_bottom(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
-                         shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 0, "y": 1},
+            self.kpsoi, self.kpsoi_1px_bottom, False)
 
     def test_keypoints_translate_1px_bottom__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
-                         shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 0, "y": 1},
+            self.kpsoi, self.kpsoi_1px_bottom, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_1px_bottom(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 0, "y": 1},
+            self.psoi, self.psoi_1px_bottom, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+    def test_polygons_translate_1px_bottom__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 0, "y": 1},
+            self.psoi, self.psoi_1px_bottom, True)
+
+    def test_bounding_boxes_translate_1px_bottom(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 0, "y": 1},
+            self.bbsoi, self.bbsoi_1px_bottom, False)
+
+    def test_bounding_boxes_translate_1px_bottom__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 0, "y": 1},
+            self.bbsoi, self.bbsoi_1px_bottom, True)
 
     # ---------------------
     # translate: fraction of the image size (towards the right)
@@ -1133,21 +1200,46 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_right])
 
     def test_keypoints_translate_33percent_right(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
-                         rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0.3333, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, False)
 
     def test_keypoints_translate_33percent_right__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
-                         rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0.3333, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_33percent_right(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0.3333, "y": 0},
+            self.psoi, self.psoi_1px_right, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+    def test_polygons_translate_33percent_right__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0.3333, "y": 0},
+            self.psoi, self.psoi_1px_right, True)
+
+    def test_bounding_boxes_translate_33percent_right(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0.3333, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, False)
+
+    def test_bounding_boxes_translate_33percent_right__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0.3333, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, True)
+
+    @classmethod
+    def _test_cba_translate_percent(cls, augf_name, percent, cbaoi,
+                                    cbaoi_scaled, deterministic):
+        aug = iaa.Affine(scale=1.0, translate_percent=percent, rotate=0,
+                         shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_scaled)
 
     # ---------------------
     # translate: fraction of the image size (towards the bottom)
@@ -1188,21 +1280,34 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_bottom])
 
     def test_keypoints_translate_33percent_bottom(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
-                         rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0, "y": 0.3333},
+            self.kpsoi, self.kpsoi_1px_bottom, False)
 
     def test_keypoints_translate_33percent_bottom__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
-                         rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0, "y": 0.3333},
+            self.kpsoi, self.kpsoi_1px_bottom, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_33percent_bottom(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0, "y": 0.3333},
+            self.psoi, self.psoi_1px_bottom, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+    def test_polygons_translate_33percent_bottom__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0, "y": 0.3333},
+            self.psoi, self.psoi_1px_bottom, True)
+
+    def test_bounding_boxes_translate_33percent_bottom(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0, "y": 0.3333},
+            self.bbsoi, self.bbsoi_1px_bottom, False)
+
+    def test_bounding_boxes_translate_33percent_bottom__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0, "y": 0.3333},
+            self.bbsoi, self.bbsoi_1px_bottom, True)
 
     # ---------------------
     # translate: axiswise uniform distributions
@@ -1278,8 +1383,6 @@ class TestAffine_translate(unittest.TestCase):
             ]),
             shape=(3, 3, 3)
         )
-
-
 
     def test_heatmaps_translate_1px_right(self):
         aug = iaa.Affine(translate_px={"x": 1})
