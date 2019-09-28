@@ -4261,6 +4261,21 @@ class TestSequential(unittest.TestCase):
         return ia.PolygonsOnImage([polygon], shape=self.image.shape)
 
     @property
+    def bbsoi(self):
+        bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
+        return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
+
+    @property
+    def bbsoi_aug(self):
+        x1 = 3-0
+        x2 = 3-2
+        y1 = 3-0
+        y2 = 3-2
+        bb = ia.BoundingBox(x1=min(x1, x2), y1=min(y1, y2),
+                            x2=max(x1, x2), y2=max(y1, y2))
+        return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
+
+    @property
     def heatmaps(self):
         heatmaps_arr = np.float32([[0, 0, 1.0],
                                    [0, 0, 1.0],
@@ -4326,42 +4341,48 @@ class TestSequential(unittest.TestCase):
 
     def test_keypoints__two_flips(self):
         aug = self.seq_two_flips
-        kpsoi = self.keypoints
-        observed = aug.augment_keypoints([kpsoi])
-        assert keypoints_equal(observed, [self.keypoints_aug])
+
+        observed = aug.augment_keypoints([self.keypoints])
+
+        assert_cbaois_equal(observed, [self.keypoints_aug])
 
     def test_keypoints__two_flips__deterministic(self):
         aug = self.seq_two_flips
         aug_det = aug.to_deterministic()
-        kpsoi = self.keypoints
 
-        observed = aug_det.augment_keypoints([kpsoi])
+        observed = aug_det.augment_keypoints([self.keypoints])
 
-        assert keypoints_equal(observed, [self.keypoints_aug])
+        assert_cbaois_equal(observed, [self.keypoints_aug])
 
     def test_polygons__two_flips(self):
         aug = self.seq_two_flips
-        polygons = self.polygons
 
-        observed = aug.augment_polygons(polygons)
+        observed = aug.augment_polygons(self.polygons)
 
-        assert observed.shape == polygons.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            self.polygons_aug.polygons[0])
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.polygons_aug)
 
     def test_polygons__two_flips__deterministic(self):
         aug = self.seq_two_flips
         aug_det = aug.to_deterministic()
-        polygons = self.polygons
 
-        observed = aug_det.augment_polygons(polygons)
+        observed = aug_det.augment_polygons(self.polygons)
 
-        assert len(observed.polygons) == 1
-        assert observed.shape == polygons.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            self.polygons_aug.polygons[0])
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.polygons_aug)
+
+    def test_bounding_boxes__two_flips(self):
+        aug = self.seq_two_flips
+
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(observed, self.bbsoi_aug)
+
+    def test_bounding_boxes__two_flips__deterministic(self):
+        aug = self.seq_two_flips
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(observed, self.bbsoi_aug)
 
     def test_heatmaps__two_flips(self):
         aug = self.seq_two_flips
