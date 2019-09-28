@@ -6244,6 +6244,119 @@ class TestElasticTransformation(unittest.TestCase):
         assert psoi_aug.shape == (10, 10, 3)
 
     # -----------
+    # bounding boxes
+    # -----------
+    def test_bounding_boxes_no_movement_if_alpha_below_threshold(self):
+        # for small alpha, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=1.0, sigma=0.0):
+            bbs = [
+                ia.BoundingBox(x1=10, y1=12, x2=20, y2=22),
+                ia.BoundingBox(x1=20, y1=32, x2=40, y2=42)
+            ]
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+
+            observed = aug.augment_bounding_boxes([bbsoi])[0]
+
+            d = bbsoi.to_xyxy_array() - observed.to_xyxy_array()
+            d = d.reshape((2*2, 2))
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 1e-8
+
+    def test_bounding_boxes_no_movement_if_sigma_below_threshold(self):
+        # for small sigma, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=1.0):
+            bbs = [
+                ia.BoundingBox(x1=10, y1=12, x2=20, y2=22),
+                ia.BoundingBox(x1=20, y1=32, x2=40, y2=42)
+            ]
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
+
+            observed = aug.augment_bounding_boxes([bbsoi])[0]
+
+            d = bbsoi.to_xyxy_array() - observed.to_xyxy_array()
+            d = d.reshape((2*2, 2))
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 1e-8
+
+    def test_bounding_boxes_small_movement_for_weak_alpha_if_threshold_zero(
+            self):
+        # for small alpha (at sigma 1.0), should barely move
+        # if thresholds set to zero
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=0.0):
+            bbs = [
+                ia.BoundingBox(x1=10, y1=12, x2=20, y2=22),
+                ia.BoundingBox(x1=20, y1=32, x2=40, y2=42)
+            ]
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+
+            observed = aug.augment_bounding_boxes([bbsoi])[0]
+
+            d = bbsoi.to_xyxy_array() - observed.to_xyxy_array()
+            d = d.reshape((2*2, 2))
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 0.5
+
+    def test_image_bounding_box_alignment(self):
+        # test alignment between between images and bounding boxes
+        image = np.zeros((100, 100), dtype=np.uint8)
+        image[35:35+1, 35:65+1] = 255
+        image[65:65+1, 35:65+1] = 255
+        image[35:65+1, 35:35+1] = 255
+        image[35:65+1, 65:65+1] = 255
+        bbs = [
+            ia.BoundingBox(x1=35.5, y1=35.5, x2=65.5, y2=65.5)
+        ]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=image.shape)
+        aug = iaa.ElasticTransformation(alpha=70, sigma=5)
+
+        images_aug, bbsois_aug = aug(images=[image, image],
+                                     bounding_boxes=[bbsoi, bbsoi])
+
+        count_bad = 0
+        for image_aug, bbsoi_aug in zip(images_aug, bbsois_aug):
+            assert bbsoi_aug.shape == (100, 100)
+            assert len(bbsoi_aug.bounding_boxes) == 1
+            for bb_aug in bbsoi_aug.bounding_boxes:
+                if bb_aug.is_fully_within_image(image_aug):
+                    # top, bottom, left, right
+                    x1 = bb_aug.x1_int
+                    x2 = bb_aug.x2_int
+                    y1 = bb_aug.y1_int
+                    y2 = bb_aug.y2_int
+                    top_row = image_aug[y1-2:y1+2, x1-2:x2+2]
+                    btm_row = image_aug[y2-2:y2+2, x1-2:x2+2]
+                    lft_row = image_aug[y1-2:y2+2, x1-2:x1+2]
+                    rgt_row = image_aug[y1-2:y2+2, x2-2:x2+2]
+                    assert np.max(top_row) > 10
+                    assert np.max(btm_row) > 10
+                    assert np.max(lft_row) > 10
+                    assert np.max(rgt_row) > 10
+                else:
+                    count_bad += 1
+        assert count_bad <= 1
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.ElasticTransformation(alpha=10, sigma=10)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(10, 10, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert len(bbsoi_aug.bounding_boxes) == 0
+        assert bbsoi_aug.shape == (10, 10, 3)
+
+    # -----------
     # heatmaps alignment
     # -----------
     def test_image_heatmaps_alignment(self):
