@@ -27,7 +27,8 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 from imgaug.testutils import (create_random_images, create_random_keypoints,
-                              array_equal_lists, keypoints_equal, reseed)
+                              array_equal_lists, keypoints_equal, reseed,
+                              assert_cbaois_equal)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
@@ -102,8 +103,7 @@ class TestNoop(unittest.TestCase):
 
         observed = aug.augment_keypoints(keypoints)
 
-        expected = keypoints
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, keypoints)
 
     def test_keypoints_deterministic(self):
         aug_det = iaa.Noop().to_deterministic()
@@ -111,8 +111,7 @@ class TestNoop(unittest.TestCase):
 
         observed = aug_det.augment_keypoints(keypoints)
 
-        expected = keypoints
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, keypoints)
 
     def test_polygons(self):
         aug = iaa.Noop()
@@ -121,9 +120,7 @@ class TestNoop(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == psoi.shape
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].exterior_almost_equals(psoi.polygons[0])
+        assert_cbaois_equal(observed, psoi)
 
     def test_polygons_deterministic(self):
         aug_det = iaa.Noop().to_deterministic()
@@ -132,9 +129,25 @@ class TestNoop(unittest.TestCase):
 
         observed = aug_det.augment_polygons(psoi)
 
-        assert observed.shape == psoi.shape
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].exterior_almost_equals(psoi.polygons[0])
+        assert_cbaois_equal(observed, psoi)
+
+    def test_bounding_boxes(self):
+        aug = iaa.Noop()
+        bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
+        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
+    def test_bounding_boxes_deterministic(self):
+        aug_det = iaa.Noop().to_deterministic()
+        bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
+        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
+
+        observed = aug_det.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     def test_line_strings(self):
         aug = iaa.Noop()
@@ -143,8 +156,7 @@ class TestNoop(unittest.TestCase):
 
         observed = aug.augment_line_strings(lsoi)
 
-        assert observed.shape == lsoi.shape
-        assert len(observed.line_strings) == 1
+        assert_cbaois_equal(observed, lsoi)
 
     def test_line_strings_deterministic(self):
         aug_det = iaa.Noop().to_deterministic()
@@ -153,10 +165,7 @@ class TestNoop(unittest.TestCase):
 
         observed = aug_det.augment_line_strings(lsoi)
 
-        assert observed.shape == lsoi.shape
-        assert len(observed.line_strings) == 1
-        assert observed.line_strings[0].coords_almost_equals(
-            lsoi.line_strings[0])
+        assert_cbaois_equal(observed, lsoi)
 
     def test_keypoints_empty(self):
         aug = iaa.Noop()
@@ -164,8 +173,7 @@ class TestNoop(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        assert observed.shape == (4, 5, 3)
-        assert len(observed.keypoints) == 0
+        assert_cbaois_equal(observed, kpsoi)
 
     def test_polygons_empty(self):
         aug = iaa.Noop()
@@ -173,8 +181,23 @@ class TestNoop(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (4, 5, 3)
-        assert len(observed.polygons) == 0
+        assert_cbaois_equal(observed, psoi)
+
+    def test_bounding_boxes_empty(self):
+        aug = iaa.Noop()
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 5, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
+    def test_line_strings_empty(self):
+        aug = iaa.Noop()
+        lsoi = ia.LineStringsOnImage([], shape=(4, 5, 3))
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
 
     def test_get_parameters(self):
         assert iaa.Noop().get_parameters() == []
