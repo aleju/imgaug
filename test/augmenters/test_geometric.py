@@ -382,10 +382,11 @@ class TestAffine_scale(unittest.TestCase):
         for x, y in coords:
             # the additional +0.5 and -0.5 here makes up for the shift factor
             # used in the affine matrix generation
-            x_centered = x - width/2 + 0.5
-            y_centered = y - height/2 + 0.5
-            x_new = x_centered * scale_x + width/2 - 0.5
-            y_new = y_centered * scale_y + height/2 - 0.5
+            offset = 0.0
+            x_centered = x - width/2 + offset
+            y_centered = y - height/2 + offset
+            x_new = x_centered * scale_x + width/2 - offset
+            y_new = y_centered * scale_y + height/2 - offset
             coords_scaled.append((x_new, y_new))
         return np.float32(coords_scaled)
 
@@ -1035,7 +1036,7 @@ class TestAffine_translate(unittest.TestCase):
             self.bbsoi, self.bbsoi_1px_right, True)
 
     @classmethod
-    def _test_cba_translate_px(cls, augf_name, px, cbaoi, cbaoi_scaled,
+    def _test_cba_translate_px(cls, augf_name, px, cbaoi, cbaoi_translated,
                                deterministic):
         aug = iaa.Affine(scale=1.0, translate_px=px, rotate=0, shear=0)
         if deterministic:
@@ -1043,7 +1044,7 @@ class TestAffine_translate(unittest.TestCase):
 
         observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(observed, cbaoi_scaled)
+        assert_cbaois_equal(observed, cbaoi_translated)
 
     def test_image_translate_1px_right_skimage(self):
         # move one pixel to the right
@@ -1231,7 +1232,7 @@ class TestAffine_translate(unittest.TestCase):
 
     @classmethod
     def _test_cba_translate_percent(cls, augf_name, percent, cbaoi,
-                                    cbaoi_scaled, deterministic):
+                                    cbaoi_translated, deterministic):
         aug = iaa.Affine(scale=1.0, translate_percent=percent, rotate=0,
                          shear=0)
         if deterministic:
@@ -1239,7 +1240,7 @@ class TestAffine_translate(unittest.TestCase):
 
         observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(observed, cbaoi_scaled)
+        assert_cbaois_equal(observed, cbaoi_translated)
 
     # ---------------------
     # translate: fraction of the image size (towards the bottom)
@@ -1505,9 +1506,29 @@ class TestAffine_rotate(unittest.TestCase):
 
     @property
     def kpsoi_rot90(self):
-        kps = [ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1),
-                   ia.Keypoint(x=1, y=2)]
+        kps = [ia.Keypoint(x=3-1, y=0), ia.Keypoint(x=3-1, y=1),
+               ia.Keypoint(x=3-1, y=2)]
         return [ia.KeypointsOnImage(kps, shape=self.image_rot90.shape)]
+
+    @property
+    def psoi(self):
+        polys = [ia.Polygon([(0, 0), (3, 0), (3, 3)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def psoi_rot90(self):
+        polys = [ia.Polygon([(3-0, 0), (3-0, 3), (3-3, 3)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image_rot90.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_rot90(self):
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image_rot90.shape)]
 
     def test_image_rot90(self):
         # rotate by 90 degrees
@@ -1549,19 +1570,40 @@ class TestAffine_rotate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_rot90])
 
     def test_keypoints_rot90(self):
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_rot90)
+        self._test_cba_rotate(
+            "augment_keypoints", 90, self.kpsoi, self.kpsoi_rot90, False)
 
     def test_keypoints_rot90__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_rotate(
+            "augment_keypoints", 90, self.kpsoi, self.kpsoi_rot90, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_rot90(self):
+        self._test_cba_rotate(
+            "augment_polygons", 90, self.psoi, self.psoi_rot90, False)
 
-        assert keypoints_equal(observed, self.kpsoi_rot90)
+    def test_polygons_rot90__deterministic(self):
+        self._test_cba_rotate(
+            "augment_polygons", 90, self.psoi, self.psoi_rot90, True)
+
+    def test_bounding_boxes_rot90(self):
+        self._test_cba_rotate(
+            "augment_bounding_boxes", 90, self.bbsoi, self.bbsoi_rot90, False)
+
+    def test_bounding_boxes_rot90__deterministic(self):
+        self._test_cba_rotate(
+            "augment_bounding_boxes", 90, self.bbsoi, self.bbsoi_rot90, True)
+
+    @classmethod
+    def _test_cba_rotate(cls, augf_name, rotate, cbaoi,
+                         cbaoi_rotated, deterministic):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=rotate,
+                         shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_rotated)
 
     def test_image_rotate_is_tuple_0_to_364_deg(self):
         # random rotation 0-364 degrees
@@ -2149,7 +2191,7 @@ class TestAffine_alignment(unittest.TestCase):
         img[2, 4:6] = 255
         img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=2)], shape=img.shape)
-        kpsoi_rot = [(5, 2), (5-1, 10-2-1)]
+        kpsoi_rot = [(5, 2), (5, 10-2)]
         img_aug_indices = []
         kpsois_aug_indices = []
         for _ in sm.xrange(40):
@@ -2194,7 +2236,7 @@ class TestAffine_alignment(unittest.TestCase):
                                   shape=img.shape)
         psoi_rot = [
             psoi.polygons[0].deepcopy(),
-            ia.Polygon([(10-1-1, 10-1-1), (10-9-1, 10-1-1), (10-5-1, 10-5-1)])
+            ia.Polygon([(10-1, 10-1), (10-9, 10-1), (10-5, 10-5)])
         ]
         img_aug_indices = []
         psois_aug_indices = []
