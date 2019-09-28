@@ -2171,11 +2171,6 @@ class PiecewiseAffine(meta.Augmenter):
         rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
-            if not keypoints_on_images[i].keypoints:
-                # PiecewiseAffine does not change the image shape, so we can
-                # just reuse the old keypoints
-                result.append(keypoints_on_images[i])
-                continue
             rs_image = rss[i]
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
