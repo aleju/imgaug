@@ -1058,6 +1058,11 @@ class TestAlphaElementwise(unittest.TestCase):
         ps = [ia.Polygon([(5, 5), (10, 5), (10, 10)])]
         return ia.PolygonsOnImage(ps, shape=(20, 20, 3))
 
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)]
+        return ia.BoundingBoxesOnImage(bbs, shape=(20, 20, 3))
+
     def test_images_factor_is_1(self):
         aug = iaa.AlphaElementwise(1, iaa.Add(10), iaa.Add(20))
         observed = aug.augment_image(self.image)
@@ -1243,62 +1248,27 @@ class TestAlphaElementwise(unittest.TestCase):
         assert np.array_equal(observed.get_arr(), self.segmaps_l1.get_arr())
 
     def test_keypoints_factor_is_1(self):
-        aug = iaa.AlphaElementwise(
-            1.0,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_keypoints([self.kpsoi])[0]
-        expected = self.kpsoi.deepcopy()
-        assert keypoints_equal([observed], [expected])
+        self._test_cba_factor_is_1("augment_keypoints", self.kpsoi)
 
     def test_keypoints_factor_is_0501(self):
-        aug = iaa.AlphaElementwise(
-            0.501,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_keypoints([self.kpsoi])[0]
-        expected = self.kpsoi.deepcopy()
-        assert keypoints_equal([observed], [expected])
+        self._test_cba_factor_is_0501("augment_keypoints", self.kpsoi)
 
     def test_keypoints_factor_is_0(self):
-        aug = iaa.AlphaElementwise(
-            0.0,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_keypoints([self.kpsoi])[0]
-        expected = self.kpsoi.shift(x=1)
-        assert keypoints_equal([observed], [expected])
+        self._test_cba_factor_is_0("augment_keypoints", self.kpsoi)
 
     def test_keypoints_factor_is_0499(self):
-        aug = iaa.AlphaElementwise(
-            0.499,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_keypoints([self.kpsoi])[0]
-        expected = self.kpsoi.shift(x=1)
-        assert keypoints_equal([observed], [expected])
+        self._test_cba_factor_is_0499("augment_keypoints", self.kpsoi)
 
     def test_keypoints_factor_is_1_with_per_channel(self):
-        aug = iaa.AlphaElementwise(
-            1.0,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}),
-            per_channel=True)
-        observed = aug.augment_keypoints([self.kpsoi])[0]
-        expected = self.kpsoi.deepcopy()
-        assert keypoints_equal([observed], [expected])
+        self._test_cba_factor_is_1_and_per_channel(
+            "augment_keypoints", self.kpsoi)
 
     def test_keypoints_factor_is_0_with_per_channel(self):
-        aug = iaa.AlphaElementwise(
-            0.0,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}),
-            per_channel=True)
-        observed = aug.augment_keypoints([self.kpsoi])[0]
-        expected = self.kpsoi.shift(x=1)
-        assert keypoints_equal([observed], [expected])
+        self._test_cba_factor_is_0_and_per_channel(
+            "augment_keypoints", self.kpsoi)
 
     def test_keypoints_factor_is_choice_of_vals_close_050_per_channel(self):
+        # TODO can this somehow be integrated into the CBA functions below?
         aug = iaa.Alpha(
             iap.Choice([0.49, 0.51]),
             iaa.Noop(),
@@ -1333,182 +1303,238 @@ class TestAlphaElementwise(unittest.TestCase):
 
     def test_keypoints_are_empty(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
-        aug = iaa.AlphaElementwise(
-            0.501,
-            iaa.Noop(),
-            iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_keypoints(kpsoi)
-        assert len(observed.keypoints) == 0
-        assert observed.shape == (1, 2, 3)
+        self._test_empty_cba("augment_keypoints", kpsoi)
 
     def test_keypoints_hooks_limit_propagation(self):
-        aug = iaa.AlphaElementwise(
-            0.0,
-            iaa.Affine(translate_px={"x": 1}),
-            iaa.Affine(translate_px={"y": 1}),
-            name="AlphaElementwiseTest")
-
-        def propagator(kpsoi_to_aug, augmenter, parents, default):
-            if "AlphaElementwise" in augmenter.name:
-                return False
-            else:
-                return default
-
-        hooks = ia.HooksKeypoints(propagator=propagator)
-        observed = aug.augment_keypoints([self.kpsoi], hooks=hooks)[0]
-        assert keypoints_equal([observed], [self.kpsoi])
+        self._test_cba_hooks_limit_propagation("augment_keypoints", self.kpsoi)
 
     def test_polygons_factor_is_1(self):
+        self._test_cba_factor_is_1("augment_polygons", self.psoi)
+
+    def test_polygons_factor_is_0501(self):
+        self._test_cba_factor_is_0501("augment_polygons", self.psoi)
+
+    def test_polygons_factor_is_0(self):
+        self._test_cba_factor_is_0("augment_polygons", self.psoi)
+
+    def test_polygons_factor_is_0499(self):
+        self._test_cba_factor_is_0499("augment_polygons", self.psoi)
+
+    def test_polygons_factor_is_1_and_per_channel(self):
+        self._test_cba_factor_is_1_and_per_channel(
+            "augment_polygons", self.psoi)
+
+    def test_polygons_factor_is_0_and_per_channel(self):
+        self._test_cba_factor_is_0_and_per_channel(
+            "augment_polygons", self.psoi)
+
+    def test_polygons_factor_is_choice_around_050_and_per_channel(self):
+        # why were different polygons than self.psoi chosen here?
+        ps = [ia.Polygon([(0, 0), (15, 0), (10, 0), (10, 5), (10, 10),
+                          (5, 10), (5, 5), (0, 10), (0, 5), (0, 0)])]
+        psoi = ia.PolygonsOnImage(ps, shape=(15, 15, 3))
+        self._test_cba_factor_is_choice_around_050_and_per_channel(
+            "augment_polygons", psoi, pointwise=False
+        )
+
+    def test_empty_polygons(self):
+        psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
+        self._test_empty_cba("augment_polygons", psoi)
+
+    def test_polygons_hooks_limit_propagation(self):
+        self._test_cba_hooks_limit_propagation("augment_polygons", self.psoi)
+
+    def test_bounding_boxes_factor_is_1(self):
+        self._test_cba_factor_is_1("augment_bounding_boxes", self.bbsoi)
+
+    def test_bounding_boxes_factor_is_0501(self):
+        self._test_cba_factor_is_0501("augment_bounding_boxes", self.bbsoi)
+
+    def test_bounding_boxes_factor_is_0(self):
+        self._test_cba_factor_is_0("augment_bounding_boxes", self.bbsoi)
+
+    def test_bounding_boxes_factor_is_0499(self):
+        self._test_cba_factor_is_0499("augment_bounding_boxes", self.bbsoi)
+
+    def test_bounding_boxes_factor_is_1_and_per_channel(self):
+        self._test_cba_factor_is_1_and_per_channel(
+            "augment_bounding_boxes", self.bbsoi)
+
+    def test_bounding_boxes_factor_is_0_and_per_channel(self):
+        self._test_cba_factor_is_0_and_per_channel(
+            "augment_bounding_boxes", self.bbsoi)
+
+    def test_bounding_boxes_factor_is_choice_around_050_and_per_channel(self):
+        self._test_cba_factor_is_choice_around_050_and_per_channel(
+            "augment_bounding_boxes", self.bbsoi, pointwise=True
+        )
+
+    def test_empty_bounding_boxes(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
+        self._test_empty_cba("augment_bounding_boxes", bbsoi)
+
+    def test_bounding_boxes_hooks_limit_propagation(self):
+        self._test_cba_hooks_limit_propagation(
+            "augment_bounding_boxes", self.bbsoi)
+
+    @classmethod
+    def _compare_cbaois(cls, observed, expected):
+        assert len(observed) == 1
+        assert len(observed[0].items) == len(expected.items)
+        assert observed[0].shape == expected.shape
+        for item_a, item_b in zip(observed[0].items, expected.items):
+            assert item_a.coords_almost_equals(item_b)
+        if isinstance(expected, ia.PolygonsOnImage):
+            for item in observed[0].items:
+                assert item.is_valid
+
+    @classmethod
+    def _shift_cbaoi(cls, cbaoi, top=0, right=0, bottom=0, left=0):
+        if isinstance(cbaoi, ia.KeypointsOnImage):
+            return cbaoi.shift(x=left-right, y=top-bottom)
+        return cbaoi.shift(top=top, right=right, bottom=bottom, left=left)
+
+    @classmethod
+    def _test_cba_factor_is_1(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             1.0,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_polygons([self.psoi])
-        assert len(observed) == 1
-        assert len(observed[0].polygons) == 1
-        assert observed[0].shape == self.psoi.shape
-        assert observed[0].polygons[0].exterior_almost_equals(
-            self.psoi.polygons[0])
-        assert observed[0].polygons[0].is_valid
 
-    def test_polygons_factor_is_0501(self):
+        observed = getattr(aug, augf_name)([cbaoi])
+
+        cls._compare_cbaois(observed, cbaoi)
+
+    @classmethod
+    def _test_cba_factor_is_0501(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.501,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_polygons([self.psoi])
-        assert len(observed) == 1
-        assert len(observed[0].polygons) == 1
-        assert observed[0].shape == self.psoi.shape
-        assert observed[0].polygons[0].exterior_almost_equals(
-            self.psoi.polygons[0])
-        assert observed[0].polygons[0].is_valid
 
-    def test_polygons_factor_is_0(self):
+        observed = getattr(aug, augf_name)([cbaoi])
+
+        cls._compare_cbaois(observed, cbaoi)
+
+    @classmethod
+    def _test_cba_factor_is_0(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.0,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_polygons([self.psoi])
-        expected = self.psoi.shift(left=1)
-        assert len(observed) == 1
-        assert len(observed[0].polygons) == 1
-        assert observed[0].shape == self.psoi.shape
-        assert observed[0].polygons[0].exterior_almost_equals(
-            expected.polygons[0])
-        assert observed[0].polygons[0].is_valid
 
-    def test_polygons_factor_is_0499(self):
+        observed = getattr(aug, augf_name)([cbaoi])
+
+        expected = cls._shift_cbaoi(cbaoi, left=1)
+        cls._compare_cbaois(observed, expected)
+
+    @classmethod
+    def _test_cba_factor_is_0499(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.499,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_polygons([self.psoi])
-        expected = self.psoi.shift(left=1)
-        assert len(observed) == 1
-        assert len(observed[0].polygons) == 1
-        assert observed[0].shape == self.psoi.shape
-        assert observed[0].polygons[0].exterior_almost_equals(
-            expected.polygons[0])
-        assert observed[0].polygons[0].is_valid
 
-    def test_polygons_factor_is_1_and_per_channel(self):
+        observed = getattr(aug, augf_name)([cbaoi])
+
+        expected = cls._shift_cbaoi(cbaoi, left=1)
+        cls._compare_cbaois(observed, expected)
+
+    @classmethod
+    def _test_cba_factor_is_1_and_per_channel(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             1.0,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
-        observed = aug.augment_polygons([self.psoi])
-        assert len(observed) == 1
-        assert len(observed[0].polygons) == 1
-        assert observed[0].shape == self.psoi.shape
-        assert observed[0].polygons[0].exterior_almost_equals(
-            self.psoi.polygons[0])
-        assert observed[0].polygons[0].is_valid
 
-    def test_polygons_factor_is_0_and_per_channel(self):
+        observed = getattr(aug, augf_name)([cbaoi])
+
+        cls._compare_cbaois(observed, cbaoi)
+
+    @classmethod
+    def _test_cba_factor_is_0_and_per_channel(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.0,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
-        observed = aug.augment_polygons([self.psoi])
-        expected = self.psoi.shift(left=1)
-        assert len(observed) == 1
-        assert len(observed[0].polygons) == 1
-        assert observed[0].shape == self.psoi.shape
-        assert observed[0].polygons[0].exterior_almost_equals(
-            expected.polygons[0])
-        assert observed[0].polygons[0].is_valid
 
-    def test_polygons_factor_is_choice_around_050_and_per_channel(self):
+        observed = getattr(aug, augf_name)([cbaoi])
+
+        expected = cls._shift_cbaoi(cbaoi, left=1)
+        cls._compare_cbaois(observed, expected)
+
+    @classmethod
+    def _test_cba_factor_is_choice_around_050_and_per_channel(
+            cls, augf_name, cbaoi, pointwise):
         aug = iaa.AlphaElementwise(
             iap.Choice([0.49, 0.51]),
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
-        ps = [ia.Polygon([(0, 0), (15, 0), (10, 0), (10, 5), (10, 10),
-                          (5, 10), (5, 5), (0, 10), (0, 5), (0, 0)])]
-        psoi = ia.PolygonsOnImage(ps, shape=(15, 15, 3))
 
-        expected_same = psoi.deepcopy()
-        expected_shifted = psoi.shift(left=1)
+        expected_same = cbaoi.deepcopy()
+        expected_shifted = cls._shift_cbaoi(cbaoi, left=1)
 
         nb_iterations = 400
         seen = [0, 0, 0]
         for _ in sm.xrange(nb_iterations):
-            observed = aug.augment_polygons([psoi])[0]
-            # We use here allclose() instead of exterior_almost_equals()
-            # as the latter one is much slower and we don't have to deal
-            # with tricky geometry changes here, just naive shifting.
-            if np.allclose(observed.polygons[0].exterior,
-                           expected_same.polygons[0].exterior,
+            observed = getattr(aug, augf_name)([cbaoi])[0]
+            # We use here allclose() instead of coords_almost_equals()
+            # as the latter one is much slower for polygons and we don't have
+            # to deal with tricky geometry changes here, just naive shifting.
+            if np.allclose(observed.items[0].coords,
+                           expected_same.items[0].coords,
                            rtol=0, atol=0.1):
                 seen[0] += 1
-            elif np.allclose(observed.polygons[0].exterior,
-                             expected_shifted.polygons[0].exterior,
+            elif np.allclose(observed.items[0].coords,
+                             expected_shifted.items[0].coords,
                              rtol=0, atol=0.1):
                 seen[1] += 1
             else:
                 seen[2] += 1
 
-        # This code can be used if the polygon augmentation mode is
-        # AlphaElementwise._MODE_POINTWISE. Currently it is _MODE_EITHER_OR.
-        #
-        # nb_points = len(ps[0].exterior)
-        # p_all_same = 2 * ((1/2)**nb_points)  # all points moved in same way
-        # expected_iter = nb_iterations*p_all_same
-        # expected_iter_notsame = nb_iterations*(1-p_all_same)
-        # atol = nb_iterations * (5*p_all_same)
-        #
-        # assert np.isclose(seen[0], expected_iter, rtol=0, atol=atol)
-        # assert np.isclose(seen[1], expected_iter, rtol=0, atol=atol)
-        # assert np.isclose(seen[2], expected_iter_notsame, rtol=0, atol=atol)
+        if pointwise:
+            # This code can be used if the polygon augmentation mode is
+            # AlphaElementwise._MODE_POINTWISE. Currently it is _MODE_EITHER_OR.
+            nb_points = len(cbaoi.items[0].coords)
+            p_all_same = 2 * ((1/2)**nb_points)  # all points moved in same way
+            expected_iter = nb_iterations*p_all_same
+            expected_iter_notsame = nb_iterations*(1-p_all_same)
+            atol = nb_iterations * (5*p_all_same)
 
-        expected_iter = nb_iterations*0.5
-        atol = nb_iterations*0.15
-        assert np.isclose(seen[0], expected_iter, rtol=0, atol=atol)
-        assert np.isclose(seen[1], expected_iter, rtol=0, atol=atol)
-        assert seen[2] == 0
+            assert np.isclose(seen[0], expected_iter, rtol=0, atol=atol)
+            assert np.isclose(seen[1], expected_iter, rtol=0, atol=atol)
+            assert np.isclose(seen[2], expected_iter_notsame, rtol=0, atol=atol)
+        else:
+            expected_iter = nb_iterations*0.5
+            atol = nb_iterations*0.15
+            assert np.isclose(seen[0], expected_iter, rtol=0, atol=atol)
+            assert np.isclose(seen[1], expected_iter, rtol=0, atol=atol)
+            assert seen[2] == 0
 
-    def test_empty_polygons(self):
-        psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
+    @classmethod
+    def _test_empty_cba(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.501,
             iaa.Noop(),
             iaa.Affine(translate_px={"x": 1}))
-        observed = aug.augment_polygons(psoi)
-        assert len(observed.polygons) == 0
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert len(observed.items) == 0
         assert observed.shape == (1, 2, 3)
 
-    def test_polygons_hooks_limit_propagation(self):
+    @classmethod
+    def _test_cba_hooks_limit_propagation(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.0,
             iaa.Affine(translate_px={"x": 1}),
             iaa.Affine(translate_px={"y": 1}),
             name="AlphaTest")
 
-        def propagator(psoi_to_aug, augmenter, parents, default):
+        def propagator(cbaoi_to_aug, augmenter, parents, default):
             if "Alpha" in augmenter.name:
                 return False
             else:
@@ -1516,9 +1542,8 @@ class TestAlphaElementwise(unittest.TestCase):
 
         # no hooks for polygons yet, so we use HooksKeypoints
         hooks = ia.HooksKeypoints(propagator=propagator)
-        observed = aug.augment_polygons([self.psoi], hooks=hooks)[0]
-        assert observed.polygons[0].exterior_almost_equals(
-            self.psoi.polygons[0])
+        observed = getattr(aug, augf_name)([cbaoi], hooks=hooks)[0]
+        assert observed.items[0].coords_almost_equals(cbaoi.items[0])
 
     def test_zero_sized_axes(self):
         shapes = [
