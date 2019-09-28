@@ -364,14 +364,16 @@ class _AffineSamplingResult(object):
         self.mode = mode
         self.order = order
 
-    def to_matrix(self, idx, arr_shape, fit_output):
+    def to_matrix(self, idx, arr_shape, fit_output, shift_add=(0.5, 0.5)):
         height, width = arr_shape[0:2]
-        shift_x = width / 2.0 - 0.5
-        shift_y = height / 2.0 - 0.5
+        # for images we use additional shifts of (0.5, 0.5) as otherwise
+        # we get an ugly black border for 90deg rotations
+        shift_y = height / 2.0 - shift_add[0]
+        shift_x = width / 2.0 - shift_add[1]
+        scale_y = self.scale[1][idx]  # TODO 1 and 0 should be inverted here
         scale_x = self.scale[0][idx]
-        scale_y = self.scale[1][idx]
+        translate_y = self.translate[1][idx]  # TODO same as above
         translate_x = self.translate[0][idx]
-        translate_y = self.translate[1][idx]
         if ia.is_single_float(translate_y):
             translate_y_px = int(
                 np.round(translate_y * height))
@@ -402,6 +404,9 @@ class _AffineSamplingResult(object):
         if fit_output:
             return _compute_affine_warp_output_shape(matrix, arr_shape)
         return matrix, arr_shape
+
+    def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.5, 0.5)):
+        return self.to_matrix(idx, arr_shape, fit_output, shift_add)
 
 
 def _is_identity_matrix(matrix, eps=1e-4):
@@ -1072,7 +1077,7 @@ class Affine(meta.Augmenter):
         samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            matrix, output_shape = samples.to_matrix(
+            matrix, output_shape = samples.to_matrix_cba(
                 i, keypoints_on_image.shape, self.fit_output)
 
             kps = keypoints_on_image.keypoints
