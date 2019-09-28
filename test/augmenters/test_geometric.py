@@ -5091,8 +5091,8 @@ class TestPerspectiveTransform(unittest.TestCase):
         gen = zip(observed[0].keypoints, kps_expected)
         # TODO deviations of around 0.5 here from expected values, why?
         for kp_observed, kp_expected in gen:
-            assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
-            assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
+            assert kp_observed.coords_almost_equals(
+                kp_expected, max_distance=1.5)
 
     def test_keypoints_with_keep_size(self):
         # keypoint augmentation with keep_size
@@ -5112,8 +5112,8 @@ class TestPerspectiveTransform(unittest.TestCase):
         gen = zip(observed[0].keypoints, kps_expected)
         # TODO deviations of around 0.5 here from expected values, why?
         for kp_observed, kp_expected in gen:
-            assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
-            assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
+            assert kp_observed.coords_almost_equals(
+                kp_expected, max_distance=1.5)
 
     def test_image_keypoint_alignment(self):
         img = np.zeros((100, 100), dtype=np.uint8)
@@ -5131,18 +5131,19 @@ class TestPerspectiveTransform(unittest.TestCase):
             ia.Keypoint(y=50, x=50)
         ]
         kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
-        aug = iaa.PerspectiveTransform(scale=(0.1, 0.3), keep_size=True)
-        aug_det = aug.to_deterministic()
+        aug = iaa.PerspectiveTransform(scale=(0.05, 0.15), keep_size=True)
 
-        imgs_aug = aug_det.augment_images([img, img])
-        kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
+        for _ in sm.xrange(10):
+            aug_det = aug.to_deterministic()
+            imgs_aug = aug_det.augment_images([img, img])
+            kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
 
-        for img_aug, kpsoi_aug in zip(imgs_aug, kpsois_aug):
-            assert kpsoi_aug.shape == img.shape
-            for kp_aug in kpsoi_aug.keypoints:
-                x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
-                if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
-                    assert img_aug[y, x] > 10
+            for img_aug, kpsoi_aug in zip(imgs_aug, kpsois_aug):
+                assert kpsoi_aug.shape == img.shape
+                for kp_aug in kpsoi_aug.keypoints:
+                    x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
+                    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+                        assert img_aug[y, x] > 10
 
     def test_empty_keypoints(self):
         # test empty keypoints
@@ -5151,8 +5152,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        assert observed.shape == (20, 10, 3)
-        assert len(observed.keypoints) == 0
+        assert_cbaois_equal(observed, kpsoi)
 
     # --------
     # polygons
@@ -5251,8 +5251,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (20, 10, 3)
-        assert len(observed.polygons) == 0
+        assert_cbaois_equal(observed, psoi)
 
     def test_polygons_under_extreme_scale_values(self):
         # test extreme scales
@@ -5294,6 +5293,101 @@ class TestPerspectiveTransform(unittest.TestCase):
                 assert poly0.exterior_almost_equals(
                     exterior_expected, max_distance=2.0)
                 """
+
+    # --------
+    # bounding boxes
+    # --------
+    def test_bounding_boxes_without_keep_size(self):
+        # BB augmentation without keep_size
+        # TODO deviations of around 0.4-0.7 in this and the next test (between
+        #      expected and observed coordinates) -- why?
+        bbs = [ia.BoundingBox(x1=0, y1=10, x2=20, y2=20)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
+        aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+        aug.jitter = iap.Deterministic(0.2)
+
+        observed = aug.augment_bounding_boxes([bbsoi])
+
+        bbs_expected = [
+            ia.BoundingBox(x1=0-0.2*30, y1=10-0.2*30,
+                           x2=20-0.2*30, y2=20-0.2*30)
+        ]
+        gen = zip(observed[0].bounding_boxes, bbs_expected)
+        # TODO deviations of around 0.5 here from expected values, why?
+        for bb_observed, bb_expected in gen:
+            assert bb_observed.coords_almost_equals(
+                bb_expected, max_distance=1.5)
+
+    def test_bounding_boxes_with_keep_size(self):
+        # BB augmentation with keep_size
+        bbs = [ia.BoundingBox(x1=0, y1=10, x2=20, y2=20)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
+        aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+        aug.jitter = iap.Deterministic(0.2)
+
+        observed = aug.augment_bounding_boxes([bbsoi])
+
+        bbs_expected = [
+            ia.BoundingBox(
+                x1=((0-0.2*30)/(30*0.6))*30,
+                y1=((10-0.2*30)/(30*0.6))*30,
+                x2=((20-0.2*30)/(30*0.6))*30,
+                y2=((20-0.2*30)/(30*0.6))*30
+            )
+        ]
+        gen = zip(observed[0].bounding_boxes, bbs_expected)
+        # TODO deviations of around 0.5 here from expected values, why?
+        for bb_observed, bb_expected in gen:
+            assert bb_observed.coords_almost_equals(
+                bb_expected, max_distance=1.5)
+
+    def test_image_bounding_box_alignment(self):
+        img = np.zeros((100, 100), dtype=np.uint8)
+        img[35:35+1, 35:65+1] = 255
+        img[65:65+1, 35:65+1] = 255
+        img[35:65+1, 35:35+1] = 255
+        img[35:65+1, 65:65+1] = 255
+        bbs = [
+            ia.BoundingBox(y1=35.5, x1=35.5, y2=65.5, x2=65.5),
+        ]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=img.shape)
+        aug = iaa.PerspectiveTransform(scale=(0.05, 0.2), keep_size=True)
+
+        for _ in sm.xrange(10):
+            imgs_aug, bbsois_aug = aug(
+                images=[img, img, img, img],
+                bounding_boxes=[bbsoi, bbsoi, bbsoi, bbsoi])
+
+            nb_skipped = 0
+            for img_aug, bbsoi_aug in zip(imgs_aug, bbsois_aug):
+                assert bbsoi_aug.shape == img_aug.shape
+                for bb_aug in bbsoi_aug.bounding_boxes:
+                    if bb_aug.is_fully_within_image(img_aug):
+                        # top, bottom, left, right
+                        x1 = bb_aug.x1_int
+                        x2 = bb_aug.x2_int
+                        y1 = bb_aug.y1_int
+                        y2 = bb_aug.y2_int
+                        top_row = img_aug[y1-1:y1+1, x1-1:x2+1]
+                        btm_row = img_aug[y2-1:y2+1, x1-1:x2+1]
+                        lft_row = img_aug[y1-1:y2+1, x1-1:x1+1]
+                        rgt_row = img_aug[y1-1:y2+1, x2-1:x2+1]
+                        assert np.max(top_row) > 10
+                        assert np.max(btm_row) > 10
+                        assert np.max(lft_row) > 10
+                        assert np.max(rgt_row) > 10
+                    else:
+                        nb_skipped += 1
+            assert nb_skipped <= 2
+
+    def test_empty_bounding_boxes(self):
+        # test empty bounding boxes
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(20, 10, 3))
+        aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     # ------------
     # mode
