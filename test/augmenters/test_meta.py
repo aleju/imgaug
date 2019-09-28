@@ -6837,15 +6837,12 @@ class TestWithChannels(unittest.TestCase):
     def test_keypoint_augmentation_single_channel(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
-        kpsoi_x = kpsoi.shift(x=1)
         affine = iaa.Affine(translate_px={"x": 1})
         aug = iaa.WithChannels(1, children=[affine])
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert len(kpsoi_aug.keypoints) == 2
-        assert kpsoi_aug.shape == (5, 6, 3)
-        assert keypoints_equal([kpsoi_aug], [kpsoi])
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
 
     def test_keypoint_augmentation_all_channels_via_list(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
@@ -6856,9 +6853,7 @@ class TestWithChannels(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert len(kpsoi_aug.keypoints) == 2
-        assert kpsoi_aug.shape == (5, 6, 3)
-        assert keypoints_equal([kpsoi_aug], [kpsoi_x])
+        assert_cbaois_equal(kpsoi_aug, kpsoi_x)
 
     def test_keypoint_augmentation_subset_of_channels(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
@@ -6869,9 +6864,7 @@ class TestWithChannels(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert len(kpsoi_aug.keypoints) == 2
-        assert kpsoi_aug.shape == (5, 6, 3)
-        assert keypoints_equal([kpsoi_aug], [kpsoi_x])
+        assert_cbaois_equal(kpsoi_aug, kpsoi_x)
 
     def test_keypoint_augmentation_with_empty_keypoints_instance(self):
         affine = iaa.Affine(translate_px={"x": 1})
@@ -6880,8 +6873,7 @@ class TestWithChannels(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert len(kpsoi_aug.keypoints) == 0
-        assert kpsoi_aug.shape == (5, 6, 3)
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
 
     def test_polygon_augmentation(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
@@ -6891,10 +6883,7 @@ class TestWithChannels(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert len(psoi_aug.polygons) == 1
-        assert psoi_aug.shape == (5, 6, 3)
-        assert psoi_aug.polygons[0].exterior_almost_equals(psoi.polygons[0])
-        assert psoi_aug.polygons[0].is_valid
+        assert_cbaois_equal(psoi_aug, psoi)
 
     def test_polygon_augmentation_all_channels_via_list(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
@@ -6905,10 +6894,7 @@ class TestWithChannels(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert len(psoi_aug.polygons) == 1
-        assert psoi_aug.shape == (5, 6, 3)
-        assert psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
-        assert psoi_aug.polygons[0].is_valid
+        assert_cbaois_equal(psoi_aug, psoi_x)
 
     def test_polygon_augmentation_subset_of_channels(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
@@ -6919,10 +6905,7 @@ class TestWithChannels(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert len(psoi_aug.polygons) == 1
-        assert psoi_aug.shape == (5, 6, 3)
-        assert psoi_aug.polygons[0].exterior_almost_equals(psoi_x.polygons[0])
-        assert psoi_aug.polygons[0].is_valid
+        assert_cbaois_equal(psoi_aug, psoi_x)
 
     def test_polygon_augmentation_with_empty_polygons_instance(self):
         psoi = ia.PolygonsOnImage([], shape=(5, 6, 3))
@@ -6931,8 +6914,48 @@ class TestWithChannels(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert len(psoi_aug.polygons) == 0
-        assert psoi_aug.shape == (5, 6, 3)
+        assert_cbaois_equal(psoi_aug, psoi)
+
+    def test_bounding_boxes_augmentation(self):
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels(1, children=[affine])
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, bbsoi)
+
+    def test_bounding_boxes_augmentation_all_channels_via_list(self):
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
+        bbsoi_x = bbsoi.shift(left=1)
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels([0, 1, 2], children=[affine])
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, bbsoi_x)
+
+    def test_bounding_boxes_augmentation_subset_of_channels(self):
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
+        bbsoi_x = bbsoi.shift(left=1)
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels([0, 1], children=[affine])
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, bbsoi_x)
+
+    def test_bounding_boxes_augmentation_with_empty_bb_instance(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(5, 6, 3))
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels([0, 1], children=[affine])
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, bbsoi)
 
     def test_invalid_datatype_for_channels_fails(self):
         got_exception = False
