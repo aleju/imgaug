@@ -405,7 +405,7 @@ class _AffineSamplingResult(object):
             return _compute_affine_warp_output_shape(matrix, arr_shape)
         return matrix, arr_shape
 
-    def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.5, 0.5)):
+    def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.0, 0.0)):
         return self.to_matrix(idx, arr_shape, fit_output, shift_add)
 
 
