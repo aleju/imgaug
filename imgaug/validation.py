@@ -17,7 +17,7 @@ def convert_iterable_to_string_of_types(iterable_var):
         in `iterable_var`. Separated by commas.
 
     """
-    types = [type(var_i) for var_i in iterable_var]
+    types = [str(type(var_i)) for var_i in iterable_var]
     return ", ".join(types)
 
 
