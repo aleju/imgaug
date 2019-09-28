@@ -6747,6 +6747,13 @@ class TestRot90(unittest.TestCase):
         )
 
     @property
+    def bbsoi(self):
+        return ia.BoundingBoxesOnImage(
+            [ia.BoundingBox(x1=1, y1=1, x2=3, y2=3)],
+            shape=(4, 8, 3)
+        )
+
+    @property
     def kpsoi_k1(self):
         # without keep size
         kp_offset = self.kp_offset
@@ -6799,7 +6806,7 @@ class TestRot90(unittest.TestCase):
             (8-expected_k1_polys[2][1]+kp_offset, expected_k1_polys[2][0]),
             (8-expected_k1_polys[3][1]+kp_offset, expected_k1_polys[3][0])]
         return ia.PolygonsOnImage([ia.Polygon(expected_k2_polys)],
-                                  shape=(8, 4, 3))
+                                  shape=(4, 8, 3))
 
     @property
     def psoi_k3(self):
@@ -6812,7 +6819,56 @@ class TestRot90(unittest.TestCase):
             (4-expected_k2_polys[2][1]+kp_offset, expected_k2_polys[2][0]),
             (4-expected_k2_polys[3][1]+kp_offset, expected_k2_polys[3][0])]
         return ia.PolygonsOnImage([ia.Polygon(expected_k3_polys)],
-                                  shape=(4, 8, 3))
+                                  shape=(8, 4, 3))
+
+    @property
+    def bbsoi_k1(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_coords = [
+            (4-1+kp_offset, 1),
+            (4-3+kp_offset, 3)]
+        return ia.BoundingBoxesOnImage([
+            ia.BoundingBox(
+                x1=min(expected_k1_coords[0][0], expected_k1_coords[1][0]),
+                y1=min(expected_k1_coords[0][1], expected_k1_coords[1][1]),
+                x2=max(expected_k1_coords[1][0], expected_k1_coords[0][0]),
+                y2=max(expected_k1_coords[1][1], expected_k1_coords[0][1])
+            )], shape=(8, 4, 3))
+
+    @property
+    def bbsoi_k2(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        coords = self.bbsoi_k1.bounding_boxes[0].coords
+        expected_k2_coords = [
+            (8-coords[0][1]+kp_offset, coords[0][0]),
+            (8-coords[1][1]+kp_offset, coords[1][0])]
+        return ia.BoundingBoxesOnImage([
+            ia.BoundingBox(
+                x1=min(expected_k2_coords[0][0], expected_k2_coords[1][0]),
+                y1=min(expected_k2_coords[0][1], expected_k2_coords[1][1]),
+                x2=max(expected_k2_coords[1][0], expected_k2_coords[0][0]),
+                y2=max(expected_k2_coords[1][1], expected_k2_coords[0][1])
+            )],
+            shape=(4, 8, 3))
+
+    @property
+    def bbsoi_k3(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        coords = self.bbsoi_k2.bounding_boxes[0].coords
+        expected_k3_coords = [
+            (4-coords[0][1]+kp_offset, coords[0][0]),
+            (4-coords[1][1]+kp_offset, coords[1][0])]
+        return ia.BoundingBoxesOnImage([
+            ia.BoundingBox(
+                x1=min(expected_k3_coords[0][0], expected_k3_coords[1][0]),
+                y1=min(expected_k3_coords[0][1], expected_k3_coords[1][1]),
+                x2=max(expected_k3_coords[1][0], expected_k3_coords[0][0]),
+                y2=max(expected_k3_coords[1][1], expected_k3_coords[0][1])
+            )],
+            shape=(8, 4, 3))
 
     def test___init___k_is_list(self):
         aug = iaa.Rot90([1, 3])
@@ -6871,10 +6927,7 @@ class TestRot90(unittest.TestCase):
 
                 kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-                assert kpsoi_aug.shape == self.kpsoi.shape
-                gen = zip(kpsoi_aug.keypoints, self.kpsoi.keypoints)
-                for kp_aug, kp in gen:
-                    assert np.allclose([kp_aug.x, kp_aug.y], [kp.x, kp.y])
+                assert_cbaois_equal(kpsoi_aug, self.kpsoi)
 
     def test_polygons_k_is_0_and_4(self):
         for k in [0, 4]:
@@ -6883,12 +6936,16 @@ class TestRot90(unittest.TestCase):
 
                 psoi_aug = aug.augment_polygons(self.psoi)
 
-                assert psoi_aug.shape == self.psoi.shape
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.polygons[0].is_valid
-                gen = zip(psoi_aug.polygons, self.psoi.polygons)
-                for poly_aug, poly in gen:
-                    assert np.allclose(poly_aug.exterior, poly.exterior)
+                assert_cbaois_equal(psoi_aug, self.psoi)
+
+    def test_bounding_boxes_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+                assert_cbaois_equal(bbsoi_aug, self.bbsoi)
 
     def test_images_k_is_1_and_5(self):
         for k in [1, 5]:
@@ -6972,10 +7029,7 @@ class TestRot90(unittest.TestCase):
 
                 kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-                assert kpsoi_aug.shape == (8, 4, 3)
-                expected_k1_kps = self.kpsoi_k1.to_xy_array()
-                for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k1_kps):
-                    assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+                assert_cbaois_equal(kpsoi_aug, self.kpsoi_k1)
 
     def test_polygons_k_is_1_and_5(self):
         for k in [1, 5]:
@@ -6984,12 +7038,16 @@ class TestRot90(unittest.TestCase):
 
                 psoi_aug = aug.augment_polygons(self.psoi)
 
-                assert psoi_aug.shape == (8, 4, 3)
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.polygons[0].is_valid
-                expected_k1_poly = self.psoi_k1.polygons[0]
-                assert psoi_aug.polygons[0].exterior_almost_equals(
-                    expected_k1_poly)
+                assert_cbaois_equal(psoi_aug, self.psoi_k1)
+
+    def test_bounding_boxes_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+                assert_cbaois_equal(bbsoi_aug, self.bbsoi_k1)
 
     def test_images_k_is_2(self):
         aug = iaa.Rot90(2, keep_size=False)
@@ -7055,21 +7113,21 @@ class TestRot90(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-        assert kpsoi_aug.shape == (4, 8, 3)
-        expected_k2_kps = self.kpsoi_k2.to_xy_array()
-        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k2_kps):
-            assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+        assert_cbaois_equal(kpsoi_aug, self.kpsoi_k2)
 
     def test_polygons_k_is_2(self):
         aug = iaa.Rot90(2, keep_size=False)
 
         psoi_aug = aug.augment_polygons(self.psoi)
 
-        assert psoi_aug.shape == (4, 8, 3)
-        assert len(psoi_aug.polygons) == 1
-        assert psoi_aug.polygons[0].is_valid
-        expected_k2_poly = self.psoi_k2.polygons[0]
-        assert psoi_aug.polygons[0].exterior_almost_equals(expected_k2_poly)
+        assert_cbaois_equal(psoi_aug, self.psoi_k2)
+
+    def test_bounding_boxes_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+
+        bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, self.bbsoi_k2)
 
     def test_images_k_is_3_and_minus1(self):
         img = self.image
@@ -7150,10 +7208,7 @@ class TestRot90(unittest.TestCase):
 
                 kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-                assert kpsoi_aug.shape == (8, 4, 3)
-                expected_k3_kps = self.kpsoi_k3.to_xy_array()
-                for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k3_kps):
-                    assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+                assert_cbaois_equal(kpsoi_aug, self.kpsoi_k3)
 
     def test_polygons_k_is_3_and_minus1(self):
         for k in [3, -1]:
@@ -7162,12 +7217,16 @@ class TestRot90(unittest.TestCase):
 
                 psoi_aug = aug.augment_polygons(self.psoi)
 
-                assert psoi_aug.shape == (8, 4, 3)
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.polygons[0].is_valid
-                expected_k3_poly = self.psoi_k3.polygons[0]
-                assert psoi_aug.polygons[0].exterior_almost_equals(
-                    expected_k3_poly)
+                assert_cbaois_equal(psoi_aug, self.psoi_k3)
+
+    def test_bounding_boxes_k_is_3_and_minus1(self):
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+                assert_cbaois_equal(bbsoi_aug, self.bbsoi_k3)
 
     def test_images_k_is_1_verify_without_using_numpy_rot90(self):
         # verify once without np.rot90
@@ -7279,6 +7338,26 @@ class TestRot90(unittest.TestCase):
         assert psoi_aug.polygons[0].is_valid
         assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
+    def test_bounding_boxes_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        bbsoi = self.bbsoi
+        kp_offset = self.kp_offset
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = [(4-1+kp_offset, 1),
+                    (4-3+kp_offset, 3)]
+        expected = [(8*x/4, 4*y/8) for x, y in expected]
+        expected = np.float32([
+            [min(expected[0][0], expected[1][0]),
+             min(expected[0][1], expected[1][1])],
+            [max(expected[0][0], expected[1][0]),
+             max(expected[0][1], expected[1][1])]
+        ])
+        assert bbsoi_aug.shape == (4, 8, 3)
+        assert len(bbsoi_aug.bounding_boxes) == 1
+        assert bbsoi_aug.bounding_boxes[0].coords_almost_equals(expected)
+
     def test_images_k_is_list(self):
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
         img = self.image
@@ -7327,31 +7406,15 @@ class TestRot90(unittest.TestCase):
         assert np.allclose(segmaps_aug[3].arr, _rot_sm(segmaps_smaller, 2))
 
     def test_keypoints_k_is_list(self):
-        def kpxy_aug(kpsoi_aug, i, j):
-            return [
-                kpsoi_aug[i].keypoints[j].x,
-                kpsoi_aug[i].keypoints[j].y
-            ]
-
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
         kpsoi = self.kpsoi
 
         kpsoi_aug = aug.augment_keypoints([kpsoi] * 4)
 
-        assert kpsoi_aug[0].shape == (8, 4, 3)
-        assert kpsoi_aug[1].shape == (4, 8, 3)
-        assert kpsoi_aug[2].shape == (8, 4, 3)
-        assert kpsoi_aug[3].shape == (4, 8, 3)
-        expected_k1_kps = self.kpsoi_k1.to_xy_array()
-        expected_k2_kps = self.kpsoi_k2.to_xy_array()
-        assert np.allclose(kpxy_aug(kpsoi_aug, 0, 0), expected_k1_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 0, 1), expected_k1_kps[1])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 1, 0), expected_k2_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 1, 1), expected_k2_kps[1])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 2, 0), expected_k1_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 2, 1), expected_k1_kps[1])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 3, 0), expected_k2_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 3, 1), expected_k2_kps[1])
+        assert_cbaois_equal(kpsoi_aug[0], self.kpsoi_k1)
+        assert_cbaois_equal(kpsoi_aug[1], self.kpsoi_k2)
+        assert_cbaois_equal(kpsoi_aug[2], self.kpsoi_k1)
+        assert_cbaois_equal(kpsoi_aug[3], self.kpsoi_k2)
 
     def test_polygons_k_is_list(self):
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
@@ -7359,16 +7422,21 @@ class TestRot90(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons([psoi] * 4)
 
-        assert psoi_aug[0].shape == (8, 4, 3)
-        assert psoi_aug[1].shape == (4, 8, 3)
-        assert psoi_aug[2].shape == (8, 4, 3)
-        assert psoi_aug[3].shape == (4, 8, 3)
-        expected_k1_poly = self.psoi_k1.polygons[0]
-        expected_k2_poly = self.psoi_k2.polygons[0]
-        assert psoi_aug[0].polygons[0].exterior_almost_equals(expected_k1_poly)
-        assert psoi_aug[1].polygons[0].exterior_almost_equals(expected_k2_poly)
-        assert psoi_aug[2].polygons[0].exterior_almost_equals(expected_k1_poly)
-        assert psoi_aug[3].polygons[0].exterior_almost_equals(expected_k2_poly)
+        assert_cbaois_equal(psoi_aug[0], self.psoi_k1)
+        assert_cbaois_equal(psoi_aug[1], self.psoi_k2)
+        assert_cbaois_equal(psoi_aug[2], self.psoi_k1)
+        assert_cbaois_equal(psoi_aug[3], self.psoi_k2)
+
+    def test_bounding_boxes_k_is_list(self):
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        bbsoi = self.bbsoi
+
+        bbsoi_aug = aug.augment_bounding_boxes([bbsoi] * 4)
+
+        assert_cbaois_equal(bbsoi_aug[0], self.bbsoi_k1)
+        assert_cbaois_equal(bbsoi_aug[1], self.bbsoi_k2)
+        assert_cbaois_equal(bbsoi_aug[2], self.bbsoi_k1)
+        assert_cbaois_equal(bbsoi_aug[3], self.bbsoi_k2)
 
     def test_empty_keypoints(self):
         aug = iaa.Rot90(k=1, keep_size=False)
@@ -7376,8 +7444,9 @@ class TestRot90(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert len(kpsoi_aug.keypoints) == 0
-        assert kpsoi_aug.shape == (8, 4, 3)
+        expected = self.kpsoi_k1
+        expected.keypoints = []
+        assert_cbaois_equal(kpsoi_aug, expected)
 
     def test_empty_polygons(self):
         aug = iaa.Rot90(k=1, keep_size=False)
@@ -7385,8 +7454,19 @@ class TestRot90(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert len(psoi_aug.polygons) == 0
-        assert psoi_aug.shape == (8, 4, 3)
+        expected = self.psoi_k1
+        expected.polygons = []
+        assert_cbaois_equal(psoi_aug, expected)
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.Rot90(k=1, keep_size=False)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 8, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = self.bbsoi_k1
+        expected.bounding_boxes = []
+        assert_cbaois_equal(bbsoi_aug, expected)
 
     def test_unusual_channel_numbers(self):
         shapes = [
