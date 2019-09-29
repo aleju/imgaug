@@ -673,6 +673,11 @@ class TestAssertLambda(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def bbsoi(self):
+        bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
+        return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
+
+    @property
     def aug_succeeds(self):
         def _func_images_succeeds(images, random_state, parents, hooks):
             return images[0][0, 0] == 0 and images[0][2, 2] == 1
@@ -690,6 +695,11 @@ class TestAssertLambda(unittest.TestCase):
                 and keypoints_on_images[0].keypoints[2].x == 2
             )
 
+        def _func_bounding_boxes_succeeds(bounding_boxes_on_images,
+                                          random_state, parents, hooks):
+            return (bounding_boxes_on_images[0].items[0].x1 == 0
+                    and bounding_boxes_on_images[0].items[0].x2 == 2)
+
         def _func_polygons_succeeds(polygons_on_images, random_state, parents,
                                    hooks):
             return (polygons_on_images[0].polygons[0].exterior[0][0] == 0
@@ -700,6 +710,7 @@ class TestAssertLambda(unittest.TestCase):
             func_heatmaps=_func_heatmaps_succeeds,
             func_segmentation_maps=_func_segmaps_succeeds,
             func_keypoints=_func_keypoints_succeeds,
+            func_bounding_boxes=_func_bounding_boxes_succeeds,
             func_polygons=_func_polygons_succeeds)
 
     @property
@@ -717,6 +728,10 @@ class TestAssertLambda(unittest.TestCase):
                                   hooks):
             return keypoints_on_images[0].keypoints[0].x == 2
 
+        def _func_bounding_boxes_fails(bounding_boxes_on_images, random_state,
+                                       parents, hooks):
+            return bounding_boxes_on_images[0].items[0].x1 == 2
+
         def _func_polygons_fails(polygons_on_images, random_state, parents,
                                  hooks):
             return polygons_on_images[0].polygons[0].exterior[0][0] == 2
@@ -726,6 +741,7 @@ class TestAssertLambda(unittest.TestCase):
             func_heatmaps=_func_heatmaps_fails,
             func_segmentation_maps=_func_segmaps_fails,
             func_keypoints=_func_keypoints_fails,
+            func_bounding_boxes=_func_bounding_boxes_fails,
             func_polygons=_func_polygons_fails,)
 
     def test_images_as_array_with_assert_that_succeeds(self):
@@ -810,8 +826,7 @@ class TestAssertLambda(unittest.TestCase):
 
     def test_keypoints_with_assert_that_succeeds(self):
         observed = self.aug_succeeds.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_keypoints_with_assert_that_fails(self):
         with self.assertRaises(AssertionError):
@@ -820,8 +835,7 @@ class TestAssertLambda(unittest.TestCase):
     def test_keypoints_with_assert_that_succeeds__deterministic(self):
         aug_succeeds_det = self.aug_succeeds.to_deterministic()
         observed = aug_succeeds_det.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_keypoints_with_assert_that_fails__deterministic(self):
         with self.assertRaises(AssertionError):
@@ -829,12 +843,7 @@ class TestAssertLambda(unittest.TestCase):
 
     def test_polygons_with_assert_that_succeeds(self):
         observed = self.aug_succeeds.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0])
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
 
     def test_polygons_with_assert_that_fails(self):
         with self.assertRaises(AssertionError):
@@ -843,16 +852,28 @@ class TestAssertLambda(unittest.TestCase):
     def test_polygons_with_assert_that_succeeds__deterministic(self):
         aug_succeeds_det = self.aug_succeeds.to_deterministic()
         observed = aug_succeeds_det.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0])
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
 
     def test_polygons_with_assert_that_fails__deterministic(self):
         with self.assertRaises(AssertionError):
             _ = self.aug_fails.augment_polygons(self.psoi)
+
+    def test_bounding_boxes_with_assert_that_succeeds(self):
+        observed = self.aug_succeeds.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
+
+    def test_bounding_boxes_with_assert_that_fails(self):
+        with self.assertRaises(AssertionError):
+            _ = self.aug_fails.augment_bounding_boxes(self.bbsoi)
+
+    def test_bounding_boxes_with_assert_that_succeeds__deterministic(self):
+        aug_succeeds_det = self.aug_succeeds.to_deterministic()
+        observed = aug_succeeds_det.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
+
+    def test_bounding_boxes_with_assert_that_fails__deterministic(self):
+        with self.assertRaises(AssertionError):
+            _ = self.aug_fails.augment_bounding_boxes(self.bbsoi)
 
     def test_other_dtypes_bool__with_assert_that_succeeds(self):
         def func_images_succeeds(images, random_state, parents, hooks):
