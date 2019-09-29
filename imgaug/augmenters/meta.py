@@ -2192,16 +2192,23 @@ class Augmenter(object):
         aug.deterministic = True
         return aug
 
-    # TODO mark this as in-place
+    @ia.deprecated("imgaug.augmenters.meta.Augmenter.seed_")
     def reseed(self, random_state=None, deterministic_too=False):
-        """Reseed this augmenter and all of its children.
+        """Old name of :func:`imgaug.augmenters.meta.Augmenter.seed_`."""
+        self.seed_(entropy=random_state, deterministic_too=deterministic_too)
+
+    # TODO mark this as in-place
+    def seed_(self, entropy=None, deterministic_too=False):
+        """Seed this augmenter and all of its children.
 
         This method assigns a new random number generator to the
         augmenter and all of its children (if it has any). The new random
-        number generator is derived from the provided one or from the
-        global random number generator.
+        number generator is *derived* from the provided seed or RNG -- or from
+        the global random number generator if ``None`` was provided.
+        Note that as child RNGs are *derived*, they do not all use the same
+        seed.
 
-        If this augmenter or any child augmenter had a random numer generator
+        If this augmenter or any child augmenter had a random number generator
         that pointed to the global random state, it will automatically be
         replaced with a local random state. This is similar to what
         :func:`imgaug.augmenters.meta.Augmenter.localize_random_state`
@@ -2220,7 +2227,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        entropy : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator that is used to derive new
             random number generators for this augmenter and its children.
             If an ``int`` is provided, it will be interpreted as a seed.
@@ -2232,25 +2239,39 @@ class Augmenter(object):
             is deterministic. This is the case both when this augmenter
             object is ``A`` or one of its children is ``A``.
 
+        Examples
+        --------
+        >>> import imgaug.augmenters as iaa
+        >>> aug = iaa.Sequential([
+        >>>     iaa.Crop(px=(0, 10)),
+        >>>     iaa.Crop(px=(0, 10))
+        >>> ])
+        >>> aug.seed_(1)
+
+        Seed an augmentation sequence containing two crop operations. Even
+        though the same seed was used, the two operations will still sample
+        different pixel amounts to crop as the child-specific seed is merely
+        derived from the provided seed.
+
         """
         assert isinstance(deterministic_too, bool), (
             "Expected 'deterministic_too' to be a boolean, got type %s." % (
                 deterministic_too))
 
-        if random_state is None:
+        if entropy is None:
             random_state = iarandom.RNG.create_pseudo_random_()
         else:
-            random_state = iarandom.RNG(random_state)
+            random_state = iarandom.RNG(entropy)
 
         if not self.deterministic or deterministic_too:
-            # note that deriving advances the RNG, so child augmenters get a
-            # different RNG state
+            # note that derive_rng_() (used below) advances the RNG, so
+            # child augmenters get a different RNG state
             self.random_state = random_state.copy()
 
         for lst in self.get_children_lists():
             for aug in lst:
-                aug.reseed(random_state=random_state.derive_rng_(),
-                           deterministic_too=deterministic_too)
+                aug.seed_(entropy=random_state.derive_rng_(),
+                          deterministic_too=deterministic_too)
 
     def localize_random_state(self, recursive=True):
         """Assign augmenter-specific RNGs to this augmenter and its children.
@@ -2521,7 +2542,7 @@ class Augmenter(object):
         ``A2`` is removed inplace from ``[A1, A2]``, then the children lists
         of ``IfElse(...)`` must also change to ``[A1], [B1, B2, B3]``. This
         is used in
-        :func:`imgaug.augmeneters.meta.Augmenter.remove_augmenters_inplace`.
+        :func:`imgaug.augmeneters.meta.Augmenter.remove_augmenters_`.
 
         Returns
         -------
@@ -2683,6 +2704,8 @@ class Augmenter(object):
             return self.find_augmenters(
                 lambda aug, parents: aug.name in names, flat=flat)
 
+    # TODO remove copy arg
+    # TODO allow first arg to be string name, class type or func
     def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
         """Remove this augmenter or children that match a condition.
 
@@ -2744,11 +2767,17 @@ class Augmenter(object):
                 return None
         else:
             aug = self if not copy else self.deepcopy()
-            aug.remove_augmenters_inplace(func, parents=[])
+            aug.remove_augmenters_(func, parents=[])
             return aug
 
-    # TODO rename to remove_augmenters_()
+    @ia.deprecated("remove_augmenters_")
     def remove_augmenters_inplace(self, func, parents=None):
+        """Old name for :func:`imgaug.meta.Augmenter.remove_augmenters_`."""
+        self.remove_augmenters_(func=func, parents=parents)
+
+    # TODO allow first arg to be string name, class type or func
+    # TODO remove parents arg + add _remove_augmenters_() with parents arg
+    def remove_augmenters_(self, func, parents=None):
         """Remove in-place children of this augmenter that match a condition.
 
         This is functionally identical to
@@ -2774,7 +2803,7 @@ class Augmenter(object):
         >>>     iaa.Fliplr(0.5, name="fliplr"),
         >>>    iaa.Flipud(0.5, name="flipud"),
         >>> ])
-        >>> seq.remove_augmenters_inplace(lambda a, parents: a.name == "fliplr")
+        >>> seq.remove_augmenters_(lambda a, parents: a.name == "fliplr")
 
         This removes the augmenter ``Fliplr`` from the ``Sequential``
         object's children.
@@ -2792,7 +2821,7 @@ class Augmenter(object):
                 del lst[i - count_removed]
 
             for aug in lst:
-                aug.remove_augmenters_inplace(func, subparents)
+                aug.remove_augmenters_(func, subparents)
 
     def copy(self):
         """Create a shallow copy of this Augmenter instance.

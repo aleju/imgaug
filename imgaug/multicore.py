@@ -459,7 +459,7 @@ def _reseed_global_local(base_seed, augseq):
     seed_global = _derive_seed(base_seed, -10**9)
     seed_local = _derive_seed(base_seed)
     iarandom.seed(seed_global)
-    augseq.reseed(seed_local)
+    augseq.seed_(seed_local)
 
 
 def _derive_seed(base_seed, offset=0):
@@ -792,7 +792,7 @@ class BackgroundAugmenter(object):
         """
         np.random.seed(seedval)
         random.seed(seedval)
-        augseq.reseed(seedval)
+        augseq.seed_(seedval)
         iarandom.seed(seedval)
 
         loader_finished = False

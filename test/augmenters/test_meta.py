@@ -2077,7 +2077,7 @@ class TestAugmenter(unittest.TestCase):
         assert aug.random_state.is_global_rng()
         assert not aug_localized.random_state.is_global_rng()
 
-    def test_reseed(self):
+    def test_seed_(self):
         aug1 = _DummyAugmenter()
         aug2 = _DummyAugmenter(deterministic=True)
         aug0 = iaa.Sequential([aug1, aug2])
@@ -2087,13 +2087,13 @@ class TestAugmenter(unittest.TestCase):
         assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
         assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
 
-        aug0_copy.reseed()
+        aug0_copy.seed_()
 
         assert not _same_rs(aug0.random_state, aug0_copy.random_state)
         assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
         assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
 
-    def test_reseed_deterministic_too(self):
+    def test_seed__deterministic_too(self):
         aug1 = _DummyAugmenter()
         aug2 = _DummyAugmenter(deterministic=True)
         aug0 = iaa.Sequential([aug1, aug2])
@@ -2103,13 +2103,13 @@ class TestAugmenter(unittest.TestCase):
         assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
         assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
 
-        aug0_copy.reseed(deterministic_too=True)
+        aug0_copy.seed_(deterministic_too=True)
 
         assert not _same_rs(aug0.random_state, aug0_copy.random_state)
         assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
         assert not _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
 
-    def test_reseed_with_seed(self):
+    def test_seed__with_integer(self):
         aug1 = _DummyAugmenter()
         aug2 = _DummyAugmenter(deterministic=True)
         aug0 = iaa.Sequential([aug1, aug2])
@@ -2119,7 +2119,7 @@ class TestAugmenter(unittest.TestCase):
         assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
         assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
 
-        aug0_copy.reseed(random_state=123)
+        aug0_copy.seed_(123)
 
         assert not _same_rs(aug0.random_state, aug0_copy.random_state)
         assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
@@ -2127,7 +2127,7 @@ class TestAugmenter(unittest.TestCase):
         expected = iarandom.RNG(123).derive_rng_()
         assert _same_rs(aug0_copy[0].random_state, expected)
 
-    def test_reseed_with_rng(self):
+    def test_seed__with_rng(self):
         aug1 = _DummyAugmenter()
         aug2 = _DummyAugmenter(deterministic=True)
         aug0 = iaa.Sequential([aug1, aug2])
@@ -2137,7 +2137,7 @@ class TestAugmenter(unittest.TestCase):
         assert _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
         assert _same_rs(aug0[1].random_state, aug0_copy[1].random_state)
 
-        aug0_copy.reseed(random_state=iarandom.RNG(123))
+        aug0_copy.seed_(iarandom.RNG(123))
 
         assert not _same_rs(aug0.random_state, aug0_copy.random_state)
         assert not _same_rs(aug0[0].random_state, aug0_copy[0].random_state)
