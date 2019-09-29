@@ -1,4 +1,4 @@
-# Unwrapped Bounding Box Augmentation
+# Unwrapped Bounding Box Augmentation #446
 
 * Added property `coords` to `BoundingBox`. The property returns an `(N,2)`
   numpy array containing the coordinates of the top-left and bottom-right
