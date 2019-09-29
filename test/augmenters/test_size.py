@@ -3226,22 +3226,20 @@ class TestPadToFixedSize(unittest.TestCase):
             height=3, width=3, pad_mode="edge", position="center")
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
 
-        observed = aug.augment_keypoints([kpsoi])
+        observed = aug.augment_keypoints(kpsoi)
 
         expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
-        assert observed[0].shape == expected.shape
-        assert keypoints_equal(observed, [expected])
+        assert_cbaois_equal(observed, expected)
 
     def test_keypoints_pad_at_center(self):
         aug = iaa.PadToFixedSize(
             height=4, width=4, pad_mode="edge", position="center")
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
 
-        observed = aug.augment_keypoints([kpsoi])
+        observed = aug.augment_keypoints(kpsoi)
 
         expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
-        assert observed[0].shape == expected.shape
-        assert keypoints_equal(observed, [expected])
+        assert_cbaois_equal(observed, expected)
 
     def test_keypoints_pad_at_left_top(self):
         # keypoint test with explicit non-center position
@@ -3249,22 +3247,163 @@ class TestPadToFixedSize(unittest.TestCase):
             height=4, width=4, pad_mode="edge", position="left-top")
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
 
-        observed = aug.augment_keypoints([kpsoi])
+        observed = aug.augment_keypoints(kpsoi)
 
         expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
-        assert observed[0].shape == expected.shape
-        assert keypoints_equal(observed, [expected])
+        assert_cbaois_equal(observed, expected)
 
     def test_keypoints_pad_at_right_bottom(self):
         aug = iaa.PadToFixedSize(
             height=4, width=4, pad_mode="edge", position="right-bottom")
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
 
-        observed = aug.augment_keypoints([kpsoi])
+        observed = aug.augment_keypoints(kpsoi)
 
         expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(4, 4))
-        assert observed[0].shape == expected.shape
-        assert keypoints_equal(observed, [expected])
+        assert_cbaois_equal(observed, expected)
+
+    def test_keypoints_empty(self):
+        aug = iaa.PadToFixedSize(height=5, width=6)
+        kpsoi = ia.KeypointsOnImage([], shape=(3, 3))
+
+        observed = aug.augment_keypoints(kpsoi)
+
+        expected = ia.KeypointsOnImage([], shape=(5, 6))
+        assert_cbaois_equal(observed, expected)
+
+    def test_polygons__image_already_fullfills_min_shape(self):
+        # polygons test with shape not being changed
+        aug = iaa.PadToFixedSize(
+            height=3, width=3, pad_mode="edge", position="center")
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_polygons(psoi)
+
+        expected = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
+    def test_polygons_pad_at_center(self):
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="center")
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_polygons(psoi)
+
+        expected = ia.PolygonsOnImage([
+            ia.Polygon([(1+0, 1+0), (1+3, 1+0), (1+3, 1+3)])
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_polygons_pad_at_left_top(self):
+        # polygon test with explicit non-center position
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="left-top")
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_polygons(psoi)
+
+        expected = ia.PolygonsOnImage([
+            ia.Polygon([(1+0, 1+0), (1+3, 1+0), (1+3, 1+3)])
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_polygons_pad_at_right_bottom(self):
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="right-bottom")
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_polygons(psoi)
+
+        expected = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_polygons_empty(self):
+        aug = iaa.PadToFixedSize(height=5, width=6)
+        psoi = ia.PolygonsOnImage([], shape=(3, 3))
+
+        observed = aug.augment_polygons(psoi)
+
+        expected = ia.KeypointsOnImage([], shape=(5, 6))
+        assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes__image_already_fullfills_min_shape(self):
+        # bounding boxes test with shape not being changed
+        aug = iaa.PadToFixedSize(
+            height=3, width=3, pad_mode="edge", position="center")
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(3, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        expected = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes_pad_at_center(self):
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="center")
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(3, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        expected = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=1+0, y1=1+1, x2=1+2, y2=1+3),
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes_pad_at_left_top(self):
+        # bounding boxes test with explicit non-center position
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="left-top")
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(3, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        expected = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=1+0, y1=1+1, x2=1+2, y2=1+3),
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes_pad_at_right_bottom(self):
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="right-bottom")
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(3, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        expected = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes_empty(self):
+        aug = iaa.PadToFixedSize(height=5, width=6)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(3, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        expected = ia.KeypointsOnImage([], shape=(5, 6))
+        assert_cbaois_equal(observed, expected)
 
     def test_heatmaps__pad_mode_should_be_ignored(self):
         # basic heatmaps test
