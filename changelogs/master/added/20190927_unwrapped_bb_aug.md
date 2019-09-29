@@ -22,6 +22,9 @@
   This allows to individually control how bounding boxes are supposed to
   be augmented. Previously, the bounding box augmentation was a wrapper around
   keypoint augmentation that did not allow such control.
+* [breaking] Added parameter `parents` to `Augmenter.augment_bounding_boxes()`.
+  This breaks if `hooks` was used as a *positional* argument in connection with
+  that method.
 * [breaking] Added parameter `func_bounding_boxes` to `Lambda`. This
   breaks if one relied on the order of the augmenter's parameters instead of
   their names.
