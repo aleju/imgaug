@@ -537,7 +537,8 @@ class TestFliplr(_TestFliplrAndFlipudBase, unittest.TestCase):
 
     @property
     def bbsoi_flipped(self):
-        bbs = [ia.BoundingBox(x1=3-0, y1=1, x2=3-2, y2=3)]
+        # note that x1 and x2 were inverted (otherwise would be x1>x2)
+        bbs = [ia.BoundingBox(x1=3-2, y1=1, x2=3-0, y2=3)]
         return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
 
     def create_aug(self, *args, **kwargs):
@@ -639,7 +640,8 @@ class TestFlipud(_TestFliplrAndFlipudBase, unittest.TestCase):
 
     @property
     def bbsoi_flipped(self):
-        bbs = [ia.BoundingBox(x1=0, y1=3-1, x2=2, y2=3-3)]
+        # note that y1 and y2 were inverted (otherwise would be y1>y2)
+        bbs = [ia.BoundingBox(x1=0, y1=3-3, x2=2, y2=3-1)]
         return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
 
     def create_aug(self, *args, **kwargs):
