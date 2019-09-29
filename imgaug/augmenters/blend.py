@@ -402,6 +402,12 @@ class Alpha(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks,
             "augment_polygons")
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_nonimages(
+            bounding_boxes_on_images, random_state, parents, hooks,
+            "augment_bounding_boxes")
+
     def _augment_nonimages(self, augmentables, random_state, parents, hooks,
                            augfunc_name):
         outputs_first, outputs_second = self._generate_branch_outputs(
@@ -670,9 +676,10 @@ class AlphaElementwise(Alpha):
         )
 
         # this controls how keypoints and polygons are augmented
-        # keypoint mode currently also affects line strings and bounding boxes
+        # keypoint mode currently also affects line strings
         self._keypoints_mode = self._MODE_POINTWISE
         self._polygons_mode = self._MODE_EITHER_OR
+        self._bounding_box_mode = self._MODE_EITHER_OR
 
     def _augment_images(self, images, random_state, parents, hooks):
         outputs_first, outputs_second = self._generate_branch_outputs(
@@ -801,9 +808,18 @@ class AlphaElementwise(Alpha):
         # from one branch or the other, which guarantuees their validity.
         # TODO decide the either-or not based on the whole average mask
         #      value but on the average mask value within the polygon's area?
-        with _switch_keypoint_mode_temporarily(self, self._polygons_mode):
+        mode = self._polygons_mode
+        with _switch_keypoint_mode_temporarily(self, mode):
             return self._augment_polygons_as_keypoints(
                 polygons_on_images, random_state, parents, hooks)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        # see notes under polygons
+        mode = self._bounding_box_mode
+        with _switch_keypoint_mode_temporarily(self, mode):
+            return self._augment_bounding_boxes_as_keypoints(
+                bounding_boxes_on_images, random_state, parents, hooks)
 
     def _augment_coordinate_based(self, inputs, random_state, parents, hooks,
                                   augfunc_name, get_coords_func,

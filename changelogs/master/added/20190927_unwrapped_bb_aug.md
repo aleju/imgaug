@@ -18,3 +18,16 @@
 * Added method `Keypoint.almost_equals(other)`.
 * Added method `imgaug.testutils.assert_cbaois_equal()`.
 * Added method `imgaug.testutils.shift_cbaoi()`.
+* Added internal `_augment_bounding_boxes()` methods to various augmenters.
+  This allows to individually control how bounding boxes are supposed to
+  be augmented. Previously, the bounding box augmentation was a wrapper around
+  keypoint augmentation that did not allow such control.
+* [breaking] Added parameter `func_bounding_boxes` to `Lambda`. This
+  breaks if one relied on the order of the augmenter's parameters instead of
+  their names.
+* [breaking] Added parameter `func_bounding_boxes` to `AssertLambda`. This
+  breaks if one relied on the order of the augmenter's parameters instead of
+  their names.
+* [breaking] Added parameter `check_bounding_boxes` to `AssertShape`. This
+  breaks if one relied on the order of the augmenter's parameters instead of
+  their names.
