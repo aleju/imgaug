@@ -2844,8 +2844,11 @@ class _TestAugmenter_augment_polys_or_ls(object):
     """Class that is used to test augment_polygons() and augment_line_strings().
 
     Originally this was only used for polygons and then made more flexible.
-    This is why all the variables are still called "polygon",
-    "polygons_on_image" etc.
+    This is why some descriptions are still geared towards polygons.
+
+    Abbreviations:
+        cba = coordinate based augmentable, e.g. Polygon
+        cbaoi = coordinate based augmentable on image, e.g. PolygonsOnImage
 
     """
 
@@ -2872,41 +2875,33 @@ class _TestAugmenter_augment_polys_or_ls(object):
     def _ObjOnImage(self, *args, **kwargs):
         return self._ObjOnImageClass(*args, **kwargs)
 
-    @abstractmethod
-    def _coords(self, obj):
-        """Return polygon.exterior or ls.coords."""
-
-    @abstractmethod
-    def _entities(self, obj_on_image):
-        """Return psoi.polygons or lsoi.line_strings."""
-
     def test_single_empty_instance(self):
         # single instance of PolygonsOnImage with 0 polygons
         aug = iaa.Rot90(1, keep_size=False)
-        poly_oi = self._ObjOnImage([], shape=(10, 11, 3))
+        cbaoi = self._ObjOnImage([], shape=(10, 11, 3))
 
-        poly_oi_aug = self._augfunc(aug, poly_oi)
+        cbaoi_aug = self._augfunc(aug, cbaoi)
 
-        assert isinstance(poly_oi_aug, self._ObjOnImageClass)
-        assert len(self._entities(poly_oi_aug)) == 0
-        assert poly_oi_aug.shape == (11, 10, 3)
+        assert isinstance(cbaoi_aug, self._ObjOnImageClass)
+        assert cbaoi_aug.empty
+        assert cbaoi_aug.shape == (11, 10, 3)
 
     def test_list_of_single_empty_instance(self):
         # list of PolygonsOnImage with 0 polygons
         aug = iaa.Rot90(1, keep_size=False)
-        poly_oi = self._ObjOnImage([], shape=(10, 11, 3))
+        cbaoi = self._ObjOnImage([], shape=(10, 11, 3))
 
-        poly_oi_aug = self._augfunc(aug, [poly_oi])
+        cbaois_aug = self._augfunc(aug, [cbaoi])
 
-        assert isinstance(poly_oi_aug, list)
-        assert isinstance(poly_oi_aug[0], self._ObjOnImageClass)
-        assert len(self._entities(poly_oi_aug[0])) == 0
-        assert poly_oi_aug[0].shape == (11, 10, 3)
+        assert isinstance(cbaois_aug, list)
+        assert isinstance(cbaois_aug[0], self._ObjOnImageClass)
+        assert cbaois_aug[0].empty
+        assert cbaois_aug[0].shape == (11, 10, 3)
 
     def test_two_pois_each_two_polygons(self):
         # 2 PolygonsOnImage, each 2 polygons
         aug = iaa.Rot90(1, keep_size=False)
-        poly_ois = [
+        cbaois = [
             self._ObjOnImage(
                 [self._Obj([(0, 0), (5, 0), (5, 5)]),
                  self._Obj([(1, 1), (6, 1), (6, 6)])],
@@ -2917,82 +2912,82 @@ class _TestAugmenter_augment_polys_or_ls(object):
                 shape=(10, 10, 3)),
         ]
 
-        poly_ois_aug = self._augfunc(aug, poly_ois)
+        cbaois_aug = self._augfunc(aug, cbaois)
 
-        assert isinstance(poly_ois_aug, list)
-        assert isinstance(poly_ois_aug[0], self._ObjOnImageClass)
-        assert isinstance(poly_ois_aug[0], self._ObjOnImageClass)
-        assert len(self._entities(poly_ois_aug[0])) == 2
-        assert len(self._entities(poly_ois_aug[1])) == 2
+        assert isinstance(cbaois_aug, list)
+        assert isinstance(cbaois_aug[0], self._ObjOnImageClass)
+        assert isinstance(cbaois_aug[0], self._ObjOnImageClass)
+        assert len(cbaois_aug[0].items) == 2
+        assert len(cbaois_aug[1].items) == 2
         kp_offset = 0
         assert np.allclose(
-            self._coords(self._entities(poly_ois_aug[0])[0]),
+            cbaois_aug[0].items[0].coords,
             [(10-0+kp_offset, 0), (10-0+kp_offset, 5), (10-5+kp_offset, 5)],
             atol=1e-4, rtol=0
         )
         assert np.allclose(
-            self._coords(self._entities(poly_ois_aug[0])[1]),
+            cbaois_aug[0].items[1].coords,
             [(10-1+kp_offset, 1), (10-1+kp_offset, 6), (10-6+kp_offset, 6)],
             atol=1e-4, rtol=0
         )
         assert np.allclose(
-            self._coords(self._entities(poly_ois_aug[1])[0]),
+            cbaois_aug[1].items[0].coords,
             [(10-2+kp_offset, 2), (10-2+kp_offset, 7), (10-7+kp_offset, 7)],
             atol=1e-4, rtol=0
         )
         assert np.allclose(
-            self._coords(self._entities(poly_ois_aug[1])[1]),
+            cbaois_aug[1].items[1].coords,
             [(10-3+kp_offset, 3), (10-3+kp_offset, 8), (10-8+kp_offset, 8)],
             atol=1e-4, rtol=0
         )
-        assert poly_ois_aug[0].shape == (10, 10, 3)
-        assert poly_ois_aug[1].shape == (10, 10, 3)
+        assert cbaois_aug[0].shape == (10, 10, 3)
+        assert cbaois_aug[1].shape == (10, 10, 3)
 
     def test_randomness_between_and_within_batches(self):
         # test whether there is randomness within each batch and between
         # batches
         aug = iaa.Rot90((0, 3), keep_size=False)
-        poly = self._Obj([(0, 0), (5, 0), (5, 5)])
-        poly_oi = self._ObjOnImage(
-            [poly.deepcopy() for _ in sm.xrange(1)],
+        cba = self._Obj([(0, 0), (5, 0), (5, 5)])
+        cbaoi = self._ObjOnImage(
+            [cba.deepcopy() for _ in sm.xrange(1)],
             shape=(10, 11, 3)
         )
-        poly_ois = [poly_oi.deepcopy() for _ in sm.xrange(100)]
+        cbaois = [cbaoi.deepcopy() for _ in sm.xrange(100)]
 
-        polys_ois_aug1 = self._augfunc(aug, poly_ois)
-        polys_ois_aug2 = self._augfunc(aug, poly_ois)
+        cbaois_aug1 = self._augfunc(aug, cbaois)
+        cbaois_aug2 = self._augfunc(aug, cbaois)
 
         # --> different between runs
-        points1 = [self._coords(poly)
+        points1 = [cba.coords
+                   for cbaoi
+                   in cbaois_aug1
+                   for cba
+                   in cbaoi.items]
+        points2 = [cba.coords
                    for poly_oi
-                   in polys_ois_aug1
-                   for poly
-                   in self._entities(poly_oi)]
-        points2 = [self._coords(poly)
-                   for poly_oi
-                   in polys_ois_aug2
-                   for poly
-                   in self._entities(poly_oi)]
+                   in cbaois_aug2
+                   for cba
+                   in poly_oi.items]
         points1 = np.float32(points1)
         points2 = np.float32(points2)
         assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
 
         # --> different between PolygonOnImages
         same = []
-        points1 = np.float32([self._coords(poly)
-                              for poly
-                              in self._entities(polys_ois_aug1[0])])
-        for poly in polys_ois_aug1[1:]:
-            points2 = np.float32([self._coords(poly)
-                                  for poly
-                                  in self._entities(poly)])
+        points1 = np.float32([cba.coords
+                              for cba
+                              in cbaois_aug1[0].items])
+        for cba in cbaois_aug1[1:]:
+            points2 = np.float32([cba.coords
+                                  for cba
+                                  in cba.items])
             same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
         assert not np.all(same)
 
         # --> different between polygons
         points1 = set()
-        for poly in self._entities(polys_ois_aug1[0]):
-            for point in self._coords(poly):
+        for cba in cbaois_aug1[0].items:
+            for point in cba.coords:
                 points1.add(tuple(
                     [int(point[0]*10), int(point[1]*10)]
                 ))
@@ -3001,39 +2996,39 @@ class _TestAugmenter_augment_polys_or_ls(object):
     def test_determinism(self):
         aug = iaa.Rot90((0, 3), keep_size=False)
         aug_det = aug.to_deterministic()
-        poly = self._Obj([(0, 0), (5, 0), (5, 5)])
-        poly_oi = self._ObjOnImage(
-            [poly.deepcopy() for _ in sm.xrange(1)],
+        cba = self._Obj([(0, 0), (5, 0), (5, 5)])
+        cbaoi = self._ObjOnImage(
+            [cba.deepcopy() for _ in sm.xrange(1)],
             shape=(10, 11, 3)
         )
-        poly_ois = [poly_oi.deepcopy() for _ in sm.xrange(100)]
+        cbaois = [cbaoi.deepcopy() for _ in sm.xrange(100)]
 
-        polys_ois_aug1 = self._augfunc(aug_det, poly_ois)
-        polys_ois_aug2 = self._augfunc(aug_det, poly_ois)
+        cbaois_aug1 = self._augfunc(aug_det, cbaois)
+        cbaois_aug2 = self._augfunc(aug_det, cbaois)
 
         # --> different between PolygonsOnImages
         same = []
-        points1 = np.float32([self._coords(poly)
-                              for poly
-                              in self._entities(polys_ois_aug1[0])])
-        for poly in polys_ois_aug1[1:]:
-            points2 = np.float32([self._coords(poly)
-                                  for poly
-                                  in self._entities(poly)])
+        points1 = np.float32([cba.coords
+                              for cba
+                              in cbaois_aug1[0].items])
+        for cbaoi in cbaois_aug1[1:]:
+            points2 = np.float32([cba.coords
+                                  for cba
+                                  in cbaoi.items])
             same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
         assert not np.all(same)
 
         # --> similar between augmentation runs
-        points1 = [self._coords(poly)
-                   for poly_oi
-                   in polys_ois_aug1
-                   for poly
-                   in self._entities(poly_oi)]
-        points2 = [self._coords(poly)
-                   for poly_oi
-                   in polys_ois_aug2
-                   for poly
-                   in self._entities(poly_oi)]
+        points1 = [cba.coords
+                   for cbaoi
+                   in cbaois_aug1
+                   for cba
+                   in cbaoi.items]
+        points2 = [cba.coords
+                   for cbaoi
+                   in cbaois_aug2
+                   for cba
+                   in cbaoi.items]
         points1 = np.float32(points1)
         points2 = np.float32(points2)
         assert np.allclose(points1, points2, atol=1e-2, rtol=0)
@@ -3046,22 +3041,22 @@ class _TestAugmenter_augment_polys_or_ls(object):
         image[2:5, 10] = 255
         image_rots = [iaa.Rot90(k, keep_size=False).augment_image(image)
                       for k in [0, 1, 2, 3]]
-        poly = self._Obj([(0, 0), (10, 0), (10, 20)])
+        cba = self._Obj([(0, 0), (10, 0), (10, 20)])
         kp_offs = 0  # offset
-        polys_rots = [
+        cbas_rots = [
             [(0, 0), (10, 0), (10, 20)],
             [(10-0+kp_offs, 0), (10-0+kp_offs, 10), (10-20+kp_offs, 10)],
             [(20-0+kp_offs, 10), (20-10+kp_offs, 10), (20-10+kp_offs, -10)],
             [(10-10+kp_offs, 20), (10-10+kp_offs, 10), (10-(-10)+kp_offs, 10)]
         ]
-        poly_ois = [self._ObjOnImage([poly], shape=image.shape)
-                    for _ in sm.xrange(50)]
+        cbaois = [self._ObjOnImage([cba], shape=image.shape)
+                  for _ in sm.xrange(50)]
 
         images_aug = aug_det.augment_images([image] * 50)
-        poly_ois_aug = self._augfunc(aug_det, poly_ois)
+        cbaois_aug = self._augfunc(aug_det, cbaois)
 
         seen = set()
-        for image_aug, poly_oi_aug in zip(images_aug, poly_ois_aug):
+        for image_aug, cbaoi_aug in zip(images_aug, cbaois_aug):
             found_image = False
             for img_rot_idx, img_rot in enumerate(image_rots):
                 if (image_aug.shape == img_rot.shape
@@ -3069,43 +3064,43 @@ class _TestAugmenter_augment_polys_or_ls(object):
                     found_image = True
                     break
 
-            found_poly = False
-            for poly_rot_idx, poly_rot in enumerate(polys_rots):
-                coords_observed = self._coords(self._entities(poly_oi_aug)[0])
-                if np.allclose(coords_observed, poly_rot):
-                    found_poly = True
+            found_cba = False
+            for poly_rot_idx, cba_rot in enumerate(cbas_rots):
+                coords_observed = cbaoi_aug.items[0].coords
+                if np.allclose(coords_observed, cba_rot):
+                    found_cba = True
                     break
 
             assert found_image
-            assert found_poly
+            assert found_cba
             assert img_rot_idx == poly_rot_idx
             seen.add((img_rot_idx, poly_rot_idx))
         assert 2 <= len(seen) <= 4  # assert not always the same rot
 
     def test_aligned_with_images_despite_empty_instances(self):
-        # Test if augmenting lists of PolygonsOnImage is still aligned with
-        # image augmentation when one PolygonsOnImage instance is empty
-        # (no polygons)
-        poly = self._Obj([(0, 0), (5, 0), (5, 5), (0, 5)])
-        psoi_lst = [
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([poly.shift(left=1)], shape=(10, 20)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
+        # Test if augmenting lists of e.g. PolygonsOnImage is still aligned
+        # with image augmentation when one e.g. PolygonsOnImage instance is
+        # empty (e.g. contains no polygons)
+        cba = self._Obj([(0, 0), (5, 0), (5, 5), (0, 5)])
+        cbaoi_lst = [
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
+            self._ObjOnImage([cba.shift(left=1)], shape=(10, 20)),
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
             self._ObjOnImage([], shape=(1, 8)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([poly.shift(left=1)], shape=(10, 20)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([poly.deepcopy()], shape=(10, 20))
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
+            self._ObjOnImage([cba.shift(left=1)], shape=(10, 20)),
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
+            self._ObjOnImage([cba.deepcopy()], shape=(10, 20))
         ]
         image = np.zeros((10, 20), dtype=np.uint8)
         image[0, 0] = 255
         image[0, 5] = 255
         image[5, 5] = 255
         image[5, 0] = 255
-        images = np.tile(image[np.newaxis, :, :], (len(psoi_lst), 1, 1))
+        images = np.tile(image[np.newaxis, :, :], (len(cbaoi_lst), 1, 1))
 
         aug = iaa.Affine(translate_px={"x": (0, 8)}, order=0, mode="constant",
                          cval=0)
@@ -3118,22 +3113,20 @@ class _TestAugmenter_augment_polys_or_ls(object):
                     inputs = list(inputs)
 
                 images_aug = aug_det.augment_images(inputs)
-                psoi_lst_aug = self._augfunc(aug_det, psoi_lst)
+                cbaoi_aug_lst = self._augfunc(aug_det, cbaoi_lst)
 
                 if is_list:
                     images_aug = np.array(images_aug, dtype=np.uint8)
                 translations_imgs = np.argmax(images_aug[:, 0, :], axis=1)
 
                 translations_points = [
-                    (self._coords(self._entities(psoi)[0])[0][0]
-                     if len(self._entities(psoi)) > 0
-                     else None)
-                    for psoi
-                    in psoi_lst_aug]
+                    (cbaoi.items[0].coords[0][0] if not cbaoi.empty else None)
+                    for cbaoi
+                    in cbaoi_aug_lst]
 
                 assert len([
+                    pointresult for
                     pointresult
-                    for pointresult
                     in translations_points
                     if pointresult is None
                 ]) == 1
@@ -3161,12 +3154,6 @@ class TestAugmenter_augment_polygons(_TestAugmenter_augment_polys_or_ls,
     def _ObjOnImageClass(self):
         return ia.PolygonsOnImage
 
-    def _coords(self, obj):
-        return obj.exterior
-    
-    def _entities(self, obj_on_image):
-        return obj_on_image.polygons
-
 
 class TestAugmenter_augment_line_strings(_TestAugmenter_augment_polys_or_ls,
                                          unittest.TestCase):
@@ -3180,12 +3167,6 @@ class TestAugmenter_augment_line_strings(_TestAugmenter_augment_polys_or_ls,
     @property
     def _ObjOnImageClass(self):
         return ia.LineStringsOnImage
-
-    def _coords(self, obj):
-        return obj.coords
-
-    def _entities(self, obj_on_image):
-        return obj_on_image.line_strings
 
 
 # TODO add line strings
