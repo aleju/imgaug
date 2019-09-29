@@ -1002,6 +1002,11 @@ class TestAssertShape(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def bbsoi(self):
+        bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
+        return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
+
+    @property
     def image_h4(self):
         base_img_h4 = np.array([[0, 0, 1, 0],
                                 [0, 0, 1, 0],
@@ -1039,6 +1044,11 @@ class TestAssertShape(unittest.TestCase):
     def psoi_h4(self):
         polygons = [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])]
         return ia.PolygonsOnImage(polygons, shape=self.image_h4.shape)
+
+    @property
+    def bbsoi_h4(self):
+        bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
+        return ia.BoundingBoxesOnImage([bb], shape=self.image_h4.shape)
 
     @property
     def aug_exact_shape(self):
@@ -1111,34 +1121,32 @@ class TestAssertShape(unittest.TestCase):
     def test_keypoints_with_exact_shape__succeeds(self):
         aug = self.aug_exact_shape
         observed = aug.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_keypoints_with_exact_shape__succeeds__deterministic(self):
         aug_det = self.aug_exact_shape.to_deterministic()
         observed = aug_det.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_polygons_with_exact_shape__succeeds(self):
         aug = self.aug_exact_shape
         observed = aug.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
 
     def test_polygons_with_exact_shape__succeeds__deterministic(self):
         aug_det = self.aug_exact_shape.to_deterministic()
         observed = aug_det.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
+
+    def test_bounding_boxes_with_exact_shape__succeeds(self):
+        aug = self.aug_exact_shape
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
+
+    def test_bounding_boxes_with_exact_shape__succeeds__deterministic(self):
+        aug_det = self.aug_exact_shape.to_deterministic()
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
 
     def test_images_with_exact_shape__fails(self):
         aug = self.aug_exact_shape
@@ -1159,6 +1167,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_exact_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_bounding_boxes_with_exact_shape__fails(self):
+        aug = self.aug_exact_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_bounding_boxes(self.bbsoi_h4)
 
     def test_images_with_none_in_shape__succeeds(self):
         aug = self.aug_none_in_shape
@@ -1200,25 +1213,35 @@ class TestAssertShape(unittest.TestCase):
         assert observed.shape == (3, 4, 3)
         assert np.array_equal(observed.get_arr(), self.segmaps.get_arr())
 
+    def test_keypoints_with_none_in_shape__succeeds(self):
+        aug = self.aug_none_in_shape
+        observed = aug.augment_keypoints(self.kpsoi)
+        assert_cbaois_equal(observed, self.kpsoi)
+
+    def test_keypoints_with_none_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_none_in_shape.to_deterministic()
+        observed = aug_det.augment_keypoints(self.kpsoi)
+        assert_cbaois_equal(observed, self.kpsoi)
+
     def test_polygons_with_none_in_shape__succeeds(self):
         aug = self.aug_none_in_shape
         observed = aug.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
 
     def test_polygons_with_none_in_shape__succeeds__deterministic(self):
         aug_det = self.aug_none_in_shape.to_deterministic()
         observed = aug_det.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
+
+    def test_bounding_boxes_with_none_in_shape__succeeds(self):
+        aug = self.aug_none_in_shape
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
+
+    def test_bounding_boxes_with_none_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_none_in_shape.to_deterministic()
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
 
     def test_images_with_none_in_shape__fails(self):
         aug = self.aug_none_in_shape
@@ -1239,6 +1262,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_none_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_bounding_boxes_with_none_in_shape__fails(self):
+        aug = self.aug_none_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_bounding_boxes(self.bbsoi_h4)
 
     def test_images_with_list_in_shape__succeeds(self):
         aug = self.aug_list_in_shape
@@ -1283,34 +1311,32 @@ class TestAssertShape(unittest.TestCase):
     def test_keypoints_with_list_in_shape__succeeds(self):
         aug = self.aug_list_in_shape
         observed = aug.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_keypoints_with_list_in_shape__succeeds__deterministic(self):
         aug_det = self.aug_list_in_shape.to_deterministic()
         observed = aug_det.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_polygons_with_list_in_shape__succeeds(self):
         aug = self.aug_list_in_shape
         observed = aug.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
 
     def test_polygons_with_list_in_shape__succeeds__deterministic(self):
         aug_det = self.aug_list_in_shape.to_deterministic()
         observed = aug_det.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
+
+    def test_bounding_boxes_with_list_in_shape__succeeds(self):
+        aug = self.aug_list_in_shape
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
+
+    def test_bounding_boxes_with_list_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_list_in_shape.to_deterministic()
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
 
     def test_images_with_list_in_shape__fails(self):
         aug = self.aug_list_in_shape
@@ -1336,6 +1362,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_list_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_bounding_boxes_with_list_in_shape__fails(self):
+        aug = self.aug_list_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_bounding_boxes(self.bbsoi_h4)
 
     def test_images_with_tuple_in_shape__succeeds(self):
         aug = self.aug_tuple_in_shape
@@ -1380,34 +1411,32 @@ class TestAssertShape(unittest.TestCase):
     def test_keypoints_with_tuple_in_shape__succeeds(self):
         aug = self.aug_tuple_in_shape
         observed = aug.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_keypoints_with_tuple_in_shape__succeeds__deterministic(self):
         aug_det = self.aug_tuple_in_shape.to_deterministic()
         observed = aug_det.augment_keypoints(self.kpsoi)
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        assert_cbaois_equal(observed, self.kpsoi)
 
     def test_polygons_with_tuple_in_shape__succeeds(self):
         aug = self.aug_tuple_in_shape
         observed = aug.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
 
     def test_polygons_with_tuple_in_shape__succeeds__deterministic(self):
         aug_det = self.aug_tuple_in_shape.to_deterministic()
         observed = aug_det.augment_polygons(self.psoi)
-        expected = self.psoi
-        assert len(observed.polygons) == 1
-        assert observed.shape == expected.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            expected.polygons[0].exterior)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.psoi)
+
+    def test_bounding_boxes_with_tuple_in_shape__succeeds(self):
+        aug = self.aug_tuple_in_shape
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
+
+    def test_bounding_boxes_with_tuple_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_tuple_in_shape.to_deterministic()
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+        assert_cbaois_equal(observed, self.bbsoi)
 
     def test_images_with_tuple_in_shape__fails(self):
         aug = self.aug_tuple_in_shape
@@ -1433,6 +1462,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_tuple_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_bounding_boxes_with_tuple_in_shape__fails(self):
+        aug = self.aug_tuple_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_bounding_boxes(self.bbsoi_h4)
 
     def test_fails_if_shape_contains_invalid_datatype(self):
         got_exception = False
