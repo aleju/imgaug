@@ -4322,6 +4322,71 @@ class TestKeepSizeByResize(unittest.TestCase):
         assert np.isclose(kpoi_aug.keypoints[2].x, 2, rtol=0, atol=1e-4)
         assert np.isclose(kpoi_aug.keypoints[2].y, 2, rtol=0, atol=1e-4)
 
+
+    def test_polygons_interpolation_is_cubic(self):
+        aug = iaa.KeepSizeByResize(self.children, interpolation="cubic")
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(4, 4, 3))
+
+        psoi_aug = aug.augment_polygons(psoi)
+
+        assert psoi_aug.shape == (4, 4, 3)
+        assert np.allclose(
+            psoi_aug.polygons[0].coords,
+            [(0, ((0-1)/3)*4),
+             (3, ((0-1)/3)*4),
+             (3, ((3-1)/3)*4)]
+        )
+
+    def test_polygons_interpolation_is_no_resize(self):
+        aug = iaa.KeepSizeByResize(
+            self.children, interpolation=iaa.KeepSizeByResize.NO_RESIZE)
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(4, 4, 3))
+
+        psoi_aug = aug.augment_polygons(psoi)
+
+        assert psoi_aug.shape == (3, 4, 3)
+        assert np.allclose(
+            psoi_aug.polygons[0].coords,
+            [(0, 0-1),
+             (3, 0-1),
+             (3, 3-1)]
+        )
+
+    def test_bounding_boxes_interpolation_is_cubic(self):
+        aug = iaa.KeepSizeByResize(self.children, interpolation="cubic")
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=3, y2=4)
+        ], shape=(4, 4, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert bbsoi_aug.shape == (4, 4, 3)
+        assert np.allclose(
+            bbsoi_aug.bounding_boxes[0].coords,
+            [(0, ((1-1)/3)*4),
+             (3, ((4-1)/3)*4)]
+        )
+
+    def test_bounding_boxes_interpolation_is_no_resize(self):
+        aug = iaa.KeepSizeByResize(
+            self.children, interpolation=iaa.KeepSizeByResize.NO_RESIZE)
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=3, y2=4)
+        ], shape=(4, 4, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert bbsoi_aug.shape == (3, 4, 3)
+        assert np.allclose(
+            bbsoi_aug.bounding_boxes[0].coords,
+            [(0, 1-1),
+             (3, 4-1)]
+        )
+
     def test_heatmaps_specific_interpolation_set_to_no_nearest(self):
         aug = iaa.KeepSizeByResize(
             self.children,
