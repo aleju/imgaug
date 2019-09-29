@@ -1473,7 +1473,9 @@ class Augmenter(object):
         # advance the RNG state, but the next call to e.g. augment() will then
         # still use the same (advanced) RNG state for images and polygons.
         # We copy here anyways as it seems cleaner.
-        random_state_recoverer = random_state.copy()
+        random_state_recoverer = None
+        if recoverer is not None:
+            random_state_recoverer = random_state.copy()
 
         result = []
         gen = enumerate(zip(kps_ois_aug, kp_counts))
