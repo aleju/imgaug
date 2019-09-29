@@ -25,7 +25,8 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 import imgaug.augmenters.size as iaa_size
-from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
+from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
+                              assert_cbaois_equal, shift_cbaoi)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
@@ -1329,6 +1330,40 @@ class TestPad(unittest.TestCase):
                             (4*(5/8), 4*(7/10))])
             )
 
+    def test_pad_bounding_boxes_by_tuple_of_fixed_ints_without_keep_size(self):
+        aug = iaa.Pad((2, 0, 4, 4), keep_size=False)
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=4, y2=4),
+               ia.BoundingBox(x1=1, y1=1, x2=3, y2=4)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(4, 4, 3))
+        bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi])
+        assert len(bbsoi_aug) == 2
+        for bbsoi_aug_i in bbsoi_aug:
+            assert bbsoi_aug_i.shape == (10, 8, 3)
+            assert len(bbsoi_aug_i.bounding_boxes) == 2
+            assert bbsoi_aug_i.bounding_boxes[0].coords_almost_equals(
+                [(4+0, 2+0), (4+4, 2+4)]
+            )
+            assert bbsoi_aug_i.bounding_boxes[1].coords_almost_equals(
+                [(4+1, 2+1), (4+3, 2+4)]
+            )
+
+    def test_pad_bounding_boxes_by_tuple_of_fixed_ints_with_keep_size(self):
+        aug = iaa.Pad((2, 0, 4, 4), keep_size=True)
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=4, y2=4),
+               ia.BoundingBox(x1=1, y1=1, x2=3, y2=4)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(4, 4, 3))
+        bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi])
+        assert len(bbsoi_aug) == 2
+        for bbsoi_aug_i in bbsoi_aug:
+            assert bbsoi_aug_i.shape == (4, 4, 3)
+            assert len(bbsoi_aug_i.bounding_boxes) == 2
+            assert bbsoi_aug_i.bounding_boxes[0].coords_almost_equals(
+                [(4*((4+0)/8), 4*((2+0)/10)), (4*((4+4)/8), 4*((2+4)/10))]
+            )
+            assert bbsoi_aug_i.bounding_boxes[1].coords_almost_equals(
+                [(4*((4+1)/8), 4*((2+1)/10)), (4*((4+3)/8), 4*((2+4)/10))]
+            )
+
     def test_pad_mode_is_stochastic_parameter(self):
         aug = iaa.Pad(px=(0, 1, 0, 0),
                       pad_mode=iap.Choice(["constant", "maximum", "edge"]),
@@ -1548,16 +1583,9 @@ class TestPad(unittest.TestCase):
 
                 assert np.array_equal(observed, image_padded)
 
-    def test_pad_keypoints_each_side_by_100_percent_without_keep_size(self):
-        image = np.zeros((4, 4), dtype=np.uint8)
-        image[0, 0] = 255
-        image[3, 0] = 255
-        image[0, 3] = 255
-        image[3, 3] = 255
-        height, width = image.shape[0:2]
-        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=3),
-               ia.Keypoint(x=3, y=3)]
-        keypoints = [ia.KeypointsOnImage(kps, shape=(4, 4))]
+    def _test_pad_cba_each_side_by_100_percent_without_keep_size(
+            self, augf_name, cbaoi):
+        height, width = cbaoi.shape[0:2]
         pads = [
             (1.0, 0, 0, 0),
             (0, 1.0, 0, 0),
@@ -1570,11 +1598,39 @@ class TestPad(unittest.TestCase):
                 top_px = int(top * height)
                 left_px = int(left * width)
                 aug = iaa.Pad(percent=pad, keep_size=False)
-                keypoints_moved = [keypoints[0].shift(x=left_px, y=top_px)]
+                cbaoi_moved = shift_cbaoi(cbaoi, left=left_px, top=top_px)
+                cbaoi_moved.shape = (
+                    int(height+top*height+bottom*height),
+                    int(width+left*width+right*width)
+                )
 
-                observed = aug.augment_keypoints(keypoints)
+                observed = getattr(aug, augf_name)(cbaoi)
 
-                assert keypoints_equal(observed, keypoints_moved)
+                assert_cbaois_equal(observed, cbaoi_moved)
+
+    def test_pad_keypoints_each_side_by_100_percent_without_keep_size(self):
+        height, width = (4, 4)
+        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=3, y=3),
+               ia.Keypoint(x=3, y=3)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(height, width))
+        self._test_pad_cba_each_side_by_100_percent_without_keep_size(
+            "augment_keypoints", kpsoi)
+
+    def test_pad_polygons_each_side_by_100_percent_without_keep_size(self):
+        height, width = (4, 4)
+        polys = [ia.Polygon([(0, 0), (4, 0), (4, 4)]),
+                 ia.Polygon([(1, 2), (2, 3), (0, 4)])]
+        psoi = ia.PolygonsOnImage(polys, shape=(height, width))
+        self._test_pad_cba_each_side_by_100_percent_without_keep_size(
+            "augment_polygons", psoi)
+
+    def test_pad_bbs_each_side_by_100_percent_without_keep_size(self):
+        height, width = (4, 4)
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=4, y2=4),
+               ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(height, width))
+        self._test_pad_cba_each_side_by_100_percent_without_keep_size(
+            "augment_bounding_boxes", bbsoi)
 
     def test_pad_heatmaps_smaller_than_img_by_floats_without_keep_size(self):
         # pad smaller heatmaps
@@ -1763,6 +1819,45 @@ class TestPad(unittest.TestCase):
                             (4*(5/8), 4*(7/10))])
             )
 
+    def test_pad_bounding_boxes_by_floats_without_keep_size(self):
+        aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=False)
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=4, y2=4),
+               ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(4, 4, 3))
+        bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi])
+        assert len(bbsoi_aug) == 2
+        for bbsoi_aug_i in bbsoi_aug:
+            assert bbsoi_aug_i.shape == (10, 8, 3)
+            assert len(bbsoi_aug_i.bounding_boxes) == 2
+            assert bbsoi_aug_i.bounding_boxes[0].coords_almost_equals(
+                [(int(1.0*4+0), int(0.5*4+0)),
+                 (int(1.0*4+4), int(0.5*4+4))]
+            )
+            assert bbsoi_aug_i.bounding_boxes[1].coords_almost_equals(
+                [(int(1.0*4+1), int(0.5*4+2)),
+                 (int(1.0*4+3), int(0.5*4+4))]
+            )
+
+    def test_pad_bounding_boxes_by_floats_with_keep_size(self):
+        # BBs, with keep_size=True
+        aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=True)
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=4, y2=4),
+               ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(4, 4, 3))
+        bbsoi_aug = aug.augment_bounding_boxes([bbsoi, bbsoi])
+        assert len(bbsoi_aug) == 2
+        for bbsoi_aug_i in bbsoi_aug:
+            assert bbsoi_aug_i.shape == (4, 4, 3)
+            assert len(bbsoi_aug_i.bounding_boxes) == 2
+            assert bbsoi_aug_i.bounding_boxes[0].coords_almost_equals(
+                [(4*(4/8), 4*(2/10)),
+                 (4*(8/8), 4*(6/10))]
+            )
+            assert bbsoi_aug_i.bounding_boxes[1].coords_almost_equals(
+                [(4*(5/8), 4*(4/10)),
+                 (4*(7/8), 4*(6/10))]
+            )
+
     def test_pad_by_tuple_of_floats_at_top_side_without_keep_size(self):
         # test pad by range of percentages
         aug = iaa.Pad(percent=((0, 1.0), 0, 0, 0), keep_size=False)
@@ -1827,6 +1922,30 @@ class TestPad(unittest.TestCase):
         assert seen[2] == 0
         assert seen[3] == 0
         assert 250 - 50 < seen[4] < 250 + 50
+
+    @classmethod
+    def _test_pad_empty_cba(cls, augf_name, cbaoi):
+        aug = iaa.Pad(px=(1, 2, 3, 4), keep_size=False)
+
+        cbaoi_aug = getattr(aug, augf_name)(cbaoi)
+
+        expected = cbaoi.deepcopy()
+        expected.shape = tuple(
+            [1+expected.shape[0]+3, 4+expected.shape[1]+2]
+            + list(expected.shape[2:]))
+        assert_cbaois_equal(cbaoi_aug, expected)
+
+    def test_pad_empty_keypoints(self):
+        cbaoi = ia.KeypointsOnImage([], shape=(2, 4, 3))
+        self._test_pad_empty_cba("augment_keypoints", cbaoi)
+
+    def test_pad_empty_polygons(self):
+        cbaoi = ia.PolygonsOnImage([], shape=(2, 4, 3))
+        self._test_pad_empty_cba("augment_polygons", cbaoi)
+
+    def test_pad_empty_bounding_boxes(self):
+        cbaoi = ia.BoundingBoxesOnImage([], shape=(2, 4, 3))
+        self._test_pad_empty_cba("augment_bounding_boxes", cbaoi)
 
     def test_zero_sized_axes_no_keep_size(self):
         shapes = [
