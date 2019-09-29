@@ -185,6 +185,22 @@ class TestResize(unittest.TestCase):
         ]
         return ia.PolygonsOnImage(polygons, shape=self.image3d.shape)
 
+    @property
+    def bbsoi2d(self):
+        bbs = [
+            ia.BoundingBox(x1=0, y1=0, x2=8, y2=4),
+            ia.BoundingBox(x1=1, y1=2, x2=6, y2=3),
+        ]
+        return ia.BoundingBoxesOnImage(bbs, shape=self.image2d.shape)
+
+    @property
+    def bbsoi3d(self):
+        bbs = [
+            ia.BoundingBox(x1=0, y1=0, x2=8, y2=4),
+            ia.BoundingBox(x1=1, y1=2, x2=6, y2=3),
+        ]
+        return ia.BoundingBoxesOnImage(bbs, shape=self.image3d.shape)
+
     @classmethod
     def _aspect_ratio(cls, image):
         return image.shape[1] / image.shape[0]
@@ -290,6 +306,18 @@ class TestResize(unittest.TestCase):
             ia.Polygon([(1.5, 2), (10.5, 2), (10.5, 6), (1.5, 6)])
         )
 
+    def test_bounding_boxes_on_3d_img_and_with_width_int_and_height_int(self):
+        aug = iaa.Resize({"width": 12, "height": 8})
+        bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi3d)
+        assert len(bbsoi_aug.bounding_boxes) == 2
+        assert bbsoi_aug.shape == (8, 12, 3)
+        assert bbsoi_aug.bounding_boxes[0].coords_almost_equals(
+            [(0, 0), (12, 8)]
+        )
+        assert bbsoi_aug.bounding_boxes[1].coords_almost_equals(
+            [((1/8)*12, (2/4)*8), ((6/8)*12, (3/4)*8)]
+        )
+
     def test_keypoints_on_2d_img_and_with_width_float_and_height_int(self):
         aug = iaa.Resize({"width": 3.0, "height": 8})
         kpsoi_aug = aug.augment_keypoints([self.kpsoi2d])[0]
@@ -312,6 +340,18 @@ class TestResize(unittest.TestCase):
             ia.Polygon([(3*1, 2), (3*7, 2), (3*7, 6), (3*1, 6)])
         )
 
+    def test_bounding_boxes_on_2d_img_and_with_width_float_and_height_int(self):
+        aug = iaa.Resize({"width": 3.0, "height": 8})
+        bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi2d)
+        assert len(bbsoi_aug.bounding_boxes) == 2
+        assert bbsoi_aug.shape == (8, 24)
+        assert bbsoi_aug.bounding_boxes[0].coords_almost_equals(
+            [(3*0, 0), (3*8, 8)]
+        )
+        assert bbsoi_aug.bounding_boxes[1].coords_almost_equals(
+            [(3*1, (2/4)*8), (3*6, (3/4)*8)]
+        )
+
     def test_empty_keypoints(self):
         aug = iaa.Resize({"height": 8, "width": 12})
         kpsoi = ia.KeypointsOnImage([], shape=(4, 8, 3))
@@ -325,6 +365,13 @@ class TestResize(unittest.TestCase):
         psoi_aug = aug.augment_polygons(psoi)
         assert len(psoi_aug.polygons) == 0
         assert psoi_aug.shape == (8, 12, 3)
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.Resize({"height": 8, "width": 12})
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 8, 3))
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+        assert len(bbsoi_aug.bounding_boxes) == 0
+        assert bbsoi_aug.shape == (8, 12, 3)
 
     def test_size_is_list_of_ints(self):
         aug = iaa.Resize([12, 14])
