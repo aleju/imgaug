@@ -1467,6 +1467,14 @@ class Augmenter(object):
         kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
                                               hooks)
 
+        # Its not really necessary to create an RNG copy for the recoverer
+        # here, as the augmentation of the polygons is already finished and
+        # used the same samples as the image augmentation. The recoverer might
+        # advance the RNG state, but the next call to e.g. augment() will then
+        # still use the same (advanced) RNG state for images and polygons.
+        # We copy here anyways as it seems cleaner.
+        random_state_recoverer = random_state.copy()
+
         result = []
         gen = enumerate(zip(kps_ois_aug, kp_counts))
         for img_idx, (kps_oi_aug, kp_counts_image) in gen:
@@ -1593,7 +1601,7 @@ class Augmenter(object):
                     poly_aug = recoverer.recover_from(
                         [(kp.x, kp.y) for kp in poly_kps_aug],
                         poly_old,
-                        random_state=random_state)
+                        random_state=random_state_recoverer)
                 else:
                     poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
                 polys_aug.append(poly_aug)
