@@ -319,6 +319,18 @@ class TestLambda(unittest.TestCase):
         expected_psoi = [ia.PolygonsOnImage([expected_poly], shape=(3, 3, 3))]
         return expected_psoi
 
+    @property
+    def bbsoi(self):
+        bb = ia.BoundingBox(x1=0, y1=1, x2=3, y2=4)
+        bbsoi = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
+        return bbsoi
+
+    @property
+    def bbsoi_aug(self):
+        bb = ia.BoundingBox(x1=0+1, y1=1+2, x2=3+1, y2=4+2)
+        bbsoi = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
+        return bbsoi
+
     @classmethod
     def func_images(cls, images, random_state, parents, hooks):
         if isinstance(images, list):
@@ -354,6 +366,23 @@ class TestLambda(unittest.TestCase):
         return [
             ia.PolygonsOnImage([ia.Polygon(new_exterior)],
                                shape=polygons_on_images[0].shape)
+        ]
+
+    @classmethod
+    def func_bbs(cls, bounding_boxes_on_images, random_state, parents, hooks):
+        if bounding_boxes_on_images[0].empty:
+            return [
+                ia.BoundingBoxesOnImage(
+                    [], shape=bounding_boxes_on_images[0].shape)
+            ]
+        new_coords = np.copy(bounding_boxes_on_images[0].items[0].coords)
+        new_coords[:, 0] += 1
+        new_coords[:, 1] += 2
+        return [
+            ia.BoundingBoxesOnImage(
+                [ia.BoundingBox(x1=new_coords[0][0], y1=new_coords[0][1],
+                                x2=new_coords[1][0], y2=new_coords[1][1])],
+                shape=bounding_boxes_on_images[0].shape)
         ]
 
     def test_images(self):
@@ -446,55 +475,67 @@ class TestLambda(unittest.TestCase):
 
     def test_keypoints(self):
         kpsoi = self.keypoints
-        expected = self.keypoints_aug
         aug = iaa.Lambda(func_keypoints=self.func_keypoints)
 
         for _ in sm.xrange(3):
             observed = aug.augment_keypoints(kpsoi)
 
-            assert keypoints_equal(observed, expected)
+            expected = self.keypoints_aug
+            assert_cbaois_equal(observed, expected)
 
     def test_keypoints_deterministic(self):
         kpsoi = self.keypoints
-        expected = self.keypoints_aug
-        aug_det = iaa.Lambda(func_keypoints=self.func_keypoints)\
-            .to_deterministic()
+        aug = iaa.Lambda(func_keypoints=self.func_keypoints)
+        aug = aug.to_deterministic()
 
         for _ in sm.xrange(3):
-            observed = aug_det.augment_keypoints(kpsoi)
+            observed = aug.augment_keypoints(kpsoi)
 
-            assert keypoints_equal(observed, expected)
+            expected = self.keypoints_aug
+            assert_cbaois_equal(observed, expected)
 
     def test_polygons(self):
         psois = self.polygons
-        expected_psoi = self.polygons_aug
         aug = iaa.Lambda(func_polygons=self.func_polygons)
 
         for _ in sm.xrange(3):
             observed = aug.augment_polygons(psois)
 
-            assert len(observed) == 1
-            assert len(observed[0].polygons) == 1
-            assert observed[0].shape == expected_psoi[0].shape
-            assert observed[0].polygons[0].exterior_almost_equals(
-                expected_psoi[0].polygons[0])
-            assert observed[0].polygons[0].is_valid
+            expected_psoi = self.polygons_aug
+            assert_cbaois_equal(observed, expected_psoi)
 
     def test_polygons_deterministic(self):
         psois = self.polygons
-        expected_psoi = self.polygons_aug
-        aug_det = iaa.Lambda(func_polygons=self.func_polygons)\
-            .to_deterministic()
+
+        aug = iaa.Lambda(func_polygons=self.func_polygons)
+        aug = aug.to_deterministic()
 
         for _ in sm.xrange(3):
-            observed = aug_det.augment_polygons(psois)
+            observed = aug.augment_polygons(psois)
 
-            assert len(observed) == 1
-            assert len(observed[0].polygons) == 1
-            assert observed[0].shape == expected_psoi[0].shape
-            assert observed[0].polygons[0].exterior_almost_equals(
-                expected_psoi[0].polygons[0])
-            assert observed[0].polygons[0].is_valid
+            expected_psoi = self.polygons_aug
+            assert_cbaois_equal(observed, expected_psoi)
+
+    def test_bounding_boxes(self):
+        bbsoi = self.bbsoi
+        aug = iaa.Lambda(func_bounding_boxes=self.func_bbs)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_bounding_boxes(bbsoi)
+
+            expected = self.bbsoi_aug
+            assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes_deterministic(self):
+        bbsoi = self.bbsoi
+        aug = iaa.Lambda(func_bounding_boxes=self.func_bbs)
+        aug = aug.to_deterministic()
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_bounding_boxes(bbsoi)
+
+            expected = self.bbsoi_aug
+            assert_cbaois_equal(observed, expected)
 
     def test_keypoints_empty(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
@@ -502,8 +543,7 @@ class TestLambda(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        assert len(observed.keypoints) == 0
-        assert observed.shape == (1, 2, 3)
+        assert_cbaois_equal(observed, kpsoi)
 
     def test_polygons_empty(self):
         psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
@@ -511,10 +551,17 @@ class TestLambda(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert len(observed.polygons) == 0
-        assert observed.shape == (1, 2, 3)
+        assert_cbaois_equal(observed, psoi)
 
-        # TODO add tests when funcs are not set in Lambda
+    def test_bounding_boxes_empty(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
+        aug = iaa.Lambda(func_bounding_boxes=self.func_bbs)
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
+    # TODO add tests when funcs are not set in Lambda
 
     def test_other_dtypes_bool(self):
         def func_images(images, random_state, parents, hooks):
@@ -1626,11 +1673,11 @@ class _DummyAugmenterBBs(iaa.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         return images
 
-    def _augment_keypoints(self, keypoints_on_images, random_state,
-                           parents, hooks):
-        return [keypoints_on_images_i.shift(x=1)
-                for keypoints_on_images_i
-                in keypoints_on_images]
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return [bbsoi.shift(left=1)
+                for bbsoi
+                in bounding_boxes_on_images]
 
     def get_parameters(self):
         return []
