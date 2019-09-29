@@ -32,6 +32,7 @@ from imgaug.testutils import (create_random_images, create_random_keypoints,
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
+from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 
 
 IS_PY36_OR_HIGHER = (sys.version_info[0] == 3 and sys.version_info[1] >= 6)
@@ -3348,6 +3349,81 @@ class _TestAugmenter_augment_cbaois(object):
                 assert np.array_equal(translations_imgs, translations_points)
 
 
+# This is the same as _ConcavePolygonRecoverer, but we make sure that we
+# always sample random values. This is to advance the state of random_state
+# and ensure that this breaks not alignment.
+class _DummyRecoverer(_ConcavePolygonRecoverer):
+    def recover_from(self, new_exterior, old_polygon, random_state=0):
+        # sample lots of values to ensure that the RNG is advanced
+        _ = random_state.integers(0, 2**30, 100)
+        return super(_DummyRecoverer, self).recover_from(
+            new_exterior, old_polygon, random_state=random_state)
+
+
+class _DummyAugmenterWithRecoverer(iaa.Augmenter):
+    def __init__(self, use_recoverer=True):
+        super(_DummyAugmenterWithRecoverer, self).__init__(
+            name=None, deterministic=False, random_state=None)
+        self.random_samples_images = []
+        self.random_samples_kps = []
+
+        if use_recoverer:
+            self.recoverer = _DummyRecoverer()
+        else:
+            self.recoverer = None
+
+    def _augment_images(self, images, random_state, parents, hooks):
+        sample = random_state.integers(0, 2**30)
+        self.random_samples_images.append(sample)
+        return images
+
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
+        return self._augment_polygons_as_keypoints(
+            polygons_on_images, random_state, parents, hooks,
+            recoverer=self.recoverer)
+
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
+        sample = random_state.integers(0, 2**30)
+        self.random_samples_kps.append(sample)
+
+        assert len(keypoints_on_images) in [1, 2]
+        assert len(keypoints_on_images[0].keypoints) == 7
+
+        result = []
+
+        for _ in keypoints_on_images:
+            # every second call of _augment_polygons()...
+            if len(self.random_samples_kps) % 2 == 1:
+                # not concave
+                kpsoi = ia.KeypointsOnImage([
+                    ia.Keypoint(x=0, y=0),
+                    ia.Keypoint(x=10, y=0),
+                    ia.Keypoint(x=10, y=4),
+                    ia.Keypoint(x=-1, y=5),
+                    ia.Keypoint(x=10, y=6),
+                    ia.Keypoint(x=10, y=10),
+                    ia.Keypoint(x=0, y=10)
+                ], shape=(10, 10, 3))
+            else:
+                # concave
+                kpsoi = ia.KeypointsOnImage([
+                    ia.Keypoint(x=0, y=0),
+                    ia.Keypoint(x=10, y=0),
+                    ia.Keypoint(x=10, y=4),
+                    ia.Keypoint(x=10, y=5),
+                    ia.Keypoint(x=10, y=6),
+                    ia.Keypoint(x=10, y=10),
+                    ia.Keypoint(x=0, y=10)
+                ], shape=(10, 10, 3))
+            result.append(kpsoi)
+        return result
+
+    def get_parameters(self):
+        return []
+
+
 class TestAugmenter_augment_polygons(_TestAugmenter_augment_cbaois,
                                      unittest.TestCase):
     def _augfunc(self, augmenter, *args, **kwargs):
@@ -3360,6 +3436,100 @@ class TestAugmenter_augment_polygons(_TestAugmenter_augment_cbaois,
     @property
     def _ObjOnImageClass(self):
         return ia.PolygonsOnImage
+
+    def _coords(self, obj):
+        return obj.exterior
+    
+    def _entities(self, obj_on_image):
+        return obj_on_image.polygons
+
+    def test_polygon_recoverer(self):
+        # This is mostly a dummy polygon. The augmenter always returns the
+        # same non-concave polygon.
+        poly = ia.Polygon([(0, 0), (10, 0),
+                           (10, 4), (10, 5), (10, 6),
+                           (10, 10), (0, 10)])
+        psoi = ia.PolygonsOnImage([poly], shape=(10, 10, 3))
+        aug = _DummyAugmenterWithRecoverer()
+
+        psoi_aug = aug.augment_polygons(psoi)
+        poly_aug = psoi_aug.polygons[0]
+
+        bb = ia.BoundingBox(x1=0, y1=0, x2=10, y2=10)
+        bb_aug = ia.BoundingBox(
+            x1=np.min(poly_aug.exterior[:, 0]),
+            y1=np.min(poly_aug.exterior[:, 1]),
+            x2=np.max(poly_aug.exterior[:, 0]),
+            y2=np.max(poly_aug.exterior[:, 1])
+        )
+        assert bb.iou(bb_aug) > 0.9
+        assert psoi_aug.polygons[0].is_valid
+
+    def test_polygon_aligned_without_recoverer(self):
+        # This is mostly a dummy polygon. The augmenter always returns the
+        # same non-concave polygon.
+        poly = ia.Polygon([(0, 0), (10, 0),
+                           (10, 4), (10, 5), (10, 6),
+                           (10, 10), (0, 10)])
+        psoi = ia.PolygonsOnImage([poly], shape=(10, 10, 3))
+        image = np.zeros((10, 10, 3))
+        aug = _DummyAugmenterWithRecoverer(use_recoverer=False)
+
+        images_aug1, psois_aug1 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        images_aug2, psois_aug2 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        images_aug3, psois_aug3 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        images_aug4, psois_aug4 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        assert not psois_aug1[0].polygons[0].is_valid
+        assert not psois_aug1[1].polygons[0].is_valid
+        assert psois_aug2[0].polygons[0].is_valid
+        assert psois_aug2[1].polygons[0].is_valid
+        assert not psois_aug3[0].polygons[0].is_valid
+        assert not psois_aug3[1].polygons[0].is_valid
+        assert psois_aug4[0].polygons[0].is_valid
+        assert psois_aug4[1].polygons[0].is_valid
+
+        assert aug.random_samples_images == aug.random_samples_kps
+
+    def test_polygon_aligned_with_recoverer(self):
+        # This is mostly a dummy polygon. The augmenter always returns the
+        # same non-concave polygon.
+        poly = ia.Polygon([(0, 0), (10, 0),
+                           (10, 4), (10, 5), (10, 6),
+                           (10, 10), (0, 10)])
+        psoi = ia.PolygonsOnImage([poly], shape=(10, 10, 3))
+        image = np.zeros((10, 10, 3))
+        aug = _DummyAugmenterWithRecoverer(use_recoverer=True)
+
+        images_aug1, psois_aug1 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        images_aug2, psois_aug2 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        images_aug3, psois_aug3 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        images_aug4, psois_aug4 = aug(images=[image, image],
+                                      polygons=[psoi, psoi])
+
+        assert psois_aug1[0].polygons[0].is_valid
+        assert psois_aug1[1].polygons[0].is_valid
+        assert psois_aug2[0].polygons[0].is_valid
+        assert psois_aug2[1].polygons[0].is_valid
+        assert psois_aug3[0].polygons[0].is_valid
+        assert psois_aug3[1].polygons[0].is_valid
+        assert psois_aug4[0].polygons[0].is_valid
+        assert psois_aug4[1].polygons[0].is_valid
+
+        assert aug.random_samples_images == aug.random_samples_kps
 
 
 class TestAugmenter_augment_line_strings(_TestAugmenter_augment_cbaois,
