@@ -108,6 +108,16 @@ class _TestFliplrAndFlipudBase(object):
 
     @property
     @abstractproperty
+    def lsoi(self):
+        pass
+
+    @property
+    @abstractproperty
+    def lsoi_flipped(self):
+        pass
+
+    @property
+    @abstractproperty
     def bbsoi(self):
         pass
 
@@ -155,6 +165,12 @@ class _TestFliplrAndFlipudBase(object):
 
     def test_polygons_p_is_0__deterministic(self):
         self._test_cbaoi_p_is_0("augment_polygons", self.psoi, True)
+
+    def test_line_strings_p_is_0(self):
+        self._test_cbaoi_p_is_0("augment_line_strings", self.lsoi, False)
+
+    def test_line_strings_p_is_0__deterministic(self):
+        self._test_cbaoi_p_is_0("augment_line_strings", self.lsoi, True)
 
     def test_bounding_boxes_p_is_0(self):
         self._test_cbaoi_p_is_0("augment_bounding_boxes", self.bbsoi, False)
@@ -219,6 +235,14 @@ class _TestFliplrAndFlipudBase(object):
     def test_polygons_p_is_1__deterministic(self):
         self._test_cbaoi_p_is_1(
             "augment_polygons", self.psoi, self.psoi_flipped, True)
+
+    def test_line_strings_p_is_1(self):
+        self._test_cbaoi_p_is_1(
+            "augment_line_strings", self.lsoi, self.lsoi_flipped, False)
+
+    def test_line_strings_p_is_1__deterministic(self):
+        self._test_cbaoi_p_is_1(
+            "augment_line_strings", self.lsoi, self.lsoi_flipped, True)
 
     def test_bounding_boxes_p_is_1(self):
         self._test_cbaoi_p_is_1(
@@ -297,6 +321,14 @@ class _TestFliplrAndFlipudBase(object):
     def test_polygons_p_is_050__deterministic(self):
         self._test_cbaoi_p_is_050__deterministic(
             "augment_polygons", self.psoi, self.psoi_flipped)
+
+    def test_line_strings_p_is_050(self):
+        self._test_cbaoi_p_is_050(
+            "augment_line_strings", self.lsoi, self.lsoi_flipped)
+
+    def test_line_strings_p_is_050__deterministic(self):
+        self._test_cbaoi_p_is_050__deterministic(
+            "augment_line_strings", self.lsoi, self.lsoi_flipped)
 
     def test_bounding_boxes_p_is_050(self):
         self._test_cbaoi_p_is_050(
@@ -531,6 +563,16 @@ class TestFliplr(_TestFliplrAndFlipudBase, unittest.TestCase):
         return [ia.PolygonsOnImage(polygons, shape=self.image.shape)]
 
     @property
+    def lsoi(self):
+        ls = [ia.LineString([(0, 0), (2, 0), (2, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
+    def lsoi_flipped(self):
+        ls = [ia.LineString([(3-0, 0), (3-2, 0), (3-2, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
         return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
@@ -632,6 +674,16 @@ class TestFlipud(_TestFliplrAndFlipudBase, unittest.TestCase):
     def psoi_flipped(self):
         polygons = [ia.Polygon([(0, 3-0), (2, 3-0), (2, 3-2)])]
         return [ia.PolygonsOnImage(polygons, shape=self.image.shape)]
+
+    @property
+    def lsoi(self):
+        ls = [ia.LineString([(0, 0), (2, 0), (2, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
+    def lsoi_flipped(self):
+        ls = [ia.LineString([(0, 3-0), (2, 3-0), (2, 3-2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
 
     @property
     def bbsoi(self):
