@@ -2840,7 +2840,7 @@ class TestAugmenter_draw_grid(unittest.TestCase):
 
 
 @six.add_metaclass(ABCMeta)
-class _TestAugmenter_augment_polys_or_ls(object):
+class _TestAugmenter_augment_cbaois(object):
     """Class that is used to test augment_polygons() and augment_line_strings().
 
     Originally this was only used for polygons and then made more flexible.
@@ -2862,18 +2862,21 @@ class _TestAugmenter_augment_polys_or_ls(object):
     @property
     @abstractmethod
     def _ObjClass(self):
-        """Return Polygon or LineString."""
+        """Return Polygon, LineString or similar class."""
 
     @property
     @abstractmethod
     def _ObjOnImageClass(self):
-        """Return PolygonsOnImage or LineStringsOnImage."""
+        """Return PolygonsOnImage, LineStringsOnImage or similar class."""
 
     def _Obj(self, *args, **kwargs):
         return self._ObjClass(*args, **kwargs)
 
     def _ObjOnImage(self, *args, **kwargs):
         return self._ObjOnImageClass(*args, **kwargs)
+
+    def _compare_coords_of_cba(self, observed, expected, atol=1e-4, rtol=0):
+        return np.allclose(observed, expected, atol=atol, rtol=rtol)
 
     def test_single_empty_instance(self):
         # single instance of PolygonsOnImage with 0 polygons
@@ -2898,7 +2901,7 @@ class _TestAugmenter_augment_polys_or_ls(object):
         assert cbaois_aug[0].empty
         assert cbaois_aug[0].shape == (11, 10, 3)
 
-    def test_two_pois_each_two_polygons(self):
+    def test_two_cbaois_each_two_cbas(self):
         # 2 PolygonsOnImage, each 2 polygons
         aug = iaa.Rot90(1, keep_size=False)
         cbaois = [
@@ -2920,22 +2923,22 @@ class _TestAugmenter_augment_polys_or_ls(object):
         assert len(cbaois_aug[0].items) == 2
         assert len(cbaois_aug[1].items) == 2
         kp_offset = 0
-        assert np.allclose(
+        assert self._compare_coords_of_cba(
             cbaois_aug[0].items[0].coords,
             [(10-0+kp_offset, 0), (10-0+kp_offset, 5), (10-5+kp_offset, 5)],
             atol=1e-4, rtol=0
         )
-        assert np.allclose(
+        assert self._compare_coords_of_cba(
             cbaois_aug[0].items[1].coords,
             [(10-1+kp_offset, 1), (10-1+kp_offset, 6), (10-6+kp_offset, 6)],
             atol=1e-4, rtol=0
         )
-        assert np.allclose(
+        assert self._compare_coords_of_cba(
             cbaois_aug[1].items[0].coords,
             [(10-2+kp_offset, 2), (10-2+kp_offset, 7), (10-7+kp_offset, 7)],
             atol=1e-4, rtol=0
         )
-        assert np.allclose(
+        assert self._compare_coords_of_cba(
             cbaois_aug[1].items[1].coords,
             [(10-3+kp_offset, 3), (10-3+kp_offset, 8), (10-8+kp_offset, 8)],
             atol=1e-4, rtol=0
@@ -2958,19 +2961,20 @@ class _TestAugmenter_augment_polys_or_ls(object):
         cbaois_aug2 = self._augfunc(aug, cbaois)
 
         # --> different between runs
-        points1 = [cba.coords
-                   for cbaoi
-                   in cbaois_aug1
-                   for cba
-                   in cbaoi.items]
-        points2 = [cba.coords
-                   for poly_oi
-                   in cbaois_aug2
-                   for cba
-                   in poly_oi.items]
-        points1 = np.float32(points1)
-        points2 = np.float32(points2)
-        assert not np.allclose(points1, points2, atol=1e-2, rtol=0)
+        cbas1 = [cba
+                 for cbaoi in cbaois_aug1
+                 for cba in cbaoi.items]
+        cbas2 = [cba
+                 for cbaoi in cbaois_aug2
+                 for cba in cbaoi.items]
+        assert len(cbas1) == len(cbas2)
+        same = []
+        for cba1, cba2 in zip(cbas1, cbas2):
+            points1 = np.float32(cba1.coords)
+            points2 = np.float32(cba2.coords)
+            same.append(self._compare_coords_of_cba(points1, points2,
+                                                    atol=1e-2, rtol=0))
+        assert not np.all(same)
 
         # --> different between PolygonOnImages
         same = []
@@ -2981,7 +2985,8 @@ class _TestAugmenter_augment_polys_or_ls(object):
             points2 = np.float32([cba.coords
                                   for cba
                                   in cba.items])
-            same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
+            same.append(self._compare_coords_of_cba(points1, points2,
+                                                    atol=1e-2, rtol=0))
         assert not np.all(same)
 
         # --> different between polygons
@@ -3015,23 +3020,23 @@ class _TestAugmenter_augment_polys_or_ls(object):
             points2 = np.float32([cba.coords
                                   for cba
                                   in cbaoi.items])
-            same.append(np.allclose(points1, points2, atol=1e-2, rtol=0))
+            same.append(self._compare_coords_of_cba(points1, points2,
+                                                    atol=1e-2, rtol=0))
         assert not np.all(same)
 
         # --> similar between augmentation runs
-        points1 = [cba.coords
-                   for cbaoi
-                   in cbaois_aug1
-                   for cba
-                   in cbaoi.items]
-        points2 = [cba.coords
-                   for cbaoi
-                   in cbaois_aug2
-                   for cba
-                   in cbaoi.items]
-        points1 = np.float32(points1)
-        points2 = np.float32(points2)
-        assert np.allclose(points1, points2, atol=1e-2, rtol=0)
+        cbas1 = [cba
+                 for cbaoi in cbaois_aug1
+                 for cba in cbaoi.items]
+        cbas2 = [cba
+                 for cbaoi in cbaois_aug2
+                 for cba in cbaoi.items]
+        assert len(cbas1) == len(cbas2)
+        for cba1, cba2 in zip(cbas1, cbas2):
+            points1 = np.float32(cba1.coords)
+            points2 = np.float32(cba2.coords)
+            assert self._compare_coords_of_cba(points1, points2,
+                                               atol=1e-2, rtol=0)
 
     def test_aligned_with_images(self):
         aug = iaa.Rot90((0, 3), keep_size=False)
@@ -3067,7 +3072,7 @@ class _TestAugmenter_augment_polys_or_ls(object):
             found_cba = False
             for poly_rot_idx, cba_rot in enumerate(cbas_rots):
                 coords_observed = cbaoi_aug.items[0].coords
-                if np.allclose(coords_observed, cba_rot):
+                if self._compare_coords_of_cba(coords_observed, cba_rot):
                     found_cba = True
                     break
 
@@ -3141,7 +3146,7 @@ class _TestAugmenter_augment_polys_or_ls(object):
                 assert np.array_equal(translations_imgs, translations_points)
 
 
-class TestAugmenter_augment_polygons(_TestAugmenter_augment_polys_or_ls,
+class TestAugmenter_augment_polygons(_TestAugmenter_augment_cbaois,
                                      unittest.TestCase):
     def _augfunc(self, augmenter, *args, **kwargs):
         return augmenter.augment_polygons(*args, **kwargs)
@@ -3155,7 +3160,7 @@ class TestAugmenter_augment_polygons(_TestAugmenter_augment_polys_or_ls,
         return ia.PolygonsOnImage
 
 
-class TestAugmenter_augment_line_strings(_TestAugmenter_augment_polys_or_ls,
+class TestAugmenter_augment_line_strings(_TestAugmenter_augment_cbaois,
                                          unittest.TestCase):
     def _augfunc(self, augmenter, *args, **kwargs):
         return augmenter.augment_line_strings(*args, **kwargs)
@@ -3167,6 +3172,50 @@ class TestAugmenter_augment_line_strings(_TestAugmenter_augment_polys_or_ls,
     @property
     def _ObjOnImageClass(self):
         return ia.LineStringsOnImage
+
+
+class TestAugmenter_augment_bounding_boxes(_TestAugmenter_augment_cbaois,
+                                           unittest.TestCase):
+    def _augfunc(self, augmenter, *args, **kwargs):
+        return augmenter.augment_bounding_boxes(*args, **kwargs)
+
+    @property
+    def _ObjClass(self):
+        return ia.BoundingBox
+
+    @property
+    def _ObjOnImageClass(self):
+        return ia.BoundingBoxesOnImage
+
+    def _Obj(self, *args, **kwargs):
+        assert len(args) == 1
+        coords = np.float32(args[0]).reshape((-1, 2))
+        x1 = np.min(coords[:, 0])
+        y1 = np.min(coords[:, 1])
+        x2 = np.max(coords[:, 0])
+        y2 = np.max(coords[:, 1])
+        return self._ObjClass(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
+
+    def _compare_coords_of_cba(self, observed, expected, atol=1e-4, rtol=0):
+        observed = np.float32(observed).reshape((-1, 2))
+        expected = np.float32(expected).reshape((-1, 2))
+        assert observed.shape[0] == 2
+        assert expected.shape[1] == 2
+
+        obs_x1 = np.min(observed[:, 0])
+        obs_y1 = np.min(observed[:, 1])
+        obs_x2 = np.max(observed[:, 0])
+        obs_y2 = np.max(observed[:, 1])
+
+        exp_x1 = np.min(expected[:, 0])
+        exp_y1 = np.min(expected[:, 1])
+        exp_x2 = np.max(expected[:, 0])
+        exp_y2 = np.max(expected[:, 1])
+
+        return np.allclose(
+            [obs_x1, obs_y1, obs_x2, obs_y2],
+            [exp_x1, exp_y1, exp_x2, exp_y2],
+            atol=atol, rtol=rtol)
 
 
 # TODO add line strings
