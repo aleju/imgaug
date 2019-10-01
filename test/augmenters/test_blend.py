@@ -474,6 +474,11 @@ class TestAlpha(unittest.TestCase):
         return ia.PolygonsOnImage(ps, shape=(20, 20, 3))
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(5, 5), (10, 5), (10, 10)])]
+        return ia.LineStringsOnImage(lss, shape=(20, 20, 3))
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)]
         return ia.BoundingBoxesOnImage(bbs, shape=(20, 20, 3))
@@ -738,6 +743,40 @@ class TestAlpha(unittest.TestCase):
     def test_polygons_hooks_limit_propagation(self):
         return self._test_cba_hooks_limit_propagation(
             "augment_polygons", self.psoi)
+
+    def test_line_strings_factor_is_1(self):
+        self._test_cba_factor_is_1("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0501(self):
+        self._test_cba_factor_is_0501("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0(self):
+        self._test_cba_factor_is_0("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0499(self):
+        self._test_cba_factor_is_0499("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_1_and_per_channel(self):
+        self._test_cba_factor_is_1_and_per_channel(
+            "augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0_and_per_channel(self):
+        self._test_cba_factor_is_0_and_per_channel(
+            "augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_choice_around_050_and_per_channel(self):
+        self._test_cba_factor_is_choice_around_050_and_per_channel(
+            "augment_line_strings", self.lsoi
+        )
+
+    def test_empty_line_strings(self):
+        return self._test_empty_cba(
+            "augment_line_strings",
+            ia.LineStringsOnImage([], shape=(1, 2, 3)))
+
+    def test_bounding_boxes_hooks_limit_propagation(self):
+        return self._test_cba_hooks_limit_propagation(
+            "augment_bounding_boxes", self.bbsoi)
 
     def test_bounding_boxes_factor_is_1(self):
         self._test_cba_factor_is_1("augment_bounding_boxes", self.bbsoi)
@@ -1043,6 +1082,11 @@ class TestAlphaElementwise(unittest.TestCase):
         return ia.PolygonsOnImage(ps, shape=(20, 20, 3))
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(5, 5), (10, 5), (10, 10)])]
+        return ia.LineStringsOnImage(lss, shape=(20, 20, 3))
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=5, y1=6, x2=7, y2=8)]
         return ia.BoundingBoxesOnImage(bbs, shape=(20, 20, 3))
@@ -1327,6 +1371,39 @@ class TestAlphaElementwise(unittest.TestCase):
 
     def test_polygons_hooks_limit_propagation(self):
         self._test_cba_hooks_limit_propagation("augment_polygons", self.psoi)
+
+    def test_line_strings_factor_is_1(self):
+        self._test_cba_factor_is_1("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0501(self):
+        self._test_cba_factor_is_0501("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0(self):
+        self._test_cba_factor_is_0("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0499(self):
+        self._test_cba_factor_is_0499("augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_1_and_per_channel(self):
+        self._test_cba_factor_is_1_and_per_channel(
+            "augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_0_and_per_channel(self):
+        self._test_cba_factor_is_0_and_per_channel(
+            "augment_line_strings", self.lsoi)
+
+    def test_line_strings_factor_is_choice_around_050_and_per_channel(self):
+        self._test_cba_factor_is_choice_around_050_and_per_channel(
+            "augment_line_strings", self.lsoi, pointwise=True
+        )
+
+    def test_empty_line_strings(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+        self._test_empty_cba("augment_line_strings", lsoi)
+
+    def test_line_strings_hooks_limit_propagation(self):
+        self._test_cba_hooks_limit_propagation(
+            "augment_line_strings", self.lsoi)
 
     def test_bounding_boxes_factor_is_1(self):
         self._test_cba_factor_is_1("augment_bounding_boxes", self.bbsoi)
