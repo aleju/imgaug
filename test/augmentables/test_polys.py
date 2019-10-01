@@ -135,6 +135,12 @@ class TestPolygon___init__(unittest.TestCase):
         assert poly.label == "test"
 
 
+class TestPolygon_coords(unittest.TestCase):
+    def test_with_three_points(self):
+        poly = ia.Polygon([(0, 0), (1, 0.5), (1.5, 2.0)])
+        assert poly.coords is poly.exterior
+
+
 class TestPolygon_xx(unittest.TestCase):
     def test_filled_polygon(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1.5, 0), (4.1, 1), (2.9, 2.0)])
@@ -1677,6 +1683,33 @@ class TestPolygon___repr___and___str__(unittest.TestCase):
         assert poly.__str__() == expected
 
 
+class TestPolygon_coords_almost_equals(unittest.TestCase):
+    @mock.patch("imgaug.augmentables.polys.Polygon.exterior_almost_equals")
+    def test_calls_exterior_almost_equals(self, mock_eae):
+        mock_eae.return_value = "foo"
+        poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        poly_b = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        result = poly_a.coords_almost_equals(poly_b)
+
+        assert result == "foo"
+        mock_eae.assert_called_once_with(poly_b, max_distance=1e-4,
+                                         points_per_edge=8)
+
+    @mock.patch("imgaug.augmentables.polys.Polygon.exterior_almost_equals")
+    def test_calls_exterior_almost_equals__no_defaults(self, mock_eae):
+        mock_eae.return_value = "foo"
+        poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        poly_b = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        result = poly_a.coords_almost_equals(poly_b, max_distance=1,
+                                             points_per_edge=2)
+
+        assert result == "foo"
+        mock_eae.assert_called_once_with(poly_b, max_distance=1,
+                                         points_per_edge=2)
+
+
 class TestPolygon_exterior_almost_equals(unittest.TestCase):
     def test_exactly_same_exterior(self):
         # exactly same exterior
@@ -1807,7 +1840,7 @@ class TestPolygon_exterior_almost_equals(unittest.TestCase):
         poly_b = ia.Polygon([(0, 0), (1, 0)])
         assert not poly_a.exterior_almost_equals(poly_b)
 
-    def test_one_polygon_one_point_other_two_points(self):
+    def test_one_polygon_one_point_other_two_points_2(self):
         poly_a = ia.Polygon([(0, 0)])
         poly_b = ia.Polygon([(0, 0), (1, 0)])
         assert not poly_a.exterior_almost_equals(poly_b)
@@ -1935,10 +1968,6 @@ class TestPolygon_almost_equals(unittest.TestCase):
         poly_b = ia.Polygon([(0, 0), (1, 0), (0.5, 1)])
         assert not poly_a.almost_equals(poly_b)
 
-    def test_other_polygon_is_wrong_datatype(self):
-        poly_a = ia.Polygon([(0, 0)])
-        assert not poly_a.almost_equals("foo")
-
 
 # TODO add test for _convert_points_to_shapely_line_string
 
@@ -2015,6 +2044,27 @@ class TestPolygonsOnImage___init__(unittest.TestCase):
             shape=(10, 11)
         )
         assert poly_oi.shape == (10, 11)
+
+
+class TestPolygonsOnImage_items(unittest.TestCase):
+    def test_with_two_polygons(self):
+        poly1 = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+        poly2 = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        psoi = ia.PolygonsOnImage(
+            [poly1, poly2],
+            shape=(10, 10, 3)
+        )
+
+        items = psoi.items
+
+        assert items == [poly1, poly2]
+
+    def test_items_empty(self):
+        psoi = ia.PolygonsOnImage([], shape=(40, 50, 3))
+
+        items = psoi.items
+
+        assert items == []
 
 
 class TestPolygonsOnImage_empty(unittest.TestCase):

@@ -154,6 +154,11 @@ class _AbstractPoolingBase(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.kernel_size, self.keep_size]
 

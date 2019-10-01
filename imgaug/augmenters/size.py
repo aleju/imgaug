@@ -658,6 +658,11 @@ class Resize(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
+
     def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
         rngs = random_state.duplicate(3)
         if isinstance(self.size, tuple):
@@ -1214,6 +1219,11 @@ class CropAndPad(meta.Augmenter):
                           hooks):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _draw_samples_image(self, random_state, height, width):
         if self.mode == "noop":
@@ -1953,6 +1963,11 @@ class PadToFixedSize(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
+
     def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(4)
 
@@ -2171,6 +2186,11 @@ class CropToFixedSize(meta.Augmenter):
                           hooks):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         return self._augment_hms_and_segmaps(heatmaps, random_state)
@@ -2558,6 +2578,11 @@ class KeepSizeByResize(meta.Augmenter):
                           hooks):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _to_deterministic(self):
         aug = self.copy()

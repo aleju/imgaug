@@ -83,6 +83,21 @@ class Keypoint(object):
         self.y = y
 
     @property
+    def coords(self):
+        """Get the xy-coordinates as an ``(N,2)`` ndarray.
+
+        Returns
+        -------
+        ndarray
+            An ``(N, 2)`` ``float32`` ndarray with ``N=1`` containing the
+            coordinates of this keypoints.
+
+        """
+        arr = np.empty((1, 2), dtype=np.float32)
+        arr[0, :] = [self.x, self.y]
+        return arr
+
+    @property
     def x_int(self):
         """Get the keypoint's x-coordinate, rounded to the closest integer.
 
@@ -330,6 +345,69 @@ class Keypoint(object):
             return points
         return [self.deepcopy(x=point[0], y=point[1]) for point in points]
 
+    def coords_almost_equals(self, other, max_distance=1e-4):
+        """Estimate if this and another KP have almost identical coordinates.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.kps.Keypoint or iterable
+            The other keypoint with which to compare this one.
+            If this is an ``iterable``, it is assumed to contain the
+            xy-coordinates of a keypoint.
+
+        max_distance : number, optional
+            The maximum euclidean distance between a this keypoint and the
+            other one. If the distance is exceeded, the two keypoints are not
+            viewed as equal.
+
+        Returns
+        -------
+        bool
+            Whether the two keypoints have almost identical coordinates.
+
+        """
+        if ia.is_np_array(other):
+            # we use flat here in case other is (N,2) instead of (4,)
+            coords_b = other.flat
+        elif ia.is_iterable(other):
+            coords_b = list(ia.flatten(other))
+        else:
+            assert isinstance(other, Keypoint), (
+                "Expected 'other' to be an iterable containing one "
+                "(x,y)-coordinate pair or a Keypoint. "
+                "Got type %s." % (type(other),))
+            coords_b = other.coords.flat
+
+        coords_a = self.coords
+
+        return np.allclose(coords_a.flat, coords_b, atol=max_distance, rtol=0)
+
+    def almost_equals(self, other, max_distance=1e-4):
+        """Compare this and another KP's coordinates.
+
+        .. note ::
+
+            This method is currently identical to ``coords_almost_equals``.
+            It exists for consistency with ``BoundingBox`` and ``Polygons``.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.kps.Keypoint or iterable
+            The other object to compare against. Expected to be a
+            ``Keypoint``.
+
+        max_distance : number, optional
+            See
+            :func:`imgaug.augmentables.kps.Keypoint.coords_almost_equals`.
+
+        Returns
+        -------
+        bool
+            ``True`` if the coordinates are almost equal. Otherwise ``False``.
+
+        """
+        return self.coords_almost_equals(other, max_distance=max_distance)
+
     def copy(self, x=None, y=None):
         """Create a shallow copy of the keypoint instance.
 
@@ -405,6 +483,18 @@ class KeypointsOnImage(object):
     def __init__(self, keypoints, shape):
         self.keypoints = keypoints
         self.shape = normalize_shape(shape)
+
+    @property
+    def items(self):
+        """Get the keypoints in this container.
+
+        Returns
+        -------
+        list of Keypoint
+            Keypoints within this container.
+
+        """
+        return self.keypoints
 
     @property
     def height(self):

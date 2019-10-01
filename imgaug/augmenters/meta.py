@@ -1094,7 +1094,8 @@ class Augmenter(object):
         """
         return keypoints_on_images
 
-    def augment_bounding_boxes(self, bounding_boxes_on_images, hooks=None):
+    def augment_bounding_boxes(self, bounding_boxes_on_images, parents=None,
+                               hooks=None):
         """Augment a batch of bounding boxes.
 
         This is the corresponding function to
@@ -1140,6 +1141,11 @@ class Augmenter(object):
             such instances, with each one of them containing the bounding
             boxes of a single image.
 
+        parents : None or list of imgaug.augmenters.meta.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as
+            ``None``. It is set automatically for child augmenters.
+
         hooks : None or imgaug.imgaug.HooksKeypoints, optional
             :class:`imgaug.imgaug.HooksKeypoints` object to dynamically
             interfere with the augmentation process.
@@ -1150,46 +1156,15 @@ class Augmenter(object):
             Augmented bounding boxes.
 
         """
-        input_was_single_instance = False
-        if isinstance(bounding_boxes_on_images, ia.BoundingBoxesOnImage):
-            input_was_single_instance = True
-            bounding_boxes_on_images = [bounding_boxes_on_images]
+        from imgaug.augmentables.bbs import BoundingBoxesOnImage
 
-        kps_ois = []
-        for bbs_oi in bounding_boxes_on_images:
-            kps = []
-            for bb in bbs_oi.bounding_boxes:
-                kps.extend(bb.to_keypoints())
-            kps_ois.append(ia.KeypointsOnImage(kps, shape=bbs_oi.shape))
-
-        kps_ois_aug = self.augment_keypoints(kps_ois, hooks=hooks)
-
-        result = []
-        for img_idx, kps_oi_aug in enumerate(kps_ois_aug):
-            bbs_aug = []
-            for i in sm.xrange(len(kps_oi_aug.keypoints) // 4):
-                bb_kps = kps_oi_aug.keypoints[i*4:i*4+4]
-                x1 = min([kp.x for kp in bb_kps])
-                x2 = max([kp.x for kp in bb_kps])
-                y1 = min([kp.y for kp in bb_kps])
-                y2 = max([kp.y for kp in bb_kps])
-                bbs_aug.append(
-                    bounding_boxes_on_images[img_idx].bounding_boxes[i].copy(
-                        x1=x1,
-                        y1=y1,
-                        x2=x2,
-                        y2=y2
-                    )
-                )
-            result.append(
-                ia.BoundingBoxesOnImage(
-                    bbs_aug,
-                    shape=kps_oi_aug.shape
-                )
-            )
-        if input_was_single_instance:
-            return result[0]
-        return result
+        return self._augment_coord_augables(
+            cls_expected=BoundingBoxesOnImage,
+            subaugment_func=self._augment_bounding_boxes,
+            augables_ois=bounding_boxes_on_images,
+            parents=parents,
+            hooks=hooks
+        )
 
     def augment_polygons(self, polygons_on_images, parents=None, hooks=None):
         """Augment a batch of polygons.
@@ -1341,7 +1316,7 @@ class Augmenter(object):
 
         This is an generic function called by keypoints, bounding boxes,
         polygons and line strings.
-        TODO keypoints, bounding boxes currently missing -- add them
+        TODO keypoints currently missing -- add them
 
         Parameters
         ----------
@@ -1352,7 +1327,7 @@ class Augmenter(object):
         subaugment_func : callable
             Function that will be called to actually augment the data.
 
-        augables_ois : imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.polys.PolygonsOnImage
+        augables_ois : imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
             The augmentables to augment. `augables_ois` is the abbreviation for
             "augmentables_on_images". Expected are the augmentables on a
             single image (single instance) or >=1 images (list of instances).
@@ -1368,7 +1343,7 @@ class Augmenter(object):
 
         Returns
         -------
-        imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+        imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
             Augmented augmentables.
 
         """
@@ -1412,6 +1387,112 @@ class Augmenter(object):
                 return augables_ois_result[0]
             return augables_ois_result
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        """Augment a batch of bounding boxes on images in-place.
+
+        This is the internal version of
+        :func:`Augmenter.augment_bounding_boxes`.
+        It is called from :func:`Augmenter.augment_bounding_boxes` and should
+        usually not be called directly.
+        This method may transform the bounding boxes in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Polygons to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
+
+        Returns
+        ----------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            The augmented bounding boxes.
+
+        """
+        return bounding_boxes_on_images
+
+    def _augment_bounding_boxes_as_keypoints(
+            self, bounding_boxes_on_images, random_state, parents, hooks):
+        """
+        Augment bounding boxes by applying KP augmentation to their corners.
+
+        Parameters
+        ----------
+        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Bounding boxes to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
+
+        Returns
+        ----------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            The augmented bounding boxes.
+
+        """
+        from imgaug.augmentables.kps import KeypointsOnImage
+        from imgaug.augmentables.bbs import BoundingBoxesOnImage
+
+        kps_ois = []
+        kp_counts = []
+        for bbsoi in bounding_boxes_on_images:
+            kps = []
+            kp_counts_image = []
+            for item in bbsoi.items:
+                item_kps = [ia.Keypoint(x=x, y=y) for x, y in item.coords]
+                kps.extend(item_kps)
+                kp_counts_image.append(len(item_kps))
+            kps_ois.append(KeypointsOnImage(kps, shape=bbsoi.shape))
+            kp_counts.append(kp_counts_image)
+
+        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
+                                              hooks)
+
+        result = []
+        gen = enumerate(zip(kps_ois_aug, kp_counts))
+        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
+            bbs_aug = []
+            counter = 0
+            for i, count in enumerate(kp_counts_image):
+                item_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
+                item_old = bounding_boxes_on_images[img_idx].items[i]
+
+                x1 = item_kps_aug[0].x
+                y1 = item_kps_aug[0].y
+                x2 = item_kps_aug[1].x
+                y2 = item_kps_aug[1].y
+
+                bb_aug = item_old
+                bb_aug.x1 = min([x1, x2])
+                bb_aug.y1 = min([y1, y2])
+                bb_aug.x2 = max([x1, x2])
+                bb_aug.y2 = max([y1, y2])
+
+                bbs_aug.append(bb_aug)
+                counter += count
+            result.append(BoundingBoxesOnImage(bbs_aug, shape=kps_oi_aug.shape))
+
+        return result
+
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
         """Augment a batch of polygons on images in-place.
@@ -1426,7 +1507,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        polygons_on_images : list of imgaug.PolygonsOnImage
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
             Polygons to augment. They may be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -3009,6 +3090,12 @@ class Sequential(Augmenter, list):
             polygons_on_images, random_state, parents, hooks,
             "augment_polygons")
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_augmentables(
+            bounding_boxes_on_images, random_state, parents, hooks,
+            "augment_bounding_boxes")
+
     def _augment_augmentables(self, augmentables, random_state, parents, hooks,
                               augfunc_name):
         if self._is_propagating(augmentables, parents, hooks):
@@ -3351,18 +3438,28 @@ class SomeOf(Augmenter, list):
         return self._augment_non_images(segmaps, random_state,
                                         parents, hooks, _augfunc)
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents, hooks):
+    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
+                           hooks):
         def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
             return augmenter_.augment_keypoints(
                 koi_to_aug_, parents_, hooks_)
         return self._augment_non_images(keypoints_on_images, random_state,
                                         parents, hooks, _augfunc)
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents, hooks):
+    def _augment_polygons(self, polygons_on_images, random_state, parents,
+                          hooks):
         def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
             return augmenter_.augment_polygons(
                 polys_to_aug_, parents_, hooks_)
         return self._augment_non_images(polygons_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        def _augfunc(augmenter_, bbs_to_aug_, parents_, hooks_):
+            return augmenter_.augment_bounding_boxes(
+                bbs_to_aug_, parents_, hooks_)
+        return self._augment_non_images(bounding_boxes_on_images, random_state,
                                         parents, hooks, _augfunc)
 
     def _augment_non_images(self, inputs, random_state, parents, hooks, func):
@@ -3640,6 +3737,15 @@ class Sometimes(Augmenter):
         return self._augment_augmentables(polygons_on_images, random_state,
                                           parents, hooks, _augfunc)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_bounding_boxes(augmentables_, parents_,
+                                                hooks_)
+        return self._augment_augmentables(bounding_boxes_on_images,
+                                          random_state, parents, hooks,
+                                          _augfunc)
+
     def _augment_augmentables(self, augmentables, random_state, parents, hooks,
                               func):
         result = augmentables
@@ -3873,6 +3979,13 @@ class WithChannels(Augmenter):
         return self._augment_non_images(polygons_on_images, parents, hooks,
                                         _augfunc)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_bounding_boxes(inputs_, parents_, hooks_)
+        return self._augment_non_images(bounding_boxes_on_images, parents,
+                                        hooks, _augfunc)
+
     def _augment_non_images(self, inputs, parents, hooks, func):
         result = inputs
         if self._is_propagating(inputs, parents, hooks):
@@ -4031,7 +4144,7 @@ class Lambda(Augmenter):
         not be altered.
 
     func_keypoints : None or callable, optional
-        The function to call for each batch of image keypoints.
+        The function to call for each batch of keypoints.
         It must follow the form::
 
             function(keypoints_on_images, random_state, parents, hooks)
@@ -4042,8 +4155,23 @@ class Lambda(Augmenter):
         If this is ``None`` instead of a function, the keypoints will not be
         altered.
 
+    func_bounding_boxes : "keypoints" or None or callable, optional
+        The function to call for each batch of bounding boxes.
+        It must follow the form::
+
+            function(bounding_boxes_on_images, random_state, parents, hooks)
+
+        and return the changed bounding boxes (may be transformed in-place).
+        This is essentially the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_bounding_boxes`.
+        If this is ``None`` instead of a function, the bounding boxes will not
+        be altered.
+        If this is the string ``"keypoints"`` instead of a function, the
+        bounding boxes will automatically be augmented by transforming their
+        corner vertices to keypoints and calling `func_keypoints`.
+
     func_polygons : "keypoints" or None or callable, optional
-        The function to call for each batch of image polygons.
+        The function to call for each batch of polygons.
         It must follow the form::
 
             function(polygons_on_images, random_state, parents, hooks)
@@ -4051,8 +4179,8 @@ class Lambda(Augmenter):
         and return the changed polygons (may be transformed in-place).
         This is essentially the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_polygons`.
-        If this is ``None`` instead of a function, the polygons will not be
-        altered.
+        If this is ``None`` instead of a function, the polygons will not
+        be altered.
         If this is the string ``"keypoints"`` instead of a function, the
         polygons will automatically be augmented by transforming their corner
         vertices to keypoints and calling `func_keypoints`.
@@ -4107,7 +4235,7 @@ class Lambda(Augmenter):
 
     def __init__(self, func_images=None, func_heatmaps=None,
                  func_segmentation_maps=None, func_keypoints=None,
-                 func_polygons="keypoints",
+                 func_bounding_boxes="keypoints", func_polygons="keypoints",
                  name=None, deterministic=False, random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic,
                                      random_state=random_state)
@@ -4115,6 +4243,7 @@ class Lambda(Augmenter):
         self.func_heatmaps = func_heatmaps
         self.func_segmentation_maps = func_segmentation_maps
         self.func_keypoints = func_keypoints
+        self.func_bounding_boxes = func_bounding_boxes
         self.func_polygons = func_polygons
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -4162,14 +4291,14 @@ class Lambda(Augmenter):
                                          parents, hooks)
             assert ia.is_iterable(result), (
                 "Expected callback function for keypoints to return list of "
-                "imgaug.KeypointsOnImage() instances, got %s." % (
-                    type(result),))
+                "imgaug.augmentables.kps.KeypointsOnImage instances, "
+                "got %s." % (type(result),))
             only_keypoints = all([
                 isinstance(el, ia.KeypointsOnImage) for el in result])
             assert only_keypoints, (
                 "Expected callback function for keypoints to return list of "
-                "imgaug.KeypointsOnImage() instances, got %s." % (
-                    [type(el) for el in result],))
+                "imgaug.augmentables.kps.KeypointsOnImage instances, "
+                "got %s." % ([type(el) for el in result],))
             return result
         return keypoints_on_images
 
@@ -4186,16 +4315,37 @@ class Lambda(Augmenter):
                                         parents, hooks)
             assert ia.is_iterable(result), (
                 "Expected callback function for polygons to return list of "
-                "imgaug.PolygonsOnImage() instances, got %s." % (
-                    type(result),))
+                "imgaug.augmentables.polys.PolygonsOnImage instances, "
+                "got %s." % (type(result),))
             only_polygons = all([
                 isinstance(el, ia.PolygonsOnImage) for el in result])
             assert only_polygons, (
                 "Expected callback function for polygons to return list of "
-                "imgaug.PolygonsOnImage() instances, got %s." % (
-                    [type(el) for el in result],))
+                "imgaug.augmentables.polys.PolygonsOnImage instances, "
+                "got %s." % ([type(el) for el in result],))
             return result
         return polygons_on_images
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        if self.func_bounding_boxes == "keypoints":
+            return self._augment_bounding_boxes_as_keypoints(
+                bounding_boxes_on_images, random_state, parents, hooks)
+        elif self.func_bounding_boxes is not None:
+            result = self.func_bounding_boxes(
+                bounding_boxes_on_images, random_state, parents, hooks)
+            assert ia.is_iterable(result), (
+                "Expected callback function for bounding boxes to return list "
+                "of imgaug.augmentables.bbs.BoundingBoxesOnImage instances, "
+                "got %s." % (type(result),))
+            only_bbs = all([
+                isinstance(el, ia.BoundingBoxesOnImage) for el in result])
+            assert only_bbs, (
+                "Expected callback function for polygons to return list of "
+                "imgaug.augmentables.polys.PolygonsOnImage instances, "
+                "got %s." % ([type(el) for el in result],))
+            return result
+        return bounding_boxes_on_images
 
     def get_parameters(self):
         return []
@@ -4269,6 +4419,16 @@ class AssertLambda(Lambda):
         It essentially re-uses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints`.
 
+    func_bounding_boxes : None or callable, optional
+        The function to call for each batch of bounding boxes.
+        It must follow the form::
+
+            function(bounding_boxes_on_images, random_state, parents, hooks)
+
+        and return either ``True`` (valid input) or ``False`` (invalid input).
+        It essentially re-uses the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_bounding_boxes`.
+
     func_polygons : None or callable, optional
         The function to call for each batch of polygons.
         It must follow the form::
@@ -4292,8 +4452,8 @@ class AssertLambda(Lambda):
 
     def __init__(self, func_images=None, func_heatmaps=None,
                  func_segmentation_maps=None, func_keypoints=None,
-                 func_polygons=None, name=None, deterministic=False,
-                 random_state=None):
+                 func_bounding_boxes=None, func_polygons=None,
+                 name=None, deterministic=False, random_state=None):
         def func_images_assert(images, random_state, parents, hooks):
             assert func_images(images, random_state, parents, hooks), (
                 "Input images did not fulfill user-defined assertion in "
@@ -4310,17 +4470,25 @@ class AssertLambda(Lambda):
                                           hooks):
             assert func_segmentation_maps(segmaps, random_state, parents,
                                           hooks), (
-                "Input segmentation maps did not fulfill user-defined assertion "
-                "in AssertLambda.")
+                "Input segmentation maps did not fulfill user-defined "
+                "assertion in AssertLambda.")
             return segmaps
 
         def func_keypoints_assert(keypoints_on_images, random_state, parents,
                                   hooks):
             assert func_keypoints(keypoints_on_images, random_state, parents,
                                   hooks), (
-                "Input keypoints did not fulfill user-defined assertion in"
+                "Input keypoints did not fulfill user-defined assertion in "
                 "AssertLambda.")
             return keypoints_on_images
+
+        def func_bbs_assert(bounding_boxes_on_images, random_state, parents,
+                            hooks):
+            assert func_bounding_boxes(bounding_boxes_on_images, random_state,
+                                       parents, hooks), (
+                "Input bounding boxes did not fulfill user-defined assertion "
+                "in AssertLambda.")
+            return bounding_boxes_on_images
 
         def func_polygons_assert(polygons_on_images, random_state, parents,
                                  hooks):
@@ -4330,14 +4498,19 @@ class AssertLambda(Lambda):
                 "AssertLambda.")
             return polygons_on_images
 
+        def _default(var, var2):
+            return var if var2 is not None else None
+
         func_sm_assert = func_segmentation_maps_assert
+        func_sm = func_segmentation_maps
 
         super(AssertLambda, self).__init__(
-            func_images_assert if func_images is not None else None,
-            func_heatmaps_assert if func_heatmaps is not None else None,
-            func_sm_assert if func_segmentation_maps is not None else None,
-            func_keypoints_assert if func_keypoints is not None else None,
-            func_polygons_assert if func_polygons is not None else None,
+            func_images=_default(func_images_assert, func_images),
+            func_heatmaps=_default(func_heatmaps_assert, func_heatmaps),
+            func_segmentation_maps=_default(func_sm_assert, func_sm),
+            func_keypoints=_default(func_keypoints_assert, func_keypoints),
+            func_bounding_boxes=_default(func_bbs_assert, func_bounding_boxes),
+            func_polygons=_default(func_polygons_assert, func_polygons),
             name=name, deterministic=deterministic, random_state=random_state)
 
 
@@ -4410,8 +4583,14 @@ class AssertShape(Lambda):
         :class:`imgaug.augmentables.kps.KeypointsOnImage` instance the
         ``.shape`` attribute, i.e. the shape of the corresponding image.
 
+    check_bounding_boxes : bool, optional
+        Whether to validate input bounding boxes via the given shape.
+        This will check (a) the number of bounding boxes and (b) for each
+        :class:`imgaug.augmentables.bbs.BoundingBoxesOnImage` instance the
+        ``.shape`` attribute, i.e. the shape of the corresponding image.
+
     check_polygons : bool, optional
-        Whether to validate input keypoints via the given shape.
+        Whether to validate input polygons via the given shape.
         This will check (a) the number of polygons and (b) for each
         :class:`imgaug.augmentables.polys.PolygonsOnImage` instance the
         ``.shape`` attribute, i.e. the shape of the corresponding image.
@@ -4450,7 +4629,7 @@ class AssertShape(Lambda):
 
     def __init__(self, shape, check_images=True, check_heatmaps=True,
                  check_segmentation_maps=True, check_keypoints=True,
-                 check_polygons=True,
+                 check_bounding_boxes=True, check_polygons=True,
                  name=None, deterministic=False, random_state=None):
         assert len(shape) == 4, (
             "Expected shape to have length 4, got %d with shape: %s." % (
@@ -4461,6 +4640,7 @@ class AssertShape(Lambda):
         self.is_checking_heatmaps = check_heatmaps
         self.is_checking_segmentation_maps = check_segmentation_maps
         self.is_checking_keypoints = check_keypoints
+        self.is_checking_bounding_boxes = check_bounding_boxes
         self.is_checking_polygons = check_polygons
 
         super(AssertShape, self).__init__(
@@ -4468,6 +4648,7 @@ class AssertShape(Lambda):
             func_heatmaps=self._check_heatmaps,
             func_segmentation_maps=self._check_segmentation_maps,
             func_keypoints=self._check_keypoints,
+            func_bounding_boxes=self._check_bounding_boxes,
             func_polygons=self._check_polygons,
             name=name,
             deterministic=deterministic,
@@ -4541,6 +4722,13 @@ class AssertShape(Lambda):
         if self.is_checking_keypoints:
             self._check_augmentables(keypoints_on_images, lambda obj: obj.shape)
         return keypoints_on_images
+
+    def _check_bounding_boxes(self, bounding_boxes_on_images, _random_state,
+                              _parents, _hooks):
+        if self.is_checking_bounding_boxes:
+            self._check_augmentables(bounding_boxes_on_images,
+                                     lambda obj: obj.shape)
+        return bounding_boxes_on_images
 
     def _check_polygons(self, polygons_on_images, _random_state, _parents,
                         _hooks):

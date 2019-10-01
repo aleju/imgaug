@@ -23,7 +23,7 @@ import imgaug.random as iarandom
 import imgaug.augmenters.pooling as iapooling
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, assert_cbaois_equal
 
 
 class Test_compute_shape_after_pooling(unittest.TestCase):
@@ -99,10 +99,7 @@ class _TestPoolingAugmentersBase(object):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert kpsoi_aug.shape == (6, 6, 3)
-        assert np.allclose(kpsoi_aug.to_xy_array(),
-                           [[1.5, 5.5],
-                            [5.5, 1.5]])
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
 
     def test_augment_keypoints__kernel_size_is_zero(self):
         self._test_augment_keypoints__kernel_size_is_noop(0)
@@ -138,10 +135,27 @@ class _TestPoolingAugmentersBase(object):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert kpsoi_aug.shape == (6, 6, 3)
-        assert np.allclose(kpsoi_aug.to_xy_array(),
-                           [[1.5, 5.5],
-                            [5.5, 1.5]])
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
+
+    def test_augment_polygons__kernel_size_is_two__keep_size(self):
+        from imgaug.augmentables.polys import Polygon, PolygonsOnImage
+        polys = [Polygon([(0, 0), (2, 0), (2, 2)])]
+        psoi = PolygonsOnImage(polys, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=True)
+
+        psoi_aug = aug.augment_polygons(psoi)
+
+        assert_cbaois_equal(psoi_aug, psoi)
+
+    def test_augment_bounding_boxes__kernel_size_is_two__keep_size(self):
+        from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
+        bbs = [BoundingBox(x1=0, y1=0, x2=2, y2=2)]
+        bbsoi = BoundingBoxesOnImage(bbs, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=True)
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, bbsoi)
 
     def test_augment_keypoints__kernel_size_is_two__no_keep_size(self):
         from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
@@ -151,10 +165,39 @@ class _TestPoolingAugmentersBase(object):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert kpsoi_aug.shape == (3, 3, 3)
-        assert np.allclose(kpsoi_aug.to_xy_array(),
-                           [[1.5/2, 5.5/2],
-                            [5.5/2, 1.5/2]])
+        expected = KeypointsOnImage.from_xy_array(
+            np.float32([
+                [1.5/2, 5.5/2],
+                [5.5/2, 1.5/2]
+            ]),
+            shape=(3, 3, 3))
+        assert_cbaois_equal(kpsoi_aug, expected)
+
+    def test_augment_polygons__kernel_size_is_two__no_keep_size(self):
+        from imgaug.augmentables.polys import Polygon, PolygonsOnImage
+        ps = [Polygon([(1.5, 1.5), (5.5, 1.5), (5.5, 5.5)])]
+        psoi = PolygonsOnImage(ps, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=False)
+
+        psoi_aug = aug.augment_polygons(psoi)
+
+        expected = PolygonsOnImage([
+            Polygon([(1.5/2, 1.5/2), (5.5/2, 1.5/2), (5.5/2, 5.5/2)])
+        ], shape=(3, 3, 3))
+        assert_cbaois_equal(psoi_aug, expected)
+
+    def test_augment_bounding_boxes__kernel_size_is_two__no_keep_size(self):
+        from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
+        bbs = [BoundingBox(x1=1.5, y1=2.5, x2=3.5, y2=4.5)]
+        bbsoi = BoundingBoxesOnImage(bbs, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=False)
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = BoundingBoxesOnImage([
+            BoundingBox(x1=1.5/2, y1=2.5/2, x2=3.5/2, y2=4.5/2)
+        ], shape=(3, 3, 3))
+        assert_cbaois_equal(bbsoi_aug, expected)
 
     def test_augment_heatmaps__kernel_size_is_two__keep_size(self):
         from imgaug.augmentables.heatmaps import HeatmapsOnImage
@@ -187,51 +230,84 @@ class _TestPoolingAugmentersBase(object):
         assert heatmaps_aug.shape == (3, 3, 3)
         assert np.allclose(heatmaps_aug.arr_0to1, arr[..., np.newaxis])
 
-    def test_augment_keypoints__kernel_size_differs(self):
+    def _test_augment_keypoints__kernel_size_differs(self, shape,
+                                                     shape_exp):
         from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
         kps = [Keypoint(x=1.5, y=5.5), Keypoint(x=5.5, y=1.5)]
-        kpsoi = KeypointsOnImage(kps, shape=(6, 6, 3))
+        kpsoi = KeypointsOnImage(kps, shape=shape)
         aug = self.augmenter(
             (iap.Deterministic(3), iap.Deterministic(2)),
             keep_size=False)
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert kpsoi_aug.shape == (2, 3, 3)
-        assert np.allclose(kpsoi_aug.to_xy_array(),
-                           [[(1.5/6)*3, (5.5/6)*2],
-                            [(5.5/6)*3, (1.5/6)*2]])
+        expected = KeypointsOnImage.from_xy_array(
+            np.float32([
+                [(1.5/shape[1])*shape_exp[1], (5.5/shape[0])*shape_exp[0]],
+                [(5.5/shape[1])*shape_exp[1], (1.5/shape[0])*shape_exp[0]]
+            ]),
+            shape=shape_exp)
+        assert_cbaois_equal(kpsoi_aug, expected)
+
+    def test_augment_keypoints__kernel_size_differs(self):
+        self._test_augment_keypoints__kernel_size_differs((6, 6, 3), (2, 3, 3))
 
     def test_augment_keypoints__kernel_size_differs__requires_padding(self):
-        from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
-        kps = [Keypoint(x=1.5, y=5.5), Keypoint(x=5.5, y=1.5)]
-        kpsoi = KeypointsOnImage(kps, shape=(5, 6, 3))
-        aug = self.augmenter(
-            (iap.Deterministic(3), iap.Deterministic(2)),
-            keep_size=False)
+        self._test_augment_keypoints__kernel_size_differs((5, 6, 3), (2, 3, 3))
 
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
-
-        assert kpsoi_aug.shape == (2, 3, 3)
-        assert np.allclose(kpsoi_aug.to_xy_array(),
-                           [[(1.5/6)*3, (5.5/5)*2],
-                            [(5.5/6)*3, (1.5/5)*2]])
-
-    def test_augment_polygons__kernel_size_differs(self):
+    def _test_augment_polygons__kernel_size_differs(self, shape, shape_exp):
         from imgaug.augmentables.polys import Polygon, PolygonsOnImage
         polys = [Polygon([(1.5, 5.5), (5.5, 1.5), (5.5, 5.5)])]
-        psoi = PolygonsOnImage(polys, shape=(6, 6, 3))
+        psoi = PolygonsOnImage(polys, shape=shape)
         aug = self.augmenter(
             (iap.Deterministic(3), iap.Deterministic(2)),
             keep_size=False)
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert psoi_aug.shape == (2, 3, 3)
-        assert np.allclose(psoi_aug.polygons[0].exterior,
-                           [[(1.5/6)*3, (5.5/6)*2],
-                            [(5.5/6)*3, (1.5/6)*2],
-                            [(5.5/6)*3, (5.5/6)*2]])
+        expected = PolygonsOnImage(
+            [Polygon([
+                ((1.5/shape[1])*shape_exp[1], (5.5/shape[0])*shape_exp[0]),
+                ((5.5/shape[1])*shape_exp[1], (1.5/shape[0])*shape_exp[0]),
+                ((5.5/shape[1])*shape_exp[1], (5.5/shape[0])*shape_exp[0])
+            ])],
+            shape=shape_exp)
+        assert_cbaois_equal(psoi_aug, expected)
+
+    def test_augment_polygons__kernel_size_differs(self):
+        self._test_augment_polygons__kernel_size_differs((6, 6, 3), (2, 3, 3))
+
+    def test_augment_polygons__kernel_size_differs__requires_padding(self):
+        self._test_augment_polygons__kernel_size_differs((5, 6, 3), (2, 3, 3))
+
+    def _test_augment_bounding_boxes__kernel_size_differs(self, shape,
+                                                          shape_exp):
+        from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
+        bbs = [BoundingBox(x1=1.5, y1=2.5, x2=5.5, y2=6.5)]
+        bbsoi = BoundingBoxesOnImage(bbs, shape=shape)
+        aug = self.augmenter(
+            (iap.Deterministic(3), iap.Deterministic(2)),
+            keep_size=False)
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = BoundingBoxesOnImage(
+            [BoundingBox(
+                x1=(1.5/shape[1])*shape_exp[1],
+                y1=(2.5/shape[0])*shape_exp[0],
+                x2=(5.5/shape[1])*shape_exp[1],
+                y2=(6.5/shape[0])*shape_exp[0],
+            )],
+            shape=shape_exp)
+        assert_cbaois_equal(bbsoi_aug, expected)
+
+    def test_augment_bounding_boxes__kernel_size_differs(self):
+        self._test_augment_bounding_boxes__kernel_size_differs((6, 6, 3),
+                                                               (2, 3, 3))
+
+    def test_augment_bounding_boxes__kernel_size_differs__requires_pad(self):
+        self._test_augment_bounding_boxes__kernel_size_differs((5, 6, 3),
+                                                               (2, 3, 3))
 
     def test_keypoint_alignment(self):
         from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
@@ -274,6 +350,88 @@ class _TestPoolingAugmentersBase(object):
                 assert kpsoi_aug.shape == image_aug.shape
                 assert len(kpsoi_aug.keypoints) == 0
 
+    def test_polygon_alignment(self):
+        from imgaug.augmentables.polys import Polygon, PolygonsOnImage
+        aug = self.augmenter((1, 2), keep_size=False)
+        image = np.zeros((40, 40, 1), dtype=np.uint8)
+
+        polys = [Polygon([(10, 10), (30, 10), (30, 30)])]
+        psoi = PolygonsOnImage(polys, shape=image.shape)
+        psoi_empty = PolygonsOnImage([], shape=image.shape)
+
+        images_batch = [image, image, image, image]
+        psoi_batch = [psoi, psoi, psoi_empty, psoi]
+
+        nb_iterations = 10
+        for _ in sm.xrange(nb_iterations):
+            images_aug, psois_aug = aug(images=images_batch,
+                                        polygons=psoi_batch)
+
+            for index in [0, 1, 3]:
+                image_aug = images_aug[index]
+                psoi_aug = psois_aug[index]
+
+                assert image_aug.shape == psoi_aug.shape
+
+                if image_aug.shape == (20, 20, 1):
+                    assert np.allclose(
+                        psoi_aug.items[0].coords,
+                        [(10/2, 10/2), (30/2, 10/2), (30/2, 30/2)]
+                    )
+                else:
+                    assert np.allclose(
+                        psoi_aug.items[0].coords,
+                        [(10, 10), (30, 10), (30, 30)]
+                    )
+
+            for index in [2]:
+                image_aug = images_aug[index]
+                psoi_aug = psois_aug[index]
+
+                assert psoi_aug.shape == image_aug.shape
+                assert len(psoi_aug.polygons) == 0
+
+    def test_bounding_boxes_alignment(self):
+        from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
+        aug = self.augmenter((1, 2), keep_size=False)
+        image = np.zeros((40, 40, 1), dtype=np.uint8)
+
+        bbs = [BoundingBox(x1=10, y1=10, x2=30, y2=30)]
+        bbsoi = BoundingBoxesOnImage(bbs, shape=image.shape)
+        bbsoi_empty = BoundingBoxesOnImage([], shape=image.shape)
+
+        images_batch = [image, image, image, image]
+        bbsoi_batch = [bbsoi, bbsoi, bbsoi_empty, bbsoi]
+
+        nb_iterations = 10
+        for _ in sm.xrange(nb_iterations):
+            images_aug, bbsois_aug = aug(images=images_batch,
+                                         bounding_boxes=bbsoi_batch)
+
+            for index in [0, 1, 3]:
+                image_aug = images_aug[index]
+                bbsoi_aug = bbsois_aug[index]
+
+                assert image_aug.shape == bbsoi_aug.shape
+
+                if image_aug.shape == (20, 20, 1):
+                    assert np.allclose(
+                        bbsoi_aug.items[0].coords,
+                        [(10/2, 10/2), (30/2, 30/2)]
+                    )
+                else:
+                    assert np.allclose(
+                        bbsoi_aug.items[0].coords,
+                        [(10, 10), (30, 30)]
+                    )
+
+            for index in [2]:
+                image_aug = images_aug[index]
+                bbsoi_aug = bbsois_aug[index]
+
+                assert bbsoi_aug.shape == image_aug.shape
+                assert len(bbsoi_aug.bounding_boxes) == 0
+
     def test_empty_keypoints(self):
         from imgaug.augmentables.kps import KeypointsOnImage
         kpsoi = KeypointsOnImage([], shape=(5, 6, 3))
@@ -281,8 +439,8 @@ class _TestPoolingAugmentersBase(object):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert kpsoi_aug.shape == (2, 2, 3)
-        assert len(kpsoi_aug.keypoints) == 0
+        expected = kpsoi.deepcopy(shape=(2, 2, 3))
+        assert_cbaois_equal(kpsoi_aug, expected)
 
     def test_empty_polygons(self):
         from imgaug.augmentables.polys import PolygonsOnImage
@@ -291,8 +449,20 @@ class _TestPoolingAugmentersBase(object):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert psoi_aug.shape == (2, 2, 3)
-        assert len(psoi_aug.polygons) == 0
+        expected = psoi.deepcopy()
+        expected.shape = (2, 2, 3)
+        assert_cbaois_equal(psoi_aug, expected)
+
+    def test_empty_bounding_boxes(self):
+        from imgaug.augmentables.bbs import BoundingBoxesOnImage
+        bbsoi = BoundingBoxesOnImage([], shape=(5, 6, 3))
+        aug = self.augmenter(3, keep_size=False)
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = bbsoi.deepcopy()
+        expected.shape = (2, 2, 3)
+        assert_cbaois_equal(bbsoi_aug, expected)
 
     def test_zero_sized_axes(self):
         shapes = [

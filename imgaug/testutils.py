@@ -38,6 +38,30 @@ class ArgCopyingMagicMock(mock.MagicMock):
             *args_copy, **kwargs_copy)
 
 
+def assert_cbaois_equal(observed, expected):
+    if isinstance(observed, list) or isinstance(expected, list):
+        assert isinstance(observed, list)
+        assert isinstance(expected, list)
+        assert len(observed) == len(expected)
+        for observed_i, expected_i in zip(observed, expected):
+            assert_cbaois_equal(observed_i, expected_i)
+    else:
+        assert len(observed.items) == len(expected.items)
+        assert observed.shape == expected.shape
+        for item_a, item_b in zip(observed.items, expected.items):
+            assert item_a.coords_almost_equals(item_b)
+        if isinstance(expected, ia.PolygonsOnImage):
+            for item_obs, item_exp in zip(observed.items, expected.items):
+                if item_exp.is_valid:
+                    assert item_obs.is_valid
+
+
+def shift_cbaoi(cbaoi, top=0, right=0, bottom=0, left=0):
+    if isinstance(cbaoi, ia.KeypointsOnImage):
+        return cbaoi.shift(x=left-right, y=top-bottom)
+    return cbaoi.shift(top=top, right=right, bottom=bottom, left=left)
+
+
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)
 

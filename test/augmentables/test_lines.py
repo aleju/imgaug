@@ -1707,6 +1707,22 @@ class TestLineStringsOnImage(unittest.TestCase):
         assert lsoi.line_strings == []
         assert lsoi.shape == (10, 10)
 
+    def test_items(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        items = lsoi.items
+
+        assert items == [ls1, ls2]
+
+    def test_items_empty(self):
+        kpsoi = LineStringsOnImage([], shape=(40, 50, 3))
+
+        items = kpsoi.items
+
+        assert items == []
+
     def test_empty_with_empty_list(self):
         lsoi = LineStringsOnImage([], shape=(10, 10, 3))
         assert lsoi.empty

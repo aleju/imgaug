@@ -87,6 +87,19 @@ class Polygon(object):
         self.label = label
 
     @property
+    def coords(self):
+        """Alias for attribute ``exterior``.
+
+        Returns
+        -------
+        ndarray
+            An ``(N, 2)`` ``float32`` ndarray containing the coordinates of
+            this polygon. This identical to the attribute ``exterior``.
+
+        """
+        return self.exterior
+
+    @property
     def xx(self):
         """Get the x-coordinates of all points on the exterior.
 
@@ -976,6 +989,34 @@ class Polygon(object):
                                in polygon_shapely.exterior.coords])
         return Polygon(exterior, label=label)
 
+    def coords_almost_equals(self, other, max_distance=1e-4,
+                             points_per_edge=8):
+        """Alias for :func:`Polygon.exterior_almost_equals`.
+
+        Parameters
+        ----------
+        other : imgaug.augmentables.polys.Polygon or (N,2) ndarray or list of tuple
+            See
+            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        max_distance : number, optional
+            See
+            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        points_per_edge : int, optional
+            See
+            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+
+        Returns
+        -------
+        bool
+            Whether the two polygon's exteriors can be viewed as equal
+            (approximate test).
+
+        """
+        return self.exterior_almost_equals(
+            other, max_distance=max_distance, points_per_edge=points_per_edge)
+
     def exterior_almost_equals(self, other, max_distance=1e-4,
                                points_per_edge=8):
         """Estimate if this and another polygon's exterior are almost identical.
@@ -1007,7 +1048,7 @@ class Polygon(object):
             The maximum euclidean distance between a point on one polygon and
             the closest point on the other polygon. If the distance is exceeded
             for any such pair, the two exteriors are not viewed as equal. The
-            points are other the points contained in the polygon's exterior
+            points are either the points contained in the polygon's exterior
             ndarray or interpolated points between these.
 
         points_per_edge : int, optional
@@ -1046,9 +1087,8 @@ class Polygon(object):
 
         Parameters
         ----------
-        other : imgaug.augmentables.polys.Polygon or any
-            The object to compare against. If not a :class:`Polygon`,
-            ``False`` will always be returned.
+        other : imgaug.augmentables.polys.Polygon
+            The other object to compare against. Expected to be a ``Polygon``.
 
         max_distance : float, optional
             See
@@ -1061,19 +1101,12 @@ class Polygon(object):
         Returns
         -------
         bool
-            Whether the two polygons can be viewed as equal. In the case of
-            the exteriors this is an approximate test.
+            ``True`` if the coordinates are almost equal and additionally
+            the labels are equal. Otherwise ``False``.
 
         """
-        if not isinstance(other, Polygon):
+        if self.label != other.label:
             return False
-        if self.label is not None or other.label is not None:
-            if self.label is None:
-                return False
-            if other.label is None:
-                return False
-            if self.label != other.label:
-                return False
         return self.exterior_almost_equals(
             other, max_distance=max_distance, points_per_edge=points_per_edge)
 
@@ -1163,6 +1196,18 @@ class PolygonsOnImage(object):
     def __init__(self, polygons, shape):
         self.polygons = polygons
         self.shape = normalize_shape(shape)
+
+    @property
+    def items(self):
+        """Get the polygons in this container.
+
+        Returns
+        -------
+        list of Polygon
+            Polygons within this container.
+
+        """
+        return self.polygons
 
     @property
     def empty(self):

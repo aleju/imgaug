@@ -1427,8 +1427,8 @@ class LineString(object):
         Parameters
         ----------
         other: imgaug.augmentables.lines.LineString
-            The other line string. Must be a LineString instance, not just
-            its coordinates.
+            The other object to compare against. Expected to be a
+            ``LineString``.
 
         max_distance : float, optional
             See :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`.
@@ -1439,9 +1439,8 @@ class LineString(object):
         Returns
         -------
         bool
-            ``True`` if the coordinates are almost equal according to
-            :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`
-            and additionally the labels are equal. Otherwise ``False``.
+            ``True`` if the coordinates are almost equal and additionally
+            the labels are equal. Otherwise ``False``.
 
         """
         if self.label != other.label:
@@ -1554,6 +1553,18 @@ class LineStringsOnImage(object):
             ))
         self.line_strings = line_strings
         self.shape = normalize_shape(shape)
+
+    @property
+    def items(self):
+        """Get the line strings in this container.
+
+        Returns
+        -------
+        list of LineString
+            Line strings within this container.
+
+        """
+        return self.line_strings
 
     @property
     def empty(self):

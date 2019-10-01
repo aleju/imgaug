@@ -17,7 +17,7 @@ def convert_iterable_to_string_of_types(iterable_var):
         in `iterable_var`. Separated by commas.
 
     """
-    types = [type(var_i) for var_i in iterable_var]
+    types = [str(type(var_i)) for var_i in iterable_var]
     return ", ".join(types)
 
 
@@ -62,13 +62,23 @@ def assert_is_iterable_of(iterable_var, classes):
         See :func:`imgaug.validation.is_iterable_of`.
 
     """
-    assert is_iterable_of(iterable_var, classes), (
-        "Expected an iterable of the following types: %s. "
-        "Got an iterable of types: %s." % (
-            (
-                ", ".join([class_.__name__ for class_ in classes])
-                if not isinstance(classes, type)
-                else classes.__name__
-            ),
-            convert_iterable_to_string_of_types(iterable_var))
-    )
+    valid = is_iterable_of(iterable_var, classes)
+    if not valid:
+        expected_types_str = (
+            ", ".join([class_.__name__ for class_ in classes])
+            if not isinstance(classes, type)
+            else classes.__name__)
+        if not ia.is_iterable(iterable_var):
+            raise AssertionError(
+                "Expected an iterable of the following types: %s. "
+                "Got instead a single instance of: %s." % (
+                    expected_types_str,
+                    type(iterable_var).__name__)
+            )
+        else:
+            raise AssertionError(
+                "Expected an iterable of the following types: %s. "
+                "Got an iterable of types: %s." % (
+                    expected_types_str,
+                    convert_iterable_to_string_of_types(iterable_var))
+            )

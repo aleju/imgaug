@@ -59,6 +59,18 @@ class TestBoundingBox(unittest.TestCase):
         assert bb.y2 == 30
         assert bb.x2 == 40
 
+    def test_coords_property_ints(self):
+        bb = ia.BoundingBox(x1=10, y1=20, x2=30, y2=40)
+        coords = bb.coords
+        assert np.allclose(coords, [[10, 20], [30, 40]],
+                           atol=1e-4, rtol=0)
+
+    def test_coords_property_floats(self):
+        bb = ia.BoundingBox(x1=10.1, y1=20.2, x2=30.3, y2=40.4)
+        coords = bb.coords
+        assert np.allclose(coords, [[10.1, 20.2], [30.3, 40.4]],
+                           atol=1e-4, rtol=0)
+
     def test_xy_int_properties(self):
         bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         assert bb.y1_int == 10
@@ -698,6 +710,120 @@ class TestBoundingBox(unittest.TestCase):
         assert kps[3].y == 3
         assert kps[3].x == 1
 
+    def test_coords_almost_equals(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        equal = bb.coords_almost_equals(other)
+
+        assert equal
+
+    def test_coords_almost_equals__unequal(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1+1, y1=3+1, x2=1+1, y2=3+1)
+
+        equal = bb.coords_almost_equals(other)
+
+        assert not equal
+
+    def test_coords_almost_equals__dist_below_max_distance(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3+1e-5)
+
+        equal = bb.coords_almost_equals(other, max_distance=1e-4)
+
+        assert equal
+
+    def test_coords_almost_equals__dist_above_max_distance(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3+1e-3)
+
+        equal = bb.coords_almost_equals(other, max_distance=1e-4)
+
+        assert not equal
+
+    def test_coords_almost_equals__input_is_array(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = np.float32([[1, 3], [1, 3]])
+
+        equal = bb.coords_almost_equals(other)
+
+        assert equal
+
+    def test_coords_almost_equals__input_is_array_not_equal(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = np.float32([[1, 3], [1, 3+0.5]])
+
+        equal = bb.coords_almost_equals(other)
+
+        assert not equal
+
+    def test_coords_almost_equals__input_is_list(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = [[1, 3], [1, 3]]
+
+        equal = bb.coords_almost_equals(other)
+
+        assert equal
+
+    def test_coords_almost_equals__input_is_list_not_equal(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = [[1, 3], [1, 3+0.5]]
+
+        equal = bb.coords_almost_equals(other)
+
+        assert not equal
+
+    def test_coords_almost_equals__bad_datatype(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        with self.assertRaises(AssertionError) as cm:
+            _ = bb.coords_almost_equals(False)
+
+        assert "Expected 'other'" in str(cm.exception)
+
+    @mock.patch("imgaug.augmentables.bbs.BoundingBox.coords_almost_equals")
+    def test_almost_equals(self, mock_cae):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        equal = bb.almost_equals(other, max_distance=1)
+
+        assert equal
+        mock_cae.assert_called_once_with(other, max_distance=1)
+
+    def test_almost_equals__labels_none_vs_string(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
+
+        equal = bb.almost_equals(other)
+
+        assert not equal
+
+    def test_almost_equals__labels_different_strings(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="bar")
+
+        equal = bb.almost_equals(other)
+
+        assert not equal
+
+    def test_almost_equals__same_string(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+
+        equal = bb.almost_equals(other)
+
+        assert equal
+
+    def test_almost_equals__distance_above_threshold(self):
+        bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3, label="foo")
+        other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3+1e-1, label="foo")
+
+        equal = bb.almost_equals(other, max_distance=1e-2)
+
+        assert not equal
+
     def test_copy(self):
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label="test")
 
@@ -781,6 +907,22 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=image)
         assert bbsoi.bounding_boxes == [bb1, bb2]
         assert bbsoi.shape == (40, 50, 3)
+
+    def test_items(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        items = bbsoi.items
+
+        assert items == [bb1, bb2]
+
+    def test_items_empty(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(40, 50, 3))
+
+        items = bbsoi.items
+
+        assert items == []
 
     def test_height(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)

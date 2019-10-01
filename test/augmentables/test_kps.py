@@ -35,6 +35,11 @@ class TestKeypoint(unittest.TestCase):
         assert np.isclose(kp.y, 1.5)
         assert np.isclose(kp.x, 2.5)
 
+    def test_coords(self):
+        kp = ia.Keypoint(x=1, y=1.5)
+        coords = kp.coords
+        assert np.allclose(coords, [1, 1.5], atol=1e-8, rtol=0)
+
     def test_x_int(self):
         kp = ia.Keypoint(y=1, x=2)
         assert kp.x == 2
@@ -219,6 +224,81 @@ class TestKeypoint(unittest.TestCase):
                 in kps_manhatten
             ])
 
+    def test_coords_almost_equals(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert equal
+
+    def test_coords_almost_equals__unequal(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5+10.0)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert not equal
+
+    def test_coords_almost_equals__distance_below_threshold(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5+1e-2)
+
+        equal = kp1.coords_almost_equals(kp2, max_distance=1e-1)
+
+        assert equal
+
+    def test_coords_almost_equals__distance_exceeds_threshold(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5+1e-2)
+
+        equal = kp1.coords_almost_equals(kp2, max_distance=1e-3)
+
+        assert not equal
+
+    def test_coords_almost_equals__array(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = np.float32([1, 1.5])
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert equal
+
+    def test_coords_almost_equals__array_unequal(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = np.float32([1, 1.5+1.0])
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert not equal
+
+    def test_coords_almost_equals__tuple(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = (1, 1.5)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert equal
+
+    def test_coords_almost_equals__tuple_unequal(self):
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = (1, 1.5+1.0)
+
+        equal = kp1.coords_almost_equals(kp2)
+
+        assert not equal
+
+    @mock.patch("imgaug.augmentables.kps.Keypoint.coords_almost_equals")
+    def test_almost_equals(self, mock_cae):
+        mock_cae.return_value = "foo"
+        kp1 = ia.Keypoint(x=1, y=1.5)
+        kp2 = ia.Keypoint(x=1, y=1.5)
+
+        result = kp1.almost_equals(kp2, max_distance=2)
+
+        assert result == "foo"
+        mock_cae.assert_called_once_with(kp2, max_distance=2)
+
     def test_string_conversion_ints(self):
         kp = ia.Keypoint(y=1, x=2)
         assert (
@@ -237,6 +317,21 @@ class TestKeypoint(unittest.TestCase):
 
 
 class TestKeypointsOnImage(unittest.TestCase):
+    def test_items(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(40, 50, 3))
+
+        items = kpsoi.items
+
+        assert items == kps
+
+    def test_items_empty(self):
+        kpsoi = ia.KeypointsOnImage([], shape=(40, 50, 3))
+
+        items = kpsoi.items
+
+        assert items == []
+
     def test_height(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))

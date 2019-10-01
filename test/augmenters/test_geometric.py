@@ -23,7 +23,8 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
-from imgaug.testutils import array_equal_lists, keypoints_equal, reseed
+from imgaug.testutils import (
+    array_equal_lists, keypoints_equal, reseed, assert_cbaois_equal)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
@@ -232,6 +233,16 @@ class TestAffine_noop(unittest.TestCase):
                ia.Keypoint(x=2, y=2)]
         return [ia.KeypointsOnImage(kps, shape=self.base_img.shape)]
 
+    @property
+    def psoi(self):
+        polygons = [ia.Polygon([(0, 0), (2, 0), (2, 2)])]
+        return [ia.PolygonsOnImage(polygons, shape=self.base_img.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.base_img.shape)]
+
     def test_image_noop(self):
         # no translation/scale/rotate/shear, shouldnt change nothing
         aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
@@ -268,21 +279,33 @@ class TestAffine_noop(unittest.TestCase):
         assert array_equal_lists(observed, expected)
 
     def test_keypoints_noop(self):
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        self._test_cba_noop("augment_keypoints", self.kpsoi, False)
 
     def test_keypoints_noop__deterministic(self):
+        self._test_cba_noop("augment_keypoints", self.kpsoi, True)
+
+    def test_polygons_noop(self):
+        self._test_cba_noop("augment_polygons", self.psoi, False)
+
+    def test_polygons_noop__deterministic(self):
+        self._test_cba_noop("augment_polygons", self.psoi, True)
+
+    def test_bounding_boxes_noop(self):
+        self._test_cba_noop("augment_bounding_boxes", self.bbsoi, False)
+
+    def test_bounding_boxes_noop__deterministic(self):
+        self._test_cba_noop("augment_bounding_boxes", self.bbsoi, True)
+
+    @classmethod
+    def _test_cba_noop(cls, augf_name, cbaoi, deterministic):
         aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        if deterministic:
+            aug = aug.to_deterministic()
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
-        expected = self.kpsoi
-        assert keypoints_equal(observed, expected)
+        expected = cbaoi
+        assert_cbaois_equal(observed, expected)
 
 
 # TODO add test with multiple images
@@ -310,6 +333,62 @@ class TestAffine_scale(unittest.TestCase):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                ia.Keypoint(x=2, y=2)]
         return [ia.KeypointsOnImage(kps, shape=self.base_img.shape)]
+
+    def kpsoi_scaled(self, scale_y, scale_x):
+        coords = np.array([
+            [0, 0],
+            [1, 1],
+            [2, 2]
+        ], dtype=np.float32)
+        coords_scaled = self._scale_coordinates(coords, scale_y, scale_x)
+        return [ia.KeypointsOnImage.from_xy_array(
+                    coords_scaled,
+                    shape=self.base_img.shape)]
+
+    @property
+    def psoi(self):
+        polys = [ia.Polygon([(0, 0), (0, 2), (2, 2)])]
+        return [ia.PolygonsOnImage(polys, shape=self.base_img.shape)]
+
+    def psoi_scaled(self, scale_y, scale_x):
+        coords = np.array([
+            [0, 0],
+            [0, 2],
+            [2, 2]
+        ], dtype=np.float32)
+        coords_scaled = self._scale_coordinates(coords, scale_y, scale_x)
+        return [ia.PolygonsOnImage(
+                    [ia.Polygon(coords_scaled)],
+                    shape=self.base_img.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.base_img.shape)]
+
+    def bbsoi_scaled(self, scale_y, scale_x):
+        coords = np.array([
+            [0, 1],
+            [2, 3]
+        ], dtype=np.float32)
+        coords_scaled = self._scale_coordinates(coords, scale_y, scale_x)
+        return [ia.BoundingBoxesOnImage.from_xyxy_array(
+                    coords_scaled.reshape((1, 4)),
+                    shape=self.base_img.shape)]
+
+    def _scale_coordinates(self, coords, scale_y, scale_x):
+        height, width = self.base_img.shape[0:2]
+        coords_scaled = []
+        for x, y in coords:
+            # the additional +0.5 and -0.5 here makes up for the shift factor
+            # used in the affine matrix generation
+            offset = 0.0
+            x_centered = x - width/2 + offset
+            y_centered = y - height/2 + offset
+            x_new = x_centered * scale_x + width/2 - offset
+            y_new = y_centered * scale_y + height/2 - offset
+            coords_scaled.append((x_new, y_new))
+        return np.float32(coords_scaled)
 
     @property
     def scale_zoom_in_outer_pixels(self):
@@ -365,29 +444,45 @@ class TestAffine_scale(unittest.TestCase):
         assert (observed[0][outer_pixels[0], outer_pixels[1]] < 150).all()
 
     def test_keypoints_scale_zoom_in(self):
-        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert observed[0].keypoints[0].x < 0
-        assert observed[0].keypoints[0].y < 0
-        assert observed[0].keypoints[1].x == 1
-        assert observed[0].keypoints[1].y == 1
-        assert observed[0].keypoints[2].x > 2
-        assert observed[0].keypoints[2].y > 2
+        self._test_cba_scale(
+            "augment_keypoints", 1.75,
+            self.kpsoi, self.kpsoi_scaled(1.75, 1.75), False)
 
     def test_keypoints_scale_zoom_in__deterministic(self):
-        aug = iaa.Affine(scale=1.75, translate_px=0, rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_scale(
+            "augment_keypoints", 1.75,
+            self.kpsoi, self.kpsoi_scaled(1.75, 1.75), True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_scale_zoom_in(self):
+        self._test_cba_scale(
+            "augment_polygons", 1.75,
+            self.psoi, self.psoi_scaled(1.75, 1.75), False)
 
-        assert observed[0].keypoints[0].x < 0
-        assert observed[0].keypoints[0].y < 0
-        assert observed[0].keypoints[1].x == 1
-        assert observed[0].keypoints[1].y == 1
-        assert observed[0].keypoints[2].x > 2
-        assert observed[0].keypoints[2].y > 2
+    def test_polygons_scale_zoom_in__deterministic(self):
+        self._test_cba_scale(
+            "augment_polygons", 1.75,
+            self.psoi, self.psoi_scaled(1.75, 1.75), True)
+
+    def test_bounding_boxes_scale_zoom_in(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", 1.75,
+            self.bbsoi, self.bbsoi_scaled(1.75, 1.75), False)
+
+    def test_bounding_boxes_scale_zoom_in__deterministic(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", 1.75,
+            self.bbsoi, self.bbsoi_scaled(1.75, 1.75), True)
+
+    @classmethod
+    def _test_cba_scale(cls, augf_name, scale, cbaoi, cbaoi_scaled,
+                        deterministic):
+        aug = iaa.Affine(scale=scale, translate_px=0, rotate=0, shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_scaled)
 
     # ---------------------
     # scale: zoom in only on x axis
@@ -443,31 +538,34 @@ class TestAffine_scale(unittest.TestCase):
         assert (observed[0][2, :] < 5).all()
 
     def test_keypoints_scale_zoom_in_only_x_axis(self):
-        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
-                         translate_px=0, rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert observed[0].keypoints[0].x < 0
-        assert observed[0].keypoints[0].y == 0
-        assert observed[0].keypoints[1].x == 1
-        assert observed[0].keypoints[1].y == 1
-        assert observed[0].keypoints[2].x > 2
-        assert observed[0].keypoints[2].y == 2
+        self._test_cba_scale(
+            "augment_keypoints", {"y": 1.0, "x": 1.75}, self.kpsoi,
+            self.kpsoi_scaled(1.0, 1.75), False)
 
     def test_keypoints_scale_zoom_in_only_x_axis__deterministic(self):
-        aug = iaa.Affine(scale={"x": 1.75, "y": 1.0},
-                         translate_px=0, rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_scale(
+            "augment_keypoints", {"y": 1.0, "x": 1.75}, self.kpsoi,
+            self.kpsoi_scaled(1.0, 1.75), True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_scale_zoom_in_only_x_axis(self):
+        self._test_cba_scale(
+            "augment_polygons", {"y": 1.0, "x": 1.75}, self.psoi,
+            self.psoi_scaled(1.0, 1.75), False)
 
-        assert observed[0].keypoints[0].x < 0
-        assert observed[0].keypoints[0].y == 0
-        assert observed[0].keypoints[1].x == 1
-        assert observed[0].keypoints[1].y == 1
-        assert observed[0].keypoints[2].x > 2
-        assert observed[0].keypoints[2].y == 2
+    def test_polygons_scale_zoom_in_only_x_axis__deterministic(self):
+        self._test_cba_scale(
+            "augment_polygons", {"y": 1.0, "x": 1.75}, self.psoi,
+            self.psoi_scaled(1.0, 1.75), True)
+
+    def test_bounding_boxes_scale_zoom_in_only_x_axis(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", {"y": 1.0, "x": 1.75}, self.bbsoi,
+            self.bbsoi_scaled(1.0, 1.75), False)
+
+    def test_bounding_boxes_scale_zoom_in_only_x_axis__deterministic(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", {"y": 1.0, "x": 1.75}, self.bbsoi,
+            self.bbsoi_scaled(1.0, 1.75), True)
 
     # ---------------------
     # scale: zoom in only on y axis
@@ -523,31 +621,34 @@ class TestAffine_scale(unittest.TestCase):
         assert (observed[0][:, 2] < 5).all()
 
     def test_keypoints_scale_zoom_in_only_y_axis(self):
-        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
-                         translate_px=0, rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert observed[0].keypoints[0].x == 0
-        assert observed[0].keypoints[0].y < 0
-        assert observed[0].keypoints[1].x == 1
-        assert observed[0].keypoints[1].y == 1
-        assert observed[0].keypoints[2].x == 2
-        assert observed[0].keypoints[2].y > 2
+        self._test_cba_scale(
+            "augment_keypoints", {"y": 1.75, "x": 1.0}, self.kpsoi,
+            self.kpsoi_scaled(1.75, 1.0), False)
 
     def test_keypoints_scale_zoom_in_only_y_axis__deterministic(self):
-        aug = iaa.Affine(scale={"x": 1.0, "y": 1.75},
-                         translate_px=0, rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_scale(
+            "augment_keypoints", {"y": 1.75, "x": 1.0}, self.kpsoi,
+            self.kpsoi_scaled(1.75, 1.0), True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_scale_zoom_in_only_y_axis(self):
+        self._test_cba_scale(
+            "augment_polygons", {"y": 1.75, "x": 1.0}, self.psoi,
+            self.psoi_scaled(1.75, 1.0), False)
 
-        assert observed[0].keypoints[0].x == 0
-        assert observed[0].keypoints[0].y < 0
-        assert observed[0].keypoints[1].x == 1
-        assert observed[0].keypoints[1].y == 1
-        assert observed[0].keypoints[2].x == 2
-        assert observed[0].keypoints[2].y > 2
+    def test_polygons_scale_zoom_in_only_y_axis__deterministic(self):
+        self._test_cba_scale(
+            "augment_polygons", {"y": 1.75, "x": 1.0}, self.psoi,
+            self.psoi_scaled(1.75, 1.0), True)
+
+    def test_bounding_boxes_scale_zoom_in_only_y_axis(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", {"y": 1.75, "x": 1.0}, self.bbsoi,
+            self.bbsoi_scaled(1.75, 1.0), False)
+
+    def test_bounding_boxes_scale_zoom_in_only_y_axis__deterministic(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", {"y": 1.75, "x": 1.0}, self.bbsoi,
+            self.bbsoi_scaled(1.75, 1.0), True)
 
     # ---------------------
     # scale: zoom out
@@ -639,19 +740,34 @@ class TestAffine_scale(unittest.TestCase):
         assert (observed[0][inner_pixels] > 200).all()
 
     def test_keypoints_scale_zoom_out(self):
-        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.scale_zoom_out_kpsoi)
-
-        assert keypoints_equal(observed, self.scale_zoom_out_kpsoi_aug)
+        self._test_cba_scale(
+            "augment_keypoints", 0.49, self.kpsoi,
+            self.kpsoi_scaled(0.49, 0.49), False)
 
     def test_keypoints_scale_zoom_out__deterministic(self):
-        aug = iaa.Affine(scale=0.49, translate_px=0, rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_scale(
+            "augment_keypoints", 0.49, self.kpsoi,
+            self.kpsoi_scaled(0.49, 0.49), True)
 
-        observed = aug_det.augment_keypoints(self.scale_zoom_out_kpsoi)
+    def test_polygons_scale_zoom_out(self):
+        self._test_cba_scale(
+            "augment_polygons", 0.49, self.psoi,
+            self.psoi_scaled(0.49, 0.49), False)
 
-        assert keypoints_equal(observed, self.scale_zoom_out_kpsoi_aug)
+    def test_polygons_scale_zoom_out__deterministic(self):
+        self._test_cba_scale(
+            "augment_polygons", 0.49, self.psoi,
+            self.psoi_scaled(0.49, 0.49), True)
+
+    def test_bounding_boxes_scale_zoom_out(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", 0.49, self.bbsoi,
+            self.bbsoi_scaled(0.49, 0.49), False)
+
+    def test_bounding_boxes_scale_zoom_out__deterministic(self):
+        self._test_cba_scale(
+            "augment_bounding_boxes", 0.49, self.bbsoi,
+            self.bbsoi_scaled(0.49, 0.49), True)
 
     # ---------------------
     # scale: x and y axis are both tuples
@@ -706,6 +822,39 @@ class TestAffine_scale(unittest.TestCase):
                     nb_changed_aug_det += 1
                 last_aug_det = observed_aug_det
         assert nb_changed_aug_det == 0
+
+    # ------------
+    # alignment
+    # ------------
+    def test_keypoint_alignment(self):
+        image = np.zeros((100, 100), dtype=np.uint8)
+        image[40-1:40+2, 40-1:40+2] = 255
+        image[40-1:40+2, 60-1:60+2] = 255
+
+        kps = [ia.Keypoint(x=40, y=40), ia.Keypoint(x=60, y=40)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=image.shape)
+
+        images = [image, image, image]
+        kpsois = [kpsoi.deepcopy(),
+                  ia.KeypointsOnImage([], shape=image.shape),
+                  kpsoi.deepcopy()]
+
+        aug = iaa.Affine(scale=[0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5,
+                                1.6, 1.7],
+                         order=0)
+
+        for iter in sm.xrange(40):
+            images_aug, kpsois_aug = aug(images=images, keypoints=kpsois)
+
+            assert kpsois_aug[1].empty
+
+            for i in [0, 2]:
+                image_aug = images_aug[i]
+                kpsoi_aug = kpsois_aug[i]
+
+                for kp in kpsoi_aug.keypoints:
+                    value = image_aug[int(kp.y), int(kp.x)]
+                    assert value > 200
 
     # ------------
     # make sure that polygons stay valid upon extreme scaling
@@ -788,6 +937,36 @@ class TestAffine_translate(unittest.TestCase):
         kps = [ia.Keypoint(x=1, y=2)]
         return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
 
+    @property
+    def psoi(self):
+        polys = [ia.Polygon([(0, 0), (2, 0), (2, 2)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def psoi_1px_right(self):
+        polys = [ia.Polygon([(0+1, 0), (2+1, 0), (2+1, 2)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def psoi_1px_bottom(self):
+        polys = [ia.Polygon([(0, 0+1), (2, 0+1), (2, 2+1)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_1px_right(self):
+        bbs = [ia.BoundingBox(x1=0+1, y1=1, x2=2+1, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_1px_bottom(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1+1, x2=2, y2=3+1)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
     # ---------------------
     # translate: move one pixel to the right
     # ---------------------
@@ -827,21 +1006,45 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_right])
 
     def test_keypoints_translate_1px_right(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                         shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 1, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, False)
 
     def test_keypoints_translate_1px_right__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 1, "y": 0}, rotate=0,
-                         shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 1, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_1px_right(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 1, "y": 0},
+            self.psoi, self.psoi_1px_right, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+    def test_polygons_translate_1px_right__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 1, "y": 0},
+            self.psoi, self.psoi_1px_right, True)
+
+    def test_bounding_boxes_translate_1px_right(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 1, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, False)
+
+    def test_bounding_boxes_translate_1px_right__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 1, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, True)
+
+    @classmethod
+    def _test_cba_translate_px(cls, augf_name, px, cbaoi, cbaoi_translated,
+                               deterministic):
+        aug = iaa.Affine(scale=1.0, translate_px=px, rotate=0, shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_translated)
 
     def test_image_translate_1px_right_skimage(self):
         # move one pixel to the right
@@ -931,21 +1134,34 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_bottom])
 
     def test_keypoints_translate_1px_bottom(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
-                         shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 0, "y": 1},
+            self.kpsoi, self.kpsoi_1px_bottom, False)
 
     def test_keypoints_translate_1px_bottom__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_px={"x": 0, "y": 1}, rotate=0,
-                         shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_px(
+            "augment_keypoints", {"x": 0, "y": 1},
+            self.kpsoi, self.kpsoi_1px_bottom, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_1px_bottom(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 0, "y": 1},
+            self.psoi, self.psoi_1px_bottom, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+    def test_polygons_translate_1px_bottom__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_polygons", {"x": 0, "y": 1},
+            self.psoi, self.psoi_1px_bottom, True)
+
+    def test_bounding_boxes_translate_1px_bottom(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 0, "y": 1},
+            self.bbsoi, self.bbsoi_1px_bottom, False)
+
+    def test_bounding_boxes_translate_1px_bottom__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_bounding_boxes", {"x": 0, "y": 1},
+            self.bbsoi, self.bbsoi_1px_bottom, True)
 
     # ---------------------
     # translate: fraction of the image size (towards the right)
@@ -985,21 +1201,46 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_right])
 
     def test_keypoints_translate_33percent_right(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
-                         rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0.3333, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, False)
 
     def test_keypoints_translate_33percent_right__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0.3333, "y": 0},
-                         rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0.3333, "y": 0},
+            self.kpsoi, self.kpsoi_1px_right, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_33percent_right(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0.3333, "y": 0},
+            self.psoi, self.psoi_1px_right, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_right)
+    def test_polygons_translate_33percent_right__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0.3333, "y": 0},
+            self.psoi, self.psoi_1px_right, True)
+
+    def test_bounding_boxes_translate_33percent_right(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0.3333, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, False)
+
+    def test_bounding_boxes_translate_33percent_right__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0.3333, "y": 0},
+            self.bbsoi, self.bbsoi_1px_right, True)
+
+    @classmethod
+    def _test_cba_translate_percent(cls, augf_name, percent, cbaoi,
+                                    cbaoi_translated, deterministic):
+        aug = iaa.Affine(scale=1.0, translate_percent=percent, rotate=0,
+                         shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_translated)
 
     # ---------------------
     # translate: fraction of the image size (towards the bottom)
@@ -1040,21 +1281,34 @@ class TestAffine_translate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_1px_bottom])
 
     def test_keypoints_translate_33percent_bottom(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
-                         rotate=0, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0, "y": 0.3333},
+            self.kpsoi, self.kpsoi_1px_bottom, False)
 
     def test_keypoints_translate_33percent_bottom__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_percent={"x": 0, "y": 0.3333},
-                         rotate=0, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_translate_percent(
+            "augment_keypoints", {"x": 0, "y": 0.3333},
+            self.kpsoi, self.kpsoi_1px_bottom, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_translate_33percent_bottom(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0, "y": 0.3333},
+            self.psoi, self.psoi_1px_bottom, False)
 
-        assert keypoints_equal(observed, self.kpsoi_1px_bottom)
+    def test_polygons_translate_33percent_bottom__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_polygons", {"x": 0, "y": 0.3333},
+            self.psoi, self.psoi_1px_bottom, True)
+
+    def test_bounding_boxes_translate_33percent_bottom(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0, "y": 0.3333},
+            self.bbsoi, self.bbsoi_1px_bottom, False)
+
+    def test_bounding_boxes_translate_33percent_bottom__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_bounding_boxes", {"x": 0, "y": 0.3333},
+            self.bbsoi, self.bbsoi_1px_bottom, True)
 
     # ---------------------
     # translate: axiswise uniform distributions
@@ -1130,8 +1384,6 @@ class TestAffine_translate(unittest.TestCase):
             ]),
             shape=(3, 3, 3)
         )
-
-
 
     def test_heatmaps_translate_1px_right(self):
         aug = iaa.Affine(translate_px={"x": 1})
@@ -1254,9 +1506,29 @@ class TestAffine_rotate(unittest.TestCase):
 
     @property
     def kpsoi_rot90(self):
-        kps = [ia.Keypoint(x=1, y=0), ia.Keypoint(x=1, y=1),
-                   ia.Keypoint(x=1, y=2)]
+        kps = [ia.Keypoint(x=3-1, y=0), ia.Keypoint(x=3-1, y=1),
+               ia.Keypoint(x=3-1, y=2)]
         return [ia.KeypointsOnImage(kps, shape=self.image_rot90.shape)]
+
+    @property
+    def psoi(self):
+        polys = [ia.Polygon([(0, 0), (3, 0), (3, 3)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
+
+    @property
+    def psoi_rot90(self):
+        polys = [ia.Polygon([(3-0, 0), (3-0, 3), (3-3, 3)])]
+        return [ia.PolygonsOnImage(polys, shape=self.image_rot90.shape)]
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
+
+    @property
+    def bbsoi_rot90(self):
+        bbs = [ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)]
+        return [ia.BoundingBoxesOnImage(bbs, shape=self.image_rot90.shape)]
 
     def test_image_rot90(self):
         # rotate by 90 degrees
@@ -1298,19 +1570,40 @@ class TestAffine_rotate(unittest.TestCase):
         assert array_equal_lists(observed, [self.image_rot90])
 
     def test_keypoints_rot90(self):
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
-
-        observed = aug.augment_keypoints(self.kpsoi)
-
-        assert keypoints_equal(observed, self.kpsoi_rot90)
+        self._test_cba_rotate(
+            "augment_keypoints", 90, self.kpsoi, self.kpsoi_rot90, False)
 
     def test_keypoints_rot90__deterministic(self):
-        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=90, shear=0)
-        aug_det = aug.to_deterministic()
+        self._test_cba_rotate(
+            "augment_keypoints", 90, self.kpsoi, self.kpsoi_rot90, True)
 
-        observed = aug_det.augment_keypoints(self.kpsoi)
+    def test_polygons_rot90(self):
+        self._test_cba_rotate(
+            "augment_polygons", 90, self.psoi, self.psoi_rot90, False)
 
-        assert keypoints_equal(observed, self.kpsoi_rot90)
+    def test_polygons_rot90__deterministic(self):
+        self._test_cba_rotate(
+            "augment_polygons", 90, self.psoi, self.psoi_rot90, True)
+
+    def test_bounding_boxes_rot90(self):
+        self._test_cba_rotate(
+            "augment_bounding_boxes", 90, self.bbsoi, self.bbsoi_rot90, False)
+
+    def test_bounding_boxes_rot90__deterministic(self):
+        self._test_cba_rotate(
+            "augment_bounding_boxes", 90, self.bbsoi, self.bbsoi_rot90, True)
+
+    @classmethod
+    def _test_cba_rotate(cls, augf_name, rotate, cbaoi,
+                         cbaoi_rotated, deterministic):
+        aug = iaa.Affine(scale=1.0, translate_px=0, rotate=rotate,
+                         shear=0)
+        if deterministic:
+            aug = aug.to_deterministic()
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_rotated)
 
     def test_image_rotate_is_tuple_0_to_364_deg(self):
         # random rotation 0-364 degrees
@@ -1898,7 +2191,7 @@ class TestAffine_alignment(unittest.TestCase):
         img[2, 4:6] = 255
         img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=5, y=2)], shape=img.shape)
-        kpsoi_rot = [(5, 2), (5-1, 10-2-1)]
+        kpsoi_rot = [(5, 2), (5, 10-2)]
         img_aug_indices = []
         kpsois_aug_indices = []
         for _ in sm.xrange(40):
@@ -1943,7 +2236,7 @@ class TestAffine_alignment(unittest.TestCase):
                                   shape=img.shape)
         psoi_rot = [
             psoi.polygons[0].deepcopy(),
-            ia.Polygon([(10-1-1, 10-1-1), (10-9-1, 10-1-1), (10-5-1, 10-5-1)])
+            ia.Polygon([(10-1, 10-1), (10-9, 10-1), (10-5, 10-5)])
         ]
         img_aug_indices = []
         psois_aug_indices = []
@@ -3687,18 +3980,11 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints([kpsoi])[0]
 
-        assert kpsoi_aug.shape == (14, 14, 3)
-        assert np.allclose(kpsoi_aug.keypoints[0].x, 5)
-        assert np.allclose(kpsoi_aug.keypoints[0].y, 3)
-        assert np.allclose(kpsoi_aug.keypoints[1].x, 3)
-        assert np.allclose(kpsoi_aug.keypoints[1].y, 8)
+        assert_cbaois_equal(kpsoi_aug, kpsoi)
 
     def test_scale_is_zero_polygons(self):
         # scale 0
         aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
-        img = np.zeros((100, 80), dtype=np.uint8)
-        img[:, 10-5:10+5] = 255
-        img[:, 70-5:70+5] = 255
         exterior = [(10, 10),
                     (70, 10), (70, 20), (70, 30), (70, 40),
                     (70, 50), (70, 60), (70, 70), (70, 80),
@@ -3708,15 +3994,22 @@ class TestPiecewiseAffine(unittest.TestCase):
                     (10, 40), (10, 30), (10, 20), (10, 10)]
         poly = ia.Polygon(exterior)
         psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
-                                  shape=img.shape)
+                                  shape=(100, 80))
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == img.shape
-        assert observed.polygons[0].exterior_almost_equals(psoi.polygons[0])
-        assert observed.polygons[1].exterior_almost_equals(psoi.polygons[1])
-        assert observed.polygons[0].is_valid
-        assert observed.polygons[1].is_valid
+        assert_cbaois_equal(observed, psoi)
+
+    def test_scale_is_zero_bounding_boxes(self):
+        # scale 0
+        aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
+        bb = ia.BoundingBox(x1=10, y1=10, x2=70, y2=20)
+        bbsoi = ia.BoundingBoxesOnImage([bb, bb.shift(left=1, top=1)],
+                                        shape=(100, 80))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     def test_scale_stronger_values_should_increase_changes_images(self):
         # stronger scale should lead to stronger changes
@@ -3973,7 +4266,6 @@ class TestPiecewiseAffine(unittest.TestCase):
         psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
                                   shape=img.shape)
 
-        # alignment
         aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
         aug_det = aug.to_deterministic()
 
@@ -3988,6 +4280,41 @@ class TestPiecewiseAffine(unittest.TestCase):
                     x = int(np.round(point_aug[0]))
                     y = int(np.round(point_aug[1]))
                     assert observed_img[y, x] > 0
+
+    def test_scale_alignment_between_images_and_bounding_boxes(self):
+        img = np.zeros((100, 80), dtype=np.uint8)
+        s = 0
+        img[10-s:10+s+1, 20-s:20+s+1] = 255
+        img[60-s:60+s+1, 70-s:70+s+1] = 255
+        bb = ia.BoundingBox(y1=10, x1=20, y2=60, x2=70)
+        bbsoi = ia.BoundingBoxesOnImage([bb], shape=img.shape)
+
+        aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
+
+        observed_imgs, observed_bbsois = aug(
+            images=[img], bounding_boxes=[bbsoi])
+
+        for observed_img, observed_bbsoi in zip(observed_imgs, observed_bbsois):
+            assert observed_bbsoi.shape == img.shape
+
+            observed_img_x = np.max(observed_img, axis=0)
+            observed_img_y = np.max(observed_img, axis=1)
+
+            nonz_x = np.nonzero(observed_img_x)[0]
+            nonz_y = np.nonzero(observed_img_y)[0]
+
+            img_x1 = min(nonz_x)
+            img_x2 = max(nonz_x)
+            img_y1 = min(nonz_y)
+            img_y2 = max(nonz_y)
+            expected = ia.BoundingBox(x1=img_x1, y1=img_y1,
+                                      x2=img_x2, y2=img_y2)
+
+            for bb_aug in observed_bbsoi.bounding_boxes:
+                # we don't expect perfect IoU here, because the actual
+                # underlying KP aug used distance maps
+                # most IoUs seem to end up in the range 0.9-0.95
+                assert bb_aug.iou(expected) > 0.8
 
     def test_scale_is_list(self):
         aug1 = iaa.PiecewiseAffine(scale=0.01, nb_rows=12, nb_cols=4)
@@ -4185,9 +4512,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         kps = [ia.Keypoint(x=-10, y=-20)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(10, 10, 3))
 
-        observed = aug.augment_keypoints([kpsoi])
+        observed = aug.augment_keypoints(kpsoi)
 
-        assert keypoints_equal([kpsoi], observed)
+        assert_cbaois_equal(observed, kpsoi)
 
     def test_keypoints_empty(self):
         # empty keypoints
@@ -4196,14 +4523,12 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        assert observed.shape == (10, 10, 3)
-        assert len(observed.keypoints) == 0
+        assert_cbaois_equal(observed, kpsoi)
 
     # ---------
     # remaining polygons tests
     # ---------
     def test_polygons_outside_of_image(self):
-        # points outside of image
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
         exterior = [(-10, -10), (110, -10), (110, 90), (-10, 90)]
         poly = ia.Polygon(exterior)
@@ -4211,19 +4536,35 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (10, 10, 3)
-        assert observed.polygons[0].exterior_almost_equals(poly)
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, psoi)
 
     def test_empty_polygons(self):
-        # empty PolygonsOnImage
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
         psoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (10, 10, 3)
-        assert len(observed.polygons) == 0
+        assert_cbaois_equal(observed, psoi)
+
+    # ---------
+    # remaining bounding box tests
+    # ---------
+    def test_bounding_boxes_outside_of_image(self):
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
+        bbs = ia.BoundingBox(x1=-10, y1=-10, x2=15, y2=15)
+        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(10, 10, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(10, 10, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     # ---------
     # zero-sized axes
@@ -4750,8 +5091,8 @@ class TestPerspectiveTransform(unittest.TestCase):
         gen = zip(observed[0].keypoints, kps_expected)
         # TODO deviations of around 0.5 here from expected values, why?
         for kp_observed, kp_expected in gen:
-            assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
-            assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
+            assert kp_observed.coords_almost_equals(
+                kp_expected, max_distance=1.5)
 
     def test_keypoints_with_keep_size(self):
         # keypoint augmentation with keep_size
@@ -4771,8 +5112,8 @@ class TestPerspectiveTransform(unittest.TestCase):
         gen = zip(observed[0].keypoints, kps_expected)
         # TODO deviations of around 0.5 here from expected values, why?
         for kp_observed, kp_expected in gen:
-            assert kp_expected.x - 1.5 < kp_observed.x < kp_expected.x + 1.5
-            assert kp_expected.y - 1.5 < kp_observed.y < kp_expected.y + 1.5
+            assert kp_observed.coords_almost_equals(
+                kp_expected, max_distance=1.5)
 
     def test_image_keypoint_alignment(self):
         img = np.zeros((100, 100), dtype=np.uint8)
@@ -4790,18 +5131,19 @@ class TestPerspectiveTransform(unittest.TestCase):
             ia.Keypoint(y=50, x=50)
         ]
         kpsoi = ia.KeypointsOnImage(kps, shape=img.shape)
-        aug = iaa.PerspectiveTransform(scale=(0.1, 0.3), keep_size=True)
-        aug_det = aug.to_deterministic()
+        aug = iaa.PerspectiveTransform(scale=(0.05, 0.15), keep_size=True)
 
-        imgs_aug = aug_det.augment_images([img, img])
-        kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
+        for _ in sm.xrange(10):
+            aug_det = aug.to_deterministic()
+            imgs_aug = aug_det.augment_images([img, img])
+            kpsois_aug = aug_det.augment_keypoints([kpsoi, kpsoi])
 
-        for img_aug, kpsoi_aug in zip(imgs_aug, kpsois_aug):
-            assert kpsoi_aug.shape == img.shape
-            for kp_aug in kpsoi_aug.keypoints:
-                x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
-                if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
-                    assert img_aug[y, x] > 10
+            for img_aug, kpsoi_aug in zip(imgs_aug, kpsois_aug):
+                assert kpsoi_aug.shape == img.shape
+                for kp_aug in kpsoi_aug.keypoints:
+                    x, y = int(np.round(kp_aug.x)), int(np.round(kp_aug.y))
+                    if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+                        assert img_aug[y, x] > 10
 
     def test_empty_keypoints(self):
         # test empty keypoints
@@ -4810,8 +5152,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        assert observed.shape == (20, 10, 3)
-        assert len(observed.keypoints) == 0
+        assert_cbaois_equal(observed, kpsoi)
 
     # --------
     # polygons
@@ -4910,8 +5251,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        assert observed.shape == (20, 10, 3)
-        assert len(observed.polygons) == 0
+        assert_cbaois_equal(observed, psoi)
 
     def test_polygons_under_extreme_scale_values(self):
         # test extreme scales
@@ -4953,6 +5293,101 @@ class TestPerspectiveTransform(unittest.TestCase):
                 assert poly0.exterior_almost_equals(
                     exterior_expected, max_distance=2.0)
                 """
+
+    # --------
+    # bounding boxes
+    # --------
+    def test_bounding_boxes_without_keep_size(self):
+        # BB augmentation without keep_size
+        # TODO deviations of around 0.4-0.7 in this and the next test (between
+        #      expected and observed coordinates) -- why?
+        bbs = [ia.BoundingBox(x1=0, y1=10, x2=20, y2=20)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
+        aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
+        aug.jitter = iap.Deterministic(0.2)
+
+        observed = aug.augment_bounding_boxes([bbsoi])
+
+        bbs_expected = [
+            ia.BoundingBox(x1=0-0.2*30, y1=10-0.2*30,
+                           x2=20-0.2*30, y2=20-0.2*30)
+        ]
+        gen = zip(observed[0].bounding_boxes, bbs_expected)
+        # TODO deviations of around 0.5 here from expected values, why?
+        for bb_observed, bb_expected in gen:
+            assert bb_observed.coords_almost_equals(
+                bb_expected, max_distance=1.5)
+
+    def test_bounding_boxes_with_keep_size(self):
+        # BB augmentation with keep_size
+        bbs = [ia.BoundingBox(x1=0, y1=10, x2=20, y2=20)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
+        aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+        aug.jitter = iap.Deterministic(0.2)
+
+        observed = aug.augment_bounding_boxes([bbsoi])
+
+        bbs_expected = [
+            ia.BoundingBox(
+                x1=((0-0.2*30)/(30*0.6))*30,
+                y1=((10-0.2*30)/(30*0.6))*30,
+                x2=((20-0.2*30)/(30*0.6))*30,
+                y2=((20-0.2*30)/(30*0.6))*30
+            )
+        ]
+        gen = zip(observed[0].bounding_boxes, bbs_expected)
+        # TODO deviations of around 0.5 here from expected values, why?
+        for bb_observed, bb_expected in gen:
+            assert bb_observed.coords_almost_equals(
+                bb_expected, max_distance=1.5)
+
+    def test_image_bounding_box_alignment(self):
+        img = np.zeros((100, 100), dtype=np.uint8)
+        img[35:35+1, 35:65+1] = 255
+        img[65:65+1, 35:65+1] = 255
+        img[35:65+1, 35:35+1] = 255
+        img[35:65+1, 65:65+1] = 255
+        bbs = [
+            ia.BoundingBox(y1=35.5, x1=35.5, y2=65.5, x2=65.5),
+        ]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=img.shape)
+        aug = iaa.PerspectiveTransform(scale=(0.05, 0.2), keep_size=True)
+
+        for _ in sm.xrange(10):
+            imgs_aug, bbsois_aug = aug(
+                images=[img, img, img, img],
+                bounding_boxes=[bbsoi, bbsoi, bbsoi, bbsoi])
+
+            nb_skipped = 0
+            for img_aug, bbsoi_aug in zip(imgs_aug, bbsois_aug):
+                assert bbsoi_aug.shape == img_aug.shape
+                for bb_aug in bbsoi_aug.bounding_boxes:
+                    if bb_aug.is_fully_within_image(img_aug):
+                        # top, bottom, left, right
+                        x1 = bb_aug.x1_int
+                        x2 = bb_aug.x2_int
+                        y1 = bb_aug.y1_int
+                        y2 = bb_aug.y2_int
+                        top_row = img_aug[y1-1:y1+1, x1-1:x2+1]
+                        btm_row = img_aug[y2-1:y2+1, x1-1:x2+1]
+                        lft_row = img_aug[y1-1:y2+1, x1-1:x1+1]
+                        rgt_row = img_aug[y1-1:y2+1, x2-1:x2+1]
+                        assert np.max(top_row) > 10
+                        assert np.max(btm_row) > 10
+                        assert np.max(lft_row) > 10
+                        assert np.max(rgt_row) > 10
+                    else:
+                        nb_skipped += 1
+            assert nb_skipped <= 2
+
+    def test_empty_bounding_boxes(self):
+        # test empty bounding boxes
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(20, 10, 3))
+        aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     # ------------
     # mode
@@ -5809,6 +6244,119 @@ class TestElasticTransformation(unittest.TestCase):
         assert psoi_aug.shape == (10, 10, 3)
 
     # -----------
+    # bounding boxes
+    # -----------
+    def test_bounding_boxes_no_movement_if_alpha_below_threshold(self):
+        # for small alpha, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=1.0, sigma=0.0):
+            bbs = [
+                ia.BoundingBox(x1=10, y1=12, x2=20, y2=22),
+                ia.BoundingBox(x1=20, y1=32, x2=40, y2=42)
+            ]
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+
+            observed = aug.augment_bounding_boxes([bbsoi])[0]
+
+            d = bbsoi.to_xyxy_array() - observed.to_xyxy_array()
+            d = d.reshape((2*2, 2))
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 1e-8
+
+    def test_bounding_boxes_no_movement_if_sigma_below_threshold(self):
+        # for small sigma, should not move if below threshold
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=1.0):
+            bbs = [
+                ia.BoundingBox(x1=10, y1=12, x2=20, y2=22),
+                ia.BoundingBox(x1=20, y1=32, x2=40, y2=42)
+            ]
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
+
+            observed = aug.augment_bounding_boxes([bbsoi])[0]
+
+            d = bbsoi.to_xyxy_array() - observed.to_xyxy_array()
+            d = d.reshape((2*2, 2))
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 1e-8
+
+    def test_bounding_boxes_small_movement_for_weak_alpha_if_threshold_zero(
+            self):
+        # for small alpha (at sigma 1.0), should barely move
+        # if thresholds set to zero
+        with _elastic_trans_temp_thresholds(alpha=0.0, sigma=0.0):
+            bbs = [
+                ia.BoundingBox(x1=10, y1=12, x2=20, y2=22),
+                ia.BoundingBox(x1=20, y1=32, x2=40, y2=42)
+            ]
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(50, 50))
+            aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
+
+            observed = aug.augment_bounding_boxes([bbsoi])[0]
+
+            d = bbsoi.to_xyxy_array() - observed.to_xyxy_array()
+            d = d.reshape((2*2, 2))
+            d[:, 0] = d[:, 0] ** 2
+            d[:, 1] = d[:, 1] ** 2
+            d = np.sum(d, axis=1)
+            d = np.average(d, axis=0)
+            assert d < 0.5
+
+    def test_image_bounding_box_alignment(self):
+        # test alignment between between images and bounding boxes
+        image = np.zeros((100, 100), dtype=np.uint8)
+        image[35:35+1, 35:65+1] = 255
+        image[65:65+1, 35:65+1] = 255
+        image[35:65+1, 35:35+1] = 255
+        image[35:65+1, 65:65+1] = 255
+        bbs = [
+            ia.BoundingBox(x1=35.5, y1=35.5, x2=65.5, y2=65.5)
+        ]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=image.shape)
+        aug = iaa.ElasticTransformation(alpha=70, sigma=5)
+
+        images_aug, bbsois_aug = aug(images=[image, image],
+                                     bounding_boxes=[bbsoi, bbsoi])
+
+        count_bad = 0
+        for image_aug, bbsoi_aug in zip(images_aug, bbsois_aug):
+            assert bbsoi_aug.shape == (100, 100)
+            assert len(bbsoi_aug.bounding_boxes) == 1
+            for bb_aug in bbsoi_aug.bounding_boxes:
+                if bb_aug.is_fully_within_image(image_aug):
+                    # top, bottom, left, right
+                    x1 = bb_aug.x1_int
+                    x2 = bb_aug.x2_int
+                    y1 = bb_aug.y1_int
+                    y2 = bb_aug.y2_int
+                    top_row = image_aug[y1-2:y1+2, x1-2:x2+2]
+                    btm_row = image_aug[y2-2:y2+2, x1-2:x2+2]
+                    lft_row = image_aug[y1-2:y2+2, x1-2:x1+2]
+                    rgt_row = image_aug[y1-2:y2+2, x2-2:x2+2]
+                    assert np.max(top_row) > 10
+                    assert np.max(btm_row) > 10
+                    assert np.max(lft_row) > 10
+                    assert np.max(rgt_row) > 10
+                else:
+                    count_bad += 1
+        assert count_bad <= 1
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.ElasticTransformation(alpha=10, sigma=10)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(10, 10, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        assert len(bbsoi_aug.bounding_boxes) == 0
+        assert bbsoi_aug.shape == (10, 10, 3)
+
+    # -----------
     # heatmaps alignment
     # -----------
     def test_image_heatmaps_alignment(self):
@@ -6199,6 +6747,13 @@ class TestRot90(unittest.TestCase):
         )
 
     @property
+    def bbsoi(self):
+        return ia.BoundingBoxesOnImage(
+            [ia.BoundingBox(x1=1, y1=1, x2=3, y2=3)],
+            shape=(4, 8, 3)
+        )
+
+    @property
     def kpsoi_k1(self):
         # without keep size
         kp_offset = self.kp_offset
@@ -6251,7 +6806,7 @@ class TestRot90(unittest.TestCase):
             (8-expected_k1_polys[2][1]+kp_offset, expected_k1_polys[2][0]),
             (8-expected_k1_polys[3][1]+kp_offset, expected_k1_polys[3][0])]
         return ia.PolygonsOnImage([ia.Polygon(expected_k2_polys)],
-                                  shape=(8, 4, 3))
+                                  shape=(4, 8, 3))
 
     @property
     def psoi_k3(self):
@@ -6264,7 +6819,56 @@ class TestRot90(unittest.TestCase):
             (4-expected_k2_polys[2][1]+kp_offset, expected_k2_polys[2][0]),
             (4-expected_k2_polys[3][1]+kp_offset, expected_k2_polys[3][0])]
         return ia.PolygonsOnImage([ia.Polygon(expected_k3_polys)],
-                                  shape=(4, 8, 3))
+                                  shape=(8, 4, 3))
+
+    @property
+    def bbsoi_k1(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_coords = [
+            (4-1+kp_offset, 1),
+            (4-3+kp_offset, 3)]
+        return ia.BoundingBoxesOnImage([
+            ia.BoundingBox(
+                x1=min(expected_k1_coords[0][0], expected_k1_coords[1][0]),
+                y1=min(expected_k1_coords[0][1], expected_k1_coords[1][1]),
+                x2=max(expected_k1_coords[1][0], expected_k1_coords[0][0]),
+                y2=max(expected_k1_coords[1][1], expected_k1_coords[0][1])
+            )], shape=(8, 4, 3))
+
+    @property
+    def bbsoi_k2(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        coords = self.bbsoi_k1.bounding_boxes[0].coords
+        expected_k2_coords = [
+            (8-coords[0][1]+kp_offset, coords[0][0]),
+            (8-coords[1][1]+kp_offset, coords[1][0])]
+        return ia.BoundingBoxesOnImage([
+            ia.BoundingBox(
+                x1=min(expected_k2_coords[0][0], expected_k2_coords[1][0]),
+                y1=min(expected_k2_coords[0][1], expected_k2_coords[1][1]),
+                x2=max(expected_k2_coords[1][0], expected_k2_coords[0][0]),
+                y2=max(expected_k2_coords[1][1], expected_k2_coords[0][1])
+            )],
+            shape=(4, 8, 3))
+
+    @property
+    def bbsoi_k3(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        coords = self.bbsoi_k2.bounding_boxes[0].coords
+        expected_k3_coords = [
+            (4-coords[0][1]+kp_offset, coords[0][0]),
+            (4-coords[1][1]+kp_offset, coords[1][0])]
+        return ia.BoundingBoxesOnImage([
+            ia.BoundingBox(
+                x1=min(expected_k3_coords[0][0], expected_k3_coords[1][0]),
+                y1=min(expected_k3_coords[0][1], expected_k3_coords[1][1]),
+                x2=max(expected_k3_coords[1][0], expected_k3_coords[0][0]),
+                y2=max(expected_k3_coords[1][1], expected_k3_coords[0][1])
+            )],
+            shape=(8, 4, 3))
 
     def test___init___k_is_list(self):
         aug = iaa.Rot90([1, 3])
@@ -6323,10 +6927,7 @@ class TestRot90(unittest.TestCase):
 
                 kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-                assert kpsoi_aug.shape == self.kpsoi.shape
-                gen = zip(kpsoi_aug.keypoints, self.kpsoi.keypoints)
-                for kp_aug, kp in gen:
-                    assert np.allclose([kp_aug.x, kp_aug.y], [kp.x, kp.y])
+                assert_cbaois_equal(kpsoi_aug, self.kpsoi)
 
     def test_polygons_k_is_0_and_4(self):
         for k in [0, 4]:
@@ -6335,12 +6936,16 @@ class TestRot90(unittest.TestCase):
 
                 psoi_aug = aug.augment_polygons(self.psoi)
 
-                assert psoi_aug.shape == self.psoi.shape
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.polygons[0].is_valid
-                gen = zip(psoi_aug.polygons, self.psoi.polygons)
-                for poly_aug, poly in gen:
-                    assert np.allclose(poly_aug.exterior, poly.exterior)
+                assert_cbaois_equal(psoi_aug, self.psoi)
+
+    def test_bounding_boxes_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+                assert_cbaois_equal(bbsoi_aug, self.bbsoi)
 
     def test_images_k_is_1_and_5(self):
         for k in [1, 5]:
@@ -6424,10 +7029,7 @@ class TestRot90(unittest.TestCase):
 
                 kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-                assert kpsoi_aug.shape == (8, 4, 3)
-                expected_k1_kps = self.kpsoi_k1.to_xy_array()
-                for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k1_kps):
-                    assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+                assert_cbaois_equal(kpsoi_aug, self.kpsoi_k1)
 
     def test_polygons_k_is_1_and_5(self):
         for k in [1, 5]:
@@ -6436,12 +7038,16 @@ class TestRot90(unittest.TestCase):
 
                 psoi_aug = aug.augment_polygons(self.psoi)
 
-                assert psoi_aug.shape == (8, 4, 3)
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.polygons[0].is_valid
-                expected_k1_poly = self.psoi_k1.polygons[0]
-                assert psoi_aug.polygons[0].exterior_almost_equals(
-                    expected_k1_poly)
+                assert_cbaois_equal(psoi_aug, self.psoi_k1)
+
+    def test_bounding_boxes_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+                assert_cbaois_equal(bbsoi_aug, self.bbsoi_k1)
 
     def test_images_k_is_2(self):
         aug = iaa.Rot90(2, keep_size=False)
@@ -6507,21 +7113,21 @@ class TestRot90(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-        assert kpsoi_aug.shape == (4, 8, 3)
-        expected_k2_kps = self.kpsoi_k2.to_xy_array()
-        for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k2_kps):
-            assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+        assert_cbaois_equal(kpsoi_aug, self.kpsoi_k2)
 
     def test_polygons_k_is_2(self):
         aug = iaa.Rot90(2, keep_size=False)
 
         psoi_aug = aug.augment_polygons(self.psoi)
 
-        assert psoi_aug.shape == (4, 8, 3)
-        assert len(psoi_aug.polygons) == 1
-        assert psoi_aug.polygons[0].is_valid
-        expected_k2_poly = self.psoi_k2.polygons[0]
-        assert psoi_aug.polygons[0].exterior_almost_equals(expected_k2_poly)
+        assert_cbaois_equal(psoi_aug, self.psoi_k2)
+
+    def test_bounding_boxes_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+
+        bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(bbsoi_aug, self.bbsoi_k2)
 
     def test_images_k_is_3_and_minus1(self):
         img = self.image
@@ -6602,10 +7208,7 @@ class TestRot90(unittest.TestCase):
 
                 kpsoi_aug = aug.augment_keypoints([self.kpsoi])[0]
 
-                assert kpsoi_aug.shape == (8, 4, 3)
-                expected_k3_kps = self.kpsoi_k3.to_xy_array()
-                for kp_aug, kp in zip(kpsoi_aug.keypoints, expected_k3_kps):
-                    assert np.allclose([kp_aug.x, kp_aug.y], [kp[0], kp[1]])
+                assert_cbaois_equal(kpsoi_aug, self.kpsoi_k3)
 
     def test_polygons_k_is_3_and_minus1(self):
         for k in [3, -1]:
@@ -6614,12 +7217,16 @@ class TestRot90(unittest.TestCase):
 
                 psoi_aug = aug.augment_polygons(self.psoi)
 
-                assert psoi_aug.shape == (8, 4, 3)
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.polygons[0].is_valid
-                expected_k3_poly = self.psoi_k3.polygons[0]
-                assert psoi_aug.polygons[0].exterior_almost_equals(
-                    expected_k3_poly)
+                assert_cbaois_equal(psoi_aug, self.psoi_k3)
+
+    def test_bounding_boxes_k_is_3_and_minus1(self):
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+
+                assert_cbaois_equal(bbsoi_aug, self.bbsoi_k3)
 
     def test_images_k_is_1_verify_without_using_numpy_rot90(self):
         # verify once without np.rot90
@@ -6731,6 +7338,26 @@ class TestRot90(unittest.TestCase):
         assert psoi_aug.polygons[0].is_valid
         assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
+    def test_bounding_boxes_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        bbsoi = self.bbsoi
+        kp_offset = self.kp_offset
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = [(4-1+kp_offset, 1),
+                    (4-3+kp_offset, 3)]
+        expected = [(8*x/4, 4*y/8) for x, y in expected]
+        expected = np.float32([
+            [min(expected[0][0], expected[1][0]),
+             min(expected[0][1], expected[1][1])],
+            [max(expected[0][0], expected[1][0]),
+             max(expected[0][1], expected[1][1])]
+        ])
+        assert bbsoi_aug.shape == (4, 8, 3)
+        assert len(bbsoi_aug.bounding_boxes) == 1
+        assert bbsoi_aug.bounding_boxes[0].coords_almost_equals(expected)
+
     def test_images_k_is_list(self):
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
         img = self.image
@@ -6779,31 +7406,15 @@ class TestRot90(unittest.TestCase):
         assert np.allclose(segmaps_aug[3].arr, _rot_sm(segmaps_smaller, 2))
 
     def test_keypoints_k_is_list(self):
-        def kpxy_aug(kpsoi_aug, i, j):
-            return [
-                kpsoi_aug[i].keypoints[j].x,
-                kpsoi_aug[i].keypoints[j].y
-            ]
-
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
         kpsoi = self.kpsoi
 
         kpsoi_aug = aug.augment_keypoints([kpsoi] * 4)
 
-        assert kpsoi_aug[0].shape == (8, 4, 3)
-        assert kpsoi_aug[1].shape == (4, 8, 3)
-        assert kpsoi_aug[2].shape == (8, 4, 3)
-        assert kpsoi_aug[3].shape == (4, 8, 3)
-        expected_k1_kps = self.kpsoi_k1.to_xy_array()
-        expected_k2_kps = self.kpsoi_k2.to_xy_array()
-        assert np.allclose(kpxy_aug(kpsoi_aug, 0, 0), expected_k1_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 0, 1), expected_k1_kps[1])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 1, 0), expected_k2_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 1, 1), expected_k2_kps[1])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 2, 0), expected_k1_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 2, 1), expected_k1_kps[1])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 3, 0), expected_k2_kps[0])
-        assert np.allclose(kpxy_aug(kpsoi_aug, 3, 1), expected_k2_kps[1])
+        assert_cbaois_equal(kpsoi_aug[0], self.kpsoi_k1)
+        assert_cbaois_equal(kpsoi_aug[1], self.kpsoi_k2)
+        assert_cbaois_equal(kpsoi_aug[2], self.kpsoi_k1)
+        assert_cbaois_equal(kpsoi_aug[3], self.kpsoi_k2)
 
     def test_polygons_k_is_list(self):
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
@@ -6811,16 +7422,21 @@ class TestRot90(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons([psoi] * 4)
 
-        assert psoi_aug[0].shape == (8, 4, 3)
-        assert psoi_aug[1].shape == (4, 8, 3)
-        assert psoi_aug[2].shape == (8, 4, 3)
-        assert psoi_aug[3].shape == (4, 8, 3)
-        expected_k1_poly = self.psoi_k1.polygons[0]
-        expected_k2_poly = self.psoi_k2.polygons[0]
-        assert psoi_aug[0].polygons[0].exterior_almost_equals(expected_k1_poly)
-        assert psoi_aug[1].polygons[0].exterior_almost_equals(expected_k2_poly)
-        assert psoi_aug[2].polygons[0].exterior_almost_equals(expected_k1_poly)
-        assert psoi_aug[3].polygons[0].exterior_almost_equals(expected_k2_poly)
+        assert_cbaois_equal(psoi_aug[0], self.psoi_k1)
+        assert_cbaois_equal(psoi_aug[1], self.psoi_k2)
+        assert_cbaois_equal(psoi_aug[2], self.psoi_k1)
+        assert_cbaois_equal(psoi_aug[3], self.psoi_k2)
+
+    def test_bounding_boxes_k_is_list(self):
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        bbsoi = self.bbsoi
+
+        bbsoi_aug = aug.augment_bounding_boxes([bbsoi] * 4)
+
+        assert_cbaois_equal(bbsoi_aug[0], self.bbsoi_k1)
+        assert_cbaois_equal(bbsoi_aug[1], self.bbsoi_k2)
+        assert_cbaois_equal(bbsoi_aug[2], self.bbsoi_k1)
+        assert_cbaois_equal(bbsoi_aug[3], self.bbsoi_k2)
 
     def test_empty_keypoints(self):
         aug = iaa.Rot90(k=1, keep_size=False)
@@ -6828,8 +7444,9 @@ class TestRot90(unittest.TestCase):
 
         kpsoi_aug = aug.augment_keypoints(kpsoi)
 
-        assert len(kpsoi_aug.keypoints) == 0
-        assert kpsoi_aug.shape == (8, 4, 3)
+        expected = self.kpsoi_k1
+        expected.keypoints = []
+        assert_cbaois_equal(kpsoi_aug, expected)
 
     def test_empty_polygons(self):
         aug = iaa.Rot90(k=1, keep_size=False)
@@ -6837,8 +7454,19 @@ class TestRot90(unittest.TestCase):
 
         psoi_aug = aug.augment_polygons(psoi)
 
-        assert len(psoi_aug.polygons) == 0
-        assert psoi_aug.shape == (8, 4, 3)
+        expected = self.psoi_k1
+        expected.polygons = []
+        assert_cbaois_equal(psoi_aug, expected)
+
+    def test_empty_bounding_boxes(self):
+        aug = iaa.Rot90(k=1, keep_size=False)
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 8, 3))
+
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+
+        expected = self.bbsoi_k1
+        expected.bounding_boxes = []
+        assert_cbaois_equal(bbsoi_aug, expected)
 
     def test_unusual_channel_numbers(self):
         shapes = [

@@ -364,14 +364,16 @@ class _AffineSamplingResult(object):
         self.mode = mode
         self.order = order
 
-    def to_matrix(self, idx, arr_shape, fit_output):
+    def to_matrix(self, idx, arr_shape, fit_output, shift_add=(0.5, 0.5)):
         height, width = arr_shape[0:2]
-        shift_x = width / 2.0 - 0.5
-        shift_y = height / 2.0 - 0.5
+        # for images we use additional shifts of (0.5, 0.5) as otherwise
+        # we get an ugly black border for 90deg rotations
+        shift_y = height / 2.0 - shift_add[0]
+        shift_x = width / 2.0 - shift_add[1]
+        scale_y = self.scale[1][idx]  # TODO 1 and 0 should be inverted here
         scale_x = self.scale[0][idx]
-        scale_y = self.scale[1][idx]
+        translate_y = self.translate[1][idx]  # TODO same as above
         translate_x = self.translate[0][idx]
-        translate_y = self.translate[1][idx]
         if ia.is_single_float(translate_y):
             translate_y_px = int(
                 np.round(translate_y * height))
@@ -402,6 +404,9 @@ class _AffineSamplingResult(object):
         if fit_output:
             return _compute_affine_warp_output_shape(matrix, arr_shape)
         return matrix, arr_shape
+
+    def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.0, 0.0)):
+        return self.to_matrix(idx, arr_shape, fit_output, shift_add)
 
 
 def _is_identity_matrix(matrix, eps=1e-4):
@@ -1072,7 +1077,7 @@ class Affine(meta.Augmenter):
         samples = self._draw_samples(nb_images, random_state)
 
         for i, keypoints_on_image in enumerate(keypoints_on_images):
-            matrix, output_shape = samples.to_matrix(
+            matrix, output_shape = samples.to_matrix_cba(
                 i, keypoints_on_image.shape, self.fit_output)
 
             kps = keypoints_on_image.keypoints
@@ -1093,6 +1098,11 @@ class Affine(meta.Augmenter):
                           hooks):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_samples, random_state):
         rngs = random_state.duplicate(11)
@@ -1806,6 +1816,11 @@ class AffineCv2(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.scale, self.translate, self.rotate, self.shear,
                 self.order, self.cval, self.mode]
@@ -2166,11 +2181,6 @@ class PiecewiseAffine(meta.Augmenter):
         rss = random_state.duplicate(nb_images)
 
         for i in sm.xrange(nb_images):
-            if not keypoints_on_images[i].keypoints:
-                # PiecewiseAffine does not change the image shape, so we can
-                # just reuse the old keypoints
-                result.append(keypoints_on_images[i])
-                continue
             rs_image = rss[i]
             kpsoi = keypoints_on_images[i]
             h, w = kpsoi.shape[0:2]
@@ -2251,6 +2261,11 @@ class PiecewiseAffine(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state):
         rss = random_state.duplicate(5)
@@ -2790,6 +2805,11 @@ class PerspectiveTransform(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _create_matrices(self, shapes, random_state):
         # TODO change these to class attributes
@@ -3404,6 +3424,11 @@ class ElasticTransformation(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
 
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
+
     def get_parameters(self):
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
@@ -3889,6 +3914,11 @@ class Rot90(meta.Augmenter):
                           hooks):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
+
+    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
+                                parents, hooks):
+        return self._augment_bounding_boxes_as_keypoints(
+            bounding_boxes_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.k, self.keep_size]
