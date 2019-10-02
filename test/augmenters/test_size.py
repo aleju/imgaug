@@ -187,6 +187,22 @@ class TestResize(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image3d.shape)
 
     @property
+    def lsoi2d(self):
+        lss = [
+            ia.LineString([(0, 0), (8, 0), (8, 4)]),
+            ia.LineString([(1, 1), (7, 1), (7, 3), (1, 3)]),
+        ]
+        return ia.LineStringsOnImage(lss, shape=self.image2d.shape)
+
+    @property
+    def lsoi3d(self):
+        lss = [
+            ia.LineString([(0, 0), (8, 0), (8, 4)]),
+            ia.LineString([(1, 1), (7, 1), (7, 3), (1, 3)]),
+        ]
+        return ia.LineStringsOnImage(lss, shape=self.image3d.shape)
+
+    @property
     def bbsoi2d(self):
         bbs = [
             ia.BoundingBox(x1=0, y1=0, x2=8, y2=4),
@@ -297,14 +313,26 @@ class TestResize(unittest.TestCase):
 
     def test_polygons_on_3d_img_and_with_width_int_and_height_int(self):
         aug = iaa.Resize({"width": 12, "height": 8})
-        psoi_aug = aug.augment_polygons(self.psoi3d)
-        assert len(psoi_aug.polygons) == 2
-        assert psoi_aug.shape == (8, 12, 3)
-        assert psoi_aug.polygons[0].exterior_almost_equals(
-            ia.Polygon([(0, 0), (12, 0), (12, 8)])
+        cbaoi_aug = aug.augment_polygons(self.psoi3d)
+        assert len(cbaoi_aug.items) == 2
+        assert cbaoi_aug.shape == (8, 12, 3)
+        assert cbaoi_aug.items[0].coords_almost_equals(
+            [(0, 0), (12, 0), (12, 8)]
         )
-        assert psoi_aug.polygons[1].exterior_almost_equals(
-            ia.Polygon([(1.5, 2), (10.5, 2), (10.5, 6), (1.5, 6)])
+        assert cbaoi_aug.items[1].coords_almost_equals(
+            [(1.5, 2), (10.5, 2), (10.5, 6), (1.5, 6)]
+        )
+
+    def test_line_strings_on_3d_img_and_with_width_int_and_height_int(self):
+        aug = iaa.Resize({"width": 12, "height": 8})
+        cbaoi_aug = aug.augment_line_strings(self.lsoi3d)
+        assert len(cbaoi_aug.items) == 2
+        assert cbaoi_aug.shape == (8, 12, 3)
+        assert cbaoi_aug.items[0].coords_almost_equals(
+            [(0, 0), (12, 0), (12, 8)]
+        )
+        assert cbaoi_aug.items[1].coords_almost_equals(
+            [(1.5, 2), (10.5, 2), (10.5, 6), (1.5, 6)]
         )
 
     def test_bounding_boxes_on_3d_img_and_with_width_int_and_height_int(self):
@@ -331,14 +359,26 @@ class TestResize(unittest.TestCase):
 
     def test_polygons_on_2d_img_and_with_width_float_and_height_int(self):
         aug = iaa.Resize({"width": 3.0, "height": 8})
-        psoi_aug = aug.augment_polygons(self.psoi2d)
-        assert len(psoi_aug.polygons) == 2
-        assert psoi_aug.shape == (8, 24)
-        assert psoi_aug.polygons[0].exterior_almost_equals(
-            ia.Polygon([(3*0, 0), (3*8, 0), (3*8, 8)])
+        cbaoi_aug = aug.augment_polygons(self.psoi2d)
+        assert len(cbaoi_aug.items) == 2
+        assert cbaoi_aug.shape == (8, 24)
+        assert cbaoi_aug.items[0].coords_almost_equals(
+            [(3*0, 0), (3*8, 0), (3*8, 8)]
         )
-        assert psoi_aug.polygons[1].exterior_almost_equals(
-            ia.Polygon([(3*1, 2), (3*7, 2), (3*7, 6), (3*1, 6)])
+        assert cbaoi_aug.items[1].coords_almost_equals(
+            [(3*1, 2), (3*7, 2), (3*7, 6), (3*1, 6)]
+        )
+
+    def test_line_strings_on_2d_img_and_with_width_float_and_height_int(self):
+        aug = iaa.Resize({"width": 3.0, "height": 8})
+        cbaoi_aug = aug.augment_line_strings(self.lsoi2d)
+        assert len(cbaoi_aug.items) == 2
+        assert cbaoi_aug.shape == (8, 24)
+        assert cbaoi_aug.items[0].coords_almost_equals(
+            [(3*0, 0), (3*8, 0), (3*8, 8)]
+        )
+        assert cbaoi_aug.items[1].coords_almost_equals(
+            [(3*1, 2), (3*7, 2), (3*7, 6), (3*1, 6)]
         )
 
     def test_bounding_boxes_on_2d_img_and_with_width_float_and_height_int(self):
@@ -366,6 +406,13 @@ class TestResize(unittest.TestCase):
         psoi_aug = aug.augment_polygons(psoi)
         assert len(psoi_aug.polygons) == 0
         assert psoi_aug.shape == (8, 12, 3)
+
+    def test_empty_line_strings(self):
+        aug = iaa.Resize({"height": 8, "width": 12})
+        lsoi = ia.LineStringsOnImage([], shape=(4, 8, 3))
+        lsoi_aug = aug.augment_line_strings(lsoi)
+        assert len(lsoi_aug.items) == 0
+        assert lsoi_aug.shape == (8, 12, 3)
 
     def test_empty_bounding_boxes(self):
         aug = iaa.Resize({"height": 8, "width": 12})
