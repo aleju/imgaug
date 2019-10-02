@@ -6963,11 +6963,10 @@ class TestWithChannels(unittest.TestCase):
     def _test_cbaoi_augmentation_with_empty_cbaoi(cls, cbaoi, augf_name):
         affine = iaa.Affine(translate_px={"x": 1})
         aug = iaa.WithChannels([0, 1], children=[affine])
-        kpsoi = ia.KeypointsOnImage([], shape=(5, 6, 3))
 
         observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(observed, kpsoi)
+        assert_cbaois_equal(observed, cbaoi)
 
     def test_keypoint_augmentation_single_channel(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
