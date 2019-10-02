@@ -3420,6 +3420,67 @@ class TestAugmenter_augment_bounding_boxes(_TestAugmenter_augment_cbaois,
             atol=atol, rtol=rtol)
 
 
+# the method is mostly tested indirectly, so very few tests here
+class TestAugmenter_augment_bounding_boxes_by_keypoints(unittest.TestCase):
+    def test_x1_x2_can_get_flipped(self):
+        # ensure that invalid BBs with x2 > x1 after aug get their x-coords
+        # flipped so that x1 < x2
+        class _FlippingX1X2Augmenter(iaa.Augmenter):
+            def _augment_images(self, images, random_state, parents, hooks):
+                return images
+
+            def _augment_bounding_boxes(self, bounding_boxes_on_images,
+                                        random_state, parents, hooks):
+                return self._augment_bounding_boxes_as_keypoints(
+                    bounding_boxes_on_images, random_state, parents, hooks)
+
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                keypoints_on_images[0].keypoints[0].x += 10
+                return keypoints_on_images
+
+            def get_parameters(self):
+                return []
+
+        aug = _FlippingX1X2Augmenter()
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)], shape=(10, 10, 3))
+        observed = aug(bounding_boxes=bbsoi)
+        assert np.allclose(
+            observed.bounding_boxes[0].coords,
+            [(2, 1), (0+10, 3)]
+        )
+
+    def test_y1_y2_can_get_flipped(self):
+        # ensure that invalid BBs with y2 > y1 after aug get their y-coords
+        # flipped so that y1 < y2
+        class _FlippingY1Y2Augmenter(iaa.Augmenter):
+            def _augment_images(self, images, random_state, parents, hooks):
+                return images
+
+            def _augment_bounding_boxes(self, bounding_boxes_on_images,
+                                        random_state, parents, hooks):
+                return self._augment_bounding_boxes_as_keypoints(
+                    bounding_boxes_on_images, random_state, parents, hooks)
+
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                keypoints_on_images[0].keypoints[0].y += 10
+                return keypoints_on_images
+
+            def get_parameters(self):
+                return []
+
+        aug = _FlippingY1Y2Augmenter()
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)], shape=(10, 10, 3))
+        observed = aug(bounding_boxes=bbsoi)
+        assert np.allclose(
+            observed.bounding_boxes[0].coords,
+            [(0, 3), (2, 1+10)]
+        )
+
+
 class TestAugmenter_augment(unittest.TestCase):
     def setUp(self):
         reseed()
