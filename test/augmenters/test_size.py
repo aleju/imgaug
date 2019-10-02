@@ -3625,7 +3625,74 @@ class TestPadToFixedSize(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
-        expected = ia.KeypointsOnImage([], shape=(5, 6))
+        expected = ia.PolygonsOnImage([], shape=(5, 6))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings__image_already_fullfills_min_shape(self):
+        # line string test with shape not being changed
+        aug = iaa.PadToFixedSize(
+            height=3, width=3, pad_mode="edge", position="center")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_pad_at_center(self):
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="center")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(1+0, 1+0), (1+3, 1+0), (1+3, 1+3)])
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_pad_at_left_top(self):
+        # line string test with explicit non-center position
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="left-top")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(1+0, 1+0), (1+3, 1+0), (1+3, 1+3)])
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_pad_at_right_bottom(self):
+        aug = iaa.PadToFixedSize(
+            height=4, width=4, pad_mode="edge", position="right-bottom")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_empty(self):
+        aug = iaa.PadToFixedSize(height=5, width=6)
+        cbaoi = ia.LineStringsOnImage([], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([], shape=(5, 6))
         assert_cbaois_equal(observed, expected)
 
     def test_bounding_boxes__image_already_fullfills_min_shape(self):
@@ -3692,7 +3759,7 @@ class TestPadToFixedSize(unittest.TestCase):
 
         observed = aug.augment_bounding_boxes(bbsoi)
 
-        expected = ia.KeypointsOnImage([], shape=(5, 6))
+        expected = ia.BoundingBoxesOnImage([], shape=(5, 6))
         assert_cbaois_equal(observed, expected)
 
     def test_heatmaps__pad_mode_should_be_ignored(self):
