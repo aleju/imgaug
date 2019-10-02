@@ -320,16 +320,28 @@ class TestLambda(unittest.TestCase):
         return expected_psoi
 
     @property
+    def lsoi(self):
+        ls = ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])
+        lsois = [ia.LineStringsOnImage([ls], shape=(3, 3, 3))]
+        return lsois
+
+    @property
+    def lsoi_aug(self):
+        ls = ia.LineString([(1, 2), (3, 2), (3, 4), (1, 4)])
+        lsois = [ia.LineStringsOnImage([ls], shape=(3, 3, 3))]
+        return lsois
+
+    @property
     def bbsoi(self):
         bb = ia.BoundingBox(x1=0, y1=1, x2=3, y2=4)
-        bbsoi = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
-        return bbsoi
+        bbsois = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
+        return bbsois
 
     @property
     def bbsoi_aug(self):
         bb = ia.BoundingBox(x1=0+1, y1=1+2, x2=3+1, y2=4+2)
-        bbsoi = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
-        return bbsoi
+        bbsois = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
+        return bbsois
 
     @classmethod
     def func_images(cls, images, random_state, parents, hooks):
@@ -366,6 +378,21 @@ class TestLambda(unittest.TestCase):
         return [
             ia.PolygonsOnImage([ia.Polygon(new_exterior)],
                                shape=polygons_on_images[0].shape)
+        ]
+
+    @classmethod
+    def func_line_strings(cls, line_strings_on_images, random_state, parents,
+                          hooks):
+        if line_strings_on_images[0].empty:
+            return [ia.LineStringsOnImage(
+                [], shape=line_strings_on_images[0].shape)]
+        new_coords = np.copy(line_strings_on_images[0].items[0].coords)
+        new_coords[:, 0] += 1
+        new_coords[:, 1] += 2
+        return [
+            ia.LineStringsOnImage(
+                [ia.LineString(new_coords)],
+                shape=line_strings_on_images[0].shape)
         ]
 
     @classmethod
@@ -516,6 +543,28 @@ class TestLambda(unittest.TestCase):
             expected_psoi = self.polygons_aug
             assert_cbaois_equal(observed, expected_psoi)
 
+    def test_line_strings(self):
+        lsois = self.lsoi
+        aug = iaa.Lambda(func_line_strings=self.func_line_strings)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_line_strings(lsois)
+
+            expected_lsoi = self.lsoi_aug
+            assert_cbaois_equal(observed, expected_lsoi)
+
+    def test_line_strings_deterministic(self):
+        lsois = self.lsoi
+
+        aug = iaa.Lambda(func_line_strings=self.func_line_strings)
+        aug = aug.to_deterministic()
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_line_strings(lsois)
+
+            expected_lsoi = self.lsoi_aug
+            assert_cbaois_equal(observed, expected_lsoi)
+
     def test_bounding_boxes(self):
         bbsoi = self.bbsoi
         aug = iaa.Lambda(func_bounding_boxes=self.func_bbs)
@@ -552,6 +601,14 @@ class TestLambda(unittest.TestCase):
         observed = aug.augment_polygons(psoi)
 
         assert_cbaois_equal(observed, psoi)
+
+    def test_line_strings_empty(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+        aug = iaa.Lambda(func_line_strings=self.func_line_strings)
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
 
     def test_bounding_boxes_empty(self):
         bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
@@ -673,6 +730,11 @@ class TestAssertLambda(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
     def bbsoi(self):
         bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
         return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
@@ -705,13 +767,19 @@ class TestAssertLambda(unittest.TestCase):
             return (polygons_on_images[0].polygons[0].exterior[0][0] == 0
                     and polygons_on_images[0].polygons[0].exterior[2][1] == 2)
 
+        def _func_line_strings_succeeds(line_strings_on_image, random_state,
+                                        parents, hooks):
+            return (line_strings_on_image[0].items[0].coords[0][0] == 0
+                    and line_strings_on_image[0].items[0].coords[2][1] == 2)
+
         return iaa.AssertLambda(
             func_images=_func_images_succeeds,
             func_heatmaps=_func_heatmaps_succeeds,
             func_segmentation_maps=_func_segmaps_succeeds,
             func_keypoints=_func_keypoints_succeeds,
             func_bounding_boxes=_func_bounding_boxes_succeeds,
-            func_polygons=_func_polygons_succeeds)
+            func_polygons=_func_polygons_succeeds,
+            func_line_strings=_func_line_strings_succeeds)
 
     @property
     def aug_fails(self):
@@ -736,13 +804,18 @@ class TestAssertLambda(unittest.TestCase):
                                  hooks):
             return polygons_on_images[0].polygons[0].exterior[0][0] == 2
 
+        def _func_line_strings_fails(line_strings_on_images, random_state,
+                                     parents, hooks):
+            return line_strings_on_images[0].items[0].coords[0][0] == 2
+
         return iaa.AssertLambda(
             func_images=_func_images_fails,
             func_heatmaps=_func_heatmaps_fails,
             func_segmentation_maps=_func_segmaps_fails,
             func_keypoints=_func_keypoints_fails,
             func_bounding_boxes=_func_bounding_boxes_fails,
-            func_polygons=_func_polygons_fails,)
+            func_polygons=_func_polygons_fails,
+            func_line_strings=_func_line_strings_fails)
 
     def test_images_as_array_with_assert_that_succeeds(self):
         observed = self.aug_succeeds.augment_images(self.images)
@@ -857,6 +930,23 @@ class TestAssertLambda(unittest.TestCase):
     def test_polygons_with_assert_that_fails__deterministic(self):
         with self.assertRaises(AssertionError):
             _ = self.aug_fails.augment_polygons(self.psoi)
+
+    def test_line_strings_with_assert_that_succeeds(self):
+        observed = self.aug_succeeds.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_assert_that_fails(self):
+        with self.assertRaises(AssertionError):
+            _ = self.aug_fails.augment_line_strings(self.lsoi)
+
+    def test_line_strings_with_assert_that_succeeds__deterministic(self):
+        aug_succeeds_det = self.aug_succeeds.to_deterministic()
+        observed = aug_succeeds_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_assert_that_fails__deterministic(self):
+        with self.assertRaises(AssertionError):
+            _ = self.aug_fails.augment_line_strings(self.lsoi)
 
     def test_bounding_boxes_with_assert_that_succeeds(self):
         observed = self.aug_succeeds.augment_bounding_boxes(self.bbsoi)
@@ -1002,6 +1092,11 @@ class TestAssertShape(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
     def bbsoi(self):
         bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
         return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
@@ -1044,6 +1139,11 @@ class TestAssertShape(unittest.TestCase):
     def psoi_h4(self):
         polygons = [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])]
         return ia.PolygonsOnImage(polygons, shape=self.image_h4.shape)
+
+    @property
+    def lsoi_h4(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image_h4.shape)
 
     @property
     def bbsoi_h4(self):
@@ -1138,6 +1238,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_exact_shape__succeeds(self):
+        aug = self.aug_exact_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_exact_shape__succeeds__deterministic(self):
+        aug_det = self.aug_exact_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_exact_shape__succeeds(self):
         aug = self.aug_exact_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1167,6 +1277,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_exact_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_exact_shape__fails(self):
+        aug = self.aug_exact_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_exact_shape__fails(self):
         aug = self.aug_exact_shape
@@ -1233,6 +1348,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_none_in_shape__succeeds(self):
+        aug = self.aug_none_in_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_none_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_none_in_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_none_in_shape__succeeds(self):
         aug = self.aug_none_in_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1262,6 +1387,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_none_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_none_in_shape__fails(self):
+        aug = self.aug_none_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_none_in_shape__fails(self):
         aug = self.aug_none_in_shape
@@ -1328,6 +1458,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_list_in_shape__succeeds(self):
+        aug = self.aug_list_in_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_list_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_list_in_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_list_in_shape__succeeds(self):
         aug = self.aug_list_in_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1362,6 +1502,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_list_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_list_in_shape__fails(self):
+        aug = self.aug_list_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_list_in_shape__fails(self):
         aug = self.aug_list_in_shape
@@ -1428,6 +1573,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_tuple_in_shape__succeeds(self):
+        aug = self.aug_tuple_in_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_tuple_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_tuple_in_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_tuple_in_shape__succeeds(self):
         aug = self.aug_tuple_in_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1462,6 +1617,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_tuple_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_tuple_in_shape__fails(self):
+        aug = self.aug_tuple_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_tuple_in_shape__fails(self):
         aug = self.aug_tuple_in_shape
@@ -4794,43 +4954,6 @@ class TestSequential(unittest.TestCase):
         assert np.all(seen)
 
     # TODO add random_order=False
-    def test_random_order_polygons(self):
-        polygon = ia.Polygon([(0, 0), (2, 0), (2, 2)])
-        polygon_12 = ia.Polygon([((0+1)*2, 0), ((2+1)*2, 0), ((2+1)*2, 2)])
-        polygon_21 = ia.Polygon([((0*2)+1, 0), ((2*2)+1, 0), ((2*2)+1, 2)])
-
-        psoi = ia.PolygonsOnImage([polygon], shape=(3, 3))
-
-        def func1(polygons_on_images, random_state, parents, hooks):
-            for psoi in polygons_on_images:
-                for poly in psoi.polygons:
-                    poly.exterior[:, 0] += 1
-            return polygons_on_images
-
-        def func2(polygons_on_images, random_state, parents, hooks):
-            for psoi in polygons_on_images:
-                for poly in psoi.polygons:
-                    poly.exterior[:, 0] *= 2
-            return polygons_on_images
-
-        aug_1 = iaa.Lambda(func_polygons=func1)
-        aug_2 = iaa.Lambda(func_polygons=func2)
-        seq = iaa.Sequential([aug_1, aug_2], random_order=True)
-
-        seen = [False, False]
-        for _ in sm.xrange(100):
-            observed = seq.augment_polygons(psoi)
-            if observed.polygons[0].exterior_almost_equals(polygon_12):
-                seen[0] = True
-            elif observed.polygons[0].exterior_almost_equals(polygon_21):
-                seen[1] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
-
-    # TODO add random_order=False
     def test_random_order_keypoints(self):
         KP = ia.Keypoint
         kps = [KP(0, 0), KP(2, 0), KP(2, 2)]
@@ -4871,13 +4994,84 @@ class TestSequential(unittest.TestCase):
         assert np.all(seen)
 
     # TODO add random_order=False
-    # TODO currently deactivated, because lambda func_bounding_boxes does not
-    #      yet exist
-    """
+    def test_random_order_polygons(self):
+        cba = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        cba_12 = ia.Polygon([(0, 0), (1, 0), ((1+1)*2, 1)])
+        cba_21 = ia.Polygon([(0, 0), (1, 0), ((1*2)+1, 1)])
+
+        cbaoi = ia.PolygonsOnImage([cba], shape=(3, 3))
+
+        def func1(polygons_on_images, random_state, parents, hooks):
+            for cbaoi_ in polygons_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.exterior[-1, 0] += 1
+            return polygons_on_images
+
+        def func2(polygons_on_images, random_state, parents, hooks):
+            for cbaoi_ in polygons_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.exterior[-1, 0] *= 2
+            return polygons_on_images
+
+        aug_1 = iaa.Lambda(func_polygons=func1)
+        aug_2 = iaa.Lambda(func_polygons=func2)
+        seq = iaa.Sequential([aug_1, aug_2], random_order=True)
+
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            observed = seq.augment_polygons(cbaoi)
+            if np.allclose(observed.items[0].coords, cba_12.coords):
+                seen[0] = True
+            elif np.allclose(observed.items[0].coords, cba_21.coords):
+                seen[1] = True
+            else:
+                assert False
+            if np.all(seen):
+                break
+        assert np.all(seen)
+
+    # TODO add random_order=False
+    def test_random_order_line_strings(self):
+        cba = ia.LineString([(0, 0), (1, 0), (1, 1)])
+        cba_12 = ia.LineString([(0, 0), (1, 0), ((1+1)*2, 1)])
+        cba_21 = ia.LineString([(0, 0), (1, 0), ((1*2)+1, 1)])
+
+        cbaoi = ia.LineStringsOnImage([cba], shape=(3, 3))
+
+        def func1(line_strings_on_images, random_state, parents, hooks):
+            for cbaoi_ in line_strings_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.coords[-1, 0] += 1
+            return line_strings_on_images
+
+        def func2(line_strings_on_images, random_state, parents, hooks):
+            for cbaoi_ in line_strings_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.coords[-1, 0] *= 2
+            return line_strings_on_images
+
+        aug_1 = iaa.Lambda(func_line_strings=func1)
+        aug_2 = iaa.Lambda(func_line_strings=func2)
+        seq = iaa.Sequential([aug_1, aug_2], random_order=True)
+
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            observed = seq.augment_line_strings(cbaoi)
+            if np.allclose(observed.items[0].coords, cba_12.coords):
+                seen[0] = True
+            elif np.allclose(observed.items[0].coords, cba_21.coords):
+                seen[1] = True
+            else:
+                assert False
+            if np.all(seen):
+                break
+        assert np.all(seen)
+
+    # TODO add random_order=False
     def test_random_order_bounding_boxes(self):
-        bbs = [ia.BoundingBox(1, 2, 3, 4)]
-        bbs_12 = [ia.BoundingBox((1+1)*2, 0, 3, 4)]
-        bbs_21 = [ia.BoundingBox((1*2)+1, 0, 3, 4)]
+        bbs = [ia.BoundingBox(x1=1, y1=2, x2=30, y2=40)]
+        bbs_12 = [ia.BoundingBox(x1=(1+1)*2, y1=2, x2=30, y2=40)]
+        bbs_21 = [ia.BoundingBox(x1=(1*2)+1, y1=2, x2=30, y2=40)]
 
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(3, 3))
         bbsoi_12 = ia.BoundingBoxesOnImage(bbs_12, shape=(3, 3))
@@ -4913,7 +5107,6 @@ class TestSequential(unittest.TestCase):
             if np.all(seen):
                 break
         assert np.all(seen)
-    """
 
     def test_zero_sized_axes(self):
         shapes = [
