@@ -2262,8 +2262,26 @@ class TestCrop(unittest.TestCase):
     def kpsoi(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                ia.Keypoint(x=2, y=2)]
-        kpsoi = [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=self.image.shape)
         return kpsoi
+
+    @property
+    def psoi(self):
+        ps = [ia.Polygon([(1, 1), (2, 1), (2, 2)])]
+        psoi = ia.PolygonsOnImage(ps, shape=self.image.shape)
+        return psoi
+
+    @property
+    def lsoi(self):
+        ls = [ia.LineString([(1, 1), (2, 1), (2, 2)])]
+        lsoi = ia.LineStringsOnImage(ls, shape=self.image.shape)
+        return lsoi
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
+        return bbsoi
 
     @property
     def heatmaps(self):
@@ -2279,6 +2297,7 @@ class TestCrop(unittest.TestCase):
                                 [0, 0, 0]])
         return [ia.SegmentationMapsOnImage(segmaps_arr, shape=self.image.shape)]
 
+    # TODO split up and add polys/LS/BBs
     def test_crop_by_fixed_int_on_each_side_on_its_own(self):
         # test crop by 1 pixel on each side
         crops = [
@@ -2304,7 +2323,7 @@ class TestCrop(unittest.TestCase):
                 observed = aug.augment_images([self.image])
                 assert array_equal_lists(observed, [base_img_cropped])
 
-                keypoints_moved = [self.kpsoi[0].shift(x=-left, y=-top)]
+                keypoints_moved = self.kpsoi.shift(x=-left, y=-top)
                 observed = aug.augment_keypoints(self.kpsoi)
                 assert keypoints_equal(observed, keypoints_moved)
 
@@ -2324,6 +2343,7 @@ class TestCrop(unittest.TestCase):
                 assert observed.shape == base_img_cropped.shape
                 assert np.array_equal(observed.get_arr(), segmaps_arr_cropped)
 
+    # TODO split up and add polys/LS/BBs
     def test_crop_by_tuple_of_ints_on_each_side_on_its_own(self):
         def _to_range_tuple(val):
             return val if isinstance(val, tuple) else (val, val)
@@ -2364,7 +2384,7 @@ class TestCrop(unittest.TestCase):
                                                :]
                                 )
                                 keypoints_cropped.append(
-                                    self.kpsoi[0].shift(
+                                    self.kpsoi.shift(
                                         x=-left_val, y=-top_val)
                                 )
 
@@ -2400,13 +2420,14 @@ class TestCrop(unittest.TestCase):
                                 in images_cropped])
 
                     observed = aug.augment_keypoints(self.kpsoi)
-                    assert any([keypoints_equal(observed, [kp])
+                    assert any([keypoints_equal(observed, kp)
                                 for kp
                                 in keypoints_cropped])
 
                 assert len(set(movements)) == 3
                 assert len(set(movements_det)) == 1
 
+    # TODO split up and add polys/LS/BBs
     def test_crop_by_list_of_ints_on_each_side_on_its_own(self):
         # test crop by list of exact pixel values
         crops = [
@@ -2440,7 +2461,7 @@ class TestCrop(unittest.TestCase):
                                                :]
                                 )
                                 keypoints_cropped.append(
-                                    self.kpsoi[0].shift(
+                                    self.kpsoi.shift(
                                         x=-left_val, y=-top_val)
                                 )
 
@@ -2474,7 +2495,7 @@ class TestCrop(unittest.TestCase):
                                 in images_cropped])
 
                     observed = aug.augment_keypoints(self.kpsoi)
-                    assert any([keypoints_equal(observed, [kp])
+                    assert any([keypoints_equal(observed, kp)
                                 for kp
                                 in keypoints_cropped])
 
@@ -2602,44 +2623,88 @@ class TestCrop(unittest.TestCase):
         aug = iaa.Crop((1, 0, 4, 4), keep_size=False)
         polygons = [ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
                     ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])]
-        psoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
+        cbaoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
 
-        psoi_aug = aug.augment_polygons([psoi, psoi])
+        cbaoi_aug = aug.augment_polygons([cbaoi, cbaoi])
 
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (5, 6, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(0-4, 0-1), (4-4, 0-1), (4-4, 4-1), (0-4, 4-1)])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (5, 6, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(0-4, 0-1), (4-4, 0-1), (4-4, 4-1), (0-4, 4-1)]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(1-4, 1-1), (5-4, 1-1), (5-4, 5-1), (1-4, 5-1)])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(1-4, 1-1), (5-4, 1-1), (5-4, 5-1), (1-4, 5-1)]
             )
 
     def test_crop_polygons_by_fixed_ints_with_keep_size(self):
         aug = iaa.Crop((1, 0, 4, 4), keep_size=True)
         polygons = [ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
                     ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])]
-        psoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
+        cbaoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
 
-        psoi_aug = aug.augment_polygons([psoi, psoi])
+        cbaoi_aug = aug.augment_polygons([cbaoi, cbaoi])
 
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (10, 10, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(10*(-4/6), 10*(-1/5)),
-                            (10*(0/6), 10*(-1/5)),
-                            (10*(0/6), 10*(3/5)),
-                            (10*(-4/6), 10*(3/5))])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 10, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(10*(-4/6), 10*(-1/5)),
+                 (10*(0/6), 10*(-1/5)),
+                 (10*(0/6), 10*(3/5)),
+                 (10*(-4/6), 10*(3/5))]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(10*(-3/6), 10*(0/5)),
-                            (10*(1/6), 10*(0/5)),
-                            (10*(1/6), 10*(4/5)),
-                            (10*(-3/6), 10*(4/5))])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(10*(-3/6), 10*(0/5)),
+                 (10*(1/6), 10*(0/5)),
+                 (10*(1/6), 10*(4/5)),
+                 (10*(-3/6), 10*(4/5))]
+            )
+
+    def test_crop_line_strings_by_fixed_ints_without_keep_size(self):
+        aug = iaa.Crop((1, 0, 4, 4), keep_size=False)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+               ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])]
+        cbaoi = ia.LineStringsOnImage(lss, shape=(10, 10, 3))
+
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (5, 6, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(0-4, 0-1), (4-4, 0-1), (4-4, 4-1), (0-4, 4-1)]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(1-4, 1-1), (5-4, 1-1), (5-4, 5-1), (1-4, 5-1)]
+            )
+
+    def test_crop_line_strings_by_fixed_ints_with_keep_size(self):
+        aug = iaa.Crop((1, 0, 4, 4), keep_size=True)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+               ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])]
+        cbaoi = ia.LineStringsOnImage(lss, shape=(10, 10, 3))
+
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 10, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(10*(-4/6), 10*(-1/5)),
+                 (10*(0/6), 10*(-1/5)),
+                 (10*(0/6), 10*(3/5)),
+                 (10*(-4/6), 10*(3/5))]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(10*(-3/6), 10*(0/5)),
+                 (10*(1/6), 10*(0/5)),
+                 (10*(1/6), 10*(4/5)),
+                 (10*(-3/6), 10*(4/5))]
             )
 
     def test_crop_bounding_boxes_by_fixed_ints_without_keep_size(self):
@@ -2788,6 +2853,14 @@ class TestCrop(unittest.TestCase):
         self._test_crop_cba_by_fixed_float_on_each_side_on_its_own(
             "augment_polygons", psoi)
 
+    def test_crop_line_strings_by_fixed_float_on_each_side_on_its_own(self):
+        height, width = (50, 50)
+        lss = [ia.LineString([(0, 0), (40, 0), (40, 40), (0, 40)]),
+               ia.LineString([(10, 10), (50, 10), (50, 50), (10, 50)])]
+        lsoi = ia.LineStringsOnImage(lss, shape=(height, width, 3))
+        self._test_crop_cba_by_fixed_float_on_each_side_on_its_own(
+            "augment_line_strings", lsoi)
+
     def test_crop_bounding_boxes_by_fixed_float_on_each_side_on_its_own(self):
         height, width = (50, 50)
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=40, y2=40),
@@ -2916,44 +2989,88 @@ class TestCrop(unittest.TestCase):
         aug = iaa.Crop(percent=(0.2, 0, 0.5, 0.1), keep_size=False)
         polygons = [ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
                     ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])]
-        psoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
+        cbaoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
 
-        psoi_aug = aug.augment_polygons([psoi, psoi])
+        cbaoi_aug = aug.augment_polygons([cbaoi, cbaoi])
 
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (3, 9, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(0-1, 0-2), (4-1, 0-2), (4-1, 4-2), (0-1, 4-2)])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (3, 9, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(0-1, 0-2), (4-1, 0-2), (4-1, 4-2), (0-1, 4-2)]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(1-1, 1-2), (5-1, 1-2), (5-1, 5-2), (1-1, 5-2)])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(1-1, 1-2), (5-1, 1-2), (5-1, 5-2), (1-1, 5-2)]
             )
 
     def test_crop_polygons_by_fixed_floats_with_keep_size(self):
         aug = iaa.Crop(percent=(0.2, 0, 0.5, 0.1), keep_size=True)
         polygons = [ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
                     ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])]
-        psoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
+        cbaoi = ia.PolygonsOnImage(polygons, shape=(10, 10, 3))
 
-        psoi_aug = aug.augment_polygons([psoi, psoi])
+        cbaoi_aug = aug.augment_polygons([cbaoi, cbaoi])
 
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (10, 10, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(10*(-1/9), 10*(-2/3)),
-                            (10*(3/9), 10*(-2/3)),
-                            (10*(3/9), 10*(2/3)),
-                            (10*(-1/9), 10*(2/3))])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 10, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(10*(-1/9), 10*(-2/3)),
+                 (10*(3/9), 10*(-2/3)),
+                 (10*(3/9), 10*(2/3)),
+                 (10*(-1/9), 10*(2/3))]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(10*(0/9), 10*(-1/3)),
-                            (10*(4/9), 10*(-1/3)),
-                            (10*(4/9), 10*(3/3)),
-                            (10*(0/9), 10*(3/3))])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(10*(0/9), 10*(-1/3)),
+                 (10*(4/9), 10*(-1/3)),
+                 (10*(4/9), 10*(3/3)),
+                 (10*(0/9), 10*(3/3))]
+            )
+
+    def test_crop_line_strings_by_fixed_floats_without_keep_size(self):
+        aug = iaa.Crop(percent=(0.2, 0, 0.5, 0.1), keep_size=False)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+               ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])]
+        cbaoi = ia.LineStringsOnImage(lss, shape=(10, 10, 3))
+
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (3, 9, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(0-1, 0-2), (4-1, 0-2), (4-1, 4-2), (0-1, 4-2)]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(1-1, 1-2), (5-1, 1-2), (5-1, 5-2), (1-1, 5-2)]
+            )
+
+    def test_crop_line_strings_by_fixed_floats_with_keep_size(self):
+        aug = iaa.Crop(percent=(0.2, 0, 0.5, 0.1), keep_size=True)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+               ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])]
+        cbaoi = ia.LineStringsOnImage(lss, shape=(10, 10, 3))
+
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 10, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(10*(-1/9), 10*(-2/3)),
+                 (10*(3/9), 10*(-2/3)),
+                 (10*(3/9), 10*(2/3)),
+                 (10*(-1/9), 10*(2/3))]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(10*(0/9), 10*(-1/3)),
+                 (10*(4/9), 10*(-1/3)),
+                 (10*(4/9), 10*(3/3)),
+                 (10*(0/9), 10*(3/3))]
             )
 
     def test_crop_bounding_boxes_by_fixed_floats_without_keep_size(self):
@@ -3068,6 +3185,10 @@ class TestCrop(unittest.TestCase):
     def test_pad_empty_polygons(self):
         cbaoi = ia.PolygonsOnImage([], shape=(12, 14, 3))
         self._test_crop_empty_cba("augment_polygons", cbaoi)
+
+    def test_pad_empty_line_strings(self):
+        cbaoi = ia.LineStringsOnImage([], shape=(12, 14, 3))
+        self._test_crop_empty_cba("augment_line_strings", cbaoi)
 
     def test_pad_empty_bounding_boxes(self):
         cbaoi = ia.BoundingBoxesOnImage([], shape=(12, 14, 3))
