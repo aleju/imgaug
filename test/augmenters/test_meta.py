@@ -5830,6 +5830,21 @@ class TestSometimes(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
+    def lsoi_lr(self):
+        lss = [ia.LineString([(3-0, 0), (3-2, 0), (3-2, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
+    def lsoi_ud(self):
+        lss = [ia.LineString([(0, 3-0), (2, 3-0), (2, 3-2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.5, y2=1.0)]
         return ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
@@ -5948,6 +5963,21 @@ class TestSometimes(unittest.TestCase):
 
         assert_cbaois_equal(observed, [self.polygons_lr])
 
+    def test_two_branches_always_first__line_strings(self):
+        aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
+        observed = aug.augment_line_strings([self.lsoi])
+
+        assert_cbaois_equal(observed, [self.lsoi_lr])
+
+    def test_two_branches_always_first__line_strings__deterministic(self):
+        aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_line_strings([self.lsoi])
+
+        assert_cbaois_equal(observed, [self.lsoi_lr])
+
     def test_two_branches_always_first__bounding_boxes(self):
         aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
 
@@ -6005,24 +6035,25 @@ class TestSometimes(unittest.TestCase):
 
     def test_two_branches_always_second__keypoints(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
         observed = aug.augment_keypoints([self.keypoints])
-        assert keypoints_equal(observed, [self.keypoints_ud])
+
+        assert_cbaois_equal(observed[0], self.keypoints_ud)
 
     def test_two_branches_always_second__keypoints__deterministic(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
         aug_det = aug.to_deterministic()
+
         observed = aug_det.augment_keypoints([self.keypoints])
-        assert keypoints_equal(observed, [self.keypoints_ud])
+
+        assert_cbaois_equal(observed[0], self.keypoints_ud)
 
     def test_two_branches_always_second__polygons(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
 
         observed = aug.augment_polygons(self.polygons)
 
-        assert observed.shape == self.polygons.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            self.polygons_ud.polygons[0])
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.polygons_ud)
 
     def test_two_branches_always_second__polygons__deterministic(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -6030,11 +6061,37 @@ class TestSometimes(unittest.TestCase):
 
         observed = aug_det.augment_polygons(self.polygons)
 
-        assert len(observed.polygons) == 1
-        assert observed.shape == self.polygons.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            self.polygons_ud.polygons[0])
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.polygons_ud)
+
+    def test_two_branches_always_second__line_strings(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
+        observed = aug.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_ud)
+
+    def test_two_branches_always_second__line_strings__deterministic(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_ud)
+
+    def test_two_branches_always_second__bounding_boxes(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(observed, self.bbsoi_ud)
+
+    def test_two_branches_always_second__bounding_boxes__deterministic(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(observed, self.bbsoi_ud)
 
     def test_two_branches_always_second__heatmaps(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -6104,65 +6161,27 @@ class TestSometimes(unittest.TestCase):
 
         assert nb_changed_aug_det == 0
 
-    def test_two_branches_both_50_percent__keypoints(self):
-        aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
-        nb_iterations = 250
-        nb_keypoints_if_branch = 0
-        nb_keypoints_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            keypoints_aug = aug.augment_keypoints(self.keypoints)
+    @classmethod
+    def _test_two_branches_both_50_percent__cbaois(
+            cls, cbaoi, cbaoi_lr, cbaoi_ud, augf_name):
+        def _same_coords(cbaoi1, cbaoi2):
+            assert len(cbaoi1.items) == len(cbaoi2.items)
+            for i1, i2 in zip(cbaoi1.items, cbaoi2.items):
+                if not np.allclose(i1.coords, i2.coords, atol=1e-4, rtol=0):
+                    return False
+            return True
 
-            if keypoints_equal(keypoints_aug, self.keypoints_lr):
-                nb_keypoints_if_branch += 1
-            elif keypoints_equal(keypoints_aug, self.keypoints_ud):
-                nb_keypoints_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_keypoints_if_branch / nb_iterations
-        p_else_branch = nb_keypoints_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_two_branches_both_50_percent__polygons(self):
-        aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
-        nb_iterations = 250
-        nb_polygons_if_branch = 0
-        nb_polygons_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            polygons_aug = aug.augment_polygons(self.polygons)
-
-            if polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons_lr.polygons[0], points_per_edge=0):
-                nb_polygons_if_branch += 1
-            elif polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons_ud.polygons[0], points_per_edge=0):
-                nb_polygons_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_polygons_if_branch / nb_iterations
-        p_else_branch = nb_polygons_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_two_branches_both_50_percent__bounding_boxes(self):
         aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
         nb_iterations = 250
         nb_if_branch = 0
         nb_else_branch = 0
         for i in sm.xrange(nb_iterations):
-            bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+            cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-            if bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi_lr.bounding_boxes[0]):
+            # use allclose() instead of coords_almost_equals() for efficiency
+            if _same_coords(cbaoi_aug, cbaoi_lr):
                 nb_if_branch += 1
-            elif bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi_ud.bounding_boxes[0]):
+            elif _same_coords(cbaoi_aug, cbaoi_ud):
                 nb_else_branch += 1
             else:
                 raise Exception(
@@ -6173,6 +6192,26 @@ class TestSometimes(unittest.TestCase):
 
         assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
         assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
+
+    def test_two_branches_both_50_percent__keypoints(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.keypoints, self.keypoints_lr, self.keypoints_ud,
+            "augment_keypoints")
+
+    def test_two_branches_both_50_percent__polygons(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.polygons, self.polygons_lr, self.polygons_ud,
+            "augment_polygons")
+
+    def test_two_branches_both_50_percent__line_strings(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.lsoi, self.lsoi_lr, self.lsoi_ud,
+            "augment_line_strings")
+
+    def test_two_branches_both_50_percent__bounding_boxes(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.bbsoi, self.bbsoi_lr, self.bbsoi_ud,
+            "augment_bounding_boxes")
 
     def test_one_branch_50_percent__images(self):
         aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
@@ -6224,65 +6263,27 @@ class TestSometimes(unittest.TestCase):
 
         assert nb_changed_aug_det == 0
 
-    def test_one_branch_50_percent__keypoints(self):
-        aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
-        nb_iterations = 250
-        nb_keypoints_if_branch = 0
-        nb_keypoints_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            keypoints_aug = aug.augment_keypoints(self.keypoints)
+    @classmethod
+    def _test_one_branch_50_percent__cbaois(
+            cls, cbaoi, cbaoi_lr, augf_name):
+        def _same_coords(cbaoi1, cbaoi2):
+            assert len(cbaoi1.items) == len(cbaoi2.items)
+            for i1, i2 in zip(cbaoi1.items, cbaoi2.items):
+                if not np.allclose(i1.coords, i2.coords, atol=1e-4, rtol=0):
+                    return False
+            return True
 
-            if keypoints_equal(keypoints_aug, self.keypoints_lr):
-                nb_keypoints_if_branch += 1
-            elif keypoints_equal(keypoints_aug, self.keypoints):
-                nb_keypoints_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_keypoints_if_branch / nb_iterations
-        p_else_branch = nb_keypoints_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_one_branch_50_percent__polygons(self):
-        aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
-        nb_iterations = 250
-        nb_polygons_if_branch = 0
-        nb_polygons_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            polygons_aug = aug.augment_polygons(self.polygons)
-
-            if polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons_lr.polygons[0], points_per_edge=0):
-                nb_polygons_if_branch += 1
-            elif polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons.polygons[0], points_per_edge=0):
-                nb_polygons_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_polygons_if_branch / nb_iterations
-        p_else_branch = nb_polygons_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_one_branch_50_percent__bounding_boxes(self):
         aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
         nb_iterations = 250
         nb_if_branch = 0
         nb_else_branch = 0
         for i in sm.xrange(nb_iterations):
-            bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+            cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-            if bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi_lr.bounding_boxes[0]):
+            # use allclose() instead of coords_almost_equals() for efficiency
+            if _same_coords(cbaoi_aug, cbaoi_lr):
                 nb_if_branch += 1
-            elif bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi.bounding_boxes[0]):
+            elif _same_coords(cbaoi_aug, cbaoi):
                 nb_else_branch += 1
             else:
                 raise Exception(
@@ -6294,29 +6295,41 @@ class TestSometimes(unittest.TestCase):
         assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
         assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
 
-    def test_empty_keypoints(self):
+    def test_one_branch_50_percent__keypoints(self):
+        self._test_one_branch_50_percent__cbaois(
+            self.keypoints, self.keypoints_lr, "augment_keypoints")
+
+    def test_one_branch_50_percent__polygons(self):
+        self._test_one_branch_50_percent__cbaois(
+            self.polygons, self.polygons_lr, "augment_polygons")
+
+    def test_one_branch_50_percent__bounding_boxes(self):
+        self._test_one_branch_50_percent__cbaois(
+            self.bbsoi, self.bbsoi_lr, "augment_bounding_boxes")
+
+    @classmethod
+    def _test_empty_cbaoi(cls, cbaoi, augf_name):
         aug = iaa.Sometimes(0.5, iaa.Noop())
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi)
+
+    def test_empty_keypoints(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
-
-        observed = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(observed, kpsoi)
+        self._test_empty_cbaoi(kpsoi, "augment_keypoints")
 
     def test_empty_polygons(self):
-        aug = iaa.Sometimes(0.5, iaa.Noop())
         psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
+        self._test_empty_cbaoi(psoi, "augment_polygons")
 
-        observed = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(observed, psoi)
+    def test_empty_line_strings(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+        self._test_empty_cbaoi(lsoi, "augment_line_strings")
 
     def test_empty_bounding_boxes(self):
-        aug = iaa.Sometimes(0.5, iaa.Noop())
         bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
-
-        observed = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
+        self._test_empty_cbaoi(bbsoi, "augment_bounding_boxes")
 
     def test_p_is_stochastic_parameter(self):
         image = np.zeros((1, 1), dtype=np.uint8) + 100
