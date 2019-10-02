@@ -7109,6 +7109,13 @@ class TestRot90(unittest.TestCase):
         )
 
     @property
+    def lsoi(self):
+        return ia.LineStringsOnImage(
+            [ia.LineString([(1, 1), (3, 1), (3, 3), (1, 3)])],
+            shape=(4, 8, 3)
+        )
+
+    @property
     def bbsoi(self):
         return ia.BoundingBoxesOnImage(
             [ia.BoundingBox(x1=1, y1=1, x2=3, y2=3)],
@@ -7182,6 +7189,43 @@ class TestRot90(unittest.TestCase):
             (4-expected_k2_polys[3][1]+kp_offset, expected_k2_polys[3][0])]
         return ia.PolygonsOnImage([ia.Polygon(expected_k3_polys)],
                                   shape=(8, 4, 3))
+
+    @property
+    def lsoi_k1(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_ls = [(4-1+kp_offset, 1),
+                          (4-1+kp_offset, 3),
+                          (4-3+kp_offset, 3),
+                          (4-3+kp_offset, 1)]
+        return ia.LineStringsOnImage([ia.LineString(expected_k1_ls)],
+                                     shape=(8, 4, 3))
+
+    @property
+    def lsoi_k2(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_ls = self.psoi_k1.items[0].coords
+        expected_k2_ls = [
+            (8-expected_k1_ls[0][1]+kp_offset, expected_k1_ls[0][0]),
+            (8-expected_k1_ls[1][1]+kp_offset, expected_k1_ls[1][0]),
+            (8-expected_k1_ls[2][1]+kp_offset, expected_k1_ls[2][0]),
+            (8-expected_k1_ls[3][1]+kp_offset, expected_k1_ls[3][0])]
+        return ia.LineStringsOnImage([ia.LineString(expected_k2_ls)],
+                                     shape=(4, 8, 3))
+
+    @property
+    def lsoi_k3(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k2_ls = self.lsoi_k2.items[0].coords
+        expected_k3_ls = [
+            (4-expected_k2_ls[0][1]+kp_offset, expected_k2_ls[0][0]),
+            (4-expected_k2_ls[1][1]+kp_offset, expected_k2_ls[1][0]),
+            (4-expected_k2_ls[2][1]+kp_offset, expected_k2_ls[2][0]),
+            (4-expected_k2_ls[3][1]+kp_offset, expected_k2_ls[3][0])]
+        return ia.LineStringsOnImage([ia.LineString(expected_k3_ls)],
+                                     shape=(8, 4, 3))
 
     @property
     def bbsoi_k1(self):
@@ -7300,6 +7344,15 @@ class TestRot90(unittest.TestCase):
 
                 assert_cbaois_equal(psoi_aug, self.psoi)
 
+    def test_line_strings_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+                assert_cbaois_equal(lsoi_aug, self.lsoi)
+
     def test_bounding_boxes_k_is_0_and_4(self):
         for k in [0, 4]:
             with self.subTest(k=k):
@@ -7402,6 +7455,15 @@ class TestRot90(unittest.TestCase):
 
                 assert_cbaois_equal(psoi_aug, self.psoi_k1)
 
+    def test_line_strings_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+                assert_cbaois_equal(lsoi_aug, self.lsoi_k1)
+
     def test_bounding_boxes_k_is_1_and_5(self):
         for k in [1, 5]:
             with self.subTest(k=k):
@@ -7483,6 +7545,13 @@ class TestRot90(unittest.TestCase):
         psoi_aug = aug.augment_polygons(self.psoi)
 
         assert_cbaois_equal(psoi_aug, self.psoi_k2)
+
+    def test_line_strings_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+
+        lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(lsoi_aug, self.lsoi_k2)
 
     def test_bounding_boxes_k_is_2(self):
         aug = iaa.Rot90(2, keep_size=False)
@@ -7580,6 +7649,15 @@ class TestRot90(unittest.TestCase):
                 psoi_aug = aug.augment_polygons(self.psoi)
 
                 assert_cbaois_equal(psoi_aug, self.psoi_k3)
+
+    def test_line_strings_k_is_3_and_minus1(self):
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+                assert_cbaois_equal(lsoi_aug, self.lsoi_k3)
 
     def test_bounding_boxes_k_is_3_and_minus1(self):
         for k in [3, -1]:
@@ -7700,6 +7778,20 @@ class TestRot90(unittest.TestCase):
         assert psoi_aug.polygons[0].is_valid
         assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
+    def test_line_strings_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        lsoi = self.lsoi
+        kp_offset = self.kp_offset
+
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        expected = [(4-1+kp_offset, 1), (4-1+kp_offset, 3),
+                    (4-3+kp_offset, 3), (4-3+kp_offset, 1)]
+        expected = [(8*x/4, 4*y/8) for x, y in expected]
+        assert lsoi_aug.shape == (4, 8, 3)
+        assert len(lsoi_aug.items) == 1
+        assert lsoi_aug.items[0].coords_almost_equals(expected)
+
     def test_bounding_boxes_k_is_1_keep_size_is_true(self):
         aug = iaa.Rot90(1, keep_size=True)
         bbsoi = self.bbsoi
@@ -7789,6 +7881,17 @@ class TestRot90(unittest.TestCase):
         assert_cbaois_equal(psoi_aug[2], self.psoi_k1)
         assert_cbaois_equal(psoi_aug[3], self.psoi_k2)
 
+    def test_line_strings_k_is_list(self):
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        lsoi = self.lsoi
+
+        lsoi_aug = aug.augment_line_strings([lsoi] * 4)
+
+        assert_cbaois_equal(lsoi_aug[0], self.lsoi_k1)
+        assert_cbaois_equal(lsoi_aug[1], self.lsoi_k2)
+        assert_cbaois_equal(lsoi_aug[2], self.lsoi_k1)
+        assert_cbaois_equal(lsoi_aug[3], self.lsoi_k2)
+
     def test_bounding_boxes_k_is_list(self):
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
         bbsoi = self.bbsoi
@@ -7819,6 +7922,16 @@ class TestRot90(unittest.TestCase):
         expected = self.psoi_k1
         expected.polygons = []
         assert_cbaois_equal(psoi_aug, expected)
+
+    def test_empty_line_strings(self):
+        aug = iaa.Rot90(k=1, keep_size=False)
+        lsoi = ia.LineStringsOnImage([], shape=(4, 8, 3))
+
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        expected = self.lsoi_k1
+        expected.line_strings = []
+        assert_cbaois_equal(lsoi_aug, expected)
 
     def test_empty_bounding_boxes(self):
         aug = iaa.Rot90(k=1, keep_size=False)
