@@ -5417,62 +5417,67 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert_cbaois_equal(observed, kpsoi)
 
     # --------
-    # polygons
+    # abstract test methods for polygons and line strings
     # --------
-    def test_polygons_without_keep_size(self):
-        exterior = np.float32([
+    @classmethod
+    def _test_cbaois_without_keep_size(cls, cba_class, cbaoi_class, augf_name):
+        points = np.float32([
             [10, 10],
             [25, 10],
             [25, 25],
             [10, 25]
         ])
-        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+        cbaoi = cbaoi_class([cba_class(points)], shape=(30, 30, 3))
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
         aug.jitter = iap.Deterministic(0.2)
 
-        observed = aug.augment_polygons(psoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
         assert observed.shape == (30 - 12, 30 - 12, 3)
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].is_valid
+        assert len(observed.items) == 1
+        if hasattr(observed.items[0], "is_valid"):
+            assert observed.items[0].is_valid
 
-        exterior_expected = np.copy(exterior)
-        exterior_expected[:, 0] -= 0.2 * 30
-        exterior_expected[:, 1] -= 0.2 * 30
+        points_expected = np.copy(points)
+        points_expected[:, 0] -= 0.2 * 30
+        points_expected[:, 1] -= 0.2 * 30
         # TODO deviations of around 0.5 here from expected values, why?
-        assert observed.polygons[0].exterior_almost_equals(
-            exterior_expected, max_distance=1.5)
+        assert observed.items[0].coords_almost_equals(
+            points_expected, max_distance=1.5)
 
-    def test_polygons_with_keep_size(self):
+    @classmethod
+    def _test_cbaois_with_keep_size(cls, cba_class, cbaoi_class, augf_name):
         # polygon augmentation with keep_size
-        exterior = np.float32([
+        points = np.float32([
             [10, 10],
             [25, 10],
             [25, 25],
             [10, 25]
         ])
-        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+        cbaoi = cbaoi_class([cba_class(points)], shape=(30, 30, 3))
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
         aug.jitter = iap.Deterministic(0.2)
 
-        observed = aug.augment_polygons(psoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
         assert observed.shape == (30, 30, 3)
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].is_valid
+        assert len(observed.items) == 1
+        if hasattr(observed.items[0], "is_valid"):
+            assert observed.items[0].is_valid
 
-        exterior_expected = np.copy(exterior)
-        exterior_expected[:, 0] = (
-            (exterior_expected[:, 0] - 0.2 * 30) / (30 * 0.6)
+        points_expected = np.copy(points)
+        points_expected[:, 0] = (
+            (points_expected[:, 0] - 0.2 * 30) / (30 * 0.6)
         ) * 30
-        exterior_expected[:, 1] = (
-            (exterior_expected[:, 1] - 0.2 * 30) / (30 * 0.6)
+        points_expected[:, 1] = (
+            (points_expected[:, 1] - 0.2 * 30) / (30 * 0.6)
         ) * 30
         # TODO deviations of around 0.5 here from expected values, why?
-        assert observed.polygons[0].exterior_almost_equals(
-            exterior_expected, max_distance=2.5)
+        assert observed.items[0].coords_almost_equals(
+            points_expected, max_distance=2.5)
 
-    def test_image_polygon_alignment(self):
+    @classmethod
+    def _test_image_cba_alignment(cls, cba_class, cbaoi_class, augf_name):
         img = np.zeros((100, 100), dtype=np.uint8)
         img[25-3:25+3, 25-3:25+3] = 255
         img[50-3:50+3, 25-3:25+3] = 255
@@ -5480,7 +5485,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         img[25-3:25+3, 75-3:75+3] = 255
         img[50-3:50+3, 75-3:75+3] = 255
         img[75-3:75+3, 75-3:75+3] = 255
-        exterior = [
+        points = [
             [25, 25],
             [75, 25],
             [75, 50],
@@ -5489,31 +5494,51 @@ class TestPerspectiveTransform(unittest.TestCase):
             [25, 50]
         ]
 
-        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=img.shape)
+        cbaoi = cbaoi_class([cba_class(points)], shape=img.shape)
         aug = iaa.PerspectiveTransform(scale=0.1, keep_size=True)
         for _ in sm.xrange(10):
             aug_det = aug.to_deterministic()
             imgs_aug = aug_det.augment_images([img] * 4)
-            psois_aug = aug_det.augment_polygons([psoi] * 4)
+            cbaois_aug = getattr(aug_det, augf_name)([cbaoi] * 4)
 
-            for img_aug, psoi_aug in zip(imgs_aug, psois_aug):
-                assert psoi_aug.shape == img.shape
-                for poly_aug in psoi_aug.polygons:
-                    assert poly_aug.is_valid
-                    for x, y in poly_aug.exterior:
+            for img_aug, cbaoi_aug in zip(imgs_aug, cbaois_aug):
+                assert cbaoi_aug.shape == img.shape
+                for cba_aug in cbaoi_aug.items:
+                    if hasattr(cba_aug, "is_valid"):
+                        assert cba_aug.is_valid
+                    for x, y in cba_aug.coords:
                         if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
                             bb = ia.BoundingBox(x1=x-2, x2=x+2, y1=y-2, y2=y+2)
                             img_ex = bb.extract_from_image(img_aug)
                             assert np.any(img_ex > 10)
 
-    def test_empty_polygons(self):
+    @classmethod
+    def _test_empty_cba(cls, cbaoi, augf_name):
         # test empty polygons
-        psoi = ia.PolygonsOnImage([], shape=(20, 10, 3))
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
 
-        observed = aug.augment_polygons(psoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(observed, psoi)
+        assert_cbaois_equal(observed, cbaoi)
+
+    # --------
+    # polygons
+    # --------
+    def test_polygons_without_keep_size(self):
+        self._test_cbaois_without_keep_size(ia.Polygon, ia.PolygonsOnImage,
+                                            "augment_polygons")
+
+    def test_polygons_with_keep_size(self):
+        self._test_cbaois_with_keep_size(ia.Polygon, ia.PolygonsOnImage,
+                                         "augment_polygons")
+
+    def test_image_polygon_alignment(self):
+        self._test_image_cba_alignment(ia.Polygon, ia.PolygonsOnImage,
+                                       "augment_polygons")
+
+    def test_empty_polygons(self):
+        psoi = ia.PolygonsOnImage([], shape=(20, 10, 3))
+        self._test_empty_cba(psoi, "augment_polygons")
 
     def test_polygons_under_extreme_scale_values(self):
         # test extreme scales
@@ -5555,6 +5580,25 @@ class TestPerspectiveTransform(unittest.TestCase):
                 assert poly0.exterior_almost_equals(
                     exterior_expected, max_distance=2.0)
                 """
+
+    # --------
+    # line strings
+    # --------
+    def test_line_strings_without_keep_size(self):
+        self._test_cbaois_without_keep_size(ia.LineString, ia.LineStringsOnImage,
+                                            "augment_line_strings")
+
+    def test_line_strings_with_keep_size(self):
+        self._test_cbaois_with_keep_size(ia.LineString, ia.LineStringsOnImage,
+                                         "augment_line_strings")
+
+    def test_image_line_string_alignment(self):
+        self._test_image_cba_alignment(ia.LineString, ia.LineStringsOnImage,
+                                       "augment_line_strings")
+
+    def test_empty_line_strings(self):
+        lsoi = ia.LineStringsOnImage([], shape=(20, 10, 3))
+        self._test_empty_cba(lsoi, "augment_line_strings")
 
     # --------
     # bounding boxes
