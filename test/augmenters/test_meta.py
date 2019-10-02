@@ -586,6 +586,48 @@ class TestLambda(unittest.TestCase):
             expected = self.bbsoi_aug
             assert_cbaois_equal(observed, expected)
 
+    def test_bounding_boxes_x1_x2_coords_can_get_flipped(self):
+        # Verify that if any augmented BB ends up with x1 > x2 that the
+        # x-coordinates will be flipped to ensure that x1 is always below x2
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)
+        ], shape=(10, 10, 3))
+
+        def _func_bbs(bounding_boxes_on_images, random_state, parents, hooks):
+            bounding_boxes_on_images[0].bounding_boxes[0].x1 += 10
+            return bounding_boxes_on_images
+
+        aug = iaa.Lambda(func_bounding_boxes=_func_bbs)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_bounding_boxes(bbsoi)
+
+            assert np.allclose(
+                observed.bounding_boxes[0].coords,
+                [(2, 1), (0+10, 3)]
+            )
+
+    def test_bounding_boxes_y1_y2_coords_can_get_flipped(self):
+        # Verify that if any augmented BB ends up with y1 > y2 that the
+        # x-coordinates will be flipped to ensure that y1 is always below y2
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)
+        ], shape=(10, 10, 3))
+
+        def _func_bbs(bounding_boxes_on_images, random_state, parents, hooks):
+            bounding_boxes_on_images[0].bounding_boxes[0].y1 += 10
+            return bounding_boxes_on_images
+
+        aug = iaa.Lambda(func_bounding_boxes=_func_bbs)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_bounding_boxes(bbsoi)
+
+            assert np.allclose(
+                observed.bounding_boxes[0].coords,
+                [(0, 3), (2, 1+10)]
+            )
+
     def test_keypoints_empty(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
         aug = iaa.Lambda(func_keypoints=self.func_keypoints)

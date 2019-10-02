@@ -4438,6 +4438,14 @@ class Lambda(Augmenter):
                 "Expected callback function for polygons to return list of "
                 "imgaug.augmentables.polys.PolygonsOnImage instances, "
                 "got %s." % ([type(el) for el in result],))
+
+            for bboi in bounding_boxes_on_images:
+                for bb in bboi.bounding_boxes:
+                    if bb.x1 > bb.x2:
+                        bb.x1, bb.x2 = bb.x2, bb.x1
+                    if bb.y1 > bb.y2:
+                        bb.y1, bb.y2 = bb.y2, bb.y1
+
             return result
         return bounding_boxes_on_images
 
