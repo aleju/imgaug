@@ -4743,18 +4743,17 @@ class TestKeepSizeByResize(unittest.TestCase):
         assert np.isclose(kpoi_aug.keypoints[2].x, 2, rtol=0, atol=1e-4)
         assert np.isclose(kpoi_aug.keypoints[2].y, 2, rtol=0, atol=1e-4)
 
-
     def test_polygons_interpolation_is_cubic(self):
         aug = iaa.KeepSizeByResize(self.children, interpolation="cubic")
-        psoi = ia.PolygonsOnImage([
+        cbaoi = ia.PolygonsOnImage([
             ia.Polygon([(0, 0), (3, 0), (3, 3)])
         ], shape=(4, 4, 3))
 
-        psoi_aug = aug.augment_polygons(psoi)
+        cbaoi_aug = aug.augment_polygons(cbaoi)
 
-        assert psoi_aug.shape == (4, 4, 3)
+        assert cbaoi_aug.shape == (4, 4, 3)
         assert np.allclose(
-            psoi_aug.polygons[0].coords,
+            cbaoi_aug.items[0].coords,
             [(0, ((0-1)/3)*4),
              (3, ((0-1)/3)*4),
              (3, ((3-1)/3)*4)]
@@ -4763,15 +4762,48 @@ class TestKeepSizeByResize(unittest.TestCase):
     def test_polygons_interpolation_is_no_resize(self):
         aug = iaa.KeepSizeByResize(
             self.children, interpolation=iaa.KeepSizeByResize.NO_RESIZE)
-        psoi = ia.PolygonsOnImage([
+        cbaoi = ia.PolygonsOnImage([
             ia.Polygon([(0, 0), (3, 0), (3, 3)])
         ], shape=(4, 4, 3))
 
-        psoi_aug = aug.augment_polygons(psoi)
+        cbaoi_aug = aug.augment_polygons(cbaoi)
 
-        assert psoi_aug.shape == (3, 4, 3)
+        assert cbaoi_aug.shape == (3, 4, 3)
         assert np.allclose(
-            psoi_aug.polygons[0].coords,
+            cbaoi_aug.items[0].coords,
+            [(0, 0-1),
+             (3, 0-1),
+             (3, 3-1)]
+        )
+
+    def test_line_strings_interpolation_is_cubic(self):
+        aug = iaa.KeepSizeByResize(self.children, interpolation="cubic")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(4, 4, 3))
+
+        cbaoi_aug = aug.augment_line_strings(cbaoi)
+
+        assert cbaoi_aug.shape == (4, 4, 3)
+        assert np.allclose(
+            cbaoi_aug.items[0].coords,
+            [(0, ((0-1)/3)*4),
+             (3, ((0-1)/3)*4),
+             (3, ((3-1)/3)*4)]
+        )
+
+    def test_line_strings_interpolation_is_no_resize(self):
+        aug = iaa.KeepSizeByResize(
+            self.children, interpolation=iaa.KeepSizeByResize.NO_RESIZE)
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(4, 4, 3))
+
+        cbaoi_aug = aug.augment_line_strings(cbaoi)
+
+        assert cbaoi_aug.shape == (3, 4, 3)
+        assert np.allclose(
+            cbaoi_aug.items[0].coords,
             [(0, 0-1),
              (3, 0-1),
              (3, 3-1)]
