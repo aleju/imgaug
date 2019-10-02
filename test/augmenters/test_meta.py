@@ -7341,6 +7341,16 @@ class TestChannelShuffle(unittest.TestCase):
 
         assert_cbaois_equal(psoi_aug, psoi)
 
+    def test_line_strings_must_not_change(self):
+        aug = iaa.ChannelShuffle(p=1.0)
+        lsoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (5, 0), (5, 5)])
+        ], shape=(10, 10, 3))
+
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(lsoi_aug, lsoi)
+
     def test_bounding_boxes_must_not_change(self):
         aug = iaa.ChannelShuffle(p=1.0)
         bbsoi = ia.BoundingBoxesOnImage([
