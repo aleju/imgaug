@@ -4191,6 +4191,70 @@ class TestCropToFixedSize(unittest.TestCase):
         expected = ia.PolygonsOnImage([], shape=(3, 3))
         assert_cbaois_equal(observed, expected)
 
+    def test_line_strings__image_already_fullfills_max_shape(self):
+        # line strings test with shape not being changed
+        aug = iaa.CropToFixedSize(height=3, width=3, position="center")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(1, 1), (3, 1), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(1, 1), (3, 1), (3, 3)])
+        ], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_crop_at_center(self):
+        # basic line strings test
+        aug = iaa.CropToFixedSize(height=1, width=1, position="center")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(1, 1), (3, 1), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(1-1, 1-1), (3-1, 1-1), (3-1, 3-1)])
+        ], shape=(1, 1))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_crop_at_left_top(self):
+        # polygons test with explicit non-center position
+        aug = iaa.CropToFixedSize(height=3, width=3, position="left-top")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(1, 1), (3, 1), (3, 3)])
+        ], shape=(5, 5))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(1-2, 1-2), (3-2, 1-2), (3-2, 3-2)])
+        ], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_crop_at_right_bottom(self):
+        aug = iaa.CropToFixedSize(height=3, width=3, position="right-bottom")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(1, 1), (3, 1), (3, 3)])
+        ], shape=(5, 5))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(1, 1), (3, 1), (3, 3)])
+        ], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_empty(self):
+        aug = iaa.CropToFixedSize(height=3, width=3, position="center")
+        cbaoi = ia.LineStringsOnImage([], shape=(5, 4))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([], shape=(3, 3))
+        assert_cbaois_equal(observed, expected)
+
     def test_bounding_boxes__image_already_fullfills_max_shape(self):
         # bounding boxes test with shape not being changed
         aug = iaa.CropToFixedSize(height=3, width=3, position="center")
