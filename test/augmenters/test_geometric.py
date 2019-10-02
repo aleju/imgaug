@@ -4198,9 +4198,15 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         assert_cbaois_equal(kpsoi_aug, kpsoi)
 
-    def test_scale_is_zero_polygons(self):
-        # scale 0
+    @classmethod
+    def _test_scale_is_zero_cbaoi(cls, cbaoi, augf_name):
         aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi)
+
+    def test_scale_is_zero_polygons(self):
         exterior = [(10, 10),
                     (70, 10), (70, 20), (70, 30), (70, 40),
                     (70, 50), (70, 60), (70, 70), (70, 80),
@@ -4212,20 +4218,28 @@ class TestPiecewiseAffine(unittest.TestCase):
         psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
                                   shape=(100, 80))
 
-        observed = aug.augment_polygons(psoi)
+        self._test_scale_is_zero_cbaoi(psoi, "augment_polygons")
 
-        assert_cbaois_equal(observed, psoi)
+    def test_scale_is_zero_line_strings(self):
+        coords = [(10, 10),
+                  (70, 10), (70, 20), (70, 30), (70, 40),
+                  (70, 50), (70, 60), (70, 70), (70, 80),
+                  (70, 90),
+                  (10, 90),
+                  (10, 80), (10, 70), (10, 60), (10, 50),
+                  (10, 40), (10, 30), (10, 20), (10, 10)]
+        ls = ia.LineString(coords)
+        lsoi = ia.LineStringsOnImage([ls, ls.shift(left=1, top=1)],
+                                     shape=(100, 80))
+
+        self._test_scale_is_zero_cbaoi(lsoi, "augment_line_strings")
 
     def test_scale_is_zero_bounding_boxes(self):
-        # scale 0
-        aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
         bb = ia.BoundingBox(x1=10, y1=10, x2=70, y2=20)
         bbsoi = ia.BoundingBoxesOnImage([bb, bb.shift(left=1, top=1)],
                                         shape=(100, 80))
 
-        observed = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
+        self._test_scale_is_zero_cbaoi(bbsoi, "augment_bounding_boxes")
 
     def test_scale_stronger_values_should_increase_changes_images(self):
         # stronger scale should lead to stronger changes
@@ -4467,35 +4481,46 @@ class TestPiecewiseAffine(unittest.TestCase):
         for kp in observed_kpsoi[0].keypoints:
             assert observed_img[int(kp.y), int(kp.x)] > 0
 
-    def test_scale_alignment_between_images_and_polygons(self):
+    @classmethod
+    def _test_scale_alignment_between_images_and_poly_or_line_strings(
+            cls, cba_class, cbaoi_class, augf_name):
         img = np.zeros((100, 80), dtype=np.uint8)
         img[:, 10-5:10+5] = 255
         img[:, 70-5:70+5] = 255
-        exterior = [(10, 10),
-                    (70, 10), (70, 20), (70, 30), (70, 40),
-                    (70, 50), (70, 60), (70, 70), (70, 80),
-                    (70, 90),
-                    (10, 90),
-                    (10, 80), (10, 70), (10, 60), (10, 50),
-                    (10, 40), (10, 30), (10, 20), (10, 10)]
-        poly = ia.Polygon(exterior)
-        psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
-                                  shape=img.shape)
+        coords = [(10, 10),
+                  (70, 10), (70, 20), (70, 30), (70, 40),
+                  (70, 50), (70, 60), (70, 70), (70, 80),
+                  (70, 90),
+                  (10, 90),
+                  (10, 80), (10, 70), (10, 60), (10, 50),
+                  (10, 40), (10, 30), (10, 20), (10, 10)]
+        cba = cba_class(coords)
+        cbaoi = cbaoi_class([cba, cba.shift(left=1, top=1)],
+                            shape=img.shape)
 
         aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
         aug_det = aug.to_deterministic()
 
         observed_imgs = aug_det.augment_images([img, img])
-        observed_psois = aug_det.augment_polygons([psoi, psoi])
+        observed_cbaois = getattr(aug_det, augf_name)([cbaoi, cbaoi])
 
-        for observed_img, observed_psoi in zip(observed_imgs, observed_psois):
-            assert observed_psoi.shape == img.shape
-            for poly_aug in observed_psoi.polygons:
-                assert poly_aug.is_valid
-                for point_aug in poly_aug.exterior:
+        for observed_img, observed_cbaoi in zip(observed_imgs, observed_cbaois):
+            assert observed_cbaoi.shape == img.shape
+            for cba_aug in observed_cbaoi.items:
+                if hasattr(cba_aug, "is_valid"):
+                    assert cba_aug.is_valid
+                for point_aug in cba_aug.coords:
                     x = int(np.round(point_aug[0]))
                     y = int(np.round(point_aug[1]))
                     assert observed_img[y, x] > 0
+
+    def test_scale_alignment_between_images_and_polygons(self):
+        self._test_scale_alignment_between_images_and_poly_or_line_strings(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_scale_alignment_between_images_and_line_strings(self):
+        self._test_scale_alignment_between_images_and_poly_or_line_strings(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
 
     def test_scale_alignment_between_images_and_bounding_boxes(self):
         img = np.zeros((100, 80), dtype=np.uint8)
@@ -4761,6 +4786,27 @@ class TestPiecewiseAffine(unittest.TestCase):
         observed = aug.augment_polygons(psoi)
 
         assert_cbaois_equal(observed, psoi)
+
+    # ---------
+    # remaining line string tests
+    # ---------
+    def test_line_strings_outside_of_image(self):
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
+        coords = [(-10, -10), (110, -10), (110, 90), (-10, 90)]
+        ls = ia.LineString(coords)
+        lsoi = ia.LineStringsOnImage([ls], shape=(10, 10, 3))
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
+
+    def test_empty_line_strings(self):
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+        lsoi = ia.LineStringsOnImage([], shape=(10, 10, 3))
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
 
     # ---------
     # remaining bounding box tests
