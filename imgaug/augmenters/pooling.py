@@ -154,6 +154,11 @@ class _AbstractPoolingBase(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         return self._augment_bounding_boxes_as_keypoints(

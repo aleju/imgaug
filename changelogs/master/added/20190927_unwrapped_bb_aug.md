@@ -25,12 +25,12 @@
 * [breaking] Added parameter `parents` to `Augmenter.augment_bounding_boxes()`.
   This breaks if `hooks` was used as a *positional* argument in connection with
   that method.
-* [breaking] Added parameter `func_bounding_boxes` to `Lambda`. This
-  breaks if one relied on the order of the augmenter's parameters instead of
-  their names.
-* [breaking] Added parameter `func_bounding_boxes` to `AssertLambda`. This
-  breaks if one relied on the order of the augmenter's parameters instead of
-  their names.
-* [breaking] Added parameter `check_bounding_boxes` to `AssertShape`. This
-  breaks if one relied on the order of the augmenter's parameters instead of
-  their names.
+* [rarely breaking] Added parameter `func_bounding_boxes` to `Lambda`.
+  This breaks if one relied on the order of the augmenter's parameters instead
+  of their names.
+* [rarely breaking] Added parameter `func_bounding_boxes` to `AssertLambda`.
+  This breaks if one relied on the order of the augmenter's parameters instead
+  of their names.
+* [rarely breaking] Added parameter `check_bounding_boxes` to `AssertShape`.
+  This breaks if one relied on the order of the augmenter's parameters instead
+  of their names.
