@@ -863,7 +863,22 @@ class TestPad(unittest.TestCase):
     def kpsoi(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1),
                ia.Keypoint(x=2, y=2)]
-        return [ia.KeypointsOnImage(kps, shape=self.image.shape)]
+        return ia.KeypointsOnImage(kps, shape=self.image.shape)
+
+    @property
+    def psoi(self):
+        polys = [ia.Polygon([(1, 1), (2, 1), (2, 2)])]
+        return ia.PolygonsOnImage(polys, shape=self.image.shape)
+
+    @property
+    def lsoi(self):
+        ls = [ia.LineString([(1, 1), (2, 1), (2, 2)])]
+        return ia.LineStringsOnImage(ls, shape=self.image.shape)
+
+    @property
+    def bbsoi(self):
+        bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
+        return ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
 
     @property
     def heatmap(self):
@@ -935,7 +950,7 @@ class TestPad(unittest.TestCase):
                 observed = aug.augment_images([self.image])
                 assert array_equal_lists(observed, [base_img_padded])
 
-    def test_pad_keypoints_by_1px_each_side_on_its_own(self):
+    def _test_pad_cbaoi_by_1px_each_side_on_its_own(self, cbaoi, augf_name):
         pads = [
             (1, 0, 0, 0),
             (0, 1, 0, 0),
@@ -952,13 +967,27 @@ class TestPad(unittest.TestCase):
                 image_padded_shape[0] += top + bottom
                 image_padded_shape[1] += left + right
 
-                kpsoi = self.kpsoi
-                expected = [kpsoi[0].shift(x=left, y=top)]
+                observed = getattr(aug, augf_name)(cbaoi)
 
-                observed = aug.augment_keypoints(kpsoi)
+                expected = shift_cbaoi(cbaoi, left=left, top=top)
+                expected.shape = tuple(image_padded_shape)
+                assert_cbaois_equal(observed, expected)
 
-                assert observed[0].shape == tuple(image_padded_shape)
-                assert keypoints_equal(observed, expected)
+    def test_pad_keypoints_by_1px_each_side_on_its_own(self):
+        self._test_pad_cbaoi_by_1px_each_side_on_its_own(
+            self.kpsoi, "augment_keypoints")
+
+    def test_pad_polygons_by_1px_each_side_on_its_own(self):
+        self._test_pad_cbaoi_by_1px_each_side_on_its_own(
+            self.psoi, "augment_polygons")
+
+    def test_pad_line_strings_by_1px_each_side_on_its_own(self):
+        self._test_pad_cbaoi_by_1px_each_side_on_its_own(
+            self.lsoi, "augment_line_strings")
+
+    def test_pad_bounding_boxes_by_1px_each_side_on_its_own(self):
+        self._test_pad_cbaoi_by_1px_each_side_on_its_own(
+            self.bbsoi, "augment_bounding_boxes")
 
     def test_pad_heatmaps_by_1px_each_side_on_its_own(self):
         pads = [
@@ -1022,6 +1051,7 @@ class TestPad(unittest.TestCase):
                 assert observed.shape == tuple(image_padded_shape)
                 assert np.array_equal(observed.get_arr(), segmaps_arr_padded)
 
+    # TODO split up, add similar tests for polygons/LS/BBs
     def test_pad_each_side_on_its_own_by_tuple_of_ints(self):
         def _to_range_tuple(val):
             return val if isinstance(val, tuple) else (val, val)
@@ -1066,7 +1096,7 @@ class TestPad(unittest.TestCase):
                                     )
                                 )
                                 keypoints_padded.append(
-                                    self.kpsoi[0].shift(x=left_val, y=top_val))
+                                    self.kpsoi.shift(x=left_val, y=top_val))
 
                 movements = []
                 movements_det = []
@@ -1102,13 +1132,14 @@ class TestPad(unittest.TestCase):
 
                     observed = aug.augment_keypoints(self.kpsoi)
                     assert any([
-                        keypoints_equal(observed, [kp])
+                        keypoints_equal(observed, kp)
                         for kp
                         in keypoints_padded])
 
                 assert len(set(movements)) == 3
                 assert len(set(movements_det)) == 1
 
+    # TODO split up, add similar tests for polygons/LS/BBs
     def test_pad_each_side_on_its_own_by_list_of_ints(self):
         # test pad by list of exact pixel values
         pads = [
@@ -1144,7 +1175,7 @@ class TestPad(unittest.TestCase):
                                 )
                             )
                             keypoints_padded.append(
-                                self.kpsoi[0].shift(x=left_val, y=top_val))
+                                self.kpsoi.shift(x=left_val, y=top_val))
 
             movements = []
             movements_det = []
@@ -1177,7 +1208,7 @@ class TestPad(unittest.TestCase):
 
                 observed = aug.augment_keypoints(self.kpsoi)
                 assert any([
-                    keypoints_equal(observed, [kp])
+                    keypoints_equal(observed, kp)
                     for kp
                     in keypoints_padded])
 
@@ -1346,13 +1377,11 @@ class TestPad(unittest.TestCase):
         assert len(psoi_aug) == 2
         for psoi_aug_i in psoi_aug:
             assert psoi_aug_i.shape == (10, 8, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(4, 2), (8, 2), (8, 6), (4, 6)])
-            )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(5, 3), (9, 3), (9, 7), (5, 7)])
-            )
+            assert len(psoi_aug_i.items) == 2
+            assert psoi_aug_i.items[0].coords_almost_equals(
+                [(4, 2), (8, 2), (8, 6), (4, 6)])
+            assert psoi_aug_i.items[1].coords_almost_equals(
+                [(5, 3), (9, 3), (9, 7), (5, 7)])
 
     def test_pad_polygons_by_tuple_of_fixed_ints_with_keep_size(self):
         aug = iaa.Pad((2, 0, 4, 4), keep_size=True)
@@ -1363,18 +1392,56 @@ class TestPad(unittest.TestCase):
         assert len(psoi_aug) == 2
         for psoi_aug_i in psoi_aug:
             assert psoi_aug_i.shape == (4, 4, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(4*(4/8), 4*(2/10)),
-                            (4*(8/8), 4*(2/10)),
-                            (4*(8/8), 4*(6/10)),
-                            (4*(4/8), 4*(6/10))])
+            assert len(psoi_aug_i.items) == 2
+            assert psoi_aug_i.items[0].coords_almost_equals(
+                [(4*(4/8), 4*(2/10)),
+                 (4*(8/8), 4*(2/10)),
+                 (4*(8/8), 4*(6/10)),
+                 (4*(4/8), 4*(6/10))]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(4*(5/8), 4*(3/10)),
-                            (4*(9/8), 4*(3/10)),
-                            (4*(9/8), 4*(7/10)),
-                            (4*(5/8), 4*(7/10))])
+            assert psoi_aug_i.items[1].coords_almost_equals(
+                [(4*(5/8), 4*(3/10)),
+                 (4*(9/8), 4*(3/10)),
+                 (4*(9/8), 4*(7/10)),
+                 (4*(5/8), 4*(7/10))]
+            )
+
+    def test_pad_line_strings_by_tuple_of_fixed_ints_without_keep_size(self):
+        aug = iaa.Pad((2, 0, 4, 4), keep_size=False)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+               ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])]
+        cbaoi = ia.LineStringsOnImage(lss, shape=(4, 4, 3))
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 8, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(4, 2), (8, 2), (8, 6), (4, 6)])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(5, 3), (9, 3), (9, 7), (5, 7)])
+
+    def test_pad_line_strings_by_tuple_of_fixed_ints_with_keep_size(self):
+        aug = iaa.Pad((2, 0, 4, 4), keep_size=True)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+               ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])]
+        cbaoi = ia.LineStringsOnImage(lss, shape=(4, 4, 3))
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (4, 4, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(4*(4/8), 4*(2/10)),
+                 (4*(8/8), 4*(2/10)),
+                 (4*(8/8), 4*(6/10)),
+                 (4*(4/8), 4*(6/10))]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(4*(5/8), 4*(3/10)),
+                 (4*(9/8), 4*(3/10)),
+                 (4*(9/8), 4*(7/10)),
+                 (4*(5/8), 4*(7/10))]
             )
 
     def test_pad_bounding_boxes_by_tuple_of_fixed_ints_without_keep_size(self):
@@ -1671,6 +1738,14 @@ class TestPad(unittest.TestCase):
         self._test_pad_cba_each_side_by_100_percent_without_keep_size(
             "augment_polygons", psoi)
 
+    def test_pad_line_strings_each_side_by_100_percent_without_keep_size(self):
+        height, width = (4, 4)
+        lss = [ia.LineString([(0, 0), (4, 0), (4, 4)]),
+               ia.LineString([(1, 2), (2, 3), (0, 4)])]
+        lsoi = ia.LineStringsOnImage(lss, shape=(height, width))
+        self._test_pad_cba_each_side_by_100_percent_without_keep_size(
+            "augment_line_strings", lsoi)
+
     def test_pad_bbs_each_side_by_100_percent_without_keep_size(self):
         height, width = (4, 4)
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=4, y2=4),
@@ -1825,45 +1900,88 @@ class TestPad(unittest.TestCase):
 
     def test_pad_polygons_by_floats_without_keep_size(self):
         aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=False)
-        psoi = ia.PolygonsOnImage([
+        cbaoi = ia.PolygonsOnImage([
             ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
             ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
         ], shape=(4, 4, 3))
-        psoi_aug = aug.augment_polygons([psoi, psoi])
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (10, 8, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(4, 2), (8, 2), (8, 6), (4, 6)])
+        cbaoi_aug = aug.augment_polygons([cbaoi, cbaoi])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 8, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(4, 2), (8, 2), (8, 6), (4, 6)]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(5, 3), (9, 3), (9, 7), (5, 7)])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(5, 3), (9, 3), (9, 7), (5, 7)]
             )
 
     def test_pad_polygons_by_floats_with_keep_size(self):
         # polygons, with keep_size=True
         aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=True)
-        psoi = ia.PolygonsOnImage([
+        cbaoi = ia.PolygonsOnImage([
             ia.Polygon([(0, 0), (4, 0), (4, 4), (0, 4)]),
             ia.Polygon([(1, 1), (5, 1), (5, 5), (1, 5)])
         ], shape=(4, 4, 3))
-        psoi_aug = aug.augment_polygons([psoi, psoi])
-        assert len(psoi_aug) == 2
-        for psoi_aug_i in psoi_aug:
-            assert psoi_aug_i.shape == (4, 4, 3)
-            assert len(psoi_aug_i.polygons) == 2
-            assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                ia.Polygon([(4*(4/8), 4*(2/10)),
-                            (4*(8/8), 4*(2/10)),
-                            (4*(8/8), 4*(6/10)),
-                            (4*(4/8), 4*(6/10))])
+        cbaoi_aug = aug.augment_polygons([cbaoi, cbaoi])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (4, 4, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(4*(4/8), 4*(2/10)),
+                 (4*(8/8), 4*(2/10)),
+                 (4*(8/8), 4*(6/10)),
+                 (4*(4/8), 4*(6/10))]
             )
-            assert psoi_aug_i.polygons[1].exterior_almost_equals(
-                ia.Polygon([(4*(5/8), 4*(3/10)),
-                            (4*(9/8), 4*(3/10)),
-                            (4*(9/8), 4*(7/10)),
-                            (4*(5/8), 4*(7/10))])
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(4*(5/8), 4*(3/10)),
+                 (4*(9/8), 4*(3/10)),
+                 (4*(9/8), 4*(7/10)),
+                 (4*(5/8), 4*(7/10))]
+            )
+
+    def test_pad_line_strings_by_floats_without_keep_size(self):
+        aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=False)
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+            ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])
+        ], shape=(4, 4, 3))
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (10, 8, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(4, 2), (8, 2), (8, 6), (4, 6)]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(5, 3), (9, 3), (9, 7), (5, 7)]
+            )
+
+    def test_pad_line_strings_by_floats_with_keep_size(self):
+        # polygons, with keep_size=True
+        aug = iaa.Pad(percent=(0.5, 0, 1.0, 1.0), keep_size=True)
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (4, 0), (4, 4), (0, 4)]),
+            ia.LineString([(1, 1), (5, 1), (5, 5), (1, 5)])
+        ], shape=(4, 4, 3))
+        cbaoi_aug = aug.augment_line_strings([cbaoi, cbaoi])
+        assert len(cbaoi_aug) == 2
+        for cbaoi_aug_i in cbaoi_aug:
+            assert cbaoi_aug_i.shape == (4, 4, 3)
+            assert len(cbaoi_aug_i.items) == 2
+            assert cbaoi_aug_i.items[0].coords_almost_equals(
+                [(4*(4/8), 4*(2/10)),
+                 (4*(8/8), 4*(2/10)),
+                 (4*(8/8), 4*(6/10)),
+                 (4*(4/8), 4*(6/10))]
+            )
+            assert cbaoi_aug_i.items[1].coords_almost_equals(
+                [(4*(5/8), 4*(3/10)),
+                 (4*(9/8), 4*(3/10)),
+                 (4*(9/8), 4*(7/10)),
+                 (4*(5/8), 4*(7/10))]
             )
 
     def test_pad_bounding_boxes_by_floats_without_keep_size(self):
@@ -1989,6 +2107,10 @@ class TestPad(unittest.TestCase):
     def test_pad_empty_polygons(self):
         cbaoi = ia.PolygonsOnImage([], shape=(2, 4, 3))
         self._test_pad_empty_cba("augment_polygons", cbaoi)
+
+    def test_pad_empty_line_strings(self):
+        cbaoi = ia.LineStringsOnImage([], shape=(2, 4, 3))
+        self._test_pad_empty_cba("augment_line_strings", cbaoi)
 
     def test_pad_empty_bounding_boxes(self):
         cbaoi = ia.BoundingBoxesOnImage([], shape=(2, 4, 3))
