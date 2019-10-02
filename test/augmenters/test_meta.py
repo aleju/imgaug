@@ -4356,7 +4356,6 @@ class TestAugmenterHooks(unittest.TestCase):
         assert keypoints_equal([keypoints_aug], [kpsoi])
 
 
-# TODO add tests for line strings
 class TestSequential(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -4428,6 +4427,16 @@ class TestSequential(unittest.TestCase):
     def polygons_aug(self):
         polygon = ia.Polygon([(3-0, 3-0), (3-2, 3-0), (3-2, 3-2), (3-0, 3-2)])
         return ia.PolygonsOnImage([polygon], shape=self.image.shape)
+
+    @property
+    def lsoi(self):
+        ls = ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])
+        return ia.LineStringsOnImage([ls], shape=self.image.shape)
+
+    @property
+    def lsoi_aug(self):
+        ls = ia.LineString([(3-0, 3-0), (3-2, 3-0), (3-2, 3-2), (3-0, 3-2)])
+        return ia.LineStringsOnImage([ls], shape=self.image.shape)
 
     @property
     def bbsoi(self):
@@ -4537,6 +4546,21 @@ class TestSequential(unittest.TestCase):
         observed = aug_det.augment_polygons(self.polygons)
 
         assert_cbaois_equal(observed, self.polygons_aug)
+
+    def test_line_strings__two_flips(self):
+        aug = self.seq_two_flips
+
+        observed = aug.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_aug)
+
+    def test_line_strings__two_flips__deterministic(self):
+        aug = self.seq_two_flips
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_aug)
 
     def test_bounding_boxes__two_flips(self):
         aug = self.seq_two_flips
