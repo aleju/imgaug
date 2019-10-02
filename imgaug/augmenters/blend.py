@@ -402,6 +402,12 @@ class Alpha(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks,
             "augment_polygons")
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_nonimages(
+            line_strings_on_images, random_state, parents, hooks,
+            "augment_line_strings")
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         return self._augment_nonimages(
@@ -679,6 +685,7 @@ class AlphaElementwise(Alpha):
         # keypoint mode currently also affects line strings
         self._keypoints_mode = self._MODE_POINTWISE
         self._polygons_mode = self._MODE_EITHER_OR
+        self._line_strings_mode = self._MODE_EITHER_OR
         self._bounding_box_mode = self._MODE_EITHER_OR
 
     def _augment_images(self, images, random_state, parents, hooks):
@@ -812,6 +819,14 @@ class AlphaElementwise(Alpha):
         with _switch_keypoint_mode_temporarily(self, mode):
             return self._augment_polygons_as_keypoints(
                 polygons_on_images, random_state, parents, hooks)
+
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        # see notes under polygons
+        mode = self._line_strings_mode
+        with _switch_keypoint_mode_temporarily(self, mode):
+            return self._augment_line_strings_as_keypoints(
+                line_strings_on_images, random_state, parents, hooks)
 
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):

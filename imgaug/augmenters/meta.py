@@ -1636,6 +1636,34 @@ class Augmenter(object):
             The augmented line strings.
 
         """
+        return line_strings_on_images
+
+    def _augment_line_strings_as_keypoints(self, line_strings_on_images,
+                                           random_state, parents, hooks):
+        """
+        Augment line strings by applying keypoint augmentation to their coords.
+
+        Parameters
+        ----------
+        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
+            Line strings to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        Returns
+        ----------
+        list of imgaug.augmentables.lines.LineStringsOnImage
+            The augmented line strings.
+
+        """
         # TODO this is very similar to the polygon augmentation method,
         #      merge somehow
         # TODO get rid of this deferred import:
@@ -3090,6 +3118,12 @@ class Sequential(Augmenter, list):
             polygons_on_images, random_state, parents, hooks,
             "augment_polygons")
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_augmentables(
+            line_strings_on_images, random_state, parents, hooks,
+            "augment_line_strings")
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         return self._augment_augmentables(
@@ -3454,6 +3488,14 @@ class SomeOf(Augmenter, list):
         return self._augment_non_images(polygons_on_images, random_state,
                                         parents, hooks, _augfunc)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
+            return augmenter_.augment_line_strings(
+                polys_to_aug_, parents_, hooks_)
+        return self._augment_non_images(line_strings_on_images, random_state,
+                                        parents, hooks, _augfunc)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         def _augfunc(augmenter_, bbs_to_aug_, parents_, hooks_):
@@ -3737,6 +3779,13 @@ class Sometimes(Augmenter):
         return self._augment_augmentables(polygons_on_images, random_state,
                                           parents, hooks, _augfunc)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        def _augfunc(augs_, augmentables_, parents_, hooks_):
+            return augs_.augment_line_strings(augmentables_, parents_, hooks_)
+        return self._augment_augmentables(line_strings_on_images, random_state,
+                                          parents, hooks, _augfunc)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         def _augfunc(augs_, augmentables_, parents_, hooks_):
@@ -3979,6 +4028,13 @@ class WithChannels(Augmenter):
         return self._augment_non_images(polygons_on_images, parents, hooks,
                                         _augfunc)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        def _augfunc(children_, inputs_, parents_, hooks_):
+            return children_.augment_line_strings(inputs_, parents_, hooks_)
+        return self._augment_non_images(line_strings_on_images, parents, hooks,
+                                        _augfunc)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         def _augfunc(children_, inputs_, parents_, hooks_):
@@ -4182,8 +4238,23 @@ class Lambda(Augmenter):
         If this is ``None`` instead of a function, the polygons will not
         be altered.
         If this is the string ``"keypoints"`` instead of a function, the
-        polygons will automatically be augmented by transforming their corner
-        vertices to keypoints and calling `func_keypoints`.
+        polygons will automatically be augmented by transforming their
+        corner vertices to keypoints and calling `func_keypoints`.
+
+    func_line_strings : "keypoints" or None or callable, optional
+        The function to call for each batch of line strings.
+        It must follow the form::
+
+            function(line_strings_on_images, random_state, parents, hooks)
+
+        and return the changed line strings (may be transformed in-place).
+        This is essentially the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_line_strings`.
+        If this is ``None`` instead of a function, the line strings will not
+        be altered.
+        If this is the string ``"keypoints"`` instead of a function, the
+        line strings will automatically be augmented by transforming their
+        corner vertices to keypoints and calling `func_keypoints`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -4236,6 +4307,7 @@ class Lambda(Augmenter):
     def __init__(self, func_images=None, func_heatmaps=None,
                  func_segmentation_maps=None, func_keypoints=None,
                  func_bounding_boxes="keypoints", func_polygons="keypoints",
+                 func_line_strings="keypoints",
                  name=None, deterministic=False, random_state=None):
         super(Lambda, self).__init__(name=name, deterministic=deterministic,
                                      random_state=random_state)
@@ -4245,6 +4317,7 @@ class Lambda(Augmenter):
         self.func_keypoints = func_keypoints
         self.func_bounding_boxes = func_bounding_boxes
         self.func_polygons = func_polygons
+        self.func_line_strings = func_line_strings
 
     def _augment_images(self, images, random_state, parents, hooks):
         if self.func_images is not None:
@@ -4326,6 +4399,27 @@ class Lambda(Augmenter):
             return result
         return polygons_on_images
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        if self.func_line_strings == "keypoints":
+            return self._augment_line_strings_as_keypoints(
+                line_strings_on_images, random_state, parents, hooks)
+        elif self.func_line_strings is not None:
+            result = self.func_line_strings(line_strings_on_images,
+                                            random_state, parents, hooks)
+            assert ia.is_iterable(result), (
+                "Expected callback function for line strings to return list of "
+                "imgaug.augmentables.lines.LineStringsOnImage instances, "
+                "got %s." % (type(result),))
+            only_ls = all([
+                isinstance(el, ia.LineStringsOnImage) for el in result])
+            assert only_ls, (
+                "Expected callback function for line strings to return list of "
+                "imgaug.augmentables.lines.LineStringsOnImages instances, "
+                "got %s." % ([type(el) for el in result],))
+            return result
+        return line_strings_on_images
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         if self.func_bounding_boxes == "keypoints":
@@ -4344,6 +4438,14 @@ class Lambda(Augmenter):
                 "Expected callback function for polygons to return list of "
                 "imgaug.augmentables.polys.PolygonsOnImage instances, "
                 "got %s." % ([type(el) for el in result],))
+
+            for bboi in bounding_boxes_on_images:
+                for bb in bboi.bounding_boxes:
+                    if bb.x1 > bb.x2:
+                        bb.x1, bb.x2 = bb.x2, bb.x1
+                    if bb.y1 > bb.y2:
+                        bb.y1, bb.y2 = bb.y2, bb.y1
+
             return result
         return bounding_boxes_on_images
 
@@ -4439,6 +4541,16 @@ class AssertLambda(Lambda):
         It essentially re-uses the interface of
         :func:`imgaug.augmenters.meta.Augmenter._augment_polygons`.
 
+    func_line_strings : None or callable, optional
+        The function to call for each batch of line strings.
+        It must follow the form::
+
+            function(line_strings_on_images, random_state, parents, hooks)
+
+        and return either ``True`` (valid input) or ``False`` (invalid input).
+        It essentially re-uses the interface of
+        :func:`imgaug.augmenters.meta.Augmenter._augment_line_strings`.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -4453,6 +4565,7 @@ class AssertLambda(Lambda):
     def __init__(self, func_images=None, func_heatmaps=None,
                  func_segmentation_maps=None, func_keypoints=None,
                  func_bounding_boxes=None, func_polygons=None,
+                 func_line_strings=None,
                  name=None, deterministic=False, random_state=None):
         def func_images_assert(images, random_state, parents, hooks):
             assert func_images(images, random_state, parents, hooks), (
@@ -4494,15 +4607,24 @@ class AssertLambda(Lambda):
                                  hooks):
             assert func_polygons(polygons_on_images, random_state, parents,
                                  hooks), (
-                "Input polygons did not fulfill user-defined assertion in"
+                "Input polygons did not fulfill user-defined assertion in "
                 "AssertLambda.")
             return polygons_on_images
+
+        def func_line_strings_assert(line_strings_on_images, random_state,
+                                     parents, hooks):
+            assert func_line_strings(line_strings_on_images, random_state,
+                                     parents, hooks), (
+                "Input line strings did not fulfill user-defined assertion in "
+                "AssertLambda.")
+            return line_strings_on_images
 
         def _default(var, var2):
             return var if var2 is not None else None
 
         func_sm_assert = func_segmentation_maps_assert
         func_sm = func_segmentation_maps
+        func_ls_assert = func_line_strings_assert
 
         super(AssertLambda, self).__init__(
             func_images=_default(func_images_assert, func_images),
@@ -4511,6 +4633,7 @@ class AssertLambda(Lambda):
             func_keypoints=_default(func_keypoints_assert, func_keypoints),
             func_bounding_boxes=_default(func_bbs_assert, func_bounding_boxes),
             func_polygons=_default(func_polygons_assert, func_polygons),
+            func_line_strings=_default(func_ls_assert, func_line_strings),
             name=name, deterministic=deterministic, random_state=random_state)
 
 
@@ -4595,6 +4718,12 @@ class AssertShape(Lambda):
         :class:`imgaug.augmentables.polys.PolygonsOnImage` instance the
         ``.shape`` attribute, i.e. the shape of the corresponding image.
 
+    check_line_strings : bool, optional
+        Whether to validate input line strings via the given shape.
+        This will check (a) the number of line strings and (b) for each
+        :class:`imgaug.augmentables.lines.LineStringsOnImage` instance the
+        ``.shape`` attribute, i.e. the shape of the corresponding image.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -4630,6 +4759,7 @@ class AssertShape(Lambda):
     def __init__(self, shape, check_images=True, check_heatmaps=True,
                  check_segmentation_maps=True, check_keypoints=True,
                  check_bounding_boxes=True, check_polygons=True,
+                 check_line_strings=True,
                  name=None, deterministic=False, random_state=None):
         assert len(shape) == 4, (
             "Expected shape to have length 4, got %d with shape: %s." % (
@@ -4642,6 +4772,7 @@ class AssertShape(Lambda):
         self.is_checking_keypoints = check_keypoints
         self.is_checking_bounding_boxes = check_bounding_boxes
         self.is_checking_polygons = check_polygons
+        self.is_checking_line_strings = check_line_strings
 
         super(AssertShape, self).__init__(
             func_images=self._check_images,
@@ -4650,6 +4781,7 @@ class AssertShape(Lambda):
             func_keypoints=self._check_keypoints,
             func_bounding_boxes=self._check_bounding_boxes,
             func_polygons=self._check_polygons,
+            func_line_strings=self._check_line_strings,
             name=name,
             deterministic=deterministic,
             random_state=random_state)
@@ -4735,6 +4867,13 @@ class AssertShape(Lambda):
         if self.is_checking_polygons:
             self._check_augmentables(polygons_on_images, lambda obj: obj.shape)
         return polygons_on_images
+
+    def _check_line_strings(self, line_strings_on_images, _random_state,
+                            _parents, _hooks):
+        if self.is_checking_line_strings:
+            self._check_augmentables(line_strings_on_images,
+                                     lambda obj: obj.shape)
+        return line_strings_on_images
 
 
 class ChannelShuffle(Augmenter):

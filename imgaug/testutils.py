@@ -46,6 +46,7 @@ def assert_cbaois_equal(observed, expected):
         for observed_i, expected_i in zip(observed, expected):
             assert_cbaois_equal(observed_i, expected_i)
     else:
+        assert type(observed) == type(expected)
         assert len(observed.items) == len(expected.items)
         assert observed.shape == expected.shape
         for item_a, item_b in zip(observed.items, expected.items):

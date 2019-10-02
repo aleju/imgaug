@@ -239,6 +239,11 @@ class TestAffine_noop(unittest.TestCase):
         return [ia.PolygonsOnImage(polygons, shape=self.base_img.shape)]
 
     @property
+    def lsoi(self):
+        ls = [ia.LineString([(0, 0), (2, 0), (2, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.base_img.shape)]
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
         return [ia.BoundingBoxesOnImage(bbs, shape=self.base_img.shape)]
@@ -289,6 +294,12 @@ class TestAffine_noop(unittest.TestCase):
 
     def test_polygons_noop__deterministic(self):
         self._test_cba_noop("augment_polygons", self.psoi, True)
+
+    def test_line_strings_noop(self):
+        self._test_cba_noop("augment_line_strings", self.lsoi, False)
+
+    def test_line_strings_noop__deterministic(self):
+        self._test_cba_noop("augment_line_strings", self.lsoi, True)
 
     def test_bounding_boxes_noop(self):
         self._test_cba_noop("augment_bounding_boxes", self.bbsoi, False)
@@ -359,6 +370,22 @@ class TestAffine_scale(unittest.TestCase):
         coords_scaled = self._scale_coordinates(coords, scale_y, scale_x)
         return [ia.PolygonsOnImage(
                     [ia.Polygon(coords_scaled)],
+                    shape=self.base_img.shape)]
+
+    @property
+    def lsoi(self):
+        ls = [ia.LineString([(0, 0), (0, 2), (2, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.base_img.shape)]
+
+    def lsoi_scaled(self, scale_y, scale_x):
+        coords = np.array([
+            [0, 0],
+            [0, 2],
+            [2, 2]
+        ], dtype=np.float32)
+        coords_scaled = self._scale_coordinates(coords, scale_y, scale_x)
+        return [ia.LineStringsOnImage(
+                    [ia.LineString(coords_scaled)],
                     shape=self.base_img.shape)]
 
     @property
@@ -463,6 +490,16 @@ class TestAffine_scale(unittest.TestCase):
             "augment_polygons", 1.75,
             self.psoi, self.psoi_scaled(1.75, 1.75), True)
 
+    def test_line_strings_scale_zoom_in(self):
+        self._test_cba_scale(
+            "augment_line_strings", 1.75,
+            self.lsoi, self.lsoi_scaled(1.75, 1.75), False)
+
+    def test_line_strings_scale_zoom_in__deterministic(self):
+        self._test_cba_scale(
+            "augment_line_strings", 1.75,
+            self.lsoi, self.lsoi_scaled(1.75, 1.75), True)
+
     def test_bounding_boxes_scale_zoom_in(self):
         self._test_cba_scale(
             "augment_bounding_boxes", 1.75,
@@ -557,6 +594,16 @@ class TestAffine_scale(unittest.TestCase):
             "augment_polygons", {"y": 1.0, "x": 1.75}, self.psoi,
             self.psoi_scaled(1.0, 1.75), True)
 
+    def test_line_strings_scale_zoom_in_only_x_axis(self):
+        self._test_cba_scale(
+            "augment_line_strings", {"y": 1.0, "x": 1.75}, self.lsoi,
+            self.lsoi_scaled(1.0, 1.75), False)
+
+    def test_line_strings_scale_zoom_in_only_x_axis__deterministic(self):
+        self._test_cba_scale(
+            "augment_line_strings", {"y": 1.0, "x": 1.75}, self.lsoi,
+            self.lsoi_scaled(1.0, 1.75), True)
+
     def test_bounding_boxes_scale_zoom_in_only_x_axis(self):
         self._test_cba_scale(
             "augment_bounding_boxes", {"y": 1.0, "x": 1.75}, self.bbsoi,
@@ -639,6 +686,16 @@ class TestAffine_scale(unittest.TestCase):
         self._test_cba_scale(
             "augment_polygons", {"y": 1.75, "x": 1.0}, self.psoi,
             self.psoi_scaled(1.75, 1.0), True)
+
+    def test_line_strings_scale_zoom_in_only_y_axis(self):
+        self._test_cba_scale(
+            "augment_polygons", {"y": 1.75, "x": 1.0}, self.psoi,
+            self.psoi_scaled(1.75, 1.0), False)
+
+    def test_line_strings_scale_zoom_in_only_y_axis__deterministic(self):
+        self._test_cba_scale(
+            "augment_line_strings", {"y": 1.75, "x": 1.0}, self.lsoi,
+            self.lsoi_scaled(1.75, 1.0), True)
 
     def test_bounding_boxes_scale_zoom_in_only_y_axis(self):
         self._test_cba_scale(
@@ -759,6 +816,16 @@ class TestAffine_scale(unittest.TestCase):
             "augment_polygons", 0.49, self.psoi,
             self.psoi_scaled(0.49, 0.49), True)
 
+    def test_line_strings_scale_zoom_out(self):
+        self._test_cba_scale(
+            "augment_line_strings", 0.49, self.lsoi,
+            self.lsoi_scaled(0.49, 0.49), False)
+
+    def test_line_strings_scale_zoom_out__deterministic(self):
+        self._test_cba_scale(
+            "augment_line_strings", 0.49, self.lsoi,
+            self.lsoi_scaled(0.49, 0.49), True)
+
     def test_bounding_boxes_scale_zoom_out(self):
         self._test_cba_scale(
             "augment_bounding_boxes", 0.49, self.bbsoi,
@@ -825,6 +892,7 @@ class TestAffine_scale(unittest.TestCase):
 
     # ------------
     # alignment
+    # TODO add alignment tests for: BBs, Polys, LS
     # ------------
     def test_keypoint_alignment(self):
         image = np.zeros((100, 100), dtype=np.uint8)
@@ -953,6 +1021,21 @@ class TestAffine_translate(unittest.TestCase):
         return [ia.PolygonsOnImage(polys, shape=self.image.shape)]
 
     @property
+    def lsoi(self):
+        ls = [ia.LineString([(0, 0), (2, 0), (2, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
+    def lsoi_1px_right(self):
+        ls = [ia.LineString([(0+1, 0), (2+1, 0), (2+1, 2)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
+    def lsoi_1px_bottom(self):
+        ls = [ia.LineString([(0, 0+1), (2, 0+1), (2, 2+1)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
         return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
@@ -1024,6 +1107,16 @@ class TestAffine_translate(unittest.TestCase):
         self._test_cba_translate_px(
             "augment_polygons", {"x": 1, "y": 0},
             self.psoi, self.psoi_1px_right, True)
+
+    def test_line_strings_translate_1px_right(self):
+        self._test_cba_translate_px(
+            "augment_line_strings", {"x": 1, "y": 0},
+            self.lsoi, self.lsoi_1px_right, False)
+
+    def test_line_strings_translate_1px_right__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_line_strings", {"x": 1, "y": 0},
+            self.lsoi, self.lsoi_1px_right, True)
 
     def test_bounding_boxes_translate_1px_right(self):
         self._test_cba_translate_px(
@@ -1153,6 +1246,16 @@ class TestAffine_translate(unittest.TestCase):
             "augment_polygons", {"x": 0, "y": 1},
             self.psoi, self.psoi_1px_bottom, True)
 
+    def test_line_strings_translate_1px_bottom(self):
+        self._test_cba_translate_px(
+            "augment_line_strings", {"x": 0, "y": 1},
+            self.lsoi, self.lsoi_1px_bottom, False)
+
+    def test_line_strings_translate_1px_bottom__deterministic(self):
+        self._test_cba_translate_px(
+            "augment_line_strings", {"x": 0, "y": 1},
+            self.lsoi, self.lsoi_1px_bottom, True)
+
     def test_bounding_boxes_translate_1px_bottom(self):
         self._test_cba_translate_px(
             "augment_bounding_boxes", {"x": 0, "y": 1},
@@ -1219,6 +1322,16 @@ class TestAffine_translate(unittest.TestCase):
         self._test_cba_translate_percent(
             "augment_polygons", {"x": 0.3333, "y": 0},
             self.psoi, self.psoi_1px_right, True)
+
+    def test_line_strings_translate_33percent_right(self):
+        self._test_cba_translate_percent(
+            "augment_line_strings", {"x": 0.3333, "y": 0},
+            self.lsoi, self.lsoi_1px_right, False)
+
+    def test_line_strings_translate_33percent_right__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_line_strings", {"x": 0.3333, "y": 0},
+            self.lsoi, self.lsoi_1px_right, True)
 
     def test_bounding_boxes_translate_33percent_right(self):
         self._test_cba_translate_percent(
@@ -1299,6 +1412,16 @@ class TestAffine_translate(unittest.TestCase):
         self._test_cba_translate_percent(
             "augment_polygons", {"x": 0, "y": 0.3333},
             self.psoi, self.psoi_1px_bottom, True)
+
+    def test_line_strings_translate_33percent_bottom(self):
+        self._test_cba_translate_percent(
+            "augment_line_strings", {"x": 0, "y": 0.3333},
+            self.lsoi, self.lsoi_1px_bottom, False)
+
+    def test_line_strings_translate_33percent_bottom__deterministic(self):
+        self._test_cba_translate_percent(
+            "augment_line_strings", {"x": 0, "y": 0.3333},
+            self.lsoi, self.lsoi_1px_bottom, True)
 
     def test_bounding_boxes_translate_33percent_bottom(self):
         self._test_cba_translate_percent(
@@ -1521,6 +1644,16 @@ class TestAffine_rotate(unittest.TestCase):
         return [ia.PolygonsOnImage(polys, shape=self.image_rot90.shape)]
 
     @property
+    def lsoi(self):
+        ls = [ia.LineString([(0, 0), (3, 0), (3, 3)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image.shape)]
+
+    @property
+    def lsoi_rot90(self):
+        ls = [ia.LineString([(3-0, 0), (3-0, 3), (3-3, 3)])]
+        return [ia.LineStringsOnImage(ls, shape=self.image_rot90.shape)]
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)]
         return [ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)]
@@ -1584,6 +1717,14 @@ class TestAffine_rotate(unittest.TestCase):
     def test_polygons_rot90__deterministic(self):
         self._test_cba_rotate(
             "augment_polygons", 90, self.psoi, self.psoi_rot90, True)
+
+    def test_line_strings_rot90(self):
+        self._test_cba_rotate(
+            "augment_line_strings", 90, self.lsoi, self.lsoi_rot90, False)
+
+    def test_line_strings_rot90__deterministic(self):
+        self._test_cba_rotate(
+            "augment_line_strings", 90, self.lsoi, self.lsoi_rot90, True)
 
     def test_bounding_boxes_rot90(self):
         self._test_cba_rotate(
@@ -2131,51 +2272,100 @@ class TestAffine_fit_output(unittest.TestCase):
                 assert kps_aug.shape == (200, 100, 3)
                 assert len(kps_aug.keypoints) == 0
 
-    def test_polygons_rot90_without_fit_output(self):
+    def _test_cbaoi_rot90_without_fit_output(self, cbaoi, augf_name):
         for backend in ["auto", "cv2", "skimage"]:
             with self.subTest(backend=backend):
                 # verify that shape in PolygonsOnImages changes
                 aug = iaa.Affine(rotate=90, backend=backend)
-                psoi = ia.PolygonsOnImage([
-                    ia.Polygon([(10, 10), (20, 10), (20, 20)])
-                ], shape=(100, 200, 3))
 
-                psoi_aug = aug.augment_polygons([psoi, psoi])
+                cbaoi_aug = getattr(aug, augf_name)([cbaoi, cbaoi])
 
-                assert len(psoi_aug) == 2
-                for psoi_aug_i in psoi_aug:
-                    assert psoi_aug_i.shape == (100, 200, 3)
-                    assert not psoi_aug_i.polygons[0].exterior_almost_equals(
-                        psoi.polygons[0].exterior, max_distance=1e-2)
-                    assert psoi_aug_i.polygons[0].is_valid
+                assert len(cbaoi_aug) == 2
+                for cbaoi_aug_i in cbaoi_aug:
+                    if isinstance(cbaoi, (ia.PolygonsOnImage,
+                                          ia.LineStringsOnImage)):
+                        assert cbaoi_aug_i.shape == cbaoi.shape
+                        assert not cbaoi_aug_i.items[0].coords_almost_equals(
+                            cbaoi.items[0].coords, max_distance=1e-2)
+                    else:
+                        assert_cbaois_equal(cbaoi_aug_i, cbaoi)
+
+    def test_polygons_rot90_without_fit_output(self):
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(10, 10), (20, 10), (20, 20)])
+        ], shape=(100, 200, 3))
+
+        self._test_cbaoi_rot90_without_fit_output(psoi, "augment_polygons")
+
+    def test_line_strings_rot90_without_fit_output(self):
+        lsoi = ia.LineStringsOnImage([
+            ia.LineString([(10, 10), (20, 10), (20, 20), (10, 10)])
+        ], shape=(100, 200, 3))
+
+        self._test_cbaoi_rot90_without_fit_output(lsoi, "augment_line_strings")
+
+    def _test_cbaoi_rot90(self, cbaoi, expected, augf_name):
+        for backend in ["auto", "cv2", "skimage"]:
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
+
+                cbaoi_aug = getattr(aug, augf_name)([cbaoi, cbaoi])
+
+                assert len(cbaoi_aug) == 2
+                for cbaoi_aug_i in cbaoi_aug:
+                    assert_cbaois_equal(cbaoi_aug_i, expected)
 
     def test_polygons_rot90(self):
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(10, 10), (20, 10), (20, 20)])
+        ], shape=(100, 200, 3))
+        expected = ia.PolygonsOnImage([
+            ia.Polygon([(100-10-1, 10), (100-10-1, 20), (100-20-1, 20)])
+        ], shape=(200, 100, 3))
+        self._test_cbaoi_rot90(psoi, expected, "augment_polygons")
+
+    def test_line_strings_rot90(self):
+        lsoi = ia.LineStringsOnImage([
+            ia.LineString([(10, 10), (20, 10), (20, 20), (10, 10)])
+        ], shape=(100, 200, 3))
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(100-10-1, 10), (100-10-1, 20), (100-20-1, 20),
+                           (100-10-1, 10)])
+        ], shape=(200, 100, 3))
+        self._test_cbaoi_rot90(lsoi, expected, "augment_line_strings")
+
+    def test_bounding_boxes_rot90(self):
+        lsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=10, y1=10, x2=20, y2=20)
+        ], shape=(100, 200, 3))
+        expected = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=100-20-1, y1=10, x2=100-10-1, y2=20)
+        ], shape=(200, 100, 3))
+        self._test_cbaoi_rot90(lsoi, expected, "augment_bounding_boxes")
+
+    def _test_empty_cbaoi_rot90(self, cbaoi, expected, augf_name):
         for backend in ["auto", "cv2", "skimage"]:
             with self.subTest(backend=backend):
                 aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
-                psoi = ia.PolygonsOnImage([
-                    ia.Polygon([(10, 10), (20, 10), (20, 20)])
-                ], shape=(100, 200, 3))
 
-                psoi_aug = aug.augment_polygons([psoi, psoi])
+                cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-                assert len(psoi_aug) == 2
-                for psoi_aug_i in psoi_aug:
-                    assert psoi_aug_i.shape == (200, 100, 3)
-                    assert psoi_aug_i.polygons[0].exterior_almost_equals(
-                        ia.Polygon([(100-10-1, 10), (100-10-1, 20),
-                                    (100-20-1, 20)])
-                    )
-                    assert psoi_aug_i.polygons[0].is_valid
+                assert_cbaois_equal(cbaoi_aug, expected)
 
     def test_empty_polygons_rot90(self):
-        for backend in ["auto", "cv2", "skimage"]:
-            with self.subTest(backend=backend):
-                aug = iaa.Affine(rotate=90, fit_output=True, backend=backend)
-                psoi = ia.PolygonsOnImage([], shape=(100, 200, 3))
-                psoi_aug = aug.augment_polygons(psoi)
-                assert psoi_aug.shape == (200, 100, 3)
-                assert len(psoi_aug.polygons) == 0
+        psoi = ia.PolygonsOnImage([], shape=(100, 200, 3))
+        expected = ia.PolygonsOnImage([], shape=(200, 100, 3))
+        self._test_empty_cbaoi_rot90(psoi, expected, "augment_polygons")
+
+    def test_empty_line_strings_rot90(self):
+        lsoi = ia.LineStringsOnImage([], shape=(100, 200, 3))
+        expected = ia.LineStringsOnImage([], shape=(200, 100, 3))
+        self._test_empty_cbaoi_rot90(lsoi, expected, "augment_line_strings")
+
+    def test_empty_bounding_boxes_rot90(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(100, 200, 3))
+        expected = ia.BoundingBoxesOnImage([], shape=(200, 100, 3))
+        self._test_empty_cbaoi_rot90(bbsoi, expected, "augment_bounding_boxes")
 
 
 # TODO merge these into TestAffine_rotate since they are rotations?
@@ -2226,29 +2416,26 @@ class TestAffine_alignment(unittest.TestCase):
         assert len(set(img_aug_indices)) == 2
         assert len(set(kpsois_aug_indices)) == 2
 
-    def test_image_polygon_alignment(self):
+    @classmethod
+    def _test_image_cbaoi_alignment(cls, cbaoi, cbaoi_rot, augf_name):
         aug = iaa.Affine(rotate=[0, 180], order=0)
         img = np.zeros((10, 10), dtype=np.uint8)
         img[0:5, 5] = 255
         img[2, 4:6] = 255
         img_rot = [np.copy(img), np.copy(np.flipud(np.fliplr(img)))]
-        psoi = ia.PolygonsOnImage([ia.Polygon([(1, 1), (9, 1), (5, 5)])],
-                                  shape=img.shape)
-        psoi_rot = [
-            psoi.polygons[0].deepcopy(),
-            ia.Polygon([(10-1, 10-1), (10-9, 10-1), (10-5, 10-5)])
-        ]
+
         img_aug_indices = []
-        psois_aug_indices = []
+        cbaois_aug_indices = []
         for _ in sm.xrange(40):
             aug_det = aug.to_deterministic()
             imgs_aug = aug_det.augment_images([img, img])
-            psois_aug = aug_det.augment_polygons([psoi, psoi])
+            cbaois_aug = getattr(aug_det, augf_name)([cbaoi, cbaoi])
 
-            assert psois_aug[0].shape == img.shape
-            assert psois_aug[1].shape == img.shape
-            assert psois_aug[0].polygons[0].is_valid
-            assert psois_aug[1].polygons[0].is_valid
+            assert cbaois_aug[0].shape == img.shape
+            assert cbaois_aug[1].shape == img.shape
+            if hasattr(cbaois_aug[0].items[0], "is_valid"):
+                assert cbaois_aug[0].items[0].is_valid
+                assert cbaois_aug[1].items[0].is_valid
 
             for img_aug in imgs_aug:
                 if np.array_equal(img_aug, img_rot[0]):
@@ -2257,16 +2444,45 @@ class TestAffine_alignment(unittest.TestCase):
                     img_aug_indices.append(1)
                 else:
                     assert False
-            for psoi_aug in psois_aug:
-                if psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[0]):
-                    psois_aug_indices.append(0)
-                elif psoi_aug.polygons[0].exterior_almost_equals(psoi_rot[1]):
-                    psois_aug_indices.append(1)
+            for cbaoi_aug in cbaois_aug:
+                if cbaoi_aug.items[0].coords_almost_equals(cbaoi_rot[0]):
+                    cbaois_aug_indices.append(0)
+                elif cbaoi_aug.items[0].coords_almost_equals(cbaoi_rot[1]):
+                    cbaois_aug_indices.append(1)
                 else:
                     assert False
-        assert np.array_equal(img_aug_indices, psois_aug_indices)
+        assert np.array_equal(img_aug_indices, cbaois_aug_indices)
         assert len(set(img_aug_indices)) == 2
-        assert len(set(psois_aug_indices)) == 2
+        assert len(set(cbaois_aug_indices)) == 2
+
+    def test_image_polygon_alignment(self):
+        psoi = ia.PolygonsOnImage([ia.Polygon([(1, 1), (9, 1), (5, 5)])],
+                                  shape=(10, 10))
+        psoi_rot = [
+            psoi.polygons[0].deepcopy(),
+            ia.Polygon([(10-1, 10-1), (10-9, 10-1), (10-5, 10-5)])
+        ]
+        self._test_image_cbaoi_alignment(psoi, psoi_rot,
+                                         "augment_polygons")
+
+    def test_image_line_string_alignment(self):
+        lsoi = ia.LineStringsOnImage([ia.LineString([(1, 1), (9, 1), (5, 5)])],
+                                     shape=(10, 10))
+        lsoi_rot = [
+            lsoi.items[0].deepcopy(),
+            ia.LineString([(10-1, 10-1), (10-9, 10-1), (10-5, 10-5)])
+        ]
+        self._test_image_cbaoi_alignment(lsoi, lsoi_rot,
+                                         "augment_line_strings")
+
+    def test_image_bounding_box_alignment(self):
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=1, y1=1, x2=9, y2=5)], shape=(10, 10))
+        bbsoi_rot = [
+            bbsoi.items[0].deepcopy(),
+            ia.BoundingBox(x1=10-9, y1=10-5, x2=10-1, y2=10-1)]
+        self._test_image_cbaoi_alignment(bbsoi, bbsoi_rot,
+                                         "augment_bounding_boxes")
 
 
 class TestAffine_other_dtypes(unittest.TestCase):
@@ -3982,9 +4198,15 @@ class TestPiecewiseAffine(unittest.TestCase):
 
         assert_cbaois_equal(kpsoi_aug, kpsoi)
 
-    def test_scale_is_zero_polygons(self):
-        # scale 0
+    @classmethod
+    def _test_scale_is_zero_cbaoi(cls, cbaoi, augf_name):
         aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi)
+
+    def test_scale_is_zero_polygons(self):
         exterior = [(10, 10),
                     (70, 10), (70, 20), (70, 30), (70, 40),
                     (70, 50), (70, 60), (70, 70), (70, 80),
@@ -3996,20 +4218,28 @@ class TestPiecewiseAffine(unittest.TestCase):
         psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
                                   shape=(100, 80))
 
-        observed = aug.augment_polygons(psoi)
+        self._test_scale_is_zero_cbaoi(psoi, "augment_polygons")
 
-        assert_cbaois_equal(observed, psoi)
+    def test_scale_is_zero_line_strings(self):
+        coords = [(10, 10),
+                  (70, 10), (70, 20), (70, 30), (70, 40),
+                  (70, 50), (70, 60), (70, 70), (70, 80),
+                  (70, 90),
+                  (10, 90),
+                  (10, 80), (10, 70), (10, 60), (10, 50),
+                  (10, 40), (10, 30), (10, 20), (10, 10)]
+        ls = ia.LineString(coords)
+        lsoi = ia.LineStringsOnImage([ls, ls.shift(left=1, top=1)],
+                                     shape=(100, 80))
+
+        self._test_scale_is_zero_cbaoi(lsoi, "augment_line_strings")
 
     def test_scale_is_zero_bounding_boxes(self):
-        # scale 0
-        aug = iaa.PiecewiseAffine(scale=0, nb_rows=10, nb_cols=10)
         bb = ia.BoundingBox(x1=10, y1=10, x2=70, y2=20)
         bbsoi = ia.BoundingBoxesOnImage([bb, bb.shift(left=1, top=1)],
                                         shape=(100, 80))
 
-        observed = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
+        self._test_scale_is_zero_cbaoi(bbsoi, "augment_bounding_boxes")
 
     def test_scale_stronger_values_should_increase_changes_images(self):
         # stronger scale should lead to stronger changes
@@ -4251,35 +4481,46 @@ class TestPiecewiseAffine(unittest.TestCase):
         for kp in observed_kpsoi[0].keypoints:
             assert observed_img[int(kp.y), int(kp.x)] > 0
 
-    def test_scale_alignment_between_images_and_polygons(self):
+    @classmethod
+    def _test_scale_alignment_between_images_and_poly_or_line_strings(
+            cls, cba_class, cbaoi_class, augf_name):
         img = np.zeros((100, 80), dtype=np.uint8)
         img[:, 10-5:10+5] = 255
         img[:, 70-5:70+5] = 255
-        exterior = [(10, 10),
-                    (70, 10), (70, 20), (70, 30), (70, 40),
-                    (70, 50), (70, 60), (70, 70), (70, 80),
-                    (70, 90),
-                    (10, 90),
-                    (10, 80), (10, 70), (10, 60), (10, 50),
-                    (10, 40), (10, 30), (10, 20), (10, 10)]
-        poly = ia.Polygon(exterior)
-        psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
-                                  shape=img.shape)
+        coords = [(10, 10),
+                  (70, 10), (70, 20), (70, 30), (70, 40),
+                  (70, 50), (70, 60), (70, 70), (70, 80),
+                  (70, 90),
+                  (10, 90),
+                  (10, 80), (10, 70), (10, 60), (10, 50),
+                  (10, 40), (10, 30), (10, 20), (10, 10)]
+        cba = cba_class(coords)
+        cbaoi = cbaoi_class([cba, cba.shift(left=1, top=1)],
+                            shape=img.shape)
 
         aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
         aug_det = aug.to_deterministic()
 
         observed_imgs = aug_det.augment_images([img, img])
-        observed_psois = aug_det.augment_polygons([psoi, psoi])
+        observed_cbaois = getattr(aug_det, augf_name)([cbaoi, cbaoi])
 
-        for observed_img, observed_psoi in zip(observed_imgs, observed_psois):
-            assert observed_psoi.shape == img.shape
-            for poly_aug in observed_psoi.polygons:
-                assert poly_aug.is_valid
-                for point_aug in poly_aug.exterior:
+        for observed_img, observed_cbaoi in zip(observed_imgs, observed_cbaois):
+            assert observed_cbaoi.shape == img.shape
+            for cba_aug in observed_cbaoi.items:
+                if hasattr(cba_aug, "is_valid"):
+                    assert cba_aug.is_valid
+                for point_aug in cba_aug.coords:
                     x = int(np.round(point_aug[0]))
                     y = int(np.round(point_aug[1]))
                     assert observed_img[y, x] > 0
+
+    def test_scale_alignment_between_images_and_polygons(self):
+        self._test_scale_alignment_between_images_and_poly_or_line_strings(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_scale_alignment_between_images_and_line_strings(self):
+        self._test_scale_alignment_between_images_and_poly_or_line_strings(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
 
     def test_scale_alignment_between_images_and_bounding_boxes(self):
         img = np.zeros((100, 80), dtype=np.uint8)
@@ -4545,6 +4786,27 @@ class TestPiecewiseAffine(unittest.TestCase):
         observed = aug.augment_polygons(psoi)
 
         assert_cbaois_equal(observed, psoi)
+
+    # ---------
+    # remaining line string tests
+    # ---------
+    def test_line_strings_outside_of_image(self):
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=10, nb_cols=10)
+        coords = [(-10, -10), (110, -10), (110, 90), (-10, 90)]
+        ls = ia.LineString(coords)
+        lsoi = ia.LineStringsOnImage([ls], shape=(10, 10, 3))
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
+
+    def test_empty_line_strings(self):
+        aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=10, nb_cols=10)
+        lsoi = ia.LineStringsOnImage([], shape=(10, 10, 3))
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
 
     # ---------
     # remaining bounding box tests
@@ -5155,62 +5417,67 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert_cbaois_equal(observed, kpsoi)
 
     # --------
-    # polygons
+    # abstract test methods for polygons and line strings
     # --------
-    def test_polygons_without_keep_size(self):
-        exterior = np.float32([
+    @classmethod
+    def _test_cbaois_without_keep_size(cls, cba_class, cbaoi_class, augf_name):
+        points = np.float32([
             [10, 10],
             [25, 10],
             [25, 25],
             [10, 25]
         ])
-        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+        cbaoi = cbaoi_class([cba_class(points)], shape=(30, 30, 3))
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
         aug.jitter = iap.Deterministic(0.2)
 
-        observed = aug.augment_polygons(psoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
         assert observed.shape == (30 - 12, 30 - 12, 3)
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].is_valid
+        assert len(observed.items) == 1
+        if hasattr(observed.items[0], "is_valid"):
+            assert observed.items[0].is_valid
 
-        exterior_expected = np.copy(exterior)
-        exterior_expected[:, 0] -= 0.2 * 30
-        exterior_expected[:, 1] -= 0.2 * 30
+        points_expected = np.copy(points)
+        points_expected[:, 0] -= 0.2 * 30
+        points_expected[:, 1] -= 0.2 * 30
         # TODO deviations of around 0.5 here from expected values, why?
-        assert observed.polygons[0].exterior_almost_equals(
-            exterior_expected, max_distance=1.5)
+        assert observed.items[0].coords_almost_equals(
+            points_expected, max_distance=1.5)
 
-    def test_polygons_with_keep_size(self):
+    @classmethod
+    def _test_cbaois_with_keep_size(cls, cba_class, cbaoi_class, augf_name):
         # polygon augmentation with keep_size
-        exterior = np.float32([
+        points = np.float32([
             [10, 10],
             [25, 10],
             [25, 25],
             [10, 25]
         ])
-        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=(30, 30, 3))
+        cbaoi = cbaoi_class([cba_class(points)], shape=(30, 30, 3))
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
         aug.jitter = iap.Deterministic(0.2)
 
-        observed = aug.augment_polygons(psoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
         assert observed.shape == (30, 30, 3)
-        assert len(observed.polygons) == 1
-        assert observed.polygons[0].is_valid
+        assert len(observed.items) == 1
+        if hasattr(observed.items[0], "is_valid"):
+            assert observed.items[0].is_valid
 
-        exterior_expected = np.copy(exterior)
-        exterior_expected[:, 0] = (
-            (exterior_expected[:, 0] - 0.2 * 30) / (30 * 0.6)
+        points_expected = np.copy(points)
+        points_expected[:, 0] = (
+            (points_expected[:, 0] - 0.2 * 30) / (30 * 0.6)
         ) * 30
-        exterior_expected[:, 1] = (
-            (exterior_expected[:, 1] - 0.2 * 30) / (30 * 0.6)
+        points_expected[:, 1] = (
+            (points_expected[:, 1] - 0.2 * 30) / (30 * 0.6)
         ) * 30
         # TODO deviations of around 0.5 here from expected values, why?
-        assert observed.polygons[0].exterior_almost_equals(
-            exterior_expected, max_distance=2.5)
+        assert observed.items[0].coords_almost_equals(
+            points_expected, max_distance=2.5)
 
-    def test_image_polygon_alignment(self):
+    @classmethod
+    def _test_image_cba_alignment(cls, cba_class, cbaoi_class, augf_name):
         img = np.zeros((100, 100), dtype=np.uint8)
         img[25-3:25+3, 25-3:25+3] = 255
         img[50-3:50+3, 25-3:25+3] = 255
@@ -5218,7 +5485,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         img[25-3:25+3, 75-3:75+3] = 255
         img[50-3:50+3, 75-3:75+3] = 255
         img[75-3:75+3, 75-3:75+3] = 255
-        exterior = [
+        points = [
             [25, 25],
             [75, 25],
             [75, 50],
@@ -5227,31 +5494,51 @@ class TestPerspectiveTransform(unittest.TestCase):
             [25, 50]
         ]
 
-        psoi = ia.PolygonsOnImage([ia.Polygon(exterior)], shape=img.shape)
+        cbaoi = cbaoi_class([cba_class(points)], shape=img.shape)
         aug = iaa.PerspectiveTransform(scale=0.1, keep_size=True)
         for _ in sm.xrange(10):
             aug_det = aug.to_deterministic()
             imgs_aug = aug_det.augment_images([img] * 4)
-            psois_aug = aug_det.augment_polygons([psoi] * 4)
+            cbaois_aug = getattr(aug_det, augf_name)([cbaoi] * 4)
 
-            for img_aug, psoi_aug in zip(imgs_aug, psois_aug):
-                assert psoi_aug.shape == img.shape
-                for poly_aug in psoi_aug.polygons:
-                    assert poly_aug.is_valid
-                    for x, y in poly_aug.exterior:
+            for img_aug, cbaoi_aug in zip(imgs_aug, cbaois_aug):
+                assert cbaoi_aug.shape == img.shape
+                for cba_aug in cbaoi_aug.items:
+                    if hasattr(cba_aug, "is_valid"):
+                        assert cba_aug.is_valid
+                    for x, y in cba_aug.coords:
                         if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
                             bb = ia.BoundingBox(x1=x-2, x2=x+2, y1=y-2, y2=y+2)
                             img_ex = bb.extract_from_image(img_aug)
                             assert np.any(img_ex > 10)
 
-    def test_empty_polygons(self):
+    @classmethod
+    def _test_empty_cba(cls, cbaoi, augf_name):
         # test empty polygons
-        psoi = ia.PolygonsOnImage([], shape=(20, 10, 3))
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
 
-        observed = aug.augment_polygons(psoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(observed, psoi)
+        assert_cbaois_equal(observed, cbaoi)
+
+    # --------
+    # polygons
+    # --------
+    def test_polygons_without_keep_size(self):
+        self._test_cbaois_without_keep_size(ia.Polygon, ia.PolygonsOnImage,
+                                            "augment_polygons")
+
+    def test_polygons_with_keep_size(self):
+        self._test_cbaois_with_keep_size(ia.Polygon, ia.PolygonsOnImage,
+                                         "augment_polygons")
+
+    def test_image_polygon_alignment(self):
+        self._test_image_cba_alignment(ia.Polygon, ia.PolygonsOnImage,
+                                       "augment_polygons")
+
+    def test_empty_polygons(self):
+        psoi = ia.PolygonsOnImage([], shape=(20, 10, 3))
+        self._test_empty_cba(psoi, "augment_polygons")
 
     def test_polygons_under_extreme_scale_values(self):
         # test extreme scales
@@ -5293,6 +5580,25 @@ class TestPerspectiveTransform(unittest.TestCase):
                 assert poly0.exterior_almost_equals(
                     exterior_expected, max_distance=2.0)
                 """
+
+    # --------
+    # line strings
+    # --------
+    def test_line_strings_without_keep_size(self):
+        self._test_cbaois_without_keep_size(ia.LineString, ia.LineStringsOnImage,
+                                            "augment_line_strings")
+
+    def test_line_strings_with_keep_size(self):
+        self._test_cbaois_with_keep_size(ia.LineString, ia.LineStringsOnImage,
+                                         "augment_line_strings")
+
+    def test_image_line_string_alignment(self):
+        self._test_image_cba_alignment(ia.LineString, ia.LineStringsOnImage,
+                                       "augment_line_strings")
+
+    def test_empty_line_strings(self):
+        lsoi = ia.LineStringsOnImage([], shape=(20, 10, 3))
+        self._test_empty_cba(lsoi, "augment_line_strings")
 
     # --------
     # bounding boxes
@@ -6138,53 +6444,63 @@ class TestElasticTransformation(unittest.TestCase):
         assert kpsoi_aug.shape == (10, 10, 3)
 
     # -----------
-    # polygons
+    # abstract methods for polygons and line strings
     # -----------
-    def test_polygons_no_movement_if_alpha_below_threshold(self):
+    @classmethod
+    def _test_cbaois_no_movement_if_alpha_below_threshold(
+            cls, cba_class, cbaoi_class, augf_name):
         # for small alpha, should not move if below threshold
         with _elastic_trans_temp_thresholds(alpha=1.0, sigma=0.0):
-            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            cba = cba_class([(10, 15), (40, 15), (40, 35), (10, 35)])
+            cbaoi = cbaoi_class([cba], shape=(50, 50))
             aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
 
-            observed = aug.augment_polygons(psoi)
+            observed = getattr(aug, augf_name)(cbaoi)
 
             assert observed.shape == (50, 50)
-            assert len(observed.polygons) == 1
-            assert observed.polygons[0].exterior_almost_equals(poly)
-            assert observed.polygons[0].is_valid
+            assert len(observed.items) == 1
+            assert observed.items[0].coords_almost_equals(cba)
+            if hasattr(observed.items[0], "is_valid"):
+                assert observed.items[0].is_valid
 
-    def test_polygons_no_movement_if_sigma_below_threshold(self):
+    @classmethod
+    def _test_cbaois_no_movement_if_sigma_below_threshold(
+            cls, cba_class, cbaoi_class, augf_name):
         # for small sigma, should not move if below threshold
         with _elastic_trans_temp_thresholds(alpha=0.0, sigma=1.0):
-            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            cba = cba_class([(10, 15), (40, 15), (40, 35), (10, 35)])
+            cbaoi = cbaoi_class([cba], shape=(50, 50))
             aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
 
-            observed = aug.augment_polygons(psoi)
+            observed = getattr(aug, augf_name)(cbaoi)
 
             assert observed.shape == (50, 50)
-            assert len(observed.polygons) == 1
-            assert observed.polygons[0].exterior_almost_equals(poly)
-            assert observed.polygons[0].is_valid
+            assert len(observed.items) == 1
+            assert observed.items[0].coords_almost_equals(cba)
+            if hasattr(observed.items[0], "is_valid"):
+                assert observed.items[0].is_valid
 
-    def test_polygons_small_movement_for_weak_alpha_if_threshold_zero(self):
+    @classmethod
+    def _test_cbaois_small_movement_for_weak_alpha_if_threshold_zero(
+            cls, cba_class, cbaoi_class, augf_name):
         # for small alpha (at sigma 1.0), should barely move
         # if thresholds set to zero
         with _elastic_trans_temp_thresholds(alpha=0.0, sigma=0.0):
-            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            cba = cba_class([(10, 15), (40, 15), (40, 35), (10, 35)])
+            cbaoi = cbaoi_class([cba], shape=(50, 50))
             aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
 
-            observed = aug.augment_polygons(psoi)
+            observed = getattr(aug, augf_name)(cbaoi)
 
             assert observed.shape == (50, 50)
-            assert len(observed.polygons) == 1
-            assert observed.polygons[0].exterior_almost_equals(
-                poly, max_distance=0.5)
-            assert observed.polygons[0].is_valid
+            assert len(observed.items) == 1
+            assert observed.items[0].coords_almost_equals(
+                cba, max_distance=0.5)
+            if hasattr(observed.items[0], "is_valid"):
+                assert observed.items[0].is_valid
 
-    def test_image_polygon_alignment(self):
+    @classmethod
+    def _test_image_cbaoi_alignment(cls, cba_class, cbaoi_class, augf_name):
         # test alignment between between images and polygons
         height_step_size = 50
         width_step_size = 30
@@ -6196,35 +6512,36 @@ class TestElasticTransformation(unittest.TestCase):
 
         image = np.zeros((height, width), dtype=np.uint8)
 
-        exterior = []
+        points = []
         for w in sm.xrange(0, 2+width_steps):
             if w not in [0, width_steps+2-1]:
                 x = width_step_size * w
                 y = height_step_size
-                exterior.append((x, y))
+                points.append((x, y))
                 image[y-s:y+s+1, x-s:x+s+1] = 255
         for w in sm.xrange(2+width_steps-1, 0, -1):
             if w not in [0, width_steps+2-1]:
                 x = width_step_size * w
                 y = height_step_size*2
-                exterior.append((x, y))
+                points.append((x, y))
                 image[y-s:y+s+1, x-s:x+s+1] = 255
 
-        poly = ia.Polygon(exterior)
-        psoi = ia.PolygonsOnImage([poly], shape=image.shape)
+        cba = cba_class(points)
+        cbaoi = cbaoi_class([cba], shape=image.shape)
         aug = iaa.ElasticTransformation(alpha=100, sigma=7)
         aug_det = aug.to_deterministic()
 
         images_aug = aug_det.augment_images([image, image])
-        psois_aug = aug_det.augment_polygons([psoi, psoi])
+        cbaois_aug = getattr(aug_det, augf_name)([cbaoi, cbaoi])
 
         count_bad = 0
-        for image_aug, psoi_aug in zip(images_aug, psois_aug):
-            assert psoi_aug.shape == image.shape
-            assert len(psoi_aug.polygons) == 1
-            for poly_aug in psoi_aug.polygons:
-                assert poly_aug.is_valid
-                for point_aug in poly_aug.exterior:
+        for image_aug, cbaoi_aug in zip(images_aug, cbaois_aug):
+            assert cbaoi_aug.shape == image.shape
+            assert len(cbaoi_aug.items) == 1
+            for cba_aug in cbaoi_aug.items:
+                if hasattr(cba_aug, "is_valid"):
+                    assert cba_aug.is_valid
+                for point_aug in cba_aug.coords:
                     x, y = point_aug[0], point_aug[1]
                     bb = ia.BoundingBox(x1=x-2, x2=x+2, y1=y-2, y2=y+2)
                     img_ex = bb.extract_from_image(image_aug)
@@ -6234,14 +6551,59 @@ class TestElasticTransformation(unittest.TestCase):
                         count_bad += 1
         assert count_bad <= 3
 
-    def test_empty_polygons(self):
+    @classmethod
+    def _test_empty_cbaois(cls, cbaoi, augf_name):
         aug = iaa.ElasticTransformation(alpha=10, sigma=10)
-        psoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
 
-        psoi_aug = aug.augment_polygons(psoi)
+        cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-        assert len(psoi_aug.polygons) == 0
-        assert psoi_aug.shape == (10, 10, 3)
+        assert_cbaois_equal(cbaoi_aug, cbaoi)
+
+    # -----------
+    # polygons
+    # -----------
+    def test_polygons_no_movement_if_alpha_below_threshold(self):
+        self._test_cbaois_no_movement_if_alpha_below_threshold(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_polygons_no_movement_if_sigma_below_threshold(self):
+        self._test_cbaois_no_movement_if_sigma_below_threshold(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_polygons_small_movement_for_weak_alpha_if_threshold_zero(self):
+        self._test_cbaois_small_movement_for_weak_alpha_if_threshold_zero(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_image_polygon_alignment(self):
+        self._test_image_cbaoi_alignment(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_empty_polygons(self):
+        cbaoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
+        self._test_empty_cbaois(cbaoi, "augment_polygons")
+
+    # -----------
+    # line strings
+    # -----------
+    def test_line_strings_no_movement_if_alpha_below_threshold(self):
+        self._test_cbaois_no_movement_if_alpha_below_threshold(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_line_strings_no_movement_if_sigma_below_threshold(self):
+        self._test_cbaois_no_movement_if_sigma_below_threshold(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_line_strings_small_movement_for_weak_alpha_if_threshold_zero(self):
+        self._test_cbaois_small_movement_for_weak_alpha_if_threshold_zero(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_image_line_string_alignment(self):
+        self._test_image_cbaoi_alignment(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_empty_line_strings(self):
+        cbaoi = ia.LineStringsOnImage([], shape=(10, 10, 3))
+        self._test_empty_cbaois(cbaoi, "augment_line_strings")
 
     # -----------
     # bounding boxes
@@ -6747,6 +7109,13 @@ class TestRot90(unittest.TestCase):
         )
 
     @property
+    def lsoi(self):
+        return ia.LineStringsOnImage(
+            [ia.LineString([(1, 1), (3, 1), (3, 3), (1, 3)])],
+            shape=(4, 8, 3)
+        )
+
+    @property
     def bbsoi(self):
         return ia.BoundingBoxesOnImage(
             [ia.BoundingBox(x1=1, y1=1, x2=3, y2=3)],
@@ -6820,6 +7189,43 @@ class TestRot90(unittest.TestCase):
             (4-expected_k2_polys[3][1]+kp_offset, expected_k2_polys[3][0])]
         return ia.PolygonsOnImage([ia.Polygon(expected_k3_polys)],
                                   shape=(8, 4, 3))
+
+    @property
+    def lsoi_k1(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_ls = [(4-1+kp_offset, 1),
+                          (4-1+kp_offset, 3),
+                          (4-3+kp_offset, 3),
+                          (4-3+kp_offset, 1)]
+        return ia.LineStringsOnImage([ia.LineString(expected_k1_ls)],
+                                     shape=(8, 4, 3))
+
+    @property
+    def lsoi_k2(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k1_ls = self.psoi_k1.items[0].coords
+        expected_k2_ls = [
+            (8-expected_k1_ls[0][1]+kp_offset, expected_k1_ls[0][0]),
+            (8-expected_k1_ls[1][1]+kp_offset, expected_k1_ls[1][0]),
+            (8-expected_k1_ls[2][1]+kp_offset, expected_k1_ls[2][0]),
+            (8-expected_k1_ls[3][1]+kp_offset, expected_k1_ls[3][0])]
+        return ia.LineStringsOnImage([ia.LineString(expected_k2_ls)],
+                                     shape=(4, 8, 3))
+
+    @property
+    def lsoi_k3(self):
+        # without keep size
+        kp_offset = self.kp_offset
+        expected_k2_ls = self.lsoi_k2.items[0].coords
+        expected_k3_ls = [
+            (4-expected_k2_ls[0][1]+kp_offset, expected_k2_ls[0][0]),
+            (4-expected_k2_ls[1][1]+kp_offset, expected_k2_ls[1][0]),
+            (4-expected_k2_ls[2][1]+kp_offset, expected_k2_ls[2][0]),
+            (4-expected_k2_ls[3][1]+kp_offset, expected_k2_ls[3][0])]
+        return ia.LineStringsOnImage([ia.LineString(expected_k3_ls)],
+                                     shape=(8, 4, 3))
 
     @property
     def bbsoi_k1(self):
@@ -6938,6 +7344,15 @@ class TestRot90(unittest.TestCase):
 
                 assert_cbaois_equal(psoi_aug, self.psoi)
 
+    def test_line_strings_k_is_0_and_4(self):
+        for k in [0, 4]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+                assert_cbaois_equal(lsoi_aug, self.lsoi)
+
     def test_bounding_boxes_k_is_0_and_4(self):
         for k in [0, 4]:
             with self.subTest(k=k):
@@ -7040,6 +7455,15 @@ class TestRot90(unittest.TestCase):
 
                 assert_cbaois_equal(psoi_aug, self.psoi_k1)
 
+    def test_line_strings_k_is_1_and_5(self):
+        for k in [1, 5]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+                assert_cbaois_equal(lsoi_aug, self.lsoi_k1)
+
     def test_bounding_boxes_k_is_1_and_5(self):
         for k in [1, 5]:
             with self.subTest(k=k):
@@ -7121,6 +7545,13 @@ class TestRot90(unittest.TestCase):
         psoi_aug = aug.augment_polygons(self.psoi)
 
         assert_cbaois_equal(psoi_aug, self.psoi_k2)
+
+    def test_line_strings_k_is_2(self):
+        aug = iaa.Rot90(2, keep_size=False)
+
+        lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(lsoi_aug, self.lsoi_k2)
 
     def test_bounding_boxes_k_is_2(self):
         aug = iaa.Rot90(2, keep_size=False)
@@ -7218,6 +7649,15 @@ class TestRot90(unittest.TestCase):
                 psoi_aug = aug.augment_polygons(self.psoi)
 
                 assert_cbaois_equal(psoi_aug, self.psoi_k3)
+
+    def test_line_strings_k_is_3_and_minus1(self):
+        for k in [3, -1]:
+            with self.subTest(k=k):
+                aug = iaa.Rot90(k, keep_size=False)
+
+                lsoi_aug = aug.augment_line_strings(self.lsoi)
+
+                assert_cbaois_equal(lsoi_aug, self.lsoi_k3)
 
     def test_bounding_boxes_k_is_3_and_minus1(self):
         for k in [3, -1]:
@@ -7338,6 +7778,20 @@ class TestRot90(unittest.TestCase):
         assert psoi_aug.polygons[0].is_valid
         assert psoi_aug.polygons[0].exterior_almost_equals(expected)
 
+    def test_line_strings_k_is_1_keep_size_is_true(self):
+        aug = iaa.Rot90(1, keep_size=True)
+        lsoi = self.lsoi
+        kp_offset = self.kp_offset
+
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        expected = [(4-1+kp_offset, 1), (4-1+kp_offset, 3),
+                    (4-3+kp_offset, 3), (4-3+kp_offset, 1)]
+        expected = [(8*x/4, 4*y/8) for x, y in expected]
+        assert lsoi_aug.shape == (4, 8, 3)
+        assert len(lsoi_aug.items) == 1
+        assert lsoi_aug.items[0].coords_almost_equals(expected)
+
     def test_bounding_boxes_k_is_1_keep_size_is_true(self):
         aug = iaa.Rot90(1, keep_size=True)
         bbsoi = self.bbsoi
@@ -7427,6 +7881,17 @@ class TestRot90(unittest.TestCase):
         assert_cbaois_equal(psoi_aug[2], self.psoi_k1)
         assert_cbaois_equal(psoi_aug[3], self.psoi_k2)
 
+    def test_line_strings_k_is_list(self):
+        aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
+        lsoi = self.lsoi
+
+        lsoi_aug = aug.augment_line_strings([lsoi] * 4)
+
+        assert_cbaois_equal(lsoi_aug[0], self.lsoi_k1)
+        assert_cbaois_equal(lsoi_aug[1], self.lsoi_k2)
+        assert_cbaois_equal(lsoi_aug[2], self.lsoi_k1)
+        assert_cbaois_equal(lsoi_aug[3], self.lsoi_k2)
+
     def test_bounding_boxes_k_is_list(self):
         aug = iaa.Rot90(_TwoValueParam(1, 2), keep_size=False)
         bbsoi = self.bbsoi
@@ -7457,6 +7922,16 @@ class TestRot90(unittest.TestCase):
         expected = self.psoi_k1
         expected.polygons = []
         assert_cbaois_equal(psoi_aug, expected)
+
+    def test_empty_line_strings(self):
+        aug = iaa.Rot90(k=1, keep_size=False)
+        lsoi = ia.LineStringsOnImage([], shape=(4, 8, 3))
+
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        expected = self.lsoi_k1
+        expected.line_strings = []
+        assert_cbaois_equal(lsoi_aug, expected)
 
     def test_empty_bounding_boxes(self):
         aug = iaa.Rot90(k=1, keep_size=False)

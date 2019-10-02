@@ -28,7 +28,7 @@ from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 from imgaug.testutils import (create_random_images, create_random_keypoints,
                               array_equal_lists, keypoints_equal, reseed,
-                              assert_cbaois_equal)
+                              assert_cbaois_equal, shift_cbaoi)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
@@ -131,24 +131,6 @@ class TestNoop(unittest.TestCase):
 
         assert_cbaois_equal(observed, psoi)
 
-    def test_bounding_boxes(self):
-        aug = iaa.Noop()
-        bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
-        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
-
-        observed = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
-
-    def test_bounding_boxes_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
-        bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
-        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
-
-        observed = aug_det.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
-
     def test_line_strings(self):
         aug = iaa.Noop()
         ls = LineString([(10, 10), (30, 10), (30, 50), (10, 50)])
@@ -167,6 +149,24 @@ class TestNoop(unittest.TestCase):
 
         assert_cbaois_equal(observed, lsoi)
 
+    def test_bounding_boxes(self):
+        aug = iaa.Noop()
+        bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
+        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
+    def test_bounding_boxes_deterministic(self):
+        aug_det = iaa.Noop().to_deterministic()
+        bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
+        bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
+
+        observed = aug_det.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
+
     def test_keypoints_empty(self):
         aug = iaa.Noop()
         kpsoi = ia.KeypointsOnImage([], shape=(4, 5, 3))
@@ -183,14 +183,6 @@ class TestNoop(unittest.TestCase):
 
         assert_cbaois_equal(observed, psoi)
 
-    def test_bounding_boxes_empty(self):
-        aug = iaa.Noop()
-        bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 5, 3))
-
-        observed = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
-
     def test_line_strings_empty(self):
         aug = iaa.Noop()
         lsoi = ia.LineStringsOnImage([], shape=(4, 5, 3))
@@ -198,6 +190,14 @@ class TestNoop(unittest.TestCase):
         observed = aug.augment_line_strings(lsoi)
 
         assert_cbaois_equal(observed, lsoi)
+
+    def test_bounding_boxes_empty(self):
+        aug = iaa.Noop()
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 5, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        assert_cbaois_equal(observed, bbsoi)
 
     def test_get_parameters(self):
         assert iaa.Noop().get_parameters() == []
@@ -320,16 +320,28 @@ class TestLambda(unittest.TestCase):
         return expected_psoi
 
     @property
+    def lsoi(self):
+        ls = ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])
+        lsois = [ia.LineStringsOnImage([ls], shape=(3, 3, 3))]
+        return lsois
+
+    @property
+    def lsoi_aug(self):
+        ls = ia.LineString([(1, 2), (3, 2), (3, 4), (1, 4)])
+        lsois = [ia.LineStringsOnImage([ls], shape=(3, 3, 3))]
+        return lsois
+
+    @property
     def bbsoi(self):
         bb = ia.BoundingBox(x1=0, y1=1, x2=3, y2=4)
-        bbsoi = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
-        return bbsoi
+        bbsois = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
+        return bbsois
 
     @property
     def bbsoi_aug(self):
         bb = ia.BoundingBox(x1=0+1, y1=1+2, x2=3+1, y2=4+2)
-        bbsoi = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
-        return bbsoi
+        bbsois = [ia.BoundingBoxesOnImage([bb], shape=(3, 3, 3))]
+        return bbsois
 
     @classmethod
     def func_images(cls, images, random_state, parents, hooks):
@@ -366,6 +378,21 @@ class TestLambda(unittest.TestCase):
         return [
             ia.PolygonsOnImage([ia.Polygon(new_exterior)],
                                shape=polygons_on_images[0].shape)
+        ]
+
+    @classmethod
+    def func_line_strings(cls, line_strings_on_images, random_state, parents,
+                          hooks):
+        if line_strings_on_images[0].empty:
+            return [ia.LineStringsOnImage(
+                [], shape=line_strings_on_images[0].shape)]
+        new_coords = np.copy(line_strings_on_images[0].items[0].coords)
+        new_coords[:, 0] += 1
+        new_coords[:, 1] += 2
+        return [
+            ia.LineStringsOnImage(
+                [ia.LineString(new_coords)],
+                shape=line_strings_on_images[0].shape)
         ]
 
     @classmethod
@@ -516,6 +543,28 @@ class TestLambda(unittest.TestCase):
             expected_psoi = self.polygons_aug
             assert_cbaois_equal(observed, expected_psoi)
 
+    def test_line_strings(self):
+        lsois = self.lsoi
+        aug = iaa.Lambda(func_line_strings=self.func_line_strings)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_line_strings(lsois)
+
+            expected_lsoi = self.lsoi_aug
+            assert_cbaois_equal(observed, expected_lsoi)
+
+    def test_line_strings_deterministic(self):
+        lsois = self.lsoi
+
+        aug = iaa.Lambda(func_line_strings=self.func_line_strings)
+        aug = aug.to_deterministic()
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_line_strings(lsois)
+
+            expected_lsoi = self.lsoi_aug
+            assert_cbaois_equal(observed, expected_lsoi)
+
     def test_bounding_boxes(self):
         bbsoi = self.bbsoi
         aug = iaa.Lambda(func_bounding_boxes=self.func_bbs)
@@ -537,6 +586,48 @@ class TestLambda(unittest.TestCase):
             expected = self.bbsoi_aug
             assert_cbaois_equal(observed, expected)
 
+    def test_bounding_boxes_x1_x2_coords_can_get_flipped(self):
+        # Verify that if any augmented BB ends up with x1 > x2 that the
+        # x-coordinates will be flipped to ensure that x1 is always below x2
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)
+        ], shape=(10, 10, 3))
+
+        def _func_bbs(bounding_boxes_on_images, random_state, parents, hooks):
+            bounding_boxes_on_images[0].bounding_boxes[0].x1 += 10
+            return bounding_boxes_on_images
+
+        aug = iaa.Lambda(func_bounding_boxes=_func_bbs)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_bounding_boxes(bbsoi)
+
+            assert np.allclose(
+                observed.bounding_boxes[0].coords,
+                [(2, 1), (0+10, 3)]
+            )
+
+    def test_bounding_boxes_y1_y2_coords_can_get_flipped(self):
+        # Verify that if any augmented BB ends up with y1 > y2 that the
+        # x-coordinates will be flipped to ensure that y1 is always below y2
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)
+        ], shape=(10, 10, 3))
+
+        def _func_bbs(bounding_boxes_on_images, random_state, parents, hooks):
+            bounding_boxes_on_images[0].bounding_boxes[0].y1 += 10
+            return bounding_boxes_on_images
+
+        aug = iaa.Lambda(func_bounding_boxes=_func_bbs)
+
+        for _ in sm.xrange(3):
+            observed = aug.augment_bounding_boxes(bbsoi)
+
+            assert np.allclose(
+                observed.bounding_boxes[0].coords,
+                [(0, 3), (2, 1+10)]
+            )
+
     def test_keypoints_empty(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
         aug = iaa.Lambda(func_keypoints=self.func_keypoints)
@@ -552,6 +643,14 @@ class TestLambda(unittest.TestCase):
         observed = aug.augment_polygons(psoi)
 
         assert_cbaois_equal(observed, psoi)
+
+    def test_line_strings_empty(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+        aug = iaa.Lambda(func_line_strings=self.func_line_strings)
+
+        observed = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(observed, lsoi)
 
     def test_bounding_boxes_empty(self):
         bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
@@ -673,6 +772,11 @@ class TestAssertLambda(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
     def bbsoi(self):
         bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
         return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
@@ -705,13 +809,19 @@ class TestAssertLambda(unittest.TestCase):
             return (polygons_on_images[0].polygons[0].exterior[0][0] == 0
                     and polygons_on_images[0].polygons[0].exterior[2][1] == 2)
 
+        def _func_line_strings_succeeds(line_strings_on_image, random_state,
+                                        parents, hooks):
+            return (line_strings_on_image[0].items[0].coords[0][0] == 0
+                    and line_strings_on_image[0].items[0].coords[2][1] == 2)
+
         return iaa.AssertLambda(
             func_images=_func_images_succeeds,
             func_heatmaps=_func_heatmaps_succeeds,
             func_segmentation_maps=_func_segmaps_succeeds,
             func_keypoints=_func_keypoints_succeeds,
             func_bounding_boxes=_func_bounding_boxes_succeeds,
-            func_polygons=_func_polygons_succeeds)
+            func_polygons=_func_polygons_succeeds,
+            func_line_strings=_func_line_strings_succeeds)
 
     @property
     def aug_fails(self):
@@ -736,13 +846,18 @@ class TestAssertLambda(unittest.TestCase):
                                  hooks):
             return polygons_on_images[0].polygons[0].exterior[0][0] == 2
 
+        def _func_line_strings_fails(line_strings_on_images, random_state,
+                                     parents, hooks):
+            return line_strings_on_images[0].items[0].coords[0][0] == 2
+
         return iaa.AssertLambda(
             func_images=_func_images_fails,
             func_heatmaps=_func_heatmaps_fails,
             func_segmentation_maps=_func_segmaps_fails,
             func_keypoints=_func_keypoints_fails,
             func_bounding_boxes=_func_bounding_boxes_fails,
-            func_polygons=_func_polygons_fails,)
+            func_polygons=_func_polygons_fails,
+            func_line_strings=_func_line_strings_fails)
 
     def test_images_as_array_with_assert_that_succeeds(self):
         observed = self.aug_succeeds.augment_images(self.images)
@@ -857,6 +972,23 @@ class TestAssertLambda(unittest.TestCase):
     def test_polygons_with_assert_that_fails__deterministic(self):
         with self.assertRaises(AssertionError):
             _ = self.aug_fails.augment_polygons(self.psoi)
+
+    def test_line_strings_with_assert_that_succeeds(self):
+        observed = self.aug_succeeds.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_assert_that_fails(self):
+        with self.assertRaises(AssertionError):
+            _ = self.aug_fails.augment_line_strings(self.lsoi)
+
+    def test_line_strings_with_assert_that_succeeds__deterministic(self):
+        aug_succeeds_det = self.aug_succeeds.to_deterministic()
+        observed = aug_succeeds_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_assert_that_fails__deterministic(self):
+        with self.assertRaises(AssertionError):
+            _ = self.aug_fails.augment_line_strings(self.lsoi)
 
     def test_bounding_boxes_with_assert_that_succeeds(self):
         observed = self.aug_succeeds.augment_bounding_boxes(self.bbsoi)
@@ -1002,6 +1134,11 @@ class TestAssertShape(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
     def bbsoi(self):
         bb = ia.BoundingBox(x1=0, y1=0, x2=2, y2=2)
         return ia.BoundingBoxesOnImage([bb], shape=self.image.shape)
@@ -1044,6 +1181,11 @@ class TestAssertShape(unittest.TestCase):
     def psoi_h4(self):
         polygons = [ia.Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])]
         return ia.PolygonsOnImage(polygons, shape=self.image_h4.shape)
+
+    @property
+    def lsoi_h4(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image_h4.shape)
 
     @property
     def bbsoi_h4(self):
@@ -1138,6 +1280,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_exact_shape__succeeds(self):
+        aug = self.aug_exact_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_exact_shape__succeeds__deterministic(self):
+        aug_det = self.aug_exact_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_exact_shape__succeeds(self):
         aug = self.aug_exact_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1167,6 +1319,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_exact_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_exact_shape__fails(self):
+        aug = self.aug_exact_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_exact_shape__fails(self):
         aug = self.aug_exact_shape
@@ -1233,6 +1390,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_none_in_shape__succeeds(self):
+        aug = self.aug_none_in_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_none_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_none_in_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_none_in_shape__succeeds(self):
         aug = self.aug_none_in_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1262,6 +1429,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_none_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_none_in_shape__fails(self):
+        aug = self.aug_none_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_none_in_shape__fails(self):
         aug = self.aug_none_in_shape
@@ -1328,6 +1500,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_list_in_shape__succeeds(self):
+        aug = self.aug_list_in_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_list_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_list_in_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_list_in_shape__succeeds(self):
         aug = self.aug_list_in_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1362,6 +1544,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_list_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_list_in_shape__fails(self):
+        aug = self.aug_list_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_list_in_shape__fails(self):
         aug = self.aug_list_in_shape
@@ -1428,6 +1615,16 @@ class TestAssertShape(unittest.TestCase):
         observed = aug_det.augment_polygons(self.psoi)
         assert_cbaois_equal(observed, self.psoi)
 
+    def test_line_strings_with_tuple_in_shape__succeeds(self):
+        aug = self.aug_tuple_in_shape
+        observed = aug.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
+    def test_line_strings_with_tuple_in_shape__succeeds__deterministic(self):
+        aug_det = self.aug_tuple_in_shape.to_deterministic()
+        observed = aug_det.augment_line_strings(self.lsoi)
+        assert_cbaois_equal(observed, self.lsoi)
+
     def test_bounding_boxes_with_tuple_in_shape__succeeds(self):
         aug = self.aug_tuple_in_shape
         observed = aug.augment_bounding_boxes(self.bbsoi)
@@ -1462,6 +1659,11 @@ class TestAssertShape(unittest.TestCase):
         aug = self.aug_tuple_in_shape
         with self.assertRaises(AssertionError):
             _ = aug.augment_polygons(self.psoi_h4)
+
+    def test_line_strings_with_tuple_in_shape__fails(self):
+        aug = self.aug_tuple_in_shape
+        with self.assertRaises(AssertionError):
+            _ = aug.augment_line_strings(self.lsoi_h4)
 
     def test_bounding_boxes_with_tuple_in_shape__fails(self):
         aug = self.aug_tuple_in_shape
@@ -2140,7 +2342,7 @@ class TestAugmenter(unittest.TestCase):
         assert np.allclose(bb1.y1, 2.5)
         assert np.allclose(bb1.y2, 3)
 
-    def test_augment_bounding_list_of_many_instances(self):
+    def test_augment_bounding_box_list_of_many_instances(self):
         bbsoi = ia.BoundingBoxesOnImage([
             ia.BoundingBox(x1=1, x2=3, y1=4, y2=5),
             ia.BoundingBox(x1=2.5, x2=3, y1=0, y2=2)
@@ -3218,7 +3420,67 @@ class TestAugmenter_augment_bounding_boxes(_TestAugmenter_augment_cbaois,
             atol=atol, rtol=rtol)
 
 
-# TODO add line strings
+# the method is mostly tested indirectly, so very few tests here
+class TestAugmenter_augment_bounding_boxes_by_keypoints(unittest.TestCase):
+    def test_x1_x2_can_get_flipped(self):
+        # ensure that invalid BBs with x2 > x1 after aug get their x-coords
+        # flipped so that x1 < x2
+        class _FlippingX1X2Augmenter(iaa.Augmenter):
+            def _augment_images(self, images, random_state, parents, hooks):
+                return images
+
+            def _augment_bounding_boxes(self, bounding_boxes_on_images,
+                                        random_state, parents, hooks):
+                return self._augment_bounding_boxes_as_keypoints(
+                    bounding_boxes_on_images, random_state, parents, hooks)
+
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                keypoints_on_images[0].keypoints[0].x += 10
+                return keypoints_on_images
+
+            def get_parameters(self):
+                return []
+
+        aug = _FlippingX1X2Augmenter()
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)], shape=(10, 10, 3))
+        observed = aug(bounding_boxes=bbsoi)
+        assert np.allclose(
+            observed.bounding_boxes[0].coords,
+            [(2, 1), (0+10, 3)]
+        )
+
+    def test_y1_y2_can_get_flipped(self):
+        # ensure that invalid BBs with y2 > y1 after aug get their y-coords
+        # flipped so that y1 < y2
+        class _FlippingY1Y2Augmenter(iaa.Augmenter):
+            def _augment_images(self, images, random_state, parents, hooks):
+                return images
+
+            def _augment_bounding_boxes(self, bounding_boxes_on_images,
+                                        random_state, parents, hooks):
+                return self._augment_bounding_boxes_as_keypoints(
+                    bounding_boxes_on_images, random_state, parents, hooks)
+
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                keypoints_on_images[0].keypoints[0].y += 10
+                return keypoints_on_images
+
+            def get_parameters(self):
+                return []
+
+        aug = _FlippingY1Y2Augmenter()
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)], shape=(10, 10, 3))
+        observed = aug(bounding_boxes=bbsoi)
+        assert np.allclose(
+            observed.bounding_boxes[0].coords,
+            [(0, 3), (2, 1+10)]
+        )
+
+
 class TestAugmenter_augment(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -3271,18 +3533,7 @@ class TestAugmenter_augment(unittest.TestCase):
                                                 keypoints=[keypoints])
 
         assert np.array_equal(images_aug[0], image)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-
-    def test_images_and_bounding_boxes(self):
-        aug = iaa.Noop()
-        image = ia.quokka((128, 128), extract="square")
-        bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
-
-        images_aug, bbs_aug = aug.augment(images=[image], bounding_boxes=[bbs])
-
-        assert np.array_equal(images_aug[0], image)
-        assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
 
     def test_images_and_polygons(self):
         aug = iaa.Noop()
@@ -3293,9 +3544,31 @@ class TestAugmenter_augment(unittest.TestCase):
                                                polygons=[polygons])
 
         assert np.array_equal(images_aug[0], image)
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(polygons_aug[0], polygons)
+
+    def test_images_and_line_strings(self):
+        aug = iaa.Noop()
+        image = ia.quokka((128, 128), extract="square")
+        psoi = ia.quokka_polygons((128, 128), extract="square")
+        lsoi = ia.LineStringsOnImage([
+            psoi.polygons[0].to_line_string(closed=False)
+        ], shape=psoi.shape)
+
+        images_aug, lsoi_aug = aug.augment(images=[image],
+                                           line_strings=[lsoi])
+
+        assert np.array_equal(images_aug[0], image)
+        assert_cbaois_equal(lsoi_aug[0], lsoi)
+
+    def test_images_and_bounding_boxes(self):
+        aug = iaa.Noop()
+        image = ia.quokka((128, 128), extract="square")
+        bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
+
+        images_aug, bbs_aug = aug.augment(images=[image], bounding_boxes=[bbs])
+
+        assert np.array_equal(images_aug[0], image)
+        assert_cbaois_equal(bbs_aug[0], bbs)
 
     def test_image_return_batch(self):
         aug = iaa.Noop()
@@ -3343,21 +3616,7 @@ class TestAugmenter_augment(unittest.TestCase):
         images_aug = batch.images_aug
         keypoints_aug = batch.keypoints_aug
         assert np.array_equal(images_aug[0], image)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-
-    def test_images_and_bounding_boxes_return_batch(self):
-        aug = iaa.Noop()
-        image = ia.quokka((128, 128), extract="square")
-        bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
-
-        batch = aug.augment(images=[image], bounding_boxes=[bbs],
-                            return_batch=True)
-
-        images_aug = batch.images_aug
-        bbs_aug = batch.bounding_boxes_aug
-        assert np.array_equal(images_aug[0], image)
-        assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
 
     def test_images_and_polygons_return_batch(self):
         aug = iaa.Noop()
@@ -3370,9 +3629,36 @@ class TestAugmenter_augment(unittest.TestCase):
         images_aug = batch.images_aug
         polygons_aug = batch.polygons_aug
         assert np.array_equal(images_aug[0], image)
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(polygons_aug[0], polygons)
+
+    def test_images_and_line_strings_return_batch(self):
+        aug = iaa.Noop()
+        image = ia.quokka((128, 128), extract="square")
+        psoi = ia.quokka_polygons((128, 128), extract="square")
+        lsoi = ia.LineStringsOnImage([
+            psoi.polygons[0].to_line_string(closed=False)
+        ], shape=psoi.shape)
+
+        batch = aug.augment(images=[image], line_strings=[lsoi],
+                            return_batch=True)
+
+        images_aug = batch.images_aug
+        lsoi_aug = batch.line_strings_aug
+        assert np.array_equal(images_aug[0], image)
+        assert_cbaois_equal(lsoi_aug[0], lsoi)
+
+    def test_images_and_bounding_boxes_return_batch(self):
+        aug = iaa.Noop()
+        image = ia.quokka((128, 128), extract="square")
+        bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
+
+        batch = aug.augment(images=[image], bounding_boxes=[bbs],
+                            return_batch=True)
+
+        images_aug = batch.images_aug
+        bbs_aug = batch.bounding_boxes_aug
+        assert np.array_equal(images_aug[0], image)
+        assert_cbaois_equal(bbs_aug[0], bbs)
 
     def test_non_image_data(self):
         aug = iaa.Noop()
@@ -3387,11 +3673,8 @@ class TestAugmenter_augment(unittest.TestCase):
         keypoints_aug = batch.keypoints_aug
         polygons_aug = batch.polygons_aug
         assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(polygons_aug[0], polygons)
 
     def test_non_image_data_unexpected_args_order(self):
         aug = iaa.Noop()
@@ -3422,6 +3705,7 @@ class TestAugmenter_augment(unittest.TestCase):
         kps = [(0, 0), (1, 2)]
         bbs = [(0, 0, 1, 1), (1, 2, 2, 3)]
         polygons = [(0, 0), (1, 0), (1, 1)]
+        ls = [(0, 0), (1, 0), (1, 1)]
 
         image_aug = aug.augment(image=image)
         _, heatmaps_aug = aug.augment(image=image, heatmaps=heatmaps)
@@ -3429,6 +3713,7 @@ class TestAugmenter_augment(unittest.TestCase):
         _, kps_aug = aug.augment(image=image, keypoints=kps)
         _, bbs_aug = aug.augment(image=image, bounding_boxes=bbs)
         _, polygons_aug = aug.augment(image=image, polygons=polygons)
+        _, ls_aug = aug.augment(image=image, line_strings=ls)
 
         # all augmentables must have been moved to the right by 1px
         assert np.all(image_aug[:, 0] == 0)
@@ -3440,6 +3725,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert kps_aug == [(1, 0), (2, 2)]
         assert bbs_aug == [(1, 0, 2, 1), (2, 2, 3, 3)]
         assert polygons_aug == [(1, 0), (2, 0), (2, 1)]
+        assert ls_aug == [(1, 0), (2, 0), (2, 1)]
 
     def test_alignment(self):
         # make sure that changes from augment() are aligned and vary between
@@ -3452,13 +3738,14 @@ class TestAugmenter_augment(unittest.TestCase):
         kps = [(0, 0)]
         bbs = [(0, 0, 1, 1)]
         polygons = [(0, 0), (1, 0), (1, 1)]
+        ls = [(0, 0), (1, 0), (1, 1)]
 
         seen = []
         for _ in sm.xrange(10):
             batch_aug = aug.augment(image=image, heatmaps=heatmaps,
                                     segmentation_maps=segmaps, keypoints=kps,
                                     bounding_boxes=bbs, polygons=polygons,
-                                    return_batch=True)
+                                    line_strings=ls, return_batch=True)
 
             shift_image = np.sum(batch_aug.images_aug[0][0, :] == 0)
             shift_heatmaps = np.sum(
@@ -3468,9 +3755,11 @@ class TestAugmenter_augment(unittest.TestCase):
             shift_kps = batch_aug.keypoints_aug[0][0]
             shift_bbs = batch_aug.bounding_boxes_aug[0][0]
             shift_polygons = batch_aug.polygons_aug[0][0]
+            shift_ls = batch_aug.line_strings_aug[0][0]
 
             assert len({shift_image, shift_heatmaps, shift_segmaps,
-                        shift_kps, shift_bbs, shift_polygons}) == 1
+                        shift_kps, shift_bbs, shift_polygons,
+                        shift_ls}) == 1
             seen.append(shift_image)
         assert len(set(seen)) > 7
 
@@ -3487,12 +3776,14 @@ class TestAugmenter_augment(unittest.TestCase):
         kps = [(0, 0)]
         bbs = [(0, 0, 1, 1)]
         polygons = [(0, 0), (1, 0), (1, 1)]
+        ls = [(0, 0), (1, 0), (1, 1)]
 
         seen = []
         for _ in sm.xrange(10):
             batch_aug = aug.augment(image=image, heatmaps=heatmaps,
                                     segmentation_maps=segmaps, keypoints=kps,
                                     bounding_boxes=bbs, polygons=polygons,
+                                    line_strings=ls,
                                     return_batch=True)
 
             shift_image = np.sum(batch_aug.images_aug[0][0, :] == 0)
@@ -3503,9 +3794,11 @@ class TestAugmenter_augment(unittest.TestCase):
             shift_kps = batch_aug.keypoints_aug[0][0]
             shift_bbs = batch_aug.bounding_boxes_aug[0][0]
             shift_polygons = batch_aug.polygons_aug[0][0]
+            shift_ls = batch_aug.line_strings_aug[0][0]
 
             assert len({shift_image, shift_heatmaps, shift_segmaps,
-                        shift_kps, shift_bbs, shift_polygons}) == 1
+                        shift_kps, shift_bbs, shift_polygons,
+                        shift_ls}) == 1
             seen.append(shift_image)
         assert len(set(seen)) == 1
 
@@ -3554,11 +3847,8 @@ class TestAugmenter_augment(unittest.TestCase):
         keypoints_aug, polygons_aug = aug.augment(keypoints=[keypoints],
                                                   polygons=[polygons])
 
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(polygons_aug[0], polygons)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3570,11 +3860,8 @@ class TestAugmenter_augment(unittest.TestCase):
         polygons_aug, keypoints_aug = aug.augment(polygons=[polygons],
                                                   keypoints=[keypoints])
 
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(polygons_aug[0], polygons)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3612,8 +3899,7 @@ class TestAugmenter_augment(unittest.TestCase):
                                                 images=[image])
 
         assert np.array_equal(images_aug[0], image)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3626,7 +3912,7 @@ class TestAugmenter_augment(unittest.TestCase):
                                           images=[image])
 
         assert np.array_equal(images_aug[0], image)
-        assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
+        assert_cbaois_equal(bbs_aug[0], bbs)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3639,9 +3925,23 @@ class TestAugmenter_augment(unittest.TestCase):
                                                images=[image])
 
         assert np.array_equal(images_aug[0], image)
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(polygons_aug[0], polygons)
+
+    @unittest.skipIf(not IS_PY36_OR_HIGHER,
+                     "Behaviour is only supported in python 3.6+")
+    def test_py_gte_36_two_outputs_inverted_order_line_strings(self):
+        aug = iaa.Noop()
+        image = ia.quokka((128, 128), extract="square")
+        psoi = ia.quokka_polygons((128, 128), extract="square")
+        lsoi = ia.LineStringsOnImage([
+            psoi.polygons[0].to_line_string(closed=False)
+        ], shape=psoi.shape)
+
+        lsoi_aug, images_aug = aug.augment(line_strings=[lsoi],
+                                           images=[image])
+
+        assert np.array_equal(images_aug[0], image)
+        assert_cbaois_equal(lsoi_aug[0], lsoi)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3674,11 +3974,8 @@ class TestAugmenter_augment(unittest.TestCase):
             polygons=[polygons])
 
         assert np.array_equal(segmaps_aug[0].arr, segmaps.arr)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(polygons_aug[0], polygons)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3711,11 +4008,8 @@ class TestAugmenter_augment(unittest.TestCase):
             segmentation_maps=[segmaps])
 
         assert np.array_equal(segmaps_aug[0].arr, segmaps.arr)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(polygons_aug[0], polygons)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3727,24 +4021,27 @@ class TestAugmenter_augment(unittest.TestCase):
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
+        lsoi = ia.LineStringsOnImage([
+            polygons.polygons[0].to_line_string(closed=False)
+        ], shape=polygons.shape)
 
         images_aug, heatmaps_aug, segmaps_aug, keypoints_aug, bbs_aug, \
-            polygons_aug = aug.augment(images=[image],
-                                       heatmaps=[heatmaps],
-                                       segmentation_maps=[segmaps],
-                                       keypoints=[keypoints],
-                                       bounding_boxes=[bbs],
-                                       polygons=[polygons])
+            polygons_aug, lsoi_aug = aug.augment(
+                images=[image],
+                heatmaps=[heatmaps],
+                segmentation_maps=[segmaps],
+                keypoints=[keypoints],
+                bounding_boxes=[bbs],
+                polygons=[polygons],
+                line_strings=[lsoi])
 
         assert np.array_equal(images_aug[0], image)
         assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
         assert np.array_equal(segmaps_aug[0].arr, segmaps.arr)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(bbs_aug[0], bbs)
+        assert_cbaois_equal(polygons_aug[0], polygons)
+        assert_cbaois_equal(lsoi_aug[0], lsoi)
 
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
@@ -3756,24 +4053,27 @@ class TestAugmenter_augment(unittest.TestCase):
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
+        lsoi = ia.LineStringsOnImage([
+            polygons.polygons[0].to_line_string(closed=False)
+        ], shape=polygons.shape)
 
-        polygons_aug, bbs_aug, keypoints_aug, segmaps_aug, heatmaps_aug, \
-            images_aug = aug.augment(polygons=[polygons],
-                                     bounding_boxes=[bbs],
-                                     keypoints=[keypoints],
-                                     segmentation_maps=[segmaps],
-                                     heatmaps=[heatmaps],
-                                     images=[image])
+        lsoi_aug, polygons_aug, bbs_aug, keypoints_aug, segmaps_aug, \
+            heatmaps_aug, images_aug = aug.augment(
+                line_strings=[lsoi],
+                polygons=[polygons],
+                bounding_boxes=[bbs],
+                keypoints=[keypoints],
+                segmentation_maps=[segmaps],
+                heatmaps=[heatmaps],
+                images=[image])
 
         assert np.array_equal(images_aug[0], image)
         assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
         assert np.array_equal(segmaps_aug[0].arr, segmaps.arr)
-        assert np.allclose(keypoints_aug[0].to_xy_array(),
-                           keypoints.to_xy_array())
-        assert np.allclose(bbs_aug[0].to_xyxy_array(), bbs.to_xyxy_array())
-        for polygon_aug, polygon in zip(polygons_aug[0].polygons,
-                                        polygons.polygons):
-            assert polygon_aug.exterior_almost_equals(polygon)
+        assert_cbaois_equal(keypoints_aug[0], keypoints)
+        assert_cbaois_equal(bbs_aug[0], bbs)
+        assert_cbaois_equal(polygons_aug[0], polygons)
+        assert_cbaois_equal(lsoi_aug[0], lsoi)
 
     @unittest.skipIf(IS_PY36_OR_HIGHER,
                      "Test checks behaviour for python <=3.5")
@@ -4319,7 +4619,6 @@ class TestAugmenterHooks(unittest.TestCase):
         assert keypoints_equal([keypoints_aug], [kpsoi])
 
 
-# TODO add tests for line strings
 class TestSequential(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -4391,6 +4690,16 @@ class TestSequential(unittest.TestCase):
     def polygons_aug(self):
         polygon = ia.Polygon([(3-0, 3-0), (3-2, 3-0), (3-2, 3-2), (3-0, 3-2)])
         return ia.PolygonsOnImage([polygon], shape=self.image.shape)
+
+    @property
+    def lsoi(self):
+        ls = ia.LineString([(0, 0), (2, 0), (2, 2), (0, 2)])
+        return ia.LineStringsOnImage([ls], shape=self.image.shape)
+
+    @property
+    def lsoi_aug(self):
+        ls = ia.LineString([(3-0, 3-0), (3-2, 3-0), (3-2, 3-2), (3-0, 3-2)])
+        return ia.LineStringsOnImage([ls], shape=self.image.shape)
 
     @property
     def bbsoi(self):
@@ -4500,6 +4809,21 @@ class TestSequential(unittest.TestCase):
         observed = aug_det.augment_polygons(self.polygons)
 
         assert_cbaois_equal(observed, self.polygons_aug)
+
+    def test_line_strings__two_flips(self):
+        aug = self.seq_two_flips
+
+        observed = aug.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_aug)
+
+    def test_line_strings__two_flips__deterministic(self):
+        aug = self.seq_two_flips
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_aug)
 
     def test_bounding_boxes__two_flips(self):
         aug = self.seq_two_flips
@@ -4733,43 +5057,6 @@ class TestSequential(unittest.TestCase):
         assert np.all(seen)
 
     # TODO add random_order=False
-    def test_random_order_polygons(self):
-        polygon = ia.Polygon([(0, 0), (2, 0), (2, 2)])
-        polygon_12 = ia.Polygon([((0+1)*2, 0), ((2+1)*2, 0), ((2+1)*2, 2)])
-        polygon_21 = ia.Polygon([((0*2)+1, 0), ((2*2)+1, 0), ((2*2)+1, 2)])
-
-        psoi = ia.PolygonsOnImage([polygon], shape=(3, 3))
-
-        def func1(polygons_on_images, random_state, parents, hooks):
-            for psoi in polygons_on_images:
-                for poly in psoi.polygons:
-                    poly.exterior[:, 0] += 1
-            return polygons_on_images
-
-        def func2(polygons_on_images, random_state, parents, hooks):
-            for psoi in polygons_on_images:
-                for poly in psoi.polygons:
-                    poly.exterior[:, 0] *= 2
-            return polygons_on_images
-
-        aug_1 = iaa.Lambda(func_polygons=func1)
-        aug_2 = iaa.Lambda(func_polygons=func2)
-        seq = iaa.Sequential([aug_1, aug_2], random_order=True)
-
-        seen = [False, False]
-        for _ in sm.xrange(100):
-            observed = seq.augment_polygons(psoi)
-            if observed.polygons[0].exterior_almost_equals(polygon_12):
-                seen[0] = True
-            elif observed.polygons[0].exterior_almost_equals(polygon_21):
-                seen[1] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
-
-    # TODO add random_order=False
     def test_random_order_keypoints(self):
         KP = ia.Keypoint
         kps = [KP(0, 0), KP(2, 0), KP(2, 2)]
@@ -4810,13 +5097,84 @@ class TestSequential(unittest.TestCase):
         assert np.all(seen)
 
     # TODO add random_order=False
-    # TODO currently deactivated, because lambda func_bounding_boxes does not
-    #      yet exist
-    """
+    def test_random_order_polygons(self):
+        cba = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        cba_12 = ia.Polygon([(0, 0), (1, 0), ((1+1)*2, 1)])
+        cba_21 = ia.Polygon([(0, 0), (1, 0), ((1*2)+1, 1)])
+
+        cbaoi = ia.PolygonsOnImage([cba], shape=(3, 3))
+
+        def func1(polygons_on_images, random_state, parents, hooks):
+            for cbaoi_ in polygons_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.exterior[-1, 0] += 1
+            return polygons_on_images
+
+        def func2(polygons_on_images, random_state, parents, hooks):
+            for cbaoi_ in polygons_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.exterior[-1, 0] *= 2
+            return polygons_on_images
+
+        aug_1 = iaa.Lambda(func_polygons=func1)
+        aug_2 = iaa.Lambda(func_polygons=func2)
+        seq = iaa.Sequential([aug_1, aug_2], random_order=True)
+
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            observed = seq.augment_polygons(cbaoi)
+            if np.allclose(observed.items[0].coords, cba_12.coords):
+                seen[0] = True
+            elif np.allclose(observed.items[0].coords, cba_21.coords):
+                seen[1] = True
+            else:
+                assert False
+            if np.all(seen):
+                break
+        assert np.all(seen)
+
+    # TODO add random_order=False
+    def test_random_order_line_strings(self):
+        cba = ia.LineString([(0, 0), (1, 0), (1, 1)])
+        cba_12 = ia.LineString([(0, 0), (1, 0), ((1+1)*2, 1)])
+        cba_21 = ia.LineString([(0, 0), (1, 0), ((1*2)+1, 1)])
+
+        cbaoi = ia.LineStringsOnImage([cba], shape=(3, 3))
+
+        def func1(line_strings_on_images, random_state, parents, hooks):
+            for cbaoi_ in line_strings_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.coords[-1, 0] += 1
+            return line_strings_on_images
+
+        def func2(line_strings_on_images, random_state, parents, hooks):
+            for cbaoi_ in line_strings_on_images:
+                for cba_ in cbaoi_.items:
+                    cba_.coords[-1, 0] *= 2
+            return line_strings_on_images
+
+        aug_1 = iaa.Lambda(func_line_strings=func1)
+        aug_2 = iaa.Lambda(func_line_strings=func2)
+        seq = iaa.Sequential([aug_1, aug_2], random_order=True)
+
+        seen = [False, False]
+        for _ in sm.xrange(100):
+            observed = seq.augment_line_strings(cbaoi)
+            if np.allclose(observed.items[0].coords, cba_12.coords):
+                seen[0] = True
+            elif np.allclose(observed.items[0].coords, cba_21.coords):
+                seen[1] = True
+            else:
+                assert False
+            if np.all(seen):
+                break
+        assert np.all(seen)
+
+    # TODO add random_order=False
     def test_random_order_bounding_boxes(self):
-        bbs = [ia.BoundingBox(1, 2, 3, 4)]
-        bbs_12 = [ia.BoundingBox((1+1)*2, 0, 3, 4)]
-        bbs_21 = [ia.BoundingBox((1*2)+1, 0, 3, 4)]
+        bbs = [ia.BoundingBox(x1=1, y1=2, x2=30, y2=40)]
+        bbs_12 = [ia.BoundingBox(x1=(1+1)*2, y1=2, x2=30, y2=40)]
+        bbs_21 = [ia.BoundingBox(x1=(1*2)+1, y1=2, x2=30, y2=40)]
 
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(3, 3))
         bbsoi_12 = ia.BoundingBoxesOnImage(bbs_12, shape=(3, 3))
@@ -4852,7 +5210,6 @@ class TestSequential(unittest.TestCase):
             if np.all(seen):
                 break
         assert np.all(seen)
-    """
 
     def test_zero_sized_axes(self):
         shapes = [
@@ -5190,122 +5547,85 @@ class TestSomeOf(unittest.TestCase):
                     for expected_i in expected]
                 assert np.any(matches)
 
-    def test_several_children_and_various_fixed_n__keypoints(self):
+    def _test_several_children_and_various_fixed_n__cbaois(
+            self, cbaoi, augf_name):
         augs = [iaa.Affine(translate_px={"x": 1}),
                 iaa.Affine(translate_px={"y": 1})]
 
+        cbaoi_x = shift_cbaoi(cbaoi, left=1)
+        cbaoi_y = shift_cbaoi(cbaoi, top=1)
+        cbaoi_xy = shift_cbaoi(cbaoi, left=1, top=1)
+
+        ns = [0, 1, 2, None]
+        expecteds = [[cbaoi],
+                     [cbaoi_x, cbaoi_y],
+                     [cbaoi_xy],
+                     [cbaoi_xy]]
+
+        for n, expected in zip(ns, expecteds):
+            with self.subTest(n=n):
+                aug = iaa.SomeOf(n=n, children=augs)
+                cbaoi_aug = getattr(aug, augf_name)(cbaoi)
+                cba = cbaoi_aug.items[0]
+                assert len(cbaoi_aug.items) == len(cbaoi.items)
+                assert cbaoi_aug.shape == (5, 6, 3)
+                if hasattr(cba, "is_valid"):
+                    assert cba.is_valid
+                matches = [
+                    cba.coords_almost_equals(cbaoi_i.items[0])
+                    for cbaoi_i in expected
+                ]
+                assert np.any(matches)
+
+    def test_several_children_and_various_fixed_n__keypoints(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
-        kpsoi_x = kpsoi.shift(x=1)
-        kpsoi_y = kpsoi.shift(y=1)
-        kpsoi_xy = kpsoi.shift(x=1, y=1)
-
-        ns = [0, 1, 2, None]
-        expecteds = [[kpsoi],
-                     [kpsoi_x, kpsoi_y],
-                     [kpsoi_xy],
-                     [kpsoi_xy]]
-
-        for n, expected in zip(ns, expecteds):
-            with self.subTest(n=n):
-                aug = iaa.SomeOf(n=n, children=augs)
-                kpsoi_aug = aug.augment_keypoints(kpsoi)
-                assert len(kpsoi_aug.keypoints) == 2
-                assert kpsoi_aug.shape == (5, 6, 3)
-                matches = [
-                    keypoints_equal([kpsoi_aug], [kpsoi_i])
-                    for kpsoi_i in expected
-                ]
-                assert np.any(matches)
+        self._test_several_children_and_various_fixed_n__cbaois(
+            kpsoi, "augment_keypoints")
 
     def test_several_children_and_various_fixed_n__polygons(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
         ps = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(ps, shape=(5, 6, 3))
-        psoi_x = psoi.shift(left=1)
-        psoi_y = psoi.shift(top=1)
-        psoi_xy = psoi.shift(left=1, top=1)
+        self._test_several_children_and_various_fixed_n__cbaois(
+            psoi, "augment_polygons")
 
-        ns = [0, 1, 2, None]
-        expecteds = [[psoi],
-                     [psoi_x, psoi_y],
-                     [psoi_xy],
-                     [psoi_xy]]
-
-        for n, expected in zip(ns, expecteds):
-            with self.subTest(n=n):
-                aug = iaa.SomeOf(n=n, children=augs)
-                psoi_aug = aug.augment_polygons(psoi)
-                polygon = psoi_aug.polygons[0]
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.shape == (5, 6, 3)
-                assert polygon.is_valid
-                matches = [
-                    polygon.exterior_almost_equals(psoi_i.polygons[0])
-                    for psoi_i in expected
-                ]
-                assert np.any(matches)
+    def test_several_children_and_various_fixed_n__line_strings(self):
+        ls = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(ls, shape=(5, 6, 3))
+        self._test_several_children_and_various_fixed_n__cbaois(
+            lsoi, "augment_line_strings")
 
     def test_several_children_and_various_fixed_n__bounding_boxes(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=3, y2=3)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        bbsoi_x = bbsoi.shift(left=1)
-        bbsoi_y = bbsoi.shift(top=1)
-        bbsoi_xy = bbsoi.shift(left=1, top=1)
+        self._test_several_children_and_various_fixed_n__cbaois(
+            bbsoi, "augment_bounding_boxes")
 
-        ns = [0, 1, 2, None]
-        expecteds = [[bbsoi],
-                     [bbsoi_x, bbsoi_y],
-                     [bbsoi_xy],
-                     [bbsoi_xy]]
+    @classmethod
+    def _test_empty_cbaoi(cls, cbaoi, augf_name):
+        augs = [iaa.Affine(translate_px={"x": 1}),
+                iaa.Affine(translate_px={"y": 1})]
+        aug = iaa.SomeOf(n=2, children=augs)
 
-        for n, expected in zip(ns, expecteds):
-            with self.subTest(n=n):
-                aug = iaa.SomeOf(n=n, children=augs)
+        cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-                bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-                bb = bbsoi_aug.bounding_boxes[0]
-                assert len(bbsoi_aug.bounding_boxes) == 1
-                assert bbsoi_aug.shape == (5, 6, 3)
-                matches = [
-                    bb.coords_almost_equals(bbsoi_i.bounding_boxes[0])
-                    for bbsoi_i in expected
-                ]
-                assert np.any(matches)
+        assert_cbaois_equal(cbaoi_aug, cbaoi)
 
     def test_empty_keypoints_on_image_instance(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
-        aug = iaa.SomeOf(n=2, children=augs)
         kpsoi = ia.KeypointsOnImage([], shape=(5, 6, 3))
-
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(kpsoi_aug, kpsoi)
+        self._test_empty_cbaoi(kpsoi, "augment_keypoints")
 
     def test_empty_polygons_on_image_instance(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
-        aug = iaa.SomeOf(n=2, children=augs)
         psoi = ia.PolygonsOnImage([], shape=(5, 6, 3))
+        self._test_empty_cbaoi(psoi, "augment_polygons")
 
-        psoi_aug = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(psoi_aug, psoi)
+    def test_empty_line_strings_on_image_instance(self):
+        lsoi = ia.LineStringsOnImage([], shape=(5, 6, 3))
+        self._test_empty_cbaoi(lsoi, "augment_line_strings")
 
     def test_empty_bounding_boxes_on_image_instance(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
-        aug = iaa.SomeOf(n=2, children=augs)
         bbsoi = ia.BoundingBoxesOnImage([], shape=(5, 6, 3))
-
-        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(bbsoi_aug, bbsoi)
+        self._test_empty_cbaoi(bbsoi, "augment_bounding_boxes")
 
     def test_random_order_false__images(self):
         augs = [iaa.Multiply(2.0), iaa.Add(100)]
@@ -5339,7 +5659,8 @@ class TestSomeOf(unittest.TestCase):
         p_observed = [n/nb_iterations for n in nb_observed]
         return p_observed
 
-    def test_images_and_keypoints_aligned(self):
+    @classmethod
+    def _test_images_and_cbaoi_aligned(cls, cbaoi, augf_name):
         img = np.zeros((3, 3), dtype=np.uint8)
         img_x = np.copy(img)
         img_y = np.copy(img)
@@ -5353,127 +5674,53 @@ class TestSomeOf(unittest.TestCase):
             iaa.Affine(translate_px={"x": 1}, order=0),
             iaa.Affine(translate_px={"y": 1}, order=0)
         ]
+        cbaoi_x = shift_cbaoi(cbaoi, left=1)
+        cbaoi_y = shift_cbaoi(cbaoi, top=1)
+        cbaoi_xy = shift_cbaoi(cbaoi, left=1, top=1)
+
+        aug = iaa.SomeOf((0, 2), children=augs)
+        seen = [False, False, False, False]
+        for _ in sm.xrange(100):
+            aug_det = aug.to_deterministic()
+            img_aug = aug_det.augment_image(img)
+            cbaoi_aug = getattr(aug_det, augf_name)(cbaoi)
+            if np.array_equal(img_aug, img):
+                assert_cbaois_equal(cbaoi_aug, cbaoi)
+                seen[0] = True
+            elif np.array_equal(img_aug, img_x):
+                assert_cbaois_equal(cbaoi_aug, cbaoi_x)
+                seen[1] = True
+            elif np.array_equal(img_aug, img_y):
+                assert_cbaois_equal(cbaoi_aug, cbaoi_y)
+                seen[2] = True
+            elif np.array_equal(img_aug, img_xy):
+                assert_cbaois_equal(cbaoi_aug, cbaoi_xy)
+                seen[3] = True
+            else:
+                assert False
+            if np.all(seen):
+                break
+        assert np.all(seen)
+
+    def test_images_and_keypoints_aligned(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
-        kpsoi_x = kpsoi.shift(x=1)
-        kpsoi_y = kpsoi.shift(y=1)
-        kpsoi_xy = kpsoi.shift(x=1, y=1)
-
-        aug = iaa.SomeOf((0, 2), children=augs)
-        seen = [False, False, False, False]
-        for _ in sm.xrange(100):
-            aug_det = aug.to_deterministic()
-            img_aug = aug_det.augment_image(img)
-            kpsoi_aug = aug_det.augment_keypoints(kpsoi)
-            if np.array_equal(img_aug, img):
-                assert keypoints_equal([kpsoi_aug], [kpsoi])
-                seen[0] = True
-            elif np.array_equal(img_aug, img_x):
-                assert keypoints_equal([kpsoi_aug], [kpsoi_x])
-                seen[1] = True
-            elif np.array_equal(img_aug, img_y):
-                assert keypoints_equal([kpsoi_aug], [kpsoi_y])
-                seen[2] = True
-            elif np.array_equal(img_aug, img_xy):
-                assert keypoints_equal([kpsoi_aug], [kpsoi_xy])
-                seen[3] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
+        self._test_images_and_cbaoi_aligned(kpsoi, "augment_keypoints")
 
     def test_images_and_polygons_aligned(self):
-        img = np.zeros((3, 3), dtype=np.uint8)
-        img_x = np.copy(img)
-        img_y = np.copy(img)
-        img_xy = np.copy(img)
-        img[1, 1] = 255
-        img_x[1, 2] = 255
-        img_y[2, 1] = 255
-        img_xy[2, 2] = 255
-
-        augs = [
-            iaa.Affine(translate_px={"x": 1}, order=0),
-            iaa.Affine(translate_px={"y": 1}, order=0)
-        ]
         ps = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(ps, shape=(5, 6, 3))
-        psoi_x = psoi.shift(left=1)
-        psoi_y = psoi.shift(top=1)
-        psoi_xy = psoi.shift(left=1, top=1)
+        self._test_images_and_cbaoi_aligned(psoi, "augment_polygons")
 
-        aug = iaa.SomeOf((0, 2), children=augs)
-        seen = [False, False, False, False]
-        for _ in sm.xrange(100):
-            aug_det = aug.to_deterministic()
-            img_aug = aug_det.augment_image(img)
-            psoi_aug = aug_det.augment_polygons(psoi)
-            polygon = psoi_aug.polygons[0]
-            if np.array_equal(img_aug, img):
-                assert polygon.exterior_almost_equals(psoi.polygons[0])
-                seen[0] = True
-            elif np.array_equal(img_aug, img_x):
-                assert polygon.exterior_almost_equals(psoi_x.polygons[0])
-                seen[1] = True
-            elif np.array_equal(img_aug, img_y):
-                assert polygon.exterior_almost_equals(psoi_y.polygons[0])
-                seen[2] = True
-            elif np.array_equal(img_aug, img_xy):
-                assert polygon.exterior_almost_equals(psoi_xy.polygons[0])
-                seen[3] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
+    def test_images_and_line_strings_aligned(self):
+        ls = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(ls, shape=(5, 6, 3))
+        self._test_images_and_cbaoi_aligned(lsoi, "augment_line_strings")
 
     def test_images_and_bounding_boxes_aligned(self):
-        img = np.zeros((3, 3), dtype=np.uint8)
-        img_x = np.copy(img)
-        img_y = np.copy(img)
-        img_xy = np.copy(img)
-        img[1, 1] = 255
-        img_x[1, 2] = 255
-        img_y[2, 1] = 255
-        img_xy[2, 2] = 255
-
-        augs = [
-            iaa.Affine(translate_px={"x": 1}, order=0),
-            iaa.Affine(translate_px={"y": 1}, order=0)
-        ]
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=3, y2=3)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        bbsoi_x = bbsoi.shift(left=1)
-        bbsoi_y = bbsoi.shift(top=1)
-        bbsoi_xy = bbsoi.shift(left=1, top=1)
-
-        aug = iaa.SomeOf((0, 2), children=augs)
-        seen = [False, False, False, False]
-        for _ in sm.xrange(100):
-            aug_det = aug.to_deterministic()
-
-            img_aug = aug_det.augment_image(img)
-            bbsoi_aug = aug_det.augment_bounding_boxes(bbsoi)
-
-            bb = bbsoi_aug.bounding_boxes[0]
-            if np.array_equal(img_aug, img):
-                assert bb.coords_almost_equals(bbsoi.bounding_boxes[0])
-                seen[0] = True
-            elif np.array_equal(img_aug, img_x):
-                assert bb.coords_almost_equals(bbsoi_x.bounding_boxes[0])
-                seen[1] = True
-            elif np.array_equal(img_aug, img_y):
-                assert bb.coords_almost_equals(bbsoi_y.bounding_boxes[0])
-                seen[2] = True
-            elif np.array_equal(img_aug, img_xy):
-                assert bb.coords_almost_equals(bbsoi_xy.bounding_boxes[0])
-                seen[3] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
+        self._test_images_and_cbaoi_aligned(bbsoi, "augment_bounding_boxes")
 
     def test_invalid_argument_as_children(self):
         got_exception = False
@@ -5879,6 +6126,21 @@ class TestSometimes(unittest.TestCase):
         return ia.PolygonsOnImage(polygons, shape=self.image.shape)
 
     @property
+    def lsoi(self):
+        lss = [ia.LineString([(0, 0), (2, 0), (2, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
+    def lsoi_lr(self):
+        lss = [ia.LineString([(3-0, 0), (3-2, 0), (3-2, 2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
+    def lsoi_ud(self):
+        lss = [ia.LineString([(0, 3-0), (2, 3-0), (2, 3-2)])]
+        return ia.LineStringsOnImage(lss, shape=self.image.shape)
+
+    @property
     def bbsoi(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.5, y2=1.0)]
         return ia.BoundingBoxesOnImage(bbs, shape=self.image.shape)
@@ -5997,6 +6259,21 @@ class TestSometimes(unittest.TestCase):
 
         assert_cbaois_equal(observed, [self.polygons_lr])
 
+    def test_two_branches_always_first__line_strings(self):
+        aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
+        observed = aug.augment_line_strings([self.lsoi])
+
+        assert_cbaois_equal(observed, [self.lsoi_lr])
+
+    def test_two_branches_always_first__line_strings__deterministic(self):
+        aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_line_strings([self.lsoi])
+
+        assert_cbaois_equal(observed, [self.lsoi_lr])
+
     def test_two_branches_always_first__bounding_boxes(self):
         aug = iaa.Sometimes(1.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
 
@@ -6054,24 +6331,25 @@ class TestSometimes(unittest.TestCase):
 
     def test_two_branches_always_second__keypoints(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
         observed = aug.augment_keypoints([self.keypoints])
-        assert keypoints_equal(observed, [self.keypoints_ud])
+
+        assert_cbaois_equal(observed[0], self.keypoints_ud)
 
     def test_two_branches_always_second__keypoints__deterministic(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
         aug_det = aug.to_deterministic()
+
         observed = aug_det.augment_keypoints([self.keypoints])
-        assert keypoints_equal(observed, [self.keypoints_ud])
+
+        assert_cbaois_equal(observed[0], self.keypoints_ud)
 
     def test_two_branches_always_second__polygons(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
 
         observed = aug.augment_polygons(self.polygons)
 
-        assert observed.shape == self.polygons.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            self.polygons_ud.polygons[0])
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.polygons_ud)
 
     def test_two_branches_always_second__polygons__deterministic(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -6079,11 +6357,37 @@ class TestSometimes(unittest.TestCase):
 
         observed = aug_det.augment_polygons(self.polygons)
 
-        assert len(observed.polygons) == 1
-        assert observed.shape == self.polygons.shape
-        assert observed.polygons[0].exterior_almost_equals(
-            self.polygons_ud.polygons[0])
-        assert observed.polygons[0].is_valid
+        assert_cbaois_equal(observed, self.polygons_ud)
+
+    def test_two_branches_always_second__line_strings(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
+        observed = aug.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_ud)
+
+    def test_two_branches_always_second__line_strings__deterministic(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_line_strings(self.lsoi)
+
+        assert_cbaois_equal(observed, self.lsoi_ud)
+
+    def test_two_branches_always_second__bounding_boxes(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+
+        observed = aug.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(observed, self.bbsoi_ud)
+
+    def test_two_branches_always_second__bounding_boxes__deterministic(self):
+        aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
+        aug_det = aug.to_deterministic()
+
+        observed = aug_det.augment_bounding_boxes(self.bbsoi)
+
+        assert_cbaois_equal(observed, self.bbsoi_ud)
 
     def test_two_branches_always_second__heatmaps(self):
         aug = iaa.Sometimes(0.0, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
@@ -6153,65 +6457,27 @@ class TestSometimes(unittest.TestCase):
 
         assert nb_changed_aug_det == 0
 
-    def test_two_branches_both_50_percent__keypoints(self):
-        aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
-        nb_iterations = 250
-        nb_keypoints_if_branch = 0
-        nb_keypoints_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            keypoints_aug = aug.augment_keypoints(self.keypoints)
+    @classmethod
+    def _test_two_branches_both_50_percent__cbaois(
+            cls, cbaoi, cbaoi_lr, cbaoi_ud, augf_name):
+        def _same_coords(cbaoi1, cbaoi2):
+            assert len(cbaoi1.items) == len(cbaoi2.items)
+            for i1, i2 in zip(cbaoi1.items, cbaoi2.items):
+                if not np.allclose(i1.coords, i2.coords, atol=1e-4, rtol=0):
+                    return False
+            return True
 
-            if keypoints_equal(keypoints_aug, self.keypoints_lr):
-                nb_keypoints_if_branch += 1
-            elif keypoints_equal(keypoints_aug, self.keypoints_ud):
-                nb_keypoints_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_keypoints_if_branch / nb_iterations
-        p_else_branch = nb_keypoints_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_two_branches_both_50_percent__polygons(self):
-        aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
-        nb_iterations = 250
-        nb_polygons_if_branch = 0
-        nb_polygons_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            polygons_aug = aug.augment_polygons(self.polygons)
-
-            if polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons_lr.polygons[0], points_per_edge=0):
-                nb_polygons_if_branch += 1
-            elif polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons_ud.polygons[0], points_per_edge=0):
-                nb_polygons_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_polygons_if_branch / nb_iterations
-        p_else_branch = nb_polygons_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_two_branches_both_50_percent__bounding_boxes(self):
         aug = iaa.Sometimes(0.5, [iaa.Fliplr(1.0)], [iaa.Flipud(1.0)])
         nb_iterations = 250
         nb_if_branch = 0
         nb_else_branch = 0
         for i in sm.xrange(nb_iterations):
-            bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+            cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-            if bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi_lr.bounding_boxes[0]):
+            # use allclose() instead of coords_almost_equals() for efficiency
+            if _same_coords(cbaoi_aug, cbaoi_lr):
                 nb_if_branch += 1
-            elif bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi_ud.bounding_boxes[0]):
+            elif _same_coords(cbaoi_aug, cbaoi_ud):
                 nb_else_branch += 1
             else:
                 raise Exception(
@@ -6222,6 +6488,26 @@ class TestSometimes(unittest.TestCase):
 
         assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
         assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
+
+    def test_two_branches_both_50_percent__keypoints(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.keypoints, self.keypoints_lr, self.keypoints_ud,
+            "augment_keypoints")
+
+    def test_two_branches_both_50_percent__polygons(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.polygons, self.polygons_lr, self.polygons_ud,
+            "augment_polygons")
+
+    def test_two_branches_both_50_percent__line_strings(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.lsoi, self.lsoi_lr, self.lsoi_ud,
+            "augment_line_strings")
+
+    def test_two_branches_both_50_percent__bounding_boxes(self):
+        self._test_two_branches_both_50_percent__cbaois(
+            self.bbsoi, self.bbsoi_lr, self.bbsoi_ud,
+            "augment_bounding_boxes")
 
     def test_one_branch_50_percent__images(self):
         aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
@@ -6273,65 +6559,27 @@ class TestSometimes(unittest.TestCase):
 
         assert nb_changed_aug_det == 0
 
-    def test_one_branch_50_percent__keypoints(self):
-        aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
-        nb_iterations = 250
-        nb_keypoints_if_branch = 0
-        nb_keypoints_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            keypoints_aug = aug.augment_keypoints(self.keypoints)
+    @classmethod
+    def _test_one_branch_50_percent__cbaois(
+            cls, cbaoi, cbaoi_lr, augf_name):
+        def _same_coords(cbaoi1, cbaoi2):
+            assert len(cbaoi1.items) == len(cbaoi2.items)
+            for i1, i2 in zip(cbaoi1.items, cbaoi2.items):
+                if not np.allclose(i1.coords, i2.coords, atol=1e-4, rtol=0):
+                    return False
+            return True
 
-            if keypoints_equal(keypoints_aug, self.keypoints_lr):
-                nb_keypoints_if_branch += 1
-            elif keypoints_equal(keypoints_aug, self.keypoints):
-                nb_keypoints_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_keypoints_if_branch / nb_iterations
-        p_else_branch = nb_keypoints_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_one_branch_50_percent__polygons(self):
-        aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
-        nb_iterations = 250
-        nb_polygons_if_branch = 0
-        nb_polygons_else_branch = 0
-        for i in sm.xrange(nb_iterations):
-            polygons_aug = aug.augment_polygons(self.polygons)
-
-            if polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons_lr.polygons[0], points_per_edge=0):
-                nb_polygons_if_branch += 1
-            elif polygons_aug.polygons[0].exterior_almost_equals(
-                    self.polygons.polygons[0], points_per_edge=0):
-                nb_polygons_else_branch += 1
-            else:
-                raise Exception(
-                    "Received output doesnt match any expected output.")
-
-        p_if_branch = nb_polygons_if_branch / nb_iterations
-        p_else_branch = nb_polygons_else_branch / nb_iterations
-
-        assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
-        assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
-
-    def test_one_branch_50_percent__bounding_boxes(self):
         aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0))
         nb_iterations = 250
         nb_if_branch = 0
         nb_else_branch = 0
         for i in sm.xrange(nb_iterations):
-            bbsoi_aug = aug.augment_bounding_boxes(self.bbsoi)
+            cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-            if bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi_lr.bounding_boxes[0]):
+            # use allclose() instead of coords_almost_equals() for efficiency
+            if _same_coords(cbaoi_aug, cbaoi_lr):
                 nb_if_branch += 1
-            elif bbsoi_aug.bounding_boxes[0].coords_almost_equals(
-                    self.bbsoi.bounding_boxes[0]):
+            elif _same_coords(cbaoi_aug, cbaoi):
                 nb_else_branch += 1
             else:
                 raise Exception(
@@ -6343,29 +6591,41 @@ class TestSometimes(unittest.TestCase):
         assert np.isclose(p_if_branch, 0.5, rtol=0, atol=0.15)
         assert np.isclose(p_else_branch, 0.5, rtol=0, atol=0.15)
 
-    def test_empty_keypoints(self):
+    def test_one_branch_50_percent__keypoints(self):
+        self._test_one_branch_50_percent__cbaois(
+            self.keypoints, self.keypoints_lr, "augment_keypoints")
+
+    def test_one_branch_50_percent__polygons(self):
+        self._test_one_branch_50_percent__cbaois(
+            self.polygons, self.polygons_lr, "augment_polygons")
+
+    def test_one_branch_50_percent__bounding_boxes(self):
+        self._test_one_branch_50_percent__cbaois(
+            self.bbsoi, self.bbsoi_lr, "augment_bounding_boxes")
+
+    @classmethod
+    def _test_empty_cbaoi(cls, cbaoi, augf_name):
         aug = iaa.Sometimes(0.5, iaa.Noop())
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi)
+
+    def test_empty_keypoints(self):
         kpsoi = ia.KeypointsOnImage([], shape=(1, 2, 3))
-
-        observed = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(observed, kpsoi)
+        self._test_empty_cbaoi(kpsoi, "augment_keypoints")
 
     def test_empty_polygons(self):
-        aug = iaa.Sometimes(0.5, iaa.Noop())
         psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
+        self._test_empty_cbaoi(psoi, "augment_polygons")
 
-        observed = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(observed, psoi)
+    def test_empty_line_strings(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+        self._test_empty_cbaoi(lsoi, "augment_line_strings")
 
     def test_empty_bounding_boxes(self):
-        aug = iaa.Sometimes(0.5, iaa.Noop())
         bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
-
-        observed = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(observed, bbsoi)
+        self._test_empty_cbaoi(bbsoi, "augment_bounding_boxes")
 
     def test_p_is_stochastic_parameter(self):
         image = np.zeros((1, 1), dtype=np.uint8) + 100
@@ -6966,128 +7226,141 @@ class TestWithChannels(unittest.TestCase):
         assert segmap_aug.shape == (3, 3, 3)
         assert np.array_equal(segmap_aug.get_arr(), segmap_arr_shifted)
 
-    def test_keypoint_augmentation_single_channel(self):
-        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
-        kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
+    @classmethod
+    def _test_cbaoi_augmentation_single_channel(cls, cbaoi, augf_name):
         affine = iaa.Affine(translate_px={"x": 1})
         aug = iaa.WithChannels(1, children=[affine])
 
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
+        observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(kpsoi_aug, kpsoi)
+        assert_cbaois_equal(observed, cbaoi)
+
+    @classmethod
+    def _test_cbaoi_augmentation_all_channels_via_list(cls, cbaoi, cbaoi_x,
+                                                       augf_name):
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels([0, 1, 2], children=[affine])
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_x)
+
+    @classmethod
+    def _test_cbaoi_augmentation_subset_of_channels(cls, cbaoi, cbaoi_x,
+                                                    augf_name):
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels([0, 1], children=[affine])
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi_x)
+
+    @classmethod
+    def _test_cbaoi_augmentation_with_empty_cbaoi(cls, cbaoi, augf_name):
+        affine = iaa.Affine(translate_px={"x": 1})
+        aug = iaa.WithChannels([0, 1], children=[affine])
+
+        observed = getattr(aug, augf_name)(cbaoi)
+
+        assert_cbaois_equal(observed, cbaoi)
+
+    def test_keypoint_augmentation_single_channel(self):
+        kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
+        self._test_cbaoi_augmentation_single_channel(kpsoi, "augment_keypoints")
 
     def test_keypoint_augmentation_all_channels_via_list(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
         kpsoi_x = kpsoi.shift(x=1)
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1, 2], children=[affine])
-
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(kpsoi_aug, kpsoi_x)
+        self._test_cbaoi_augmentation_all_channels_via_list(
+            kpsoi, kpsoi_x, "augment_keypoints")
 
     def test_keypoint_augmentation_subset_of_channels(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=2)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
         kpsoi_x = kpsoi.shift(x=1)
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1], children=[affine])
-
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(kpsoi_aug, kpsoi_x)
+        self._test_cbaoi_augmentation_subset_of_channels(
+            kpsoi, kpsoi_x, "augment_keypoints")
 
     def test_keypoint_augmentation_with_empty_keypoints_instance(self):
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1], children=[affine])
         kpsoi = ia.KeypointsOnImage([], shape=(5, 6, 3))
-
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(kpsoi_aug, kpsoi)
+        self._test_cbaoi_augmentation_with_empty_cbaoi(
+            kpsoi, "augment_keypoints")
 
     def test_polygon_augmentation(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(polygons, shape=(5, 6, 3))
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels(1, children=[affine])
-
-        psoi_aug = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(psoi_aug, psoi)
+        self._test_cbaoi_augmentation_single_channel(psoi, "augment_polygons")
 
     def test_polygon_augmentation_all_channels_via_list(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(polygons, shape=(5, 6, 3))
         psoi_x = psoi.shift(left=1)
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1, 2], children=[affine])
-
-        psoi_aug = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(psoi_aug, psoi_x)
+        self._test_cbaoi_augmentation_all_channels_via_list(
+            psoi, psoi_x, "augment_polygons")
 
     def test_polygon_augmentation_subset_of_channels(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(polygons, shape=(5, 6, 3))
         psoi_x = psoi.shift(left=1)
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1], children=[affine])
-
-        psoi_aug = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(psoi_aug, psoi_x)
+        self._test_cbaoi_augmentation_subset_of_channels(
+            psoi, psoi_x, "augment_polygons")
 
     def test_polygon_augmentation_with_empty_polygons_instance(self):
         psoi = ia.PolygonsOnImage([], shape=(5, 6, 3))
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1], children=[affine])
+        self._test_cbaoi_augmentation_with_empty_cbaoi(
+            psoi, "augment_polygons")
 
-        psoi_aug = aug.augment_polygons(psoi)
+    def test_line_string_augmentation(self):
+        lss = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(lss, shape=(5, 6, 3))
+        self._test_cbaoi_augmentation_single_channel(
+            lsoi, "augment_line_strings")
 
-        assert_cbaois_equal(psoi_aug, psoi)
+    def test_line_string_augmentation_all_channels_via_list(self):
+        lss = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(lss, shape=(5, 6, 3))
+        lsoi_x = lsoi.shift(left=1)
+        self._test_cbaoi_augmentation_all_channels_via_list(
+            lsoi, lsoi_x, "augment_line_strings")
+
+    def test_line_string_augmentation_subset_of_channels(self):
+        lss = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(lss, shape=(5, 6, 3))
+        lsoi_x = lsoi.shift(left=1)
+        self._test_cbaoi_augmentation_subset_of_channels(
+            lsoi, lsoi_x, "augment_line_strings")
+
+    def test_line_string_augmentation_with_empty_polygons_instance(self):
+        lsoi = ia.LineStringsOnImage([], shape=(5, 6, 3))
+        self._test_cbaoi_augmentation_with_empty_cbaoi(
+            lsoi, "augment_line_strings")
 
     def test_bounding_boxes_augmentation(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels(1, children=[affine])
-
-        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(bbsoi_aug, bbsoi)
+        self._test_cbaoi_augmentation_single_channel(
+            bbsoi, "augment_bounding_boxes")
 
     def test_bounding_boxes_augmentation_all_channels_via_list(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
         bbsoi_x = bbsoi.shift(left=1)
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1, 2], children=[affine])
-
-        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(bbsoi_aug, bbsoi_x)
+        self._test_cbaoi_augmentation_all_channels_via_list(
+            bbsoi, bbsoi_x, "augment_bounding_boxes")
 
     def test_bounding_boxes_augmentation_subset_of_channels(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
         bbsoi_x = bbsoi.shift(left=1)
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1], children=[affine])
-
-        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(bbsoi_aug, bbsoi_x)
+        self._test_cbaoi_augmentation_subset_of_channels(
+            bbsoi, bbsoi_x, "augment_bounding_boxes")
 
     def test_bounding_boxes_augmentation_with_empty_bb_instance(self):
         bbsoi = ia.BoundingBoxesOnImage([], shape=(5, 6, 3))
-        affine = iaa.Affine(translate_px={"x": 1})
-        aug = iaa.WithChannels([0, 1], children=[affine])
-
-        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(bbsoi_aug, bbsoi)
+        self._test_cbaoi_augmentation_with_empty_cbaoi(
+            bbsoi, "augment_bounding_boxes")
 
     def test_invalid_datatype_for_channels_fails(self):
         got_exception = False
@@ -7362,6 +7635,16 @@ class TestChannelShuffle(unittest.TestCase):
         psoi_aug = aug.augment_polygons(psoi)
 
         assert_cbaois_equal(psoi_aug, psoi)
+
+    def test_line_strings_must_not_change(self):
+        aug = iaa.ChannelShuffle(p=1.0)
+        lsoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (5, 0), (5, 5)])
+        ], shape=(10, 10, 3))
+
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        assert_cbaois_equal(lsoi_aug, lsoi)
 
     def test_bounding_boxes_must_not_change(self):
         aug = iaa.ChannelShuffle(p=1.0)

@@ -1099,6 +1099,11 @@ class Affine(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         return self._augment_bounding_boxes_as_keypoints(
@@ -1816,6 +1821,11 @@ class AffineCv2(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         return self._augment_bounding_boxes_as_keypoints(
@@ -2261,6 +2271,11 @@ class PiecewiseAffine(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
+
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
 
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
@@ -2805,6 +2820,11 @@ class PerspectiveTransform(meta.Augmenter):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
+
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
 
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
@@ -3424,6 +3444,11 @@ class ElasticTransformation(meta.Augmenter):
             polygons_on_images, random_state, parents, hooks,
             recoverer=self.polygon_recoverer)
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
+
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
         return self._augment_bounding_boxes_as_keypoints(
@@ -3914,6 +3939,11 @@ class Rot90(meta.Augmenter):
                           hooks):
         return self._augment_polygons_as_keypoints(
             polygons_on_images, random_state, parents, hooks)
+
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        return self._augment_line_strings_as_keypoints(
+            line_strings_on_images, random_state, parents, hooks)
 
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
