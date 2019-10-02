@@ -28,7 +28,7 @@ from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 from imgaug.testutils import (create_random_images, create_random_keypoints,
                               array_equal_lists, keypoints_equal, reseed,
-                              assert_cbaois_equal)
+                              assert_cbaois_equal, shift_cbaoi)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
@@ -5251,122 +5251,85 @@ class TestSomeOf(unittest.TestCase):
                     for expected_i in expected]
                 assert np.any(matches)
 
-    def test_several_children_and_various_fixed_n__keypoints(self):
+    def _test_several_children_and_various_fixed_n__cbaois(
+            self, cbaoi, augf_name):
         augs = [iaa.Affine(translate_px={"x": 1}),
                 iaa.Affine(translate_px={"y": 1})]
 
+        cbaoi_x = shift_cbaoi(cbaoi, left=1)
+        cbaoi_y = shift_cbaoi(cbaoi, top=1)
+        cbaoi_xy = shift_cbaoi(cbaoi, left=1, top=1)
+
+        ns = [0, 1, 2, None]
+        expecteds = [[cbaoi],
+                     [cbaoi_x, cbaoi_y],
+                     [cbaoi_xy],
+                     [cbaoi_xy]]
+
+        for n, expected in zip(ns, expecteds):
+            with self.subTest(n=n):
+                aug = iaa.SomeOf(n=n, children=augs)
+                cbaoi_aug = getattr(aug, augf_name)(cbaoi)
+                cba = cbaoi_aug.items[0]
+                assert len(cbaoi_aug.items) == len(cbaoi.items)
+                assert cbaoi_aug.shape == (5, 6, 3)
+                if hasattr(cba, "is_valid"):
+                    assert cba.is_valid
+                matches = [
+                    cba.coords_almost_equals(cbaoi_i.items[0])
+                    for cbaoi_i in expected
+                ]
+                assert np.any(matches)
+
+    def test_several_children_and_various_fixed_n__keypoints(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
-        kpsoi_x = kpsoi.shift(x=1)
-        kpsoi_y = kpsoi.shift(y=1)
-        kpsoi_xy = kpsoi.shift(x=1, y=1)
-
-        ns = [0, 1, 2, None]
-        expecteds = [[kpsoi],
-                     [kpsoi_x, kpsoi_y],
-                     [kpsoi_xy],
-                     [kpsoi_xy]]
-
-        for n, expected in zip(ns, expecteds):
-            with self.subTest(n=n):
-                aug = iaa.SomeOf(n=n, children=augs)
-                kpsoi_aug = aug.augment_keypoints(kpsoi)
-                assert len(kpsoi_aug.keypoints) == 2
-                assert kpsoi_aug.shape == (5, 6, 3)
-                matches = [
-                    keypoints_equal([kpsoi_aug], [kpsoi_i])
-                    for kpsoi_i in expected
-                ]
-                assert np.any(matches)
+        self._test_several_children_and_various_fixed_n__cbaois(
+            kpsoi, "augment_keypoints")
 
     def test_several_children_and_various_fixed_n__polygons(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
         ps = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(ps, shape=(5, 6, 3))
-        psoi_x = psoi.shift(left=1)
-        psoi_y = psoi.shift(top=1)
-        psoi_xy = psoi.shift(left=1, top=1)
+        self._test_several_children_and_various_fixed_n__cbaois(
+            psoi, "augment_polygons")
 
-        ns = [0, 1, 2, None]
-        expecteds = [[psoi],
-                     [psoi_x, psoi_y],
-                     [psoi_xy],
-                     [psoi_xy]]
-
-        for n, expected in zip(ns, expecteds):
-            with self.subTest(n=n):
-                aug = iaa.SomeOf(n=n, children=augs)
-                psoi_aug = aug.augment_polygons(psoi)
-                polygon = psoi_aug.polygons[0]
-                assert len(psoi_aug.polygons) == 1
-                assert psoi_aug.shape == (5, 6, 3)
-                assert polygon.is_valid
-                matches = [
-                    polygon.exterior_almost_equals(psoi_i.polygons[0])
-                    for psoi_i in expected
-                ]
-                assert np.any(matches)
+    def test_several_children_and_various_fixed_n__line_strings(self):
+        ls = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(ls, shape=(5, 6, 3))
+        self._test_several_children_and_various_fixed_n__cbaois(
+            lsoi, "augment_line_strings")
 
     def test_several_children_and_various_fixed_n__bounding_boxes(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=3, y2=3)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        bbsoi_x = bbsoi.shift(left=1)
-        bbsoi_y = bbsoi.shift(top=1)
-        bbsoi_xy = bbsoi.shift(left=1, top=1)
+        self._test_several_children_and_various_fixed_n__cbaois(
+            bbsoi, "augment_bounding_boxes")
 
-        ns = [0, 1, 2, None]
-        expecteds = [[bbsoi],
-                     [bbsoi_x, bbsoi_y],
-                     [bbsoi_xy],
-                     [bbsoi_xy]]
+    @classmethod
+    def _test_empty_cbaoi(cls, cbaoi, augf_name):
+        augs = [iaa.Affine(translate_px={"x": 1}),
+                iaa.Affine(translate_px={"y": 1})]
+        aug = iaa.SomeOf(n=2, children=augs)
 
-        for n, expected in zip(ns, expecteds):
-            with self.subTest(n=n):
-                aug = iaa.SomeOf(n=n, children=augs)
+        cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-                bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-                bb = bbsoi_aug.bounding_boxes[0]
-                assert len(bbsoi_aug.bounding_boxes) == 1
-                assert bbsoi_aug.shape == (5, 6, 3)
-                matches = [
-                    bb.coords_almost_equals(bbsoi_i.bounding_boxes[0])
-                    for bbsoi_i in expected
-                ]
-                assert np.any(matches)
+        assert_cbaois_equal(cbaoi_aug, cbaoi)
 
     def test_empty_keypoints_on_image_instance(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
-        aug = iaa.SomeOf(n=2, children=augs)
         kpsoi = ia.KeypointsOnImage([], shape=(5, 6, 3))
-
-        kpsoi_aug = aug.augment_keypoints(kpsoi)
-
-        assert_cbaois_equal(kpsoi_aug, kpsoi)
+        self._test_empty_cbaoi(kpsoi, "augment_keypoints")
 
     def test_empty_polygons_on_image_instance(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
-        aug = iaa.SomeOf(n=2, children=augs)
         psoi = ia.PolygonsOnImage([], shape=(5, 6, 3))
+        self._test_empty_cbaoi(psoi, "augment_polygons")
 
-        psoi_aug = aug.augment_polygons(psoi)
-
-        assert_cbaois_equal(psoi_aug, psoi)
+    def test_empty_line_strings_on_image_instance(self):
+        lsoi = ia.LineStringsOnImage([], shape=(5, 6, 3))
+        self._test_empty_cbaoi(lsoi, "augment_line_strings")
 
     def test_empty_bounding_boxes_on_image_instance(self):
-        augs = [iaa.Affine(translate_px={"x": 1}),
-                iaa.Affine(translate_px={"y": 1})]
-        aug = iaa.SomeOf(n=2, children=augs)
         bbsoi = ia.BoundingBoxesOnImage([], shape=(5, 6, 3))
-
-        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
-
-        assert_cbaois_equal(bbsoi_aug, bbsoi)
+        self._test_empty_cbaoi(bbsoi, "augment_bounding_boxes")
 
     def test_random_order_false__images(self):
         augs = [iaa.Multiply(2.0), iaa.Add(100)]
@@ -5400,7 +5363,8 @@ class TestSomeOf(unittest.TestCase):
         p_observed = [n/nb_iterations for n in nb_observed]
         return p_observed
 
-    def test_images_and_keypoints_aligned(self):
+    @classmethod
+    def _test_images_and_cbaoi_aligned(cls, cbaoi, augf_name):
         img = np.zeros((3, 3), dtype=np.uint8)
         img_x = np.copy(img)
         img_y = np.copy(img)
@@ -5414,127 +5378,53 @@ class TestSomeOf(unittest.TestCase):
             iaa.Affine(translate_px={"x": 1}, order=0),
             iaa.Affine(translate_px={"y": 1}, order=0)
         ]
+        cbaoi_x = shift_cbaoi(cbaoi, left=1)
+        cbaoi_y = shift_cbaoi(cbaoi, top=1)
+        cbaoi_xy = shift_cbaoi(cbaoi, left=1, top=1)
+
+        aug = iaa.SomeOf((0, 2), children=augs)
+        seen = [False, False, False, False]
+        for _ in sm.xrange(100):
+            aug_det = aug.to_deterministic()
+            img_aug = aug_det.augment_image(img)
+            cbaoi_aug = getattr(aug_det, augf_name)(cbaoi)
+            if np.array_equal(img_aug, img):
+                assert_cbaois_equal(cbaoi_aug, cbaoi)
+                seen[0] = True
+            elif np.array_equal(img_aug, img_x):
+                assert_cbaois_equal(cbaoi_aug, cbaoi_x)
+                seen[1] = True
+            elif np.array_equal(img_aug, img_y):
+                assert_cbaois_equal(cbaoi_aug, cbaoi_y)
+                seen[2] = True
+            elif np.array_equal(img_aug, img_xy):
+                assert_cbaois_equal(cbaoi_aug, cbaoi_xy)
+                seen[3] = True
+            else:
+                assert False
+            if np.all(seen):
+                break
+        assert np.all(seen)
+
+    def test_images_and_keypoints_aligned(self):
         kps = [ia.Keypoint(x=0, y=0), ia.Keypoint(x=1, y=1)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(5, 6, 3))
-        kpsoi_x = kpsoi.shift(x=1)
-        kpsoi_y = kpsoi.shift(y=1)
-        kpsoi_xy = kpsoi.shift(x=1, y=1)
-
-        aug = iaa.SomeOf((0, 2), children=augs)
-        seen = [False, False, False, False]
-        for _ in sm.xrange(100):
-            aug_det = aug.to_deterministic()
-            img_aug = aug_det.augment_image(img)
-            kpsoi_aug = aug_det.augment_keypoints(kpsoi)
-            if np.array_equal(img_aug, img):
-                assert keypoints_equal([kpsoi_aug], [kpsoi])
-                seen[0] = True
-            elif np.array_equal(img_aug, img_x):
-                assert keypoints_equal([kpsoi_aug], [kpsoi_x])
-                seen[1] = True
-            elif np.array_equal(img_aug, img_y):
-                assert keypoints_equal([kpsoi_aug], [kpsoi_y])
-                seen[2] = True
-            elif np.array_equal(img_aug, img_xy):
-                assert keypoints_equal([kpsoi_aug], [kpsoi_xy])
-                seen[3] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
+        self._test_images_and_cbaoi_aligned(kpsoi, "augment_keypoints")
 
     def test_images_and_polygons_aligned(self):
-        img = np.zeros((3, 3), dtype=np.uint8)
-        img_x = np.copy(img)
-        img_y = np.copy(img)
-        img_xy = np.copy(img)
-        img[1, 1] = 255
-        img_x[1, 2] = 255
-        img_y[2, 1] = 255
-        img_xy[2, 2] = 255
-
-        augs = [
-            iaa.Affine(translate_px={"x": 1}, order=0),
-            iaa.Affine(translate_px={"y": 1}, order=0)
-        ]
         ps = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(ps, shape=(5, 6, 3))
-        psoi_x = psoi.shift(left=1)
-        psoi_y = psoi.shift(top=1)
-        psoi_xy = psoi.shift(left=1, top=1)
+        self._test_images_and_cbaoi_aligned(psoi, "augment_polygons")
 
-        aug = iaa.SomeOf((0, 2), children=augs)
-        seen = [False, False, False, False]
-        for _ in sm.xrange(100):
-            aug_det = aug.to_deterministic()
-            img_aug = aug_det.augment_image(img)
-            psoi_aug = aug_det.augment_polygons(psoi)
-            polygon = psoi_aug.polygons[0]
-            if np.array_equal(img_aug, img):
-                assert polygon.exterior_almost_equals(psoi.polygons[0])
-                seen[0] = True
-            elif np.array_equal(img_aug, img_x):
-                assert polygon.exterior_almost_equals(psoi_x.polygons[0])
-                seen[1] = True
-            elif np.array_equal(img_aug, img_y):
-                assert polygon.exterior_almost_equals(psoi_y.polygons[0])
-                seen[2] = True
-            elif np.array_equal(img_aug, img_xy):
-                assert polygon.exterior_almost_equals(psoi_xy.polygons[0])
-                seen[3] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
+    def test_images_and_line_strings_aligned(self):
+        ls = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
+        lsoi = ia.LineStringsOnImage(ls, shape=(5, 6, 3))
+        self._test_images_and_cbaoi_aligned(lsoi, "augment_line_strings")
 
     def test_images_and_bounding_boxes_aligned(self):
-        img = np.zeros((3, 3), dtype=np.uint8)
-        img_x = np.copy(img)
-        img_y = np.copy(img)
-        img_xy = np.copy(img)
-        img[1, 1] = 255
-        img_x[1, 2] = 255
-        img_y[2, 1] = 255
-        img_xy[2, 2] = 255
-
-        augs = [
-            iaa.Affine(translate_px={"x": 1}, order=0),
-            iaa.Affine(translate_px={"y": 1}, order=0)
-        ]
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=3, y2=3)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        bbsoi_x = bbsoi.shift(left=1)
-        bbsoi_y = bbsoi.shift(top=1)
-        bbsoi_xy = bbsoi.shift(left=1, top=1)
-
-        aug = iaa.SomeOf((0, 2), children=augs)
-        seen = [False, False, False, False]
-        for _ in sm.xrange(100):
-            aug_det = aug.to_deterministic()
-
-            img_aug = aug_det.augment_image(img)
-            bbsoi_aug = aug_det.augment_bounding_boxes(bbsoi)
-
-            bb = bbsoi_aug.bounding_boxes[0]
-            if np.array_equal(img_aug, img):
-                assert bb.coords_almost_equals(bbsoi.bounding_boxes[0])
-                seen[0] = True
-            elif np.array_equal(img_aug, img_x):
-                assert bb.coords_almost_equals(bbsoi_x.bounding_boxes[0])
-                seen[1] = True
-            elif np.array_equal(img_aug, img_y):
-                assert bb.coords_almost_equals(bbsoi_y.bounding_boxes[0])
-                seen[2] = True
-            elif np.array_equal(img_aug, img_xy):
-                assert bb.coords_almost_equals(bbsoi_xy.bounding_boxes[0])
-                seen[3] = True
-            else:
-                assert False
-            if np.all(seen):
-                break
-        assert np.all(seen)
+        self._test_images_and_cbaoi_aligned(bbsoi, "augment_bounding_boxes")
 
     def test_invalid_argument_as_children(self):
         got_exception = False
