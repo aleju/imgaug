@@ -1357,7 +1357,9 @@ class TestAlphaElementwise(unittest.TestCase):
             "augment_polygons", self.psoi)
 
     def test_polygons_factor_is_choice_around_050_and_per_channel(self):
-        # why were different polygons than self.psoi chosen here?
+        # We use more points here to verify the
+        # either-or-mode (pointwise=False). The probability that all points
+        # move in the same way be coincidence is extremely low for so many.
         ps = [ia.Polygon([(0, 0), (15, 0), (10, 0), (10, 5), (10, 10),
                           (5, 10), (5, 5), (0, 10), (0, 5), (0, 0)])]
         psoi = ia.PolygonsOnImage(ps, shape=(15, 15, 3))
@@ -1393,8 +1395,12 @@ class TestAlphaElementwise(unittest.TestCase):
             "augment_line_strings", self.lsoi)
 
     def test_line_strings_factor_is_choice_around_050_and_per_channel(self):
+        # see same polygons test for why self.lsoi is not used here
+        lss = [ia.LineString([(0, 0), (15, 0), (10, 0), (10, 5), (10, 10),
+                              (5, 10), (5, 5), (0, 10), (0, 5), (0, 0)])]
+        lsoi = ia.LineStringsOnImage(lss, shape=(15, 15, 3))
         self._test_cba_factor_is_choice_around_050_and_per_channel(
-            "augment_line_strings", self.lsoi, pointwise=True
+            "augment_line_strings", lsoi, pointwise=False
         )
 
     def test_empty_line_strings(self):
@@ -1426,8 +1432,10 @@ class TestAlphaElementwise(unittest.TestCase):
             "augment_bounding_boxes", self.bbsoi)
 
     def test_bounding_boxes_factor_is_choice_around_050_and_per_channel(self):
+        # TODO pointwise=True or False makes no difference here, because
+        #      there aren't enough points (see corresponding polygon test)
         self._test_cba_factor_is_choice_around_050_and_per_channel(
-            "augment_bounding_boxes", self.bbsoi, pointwise=True
+            "augment_bounding_boxes", self.bbsoi, pointwise=False
         )
 
     def test_empty_bounding_boxes(self):
