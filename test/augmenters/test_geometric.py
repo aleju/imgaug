@@ -6444,53 +6444,63 @@ class TestElasticTransformation(unittest.TestCase):
         assert kpsoi_aug.shape == (10, 10, 3)
 
     # -----------
-    # polygons
+    # abstract methods for polygons and line strings
     # -----------
-    def test_polygons_no_movement_if_alpha_below_threshold(self):
+    @classmethod
+    def _test_cbaois_no_movement_if_alpha_below_threshold(
+            cls, cba_class, cbaoi_class, augf_name):
         # for small alpha, should not move if below threshold
         with _elastic_trans_temp_thresholds(alpha=1.0, sigma=0.0):
-            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            cba = cba_class([(10, 15), (40, 15), (40, 35), (10, 35)])
+            cbaoi = cbaoi_class([cba], shape=(50, 50))
             aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
 
-            observed = aug.augment_polygons(psoi)
+            observed = getattr(aug, augf_name)(cbaoi)
 
             assert observed.shape == (50, 50)
-            assert len(observed.polygons) == 1
-            assert observed.polygons[0].exterior_almost_equals(poly)
-            assert observed.polygons[0].is_valid
+            assert len(observed.items) == 1
+            assert observed.items[0].coords_almost_equals(cba)
+            if hasattr(observed.items[0], "is_valid"):
+                assert observed.items[0].is_valid
 
-    def test_polygons_no_movement_if_sigma_below_threshold(self):
+    @classmethod
+    def _test_cbaois_no_movement_if_sigma_below_threshold(
+            cls, cba_class, cbaoi_class, augf_name):
         # for small sigma, should not move if below threshold
         with _elastic_trans_temp_thresholds(alpha=0.0, sigma=1.0):
-            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            cba = cba_class([(10, 15), (40, 15), (40, 35), (10, 35)])
+            cbaoi = cbaoi_class([cba], shape=(50, 50))
             aug = iaa.ElasticTransformation(alpha=1.0, sigma=0.001)
 
-            observed = aug.augment_polygons(psoi)
+            observed = getattr(aug, augf_name)(cbaoi)
 
             assert observed.shape == (50, 50)
-            assert len(observed.polygons) == 1
-            assert observed.polygons[0].exterior_almost_equals(poly)
-            assert observed.polygons[0].is_valid
+            assert len(observed.items) == 1
+            assert observed.items[0].coords_almost_equals(cba)
+            if hasattr(observed.items[0], "is_valid"):
+                assert observed.items[0].is_valid
 
-    def test_polygons_small_movement_for_weak_alpha_if_threshold_zero(self):
+    @classmethod
+    def _test_cbaois_small_movement_for_weak_alpha_if_threshold_zero(
+            cls, cba_class, cbaoi_class, augf_name):
         # for small alpha (at sigma 1.0), should barely move
         # if thresholds set to zero
         with _elastic_trans_temp_thresholds(alpha=0.0, sigma=0.0):
-            poly = ia.Polygon([(10, 15), (40, 15), (40, 35), (10, 35)])
-            psoi = ia.PolygonsOnImage([poly], shape=(50, 50))
+            cba = cba_class([(10, 15), (40, 15), (40, 35), (10, 35)])
+            cbaoi = cbaoi_class([cba], shape=(50, 50))
             aug = iaa.ElasticTransformation(alpha=0.001, sigma=1.0)
 
-            observed = aug.augment_polygons(psoi)
+            observed = getattr(aug, augf_name)(cbaoi)
 
             assert observed.shape == (50, 50)
-            assert len(observed.polygons) == 1
-            assert observed.polygons[0].exterior_almost_equals(
-                poly, max_distance=0.5)
-            assert observed.polygons[0].is_valid
+            assert len(observed.items) == 1
+            assert observed.items[0].coords_almost_equals(
+                cba, max_distance=0.5)
+            if hasattr(observed.items[0], "is_valid"):
+                assert observed.items[0].is_valid
 
-    def test_image_polygon_alignment(self):
+    @classmethod
+    def _test_image_cbaoi_alignment(cls, cba_class, cbaoi_class, augf_name):
         # test alignment between between images and polygons
         height_step_size = 50
         width_step_size = 30
@@ -6502,35 +6512,36 @@ class TestElasticTransformation(unittest.TestCase):
 
         image = np.zeros((height, width), dtype=np.uint8)
 
-        exterior = []
+        points = []
         for w in sm.xrange(0, 2+width_steps):
             if w not in [0, width_steps+2-1]:
                 x = width_step_size * w
                 y = height_step_size
-                exterior.append((x, y))
+                points.append((x, y))
                 image[y-s:y+s+1, x-s:x+s+1] = 255
         for w in sm.xrange(2+width_steps-1, 0, -1):
             if w not in [0, width_steps+2-1]:
                 x = width_step_size * w
                 y = height_step_size*2
-                exterior.append((x, y))
+                points.append((x, y))
                 image[y-s:y+s+1, x-s:x+s+1] = 255
 
-        poly = ia.Polygon(exterior)
-        psoi = ia.PolygonsOnImage([poly], shape=image.shape)
+        cba = cba_class(points)
+        cbaoi = cbaoi_class([cba], shape=image.shape)
         aug = iaa.ElasticTransformation(alpha=100, sigma=7)
         aug_det = aug.to_deterministic()
 
         images_aug = aug_det.augment_images([image, image])
-        psois_aug = aug_det.augment_polygons([psoi, psoi])
+        cbaois_aug = getattr(aug_det, augf_name)([cbaoi, cbaoi])
 
         count_bad = 0
-        for image_aug, psoi_aug in zip(images_aug, psois_aug):
-            assert psoi_aug.shape == image.shape
-            assert len(psoi_aug.polygons) == 1
-            for poly_aug in psoi_aug.polygons:
-                assert poly_aug.is_valid
-                for point_aug in poly_aug.exterior:
+        for image_aug, cbaoi_aug in zip(images_aug, cbaois_aug):
+            assert cbaoi_aug.shape == image.shape
+            assert len(cbaoi_aug.items) == 1
+            for cba_aug in cbaoi_aug.items:
+                if hasattr(cba_aug, "is_valid"):
+                    assert cba_aug.is_valid
+                for point_aug in cba_aug.coords:
                     x, y = point_aug[0], point_aug[1]
                     bb = ia.BoundingBox(x1=x-2, x2=x+2, y1=y-2, y2=y+2)
                     img_ex = bb.extract_from_image(image_aug)
@@ -6540,14 +6551,59 @@ class TestElasticTransformation(unittest.TestCase):
                         count_bad += 1
         assert count_bad <= 3
 
-    def test_empty_polygons(self):
+    @classmethod
+    def _test_empty_cbaois(cls, cbaoi, augf_name):
         aug = iaa.ElasticTransformation(alpha=10, sigma=10)
-        psoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
 
-        psoi_aug = aug.augment_polygons(psoi)
+        cbaoi_aug = getattr(aug, augf_name)(cbaoi)
 
-        assert len(psoi_aug.polygons) == 0
-        assert psoi_aug.shape == (10, 10, 3)
+        assert_cbaois_equal(cbaoi_aug, cbaoi)
+
+    # -----------
+    # polygons
+    # -----------
+    def test_polygons_no_movement_if_alpha_below_threshold(self):
+        self._test_cbaois_no_movement_if_alpha_below_threshold(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_polygons_no_movement_if_sigma_below_threshold(self):
+        self._test_cbaois_no_movement_if_sigma_below_threshold(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_polygons_small_movement_for_weak_alpha_if_threshold_zero(self):
+        self._test_cbaois_small_movement_for_weak_alpha_if_threshold_zero(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_image_polygon_alignment(self):
+        self._test_image_cbaoi_alignment(
+            ia.Polygon, ia.PolygonsOnImage, "augment_polygons")
+
+    def test_empty_polygons(self):
+        cbaoi = ia.PolygonsOnImage([], shape=(10, 10, 3))
+        self._test_empty_cbaois(cbaoi, "augment_polygons")
+
+    # -----------
+    # line strings
+    # -----------
+    def test_line_strings_no_movement_if_alpha_below_threshold(self):
+        self._test_cbaois_no_movement_if_alpha_below_threshold(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_line_strings_no_movement_if_sigma_below_threshold(self):
+        self._test_cbaois_no_movement_if_sigma_below_threshold(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_line_strings_small_movement_for_weak_alpha_if_threshold_zero(self):
+        self._test_cbaois_small_movement_for_weak_alpha_if_threshold_zero(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_image_line_string_alignment(self):
+        self._test_image_cbaoi_alignment(
+            ia.LineString, ia.LineStringsOnImage, "augment_line_strings")
+
+    def test_empty_line_strings(self):
+        cbaoi = ia.LineStringsOnImage([], shape=(10, 10, 3))
+        self._test_empty_cbaois(cbaoi, "augment_line_strings")
 
     # -----------
     # bounding boxes
