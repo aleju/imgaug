@@ -410,3 +410,114 @@ class Batch(object):
                                                 line_strings_aug)
 
         return batch
+
+
+class BatchInAugmentation(object):
+    """
+    Class encapsulating a batch during the augmentation process.
+
+    Data within the batch is already verified and normalized, similar to
+    :class:`Batch`. Data within the batch may be changed in-place. No initial
+    copy is needed.
+
+    Parameters
+    ----------
+    images : None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
+        The images to augment.
+
+    heatmaps : None or list of imgaug.augmentables.heatmaps.HeatmapsOnImage
+        The heatmaps to augment.
+
+    segmentation_maps : None or list of imgaug.augmentables.segmaps.SegmentationMapsOnImage
+        The segmentation maps to augment.
+
+    keypoints : None or list of imgaug.augmentables.kps.KeypointOnImage
+        The keypoints to augment.
+
+    bounding_boxes : None or list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+        The bounding boxes to augment.
+
+    polygons : None or list of imgaug.augmentables.polys.PolygonsOnImage
+        The polygons to augment.
+
+    line_strings : None or list of imgaug.augmentables.lines.LineStringsOnImage
+        The line strings to augment.
+
+    """
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
+                 keypoints=None, bounding_boxes=None, polygons=None,
+                 line_strings=None, data=None):
+        self.images = images
+        self.heatmaps = heatmaps
+        self.segmentation_maps = segmentation_maps
+        self.keypoints = keypoints
+        self.bounding_boxes = bounding_boxes
+        self.polygons = polygons
+        self.line_strings = line_strings
+        self.data = data
+
+    def get_augmentable_names_to_augment(self):
+        """Get the names of types of augmentables that contain data.
+
+        This method is intended for situations where one wants to know which
+        data is contained in the batch that has to be augmented, visualized
+        or something similar.
+
+        Returns
+        -------
+        list of str
+            Names of types of augmentables. E.g. ``["images", "polygons"]``.
+
+        """
+        return _get_augmentable_names_to_augment(self, "")
+
+    def to_batch_in_augmentation(self):
+        """Convert this batch into a :class:`BatchInAugmentation` instance.
+
+        This method simply returns the batch itself. It exists for consistency
+        with the other batch classes.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The batch itself. (Not copied.)
+
+        """
+        return self
+
+    def to_batch(self, batch_before_aug):
+        """Convert this batch into a :class:`Batch` instance.
+
+        Parameters
+        ----------
+        batch_before_aug : imgaug.augmentables.batches.Batch
+            The batch before augmentation. It is required to set the input
+            data of the :class:`Batch` instance, e.g. ``images_unaug``
+            or ``data``.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.Batch
+            Batch, with original unaugmented inputs from `batch_before_aug`
+            and augmented outputs from this :class:`BatchInAugmentation`
+            instance.
+
+        """
+        batch = Batch(
+            images=batch_before_aug.images_unaug,
+            heatmaps=batch_before_aug.heatmaps_unaug,
+            segmentation_maps=batch_before_aug.segmentation_maps_unaug,
+            keypoints=batch_before_aug.keypoints_unaug,
+            bounding_boxes=batch_before_aug.bounding_boxes_unaug,
+            polygons=batch_before_aug.polygons_unaug,
+            line_strings=batch_before_aug.line_strings_unaug,
+            data=batch_before_aug.data
+        )
+        batch.images_aug = self.images
+        batch.heatmaps_aug = self.heatmaps
+        batch.segmentation_maps_aug = self.segmentation_maps
+        batch.keypoints_aug = self.keypoints
+        batch.bounding_boxes_aug = self.bounding_boxes
+        batch.polygons_aug = self.polygons
+        batch.line_strings_aug = self.line_strings
+        return batch
