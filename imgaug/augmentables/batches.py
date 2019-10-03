@@ -6,8 +6,26 @@ import numpy as np
 
 from .. import imgaug as ia
 from . import normalization as nlib
+from . import utils as utils
 
 DEFAULT = "DEFAULT"
+
+_AUGMENTABLE_NAMES = [
+    "images", "heatmaps", "segmentation_maps", "keypoints",
+    "bounding_boxes", "polygons", "line_strings"]
+
+
+def _get_augmentable_names_to_augment(batch, postfix):
+    result = []
+    for name in _AUGMENTABLE_NAMES:
+        value = getattr(batch, name + postfix)
+        # Every data item is either an array or a list. If there are no
+        # items in the array/list, there are also no shapes to change
+        # as shape-changes are imagewise. Hence, we can afford to check
+        # len() here.
+        if value is not None and len(value) > 0:
+            result.append(name)
+    return result
 
 
 # TODO also support (H,W,C) for heatmaps of len(images) == 1
@@ -117,6 +135,9 @@ class UnnormalizedBatch(object):
         self.line_strings_unaug = line_strings
         self.line_strings_aug = None
         self.data = data
+
+    def get_augmentable_names_to_augment(self):
+        return _get_augmentable_names_to_augment(self, "_unaug")
 
     def to_normalized_batch(self):
         """Convert this unnormalized batch to an instance of Batch.
@@ -300,6 +321,20 @@ class Batch(object):
     def bounding_boxes(self):
         return self.bounding_boxes_unaug
 
+    def get_augmentable_names_to_augment(self):
+        """Get the names of types of augmentables that contain data.
+
+        This method is intended for situations where one wants to know which
+        data is contained in the batch that has to be augmented, visualized
+        or something similar.
+
+        Returns
+        -------
+        list of str
+            Names of types of augmentables. E.g. ``["images", "polygons"]``.
+
+        """
+        return _get_augmentable_names_to_augment(self, "_unaug")
     @classmethod
     def _deepcopy_obj(cls, obj):
         if obj is None:
