@@ -1038,46 +1038,11 @@ class Augmenter(object):
             Augmented keypoints.
 
         """
-        kpsois = keypoints_on_images
-
-        with _maybe_deterministic_ctx(self):
-            if parents is None:
-                parents = []
-
-            input_was_single_instance = False
-            if isinstance(kpsois, ia.KeypointsOnImage):
-                input_was_single_instance = True
-                kpsois = [kpsois]
-
-            iaval.assert_is_iterable_of(kpsois, ia.KeypointsOnImage)
-
-            # copy, but only if topmost call or hooks are provided
-            kpsois_copy = kpsois
-            if len(parents) == 0 or hooks is not None:
-                kpsois_copy = [kpsoi.deepcopy() for kpsoi in kpsois]
-
-            if hooks is not None:
-                kpsois_copy = hooks.preprocess(
-                    kpsois_copy, augmenter=self, parents=parents)
-
-            kpsois_result = kpsois_copy
-            if self._is_activated_with_hooks(kpsois_copy, parents, hooks):
-                if len(kpsois_copy) > 0:
-                    kpsois_result = self._augment_keypoints(
-                        kpsois_copy,
-                        random_state=self.random_state,
-                        parents=parents,
-                        hooks=hooks
-                    )
-                    # self.random_state.advance_()
-
-            if hooks is not None:
-                kpsois_result = hooks.postprocess(
-                    kpsois_result, augmenter=self, parents=parents)
-
-            if input_was_single_instance:
-                return kpsois_result[0]
-            return kpsois_result
+        return self.augment_batch(
+            UnnormalizedBatch(keypoints=keypoints_on_images),
+            parents=parents,
+            hooks=hooks
+        ).keypoints_aug
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
