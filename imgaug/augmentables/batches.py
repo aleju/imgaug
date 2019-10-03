@@ -187,6 +187,17 @@ class UnnormalizedBatch(object):
             data=self.data
         )
 
+    def to_batch_in_augmentation(self):
+        """Convert this batch to a :class:`BatchInAugmentation` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The converted batch.
+
+        """
+        return self.to_normalized_batch().to_batch_in_augmentation()
+
     def fill_from_augmented_normalized_batch(self, batch_aug_norm):
         """
         Fill this batch with (normalized) augmentation results.
@@ -350,6 +361,30 @@ class Batch(object):
         """
         return self
 
+    def to_batch_in_augmentation(self):
+        """Convert this batch to a :class:`BatchInAugmentation` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The converted batch.
+
+        """
+        def _copy(var):
+            if var is not None:
+                return utils.copy_augmentables(var)
+            return var
+
+        return BatchInAugmentation(
+            images=_copy(self.images_unaug),
+            heatmaps=_copy(self.heatmaps_unaug),
+            segmentation_maps=_copy(self.segmentation_maps_unaug),
+            keypoints=_copy(self.keypoints_unaug),
+            bounding_boxes=_copy(self.bounding_boxes_unaug),
+            polygons=_copy(self.polygons_unaug),
+            line_strings=_copy(self.line_strings_unaug)
+        )
+
     @classmethod
     def _deepcopy_obj(cls, obj):
         if obj is None:
@@ -472,7 +507,7 @@ class BatchInAugmentation(object):
         return _get_augmentable_names_to_augment(self, "")
 
     def to_batch_in_augmentation(self):
-        """Convert this batch into a :class:`BatchInAugmentation` instance.
+        """Convert this batch to a :class:`BatchInAugmentation` instance.
 
         This method simply returns the batch itself. It exists for consistency
         with the other batch classes.
