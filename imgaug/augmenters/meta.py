@@ -603,6 +603,37 @@ class Augmenter(object):
         return result
 
     def _augment_batch(self, batch, random_state, parents, hooks):
+        """Augment a batch in-place.
+
+        This is the internal version of :func:`Augmenter.augment_batch`.
+        It is called from :func:`Augmenter.augment_batch` and should usually
+        not be called directly.
+        This method may transform the batches in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        batch : imgaug.augmentables.batches.BatchInAugmentation
+            The normalized batch to augment. May be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        hooks : imgaug.imgaug.HooksImages or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        Returns
+        ----------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The augmented batch.
+
+        """
         augm_names = batch.get_augmentable_names_to_augment()
 
         # set attribute batch.T_aug with result of self.augment_T() for each
@@ -648,7 +679,7 @@ class Augmenter(object):
 
         Returns
         -------
-        img : ndarray
+        ndarray
             The corresponding augmented image.
 
         """
@@ -760,7 +791,7 @@ class Augmenter(object):
 
         Returns
         ----------
-        images : (N,H,W,C) ndarray or list of (H,W,C) ndarray
+        (N,H,W,C) ndarray or list of (H,W,C) ndarray
             The augmented images.
 
         """
