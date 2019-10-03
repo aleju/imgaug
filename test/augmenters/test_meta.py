@@ -1995,11 +1995,6 @@ class TestAugmenter(unittest.TestCase):
             in str(caught_warnings[-1].message)
         )
 
-    def test_augment_images_invalid_datatype(self):
-        aug = _DummyAugmenter()
-        with self.assertRaises(Exception):
-            _ = aug.augment_images(None)
-
     def test_augment_images_array_in_list_out(self):
         self._test_augment_images_array_in_list_out_varying_channels(
             [3] * 20)
