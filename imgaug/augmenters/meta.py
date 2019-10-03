@@ -1140,15 +1140,11 @@ class Augmenter(object):
             Augmented bounding boxes.
 
         """
-        from imgaug.augmentables.bbs import BoundingBoxesOnImage
-
-        return self._augment_coord_augables(
-            cls_expected=BoundingBoxesOnImage,
-            subaugment_func=self._augment_bounding_boxes,
-            augables_ois=bounding_boxes_on_images,
+        return self.augment_batch(
+            UnnormalizedBatch(bounding_boxes=bounding_boxes_on_images),
             parents=parents,
             hooks=hooks
-        )
+        ).bounding_boxes_aug
 
     def augment_polygons(self, polygons_on_images, parents=None, hooks=None):
         """Augment a batch of polygons.
