@@ -2103,13 +2103,6 @@ class TestAugmenter(unittest.TestCase):
         observed = noaug.augment_images(images_list2d3d)
         assert array_equal_lists(observed, images_list2d3d)
 
-    def test__augment_images_by_default_not_implemented(self):
-        # test case to cover the "raise NotImplementedError" in
-        # Augmenter._augment_images()
-        aug = _DummyAugmenterCallsParent()
-        with self.assertRaises(NotImplementedError):
-            _ = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
-
     def test_augment_keypoints_single_instance(self):
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(32, 32, 3))
         aug = iaa.Affine(translate_px={"x": 1})

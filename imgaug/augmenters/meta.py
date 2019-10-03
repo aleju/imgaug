@@ -755,7 +755,6 @@ class Augmenter(object):
             hooks=hooks
         ).images_aug
 
-    @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
         """Augment a batch of images in-place.
 
@@ -795,7 +794,7 @@ class Augmenter(object):
             The augmented images.
 
         """
-        raise NotImplementedError()
+        return images
 
     def augment_heatmaps(self, heatmaps, parents=None, hooks=None):
         """Augment a batch of heatmaps.
