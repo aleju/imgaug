@@ -1275,15 +1275,11 @@ class Augmenter(object):
             Augmented line strings.
 
         """
-        from imgaug.augmentables.lines import LineStringsOnImage
-
-        return self._augment_coord_augables(
-            cls_expected=LineStringsOnImage,
-            subaugment_func=self._augment_line_strings,
-            augables_ois=line_strings_on_images,
+        return self.augment_batch(
+            UnnormalizedBatch(line_strings=line_strings_on_images),
             parents=parents,
             hooks=hooks
-        )
+        ).line_strings_aug
 
     def _augment_coord_augables(self, cls_expected, subaugment_func,
                                 augables_ois, parents=None,
