@@ -181,17 +181,43 @@ def _remove_added_channel_axis(arrs_added, arrs_orig):
 
 
 class _maybe_deterministic_context(object):
-    def __init__(self, augmenter):
-        self.augmenter = augmenter
+    """Context that resets an RNG to its initial state upon exit.
+
+    This allows to execute some sampling functions and leave the code block
+    with the used RNG in the same state as before.
+
+    Parameters
+    ----------
+    random_state : imgaug.random.RNG or imgaug.augmenters.meta.Augmenter
+        The RNG to reset. If this is an augmenter, then the augmenter's
+        RNG will be used.
+
+    deterministic : None or bool
+        Whether to reset the RNG upon exit (``True``) or not (``False``).
+        Allowed to be ``None`` iff `random_state` was an augmenter, in which
+        case that augmenter's ``deterministic`` attribute will be used.
+
+    """
+
+    def __init__(self, random_state, deterministic=None):
+        if deterministic is None:
+            augmenter = random_state
+            self.random_state = augmenter.random_state
+            self.deterministic = augmenter.deterministic
+        else:
+            assert deterministic is not None, (
+                "Expected boolean as `deterministic`, got None.")
+            self.random_state = random_state
+            self.deterministic = deterministic
         self.old_state = None
 
     def __enter__(self):
-        if self.augmenter.deterministic:
-            self.old_state = self.augmenter.random_state.state
+        if self.deterministic:
+            self.old_state = self.random_state.state
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         if self.old_state is not None:
-            self.augmenter.random_state.state = self.old_state
+            self.random_state.state = self.old_state
 
 
 @six.add_metaclass(ABCMeta)
