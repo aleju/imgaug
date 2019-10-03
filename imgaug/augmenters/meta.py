@@ -513,7 +513,7 @@ class Augmenter(object):
                     del id_to_batch_orig[idx]
                     yield batch_unnormalized
 
-    def augment_batch(self, batch, hooks=None):
+    def augment_batch(self, batch, parents=None, hooks=None):
         """
         Augment a single batch.
 
@@ -521,6 +521,11 @@ class Augmenter(object):
         ----------
         batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch
             A single batch to augment.
+
+        parents : None or list of imgaug.augmenters.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as
+            ``None``. It is set automatically for child augmenters.
 
         hooks : None or imgaug.HooksImages, optional
             HooksImages object to dynamically interfere with the augmentation
@@ -533,27 +538,46 @@ class Augmenter(object):
 
         """
         batch_orig = batch
-        if isinstance(batch, UnnormalizedBatch):
-            batch = batch.to_normalized_batch()
-
-        augmentables = [(attr_name[:-len("_unaug")], attr)
-                        for attr_name, attr
-                        in batch.__dict__.items()
-                        if attr_name.endswith("_unaug") and attr is not None]
+        batch_orig_norm = batch.to_normalized_batch()
+        batch = batch_orig_norm.to_batch_in_augmentation()
 
         augseq = self
-        if len(augmentables) > 1 and not self.deterministic:
-            augseq = self.to_deterministic()
+        if not self.deterministic:
+            augm_names = batch.get_augmentable_names_to_augment()
+            if len(augm_names):
+                # note that to_deterministic() advances the RNG state, so we
+                # don't have to worry about executing many times the same augs
+                augseq = self.to_deterministic()
+
+        # If _augment_batch() ends up calling _augment_images() and similar
+        # methods, we don't need the deterministic context here. But if there
+        # is a custom implementation of _augment_batch(), then we should have
+        # this here. It causes very little overhead.
+        with _maybe_deterministic_context(augseq):
+            batch = augseq._augment_batch(
+                batch,
+                random_state=self.random_state,
+                parents=parents if parents is not None else [],
+                hooks=hooks)
+
+        result = batch.to_batch(batch_orig_norm)
+        if isinstance(batch_orig, UnnormalizedBatch):
+            result = batch_orig.fill_from_augmented_normalized_batch(result)
+        return result
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        augm_names = batch.get_augmentable_names_to_augment()
 
         # set attribute batch.T_aug with result of self.augment_T() for each
-        # batch.T_unaug that was not None
-        for attr_name, attr in augmentables:
-            aug = getattr(augseq, "augment_%s" % (attr_name,))(
-                attr, hooks=hooks)
-            setattr(batch, "%s_aug" % (attr_name,), aug)
+        # batch.T_unaug (that had any content)
+        for augm_name in augm_names:
+            with _maybe_deterministic_context(random_state, self.deterministic):
+                augm = getattr(batch, augm_name)
+                aug = getattr(self, "_augment_" + augm_name)(
+                    augm, random_state=random_state, parents=parents,
+                    hooks=hooks)
+                setattr(batch, augm_name, aug)
 
-        if isinstance(batch_orig, UnnormalizedBatch):
-            batch = batch_orig.fill_from_augmented_normalized_batch(batch)
         return batch
 
     def _is_activated_with_hooks(self, augmentables, parents, hooks):
