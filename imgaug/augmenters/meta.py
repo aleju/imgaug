@@ -180,7 +180,7 @@ def _remove_added_channel_axis(arrs_added, arrs_orig):
     ]
 
 
-class _maybe_deterministic_context(object):
+class _maybe_deterministic_ctx(object):
     """Context that resets an RNG to its initial state upon exit.
 
     This allows to execute some sampling functions and leave the code block
@@ -553,7 +553,7 @@ class Augmenter(object):
         # methods, we don't need the deterministic context here. But if there
         # is a custom implementation of _augment_batch(), then we should have
         # this here. It causes very little overhead.
-        with _maybe_deterministic_context(augseq):
+        with _maybe_deterministic_ctx(augseq):
             batch = augseq._augment_batch(
                 batch,
                 random_state=self.random_state,
@@ -571,7 +571,7 @@ class Augmenter(object):
         # set attribute batch.T_aug with result of self.augment_T() for each
         # batch.T_unaug (that had any content)
         for augm_name in augm_names:
-            with _maybe_deterministic_context(random_state, self.deterministic):
+            with _maybe_deterministic_ctx(random_state, self.deterministic):
                 augm = getattr(batch, augm_name)
                 aug = getattr(self, "_augment_" + augm_name)(
                     augm, random_state=random_state, parents=parents,
@@ -668,7 +668,7 @@ class Augmenter(object):
         gaussian blurring to them.
 
         """
-        with _maybe_deterministic_context(self):
+        with _maybe_deterministic_ctx(self):
             if parents is not None and len(parents) > 0 and hooks is None:
                 # This is a child call. The data has already been validated and
                 # copied. We don't need to copy it again for hooks, as these
@@ -824,7 +824,7 @@ class Augmenter(object):
             Corresponding augmented heatmap(s).
 
         """
-        with _maybe_deterministic_context(self):
+        with _maybe_deterministic_ctx(self):
             if parents is None:
                 parents = []
 
@@ -938,7 +938,7 @@ class Augmenter(object):
             Corresponding augmented segmentation map(s).
 
         """
-        with _maybe_deterministic_context(self):
+        with _maybe_deterministic_ctx(self):
             if parents is None:
                 parents = []
 
@@ -1071,7 +1071,7 @@ class Augmenter(object):
         """
         kpsois = keypoints_on_images
 
-        with _maybe_deterministic_context(self):
+        with _maybe_deterministic_ctx(self):
             if parents is None:
                 parents = []
 
@@ -1397,7 +1397,7 @@ class Augmenter(object):
             Augmented augmentables.
 
         """
-        with _maybe_deterministic_context(self):
+        with _maybe_deterministic_ctx(self):
             if parents is None:
                 parents = []
 
