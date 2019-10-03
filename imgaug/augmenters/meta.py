@@ -1206,15 +1206,11 @@ class Augmenter(object):
             Augmented polygons.
 
         """
-        from imgaug.augmentables.polys import PolygonsOnImage
-
-        return self._augment_coord_augables(
-            cls_expected=PolygonsOnImage,
-            subaugment_func=self._augment_polygons,
-            augables_ois=polygons_on_images,
+        return self.augment_batch(
+            UnnormalizedBatch(polygons=polygons_on_images),
             parents=parents,
             hooks=hooks
-        )
+        ).polygons_aug
 
     def augment_line_strings(self, line_strings_on_images, parents=None,
                              hooks=None):
