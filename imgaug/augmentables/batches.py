@@ -484,6 +484,24 @@ class Batch(object):
         return batch
 
 
+class _BatchInAugmentationPropagationContext(object):
+    def __init__(self, batch, augmenter, hooks, parents):
+        self.batch = batch
+        self.augmenter = augmenter
+        self.hooks = hooks
+        self.parents = parents
+        self.noned_info = None
+
+    def __enter__(self):
+        if self.hooks is not None:
+            self.noned_info = self.batch.apply_propagation_hooks_(
+                self.augmenter, self.hooks, self.parents)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.noned_info is not None:
+            self.batch.unapply_propagation_hooks_(self.noned_info)
+
+
 class BatchInAugmentation(object):
     """
     Class encapsulating a batch during the augmentation process.
@@ -546,6 +564,26 @@ class BatchInAugmentation(object):
     def get_augmentables(self):
         return _get_augmentables(self, "")
 
+    def propagation_hooks_ctx(self, augmenter, hooks, parents):
+        return _BatchInAugmentationPropagationContext(
+            self, augmenter=augmenter, hooks=hooks, parents=parents)
+
+    def apply_propagation_hooks_(self, augmenter, hooks, parents):
+        if hooks is None:
+            return None
+
+        noned_info = []
+        for augm_name, value, attr_name in self.get_augmentables():
+            is_prop = hooks.is_propagating(
+                value, augmenter=augmenter, parents=parents, default=True)
+            if not is_prop:
+                setattr(self, attr_name, None)
+                noned_info.append((attr_name, value))
+        return noned_info
+
+    def unapply_propagation_hooks_(self, noned_info):
+        for attr_name, value in noned_info:
+            setattr(self, attr_name, value)
 
     def to_batch_in_augmentation(self):
         """Convert this batch to a :class:`BatchInAugmentation` instance.
