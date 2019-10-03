@@ -524,7 +524,7 @@ def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
 def invert_normalize_images(images, images_old):
     if images_old is None:
         assert images is None, (
-            "Expected (normalized) 'images' to be None due (unnormalized) "
+            "Expected (normalized) 'images' to be None due to (unnormalized) "
             "'images_old' being None. Got type %s instead." % (type(images),))
         return None
     elif ia.is_np_array(images_old):
