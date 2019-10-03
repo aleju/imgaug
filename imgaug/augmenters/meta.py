@@ -541,13 +541,39 @@ class Augmenter(object):
         batch_orig_norm = batch.to_normalized_batch()
         batch = batch_orig_norm.to_batch_in_augmentation()
 
+        augm_names = batch.get_augmentable_names_to_augment()
+
         augseq = self
         if not self.deterministic:
-            augm_names = batch.get_augmentable_names_to_augment()
-            if len(augm_names):
+            if len(augm_names) > 1:
                 # note that to_deterministic() advances the RNG state, so we
                 # don't have to worry about executing many times the same augs
                 augseq = self.to_deterministic()
+
+        # hooks preprocess
+        if hooks is not None:
+            for augm_name in augm_names:
+                augm = getattr(batch, augm_name)
+                augm = hooks.preprocess(augm, augmenter=self, parents=parents)
+                setattr(batch, augm_name, augm)
+
+        # set augmentables to None if this augmenter is deactivated or hooks
+        # demands it
+        set_to_none = []
+        if not self.activated:
+            for augm_name in augm_names:
+                augm = getattr(batch, augm_name)
+                set_to_none.append((augm_name, augm))
+                setattr(batch, augm_name, None)
+        elif hooks is not None:
+            for augm_name in augm_names:
+                augm = getattr(batch, augm_name)
+                activated = hooks.is_activated(
+                    augm, augmenter=self, parents=parents,
+                    default=self.activated)
+                if not activated:
+                    set_to_none.append((augm_name, augm))
+                    setattr(batch, augm_name, None)
 
         # If _augment_batch() ends up calling _augment_images() and similar
         # methods, we don't need the deterministic context here. But if there
@@ -559,6 +585,17 @@ class Augmenter(object):
                 random_state=self.random_state,
                 parents=parents if parents is not None else [],
                 hooks=hooks)
+
+        # revert augmentables being set to None for non-activated augmenters
+        for augm_name, augm in set_to_none:
+            setattr(batch, augm_name, augm)
+
+        # hooks postprocess
+        if hooks is not None:
+            for augm_name in augm_names:
+                augm = getattr(batch, augm_name)
+                augm = hooks.postprocess(augm, augmenter=self, parents=parents)
+                setattr(batch, augm_name, augm)
 
         result = batch.to_batch(batch_orig_norm)
         if isinstance(batch_orig, UnnormalizedBatch):
@@ -573,10 +610,10 @@ class Augmenter(object):
         for augm_name in augm_names:
             with _maybe_deterministic_ctx(random_state, self.deterministic):
                 augm = getattr(batch, augm_name)
-                aug = getattr(self, "_augment_" + augm_name)(
+                augm = getattr(self, "_augment_" + augm_name)(
                     augm, random_state=random_state, parents=parents,
                     hooks=hooks)
-                setattr(batch, augm_name, aug)
+                setattr(batch, augm_name, augm)
 
         return batch
 
