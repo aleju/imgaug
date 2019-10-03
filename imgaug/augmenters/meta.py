@@ -3039,64 +3039,20 @@ class Sequential(Augmenter, list):
                 type(random_order),))
         self.random_order = random_order
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(augmentables, augmenter=self,
-                                    parents=parents, default=True)
-        )
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        return self._augment_augmentables(
-            images, random_state, parents, hooks, "augment_images")
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_augmentables(
-            heatmaps, random_state, parents, hooks, "augment_heatmaps")
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_augmentables(
-            segmaps, random_state, parents, hooks, "augment_segmentation_maps")
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return self._augment_augmentables(
-            keypoints_on_images, random_state, parents, hooks,
-            "augment_keypoints")
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_augmentables(
-            polygons_on_images, random_state, parents, hooks,
-            "augment_polygons")
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_augmentables(
-            line_strings_on_images, random_state, parents, hooks,
-            "augment_line_strings")
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_augmentables(
-            bounding_boxes_on_images, random_state, parents, hooks,
-            "augment_bounding_boxes")
-
-    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
-                              augfunc_name):
-        if self._is_propagating(augmentables, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
             if self.random_order:
                 order = random_state.permutation(len(self))
             else:
                 order = sm.xrange(len(self))
 
             for index in order:
-                augmentables = getattr(self[index], augfunc_name)(
-                    augmentables,
+                batch = self[index].augment_batch(
+                    batch,
                     parents=parents + [self],
                     hooks=hooks
                 )
-        return augmentables
+        return batch
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
