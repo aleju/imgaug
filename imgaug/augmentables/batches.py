@@ -335,6 +335,21 @@ class Batch(object):
 
         """
         return _get_augmentable_names_to_augment(self, "_unaug")
+
+    def to_normalized_batch(self):
+        """Return this batch.
+
+        This method does nothing and only exists to simplify interfaces
+        that accept both :class:`UnnormalizedBatch` and :class:`Batch`.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.Batch
+            This batch (not copied).
+
+        """
+        return self
+
     @classmethod
     def _deepcopy_obj(cls, obj):
         if obj is None:
