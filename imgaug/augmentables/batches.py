@@ -15,16 +15,23 @@ _AUGMENTABLE_NAMES = [
     "bounding_boxes", "polygons", "line_strings"]
 
 
-def _get_augmentable_names_to_augment(batch, postfix):
+def _get_augmentables_names(batch, postfix):
+    return [name
+            for name, value, attr_name
+            in _get_augmentables(batch, postfix)]
+
+
+def _get_augmentables(batch, postfix):
     result = []
     for name in _AUGMENTABLE_NAMES:
+        attr_name = name + postfix
         value = getattr(batch, name + postfix)
         # Every data item is either an array or a list. If there are no
         # items in the array/list, there are also no shapes to change
         # as shape-changes are imagewise. Hence, we can afford to check
         # len() here.
         if value is not None and len(value) > 0:
-            result.append(name)
+            result.append((name, value, attr_name))
     return result
 
 
@@ -136,7 +143,7 @@ class UnnormalizedBatch(object):
         self.line_strings_aug = None
         self.data = data
 
-    def get_augmentable_names_to_augment(self):
+    def get_augmentables_names(self):
         """Get the names of types of augmentables that contain data.
 
         This method is intended for situations where one wants to know which
@@ -149,7 +156,7 @@ class UnnormalizedBatch(object):
             Names of types of augmentables. E.g. ``["images", "polygons"]``.
 
         """
-        return _get_augmentable_names_to_augment(self, "_unaug")
+        return _get_augmentables_names(self, "_unaug")
 
     def to_normalized_batch(self):
         """Convert this unnormalized batch to an instance of Batch.
@@ -344,7 +351,7 @@ class Batch(object):
     def bounding_boxes(self):
         return self.bounding_boxes_unaug
 
-    def get_augmentable_names_to_augment(self):
+    def get_augmentables_names(self):
         """Get the names of types of augmentables that contain data.
 
         This method is intended for situations where one wants to know which
@@ -357,7 +364,7 @@ class Batch(object):
             Names of types of augmentables. E.g. ``["images", "polygons"]``.
 
         """
-        return _get_augmentable_names_to_augment(self, "_unaug")
+        return _get_augmentables_names(self, "_unaug")
 
     def to_normalized_batch(self):
         """Return this batch.
@@ -503,7 +510,7 @@ class BatchInAugmentation(object):
         self.line_strings = line_strings
         self.data = data
 
-    def get_augmentable_names_to_augment(self):
+    def get_augmentables_names(self):
         """Get the names of types of augmentables that contain data.
 
         This method is intended for situations where one wants to know which
@@ -516,7 +523,11 @@ class BatchInAugmentation(object):
             Names of types of augmentables. E.g. ``["images", "polygons"]``.
 
         """
-        return _get_augmentable_names_to_augment(self, "")
+        return _get_augmentables_names(self, "")
+
+    def get_augmentables(self):
+        return _get_augmentables(self, "")
+
 
     def to_batch_in_augmentation(self):
         """Convert this batch to a :class:`BatchInAugmentation` instance.
