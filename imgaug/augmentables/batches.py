@@ -137,6 +137,18 @@ class UnnormalizedBatch(object):
         self.data = data
 
     def get_augmentable_names_to_augment(self):
+        """Get the names of types of augmentables that contain data.
+
+        This method is intended for situations where one wants to know which
+        data is contained in the batch that has to be augmented, visualized
+        or something similar.
+
+        Returns
+        -------
+        list of str
+            Names of types of augmentables. E.g. ``["images", "polygons"]``.
+
+        """
         return _get_augmentable_names_to_augment(self, "_unaug")
 
     def to_normalized_batch(self):
