@@ -538,42 +538,45 @@ class Augmenter(object):
 
         """
         batch_orig = batch
-        batch_orig_norm = batch.to_normalized_batch()
-        batch = batch_orig_norm.to_batch_in_augmentation()
+        batch_norm = batch
+        if isinstance(batch_norm, UnnormalizedBatch):
+            batch_norm = batch_norm.to_normalized_batch()
+        batch = batch_norm.to_batch_in_augmentation()
 
-        augm_names = batch.get_augmentable_names_to_augment()
+        augms = batch.get_augmentables()
 
         augseq = self
         if not self.deterministic:
-            if len(augm_names) > 1:
+            if len(augms) > 1:
                 # note that to_deterministic() advances the RNG state, so we
                 # don't have to worry about executing many times the same augs
                 augseq = self.to_deterministic()
 
         # hooks preprocess
         if hooks is not None:
-            for augm_name in augm_names:
-                augm = getattr(batch, augm_name)
-                augm = hooks.preprocess(augm, augmenter=self, parents=parents)
-                setattr(batch, augm_name, augm)
+            for augm_name, augm_value, augm_attr_name in augms:
+                augm_value = hooks.preprocess(
+                    augm_value, augmenter=self, parents=parents)
+                setattr(batch, augm_attr_name, augm_value)
+
+            # refresh so that values are updated for later functions
+            augms = batch.get_augmentables()
 
         # set augmentables to None if this augmenter is deactivated or hooks
         # demands it
         set_to_none = []
         if not self.activated:
-            for augm_name in augm_names:
-                augm = getattr(batch, augm_name)
-                set_to_none.append((augm_name, augm))
-                setattr(batch, augm_name, None)
+            for augm_name, augm_value, augm_attr_name in augms:
+                set_to_none.append((augm_name, augm_value, augm_attr_name))
+                setattr(batch, augm_attr_name, None)
         elif hooks is not None:
-            for augm_name in augm_names:
-                augm = getattr(batch, augm_name)
+            for augm_name, augm_value, augm_attr_name in augms:
                 activated = hooks.is_activated(
-                    augm, augmenter=self, parents=parents,
+                    augm_value, augmenter=self, parents=parents,
                     default=self.activated)
                 if not activated:
-                    set_to_none.append((augm_name, augm))
-                    setattr(batch, augm_name, None)
+                    set_to_none.append((augm_name, augm_value, augm_attr_name))
+                    setattr(batch, augm_attr_name, None)
 
         # If _augment_batch() ends up calling _augment_images() and similar
         # methods, we don't need the deterministic context here. But if there
@@ -587,19 +590,24 @@ class Augmenter(object):
                 hooks=hooks)
 
         # revert augmentables being set to None for non-activated augmenters
-        for augm_name, augm in set_to_none:
-            setattr(batch, augm_name, augm)
+        for augm_name, augm_value, augm_attr_name in set_to_none:
+            setattr(batch, augm_attr_name, augm_value)
 
         # hooks postprocess
         if hooks is not None:
-            for augm_name in augm_names:
-                augm = getattr(batch, augm_name)
-                augm = hooks.postprocess(augm, augmenter=self, parents=parents)
-                setattr(batch, augm_name, augm)
+            # refresh as contents may have been changed in _augment_batch()
+            augms = batch.get_augmentables()
 
-        result = batch.to_batch(batch_orig_norm)
+            for augm_name, augm_value, augm_attr_name in augms:
+                augm_value = hooks.postprocess(
+                    augm_value, augmenter=self, parents=parents)
+                setattr(batch, augm_attr_name, augm_value)
+
+        batch_norm.fill_from_batch_in_augmentation_(batch)
+        result = batch_norm
         if isinstance(batch_orig, UnnormalizedBatch):
-            result = batch_orig.fill_from_augmented_normalized_batch(result)
+            # TODO make fill_from_augmented_normalized_batch inplace
+            result = batch_orig.fill_from_augmented_normalized_batch(batch_norm)
         return result
 
     def _augment_batch(self, batch, random_state, parents, hooks):
@@ -634,17 +642,19 @@ class Augmenter(object):
             The augmented batch.
 
         """
-        augm_names = batch.get_augmentable_names_to_augment()
+        augms = batch.get_augmentables()
 
         # set attribute batch.T_aug with result of self.augment_T() for each
         # batch.T_unaug (that had any content)
-        for augm_name in augm_names:
+        for augm_name, augm_value, augm_attr_name in augms:
             with _maybe_deterministic_ctx(random_state, self.deterministic):
-                augm = getattr(batch, augm_name)
-                augm = getattr(self, "_augment_" + augm_name)(
-                    augm, random_state=random_state, parents=parents,
-                    hooks=hooks)
-                setattr(batch, augm_name, augm)
+                # Checking for none here is not strictly necessary, but should
+                # improve performance a bit by saving some function calls.
+                if augm_value is not None:
+                    augm_value = getattr(self, "_augment_" + augm_name)(
+                        augm_value, random_state=random_state, parents=parents,
+                        hooks=hooks)
+                    setattr(batch, augm_attr_name, augm_value)
 
         return batch
 
