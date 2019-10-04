@@ -215,3 +215,53 @@ def interpolate_points_by_max_distance(points, max_distance, closed=True):
     if not closed:
         points_interp.append(points[-1])
     return points_interp
+
+
+def convert_cbaois_to_kpsois(cbaois):
+    """Convert coordinate-based augmentables to KeypointsOnImage instances.
+
+    Parameters
+    ----------
+    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage
+        Coordinate-based augmentables to convert, e.g. bounding boxes.
+
+    Returns
+    -------
+    list of imgaug.augmentables.kps.KeypointsOnImage
+        ``KeypointsOnImage`` instances containing the coordinates of input
+        `cbaois`.
+
+    """
+    kpsois = []
+    for cbaoi in cbaois:
+        kpsois.append(cbaoi.to_keypoints_on_image())
+    return kpsois
+
+
+def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
+    """Invert the output of :func:`convert_to_cbaois_to_kpsois` in-place.
+
+    This function writes in-place into `cbaois`.
+
+    Parameters
+    ----------
+    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage
+        Original coordinate-based augmentables before they were converted,
+        i.e. the same inputs as provided to :func:`convert_to_kpsois`.
+
+    kpsois : list of imgaug.augmentables.kps.KeypointsOnImages
+        Keypoints to convert back to the types of `cbaois`, i.e. the outputs
+        of :func:`convert_cbaois_to_kpsois`.
+
+    Returns
+    -------
+    list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage
+        Parameter `cbaois`, with updated coordinates and shapes derived from
+        `kpsois`. `cbaois` is modified in-place.
+
+    """
+    result = []
+    for img_idx, (cbaoi, kpsoi) in enumerate(zip(cbaois, kpsois)):
+        cbaoi_recovered = cbaoi.invert_to_keypoints_on_image_(kpsoi)
+        result.append(cbaoi_recovered)
+    return result
