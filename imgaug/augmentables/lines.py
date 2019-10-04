@@ -1823,6 +1823,17 @@ class LineStringsOnImage(object):
         return LineStringsOnImage(lss_new, shape=self.shape)
 
     def to_keypoints_on_image(self):
+        """Convert the line strings to one ``KeypointsOnImage`` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            A keypoints instance containing ``N`` coordinates for a total
+            of ``N`` points in the ``coords`` attributes of all line strings.
+            Order matches the order in ``line_strings`` and ``coords``
+            attributes.
+
+        """
         from . import KeypointsOnImage
         if self.empty:
             return KeypointsOnImage([], shape=self.shape)
@@ -1833,6 +1844,24 @@ class LineStringsOnImage(object):
                                               shape=self.shape)
 
     def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``LineStringsOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to convert back to line strings, i.e. the outputs
+            of ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        LineStringsOnImage
+            Line strings container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
         lss = self.line_strings
         coordss = [ls.coords for ls in lss]
         nb_points = sum([len(coords) for coords in coordss])

@@ -1481,6 +1481,16 @@ class PolygonsOnImage(object):
         return PolygonsOnImage(polys_new, shape=self.shape)
 
     def to_keypoints_on_image(self):
+        """Convert the polygons to one ``KeypointsOnImage`` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            A keypoints instance containing ``N`` coordinates for a total
+            of ``N`` points in all exteriors of the polygons within this
+            container. Order matches the order in ``polygons``.
+
+        """
         from . import KeypointsOnImage
         if self.empty:
             return KeypointsOnImage([], shape=self.shape)
@@ -1490,6 +1500,24 @@ class PolygonsOnImage(object):
         return KeypointsOnImage.from_xy_array(exteriors, shape=self.shape)
 
     def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``PolygonsOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to convert back to polygons, i.e. the outputs
+            of ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        PolygonsOnImage
+            Polygons container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
         polys = self.polygons
         exteriors = [poly.exterior for poly in polys]
         nb_points = sum([len(exterior) for exterior in exteriors])

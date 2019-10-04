@@ -1226,6 +1226,15 @@ class BoundingBoxesOnImage(object):
         return BoundingBoxesOnImage(bbs_new, shape=self.shape)
 
     def to_keypoints_on_image(self):
+        """Convert the bounding boxes to one ``KeypointsOnImage`` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            A keypoints instance containing ``N*2`` coordinates for ``N``
+            bounding boxes. Order matches the order in ``bounding_boxes``.
+
+        """
         from . import KeypointsOnImage
         return KeypointsOnImage.from_xy_array(
             self.to_xyxy_array().reshape((-1, 2)),
@@ -1233,6 +1242,24 @@ class BoundingBoxesOnImage(object):
         )
 
     def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``BoundingBoxesOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to convert back to bounding boxes, i.e. the outputs
+            of ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        BoundingBoxesOnImage
+            Bounding boxes container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
         assert len(kpsoi.keypoints) == len(self.bounding_boxes) * 2
         for i, bb in enumerate(self.bounding_boxes):
             xx = [kpsoi.keypoints[2*i+0].x, kpsoi.keypoints[2*i+1].x]
