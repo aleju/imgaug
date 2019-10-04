@@ -1225,6 +1225,25 @@ class BoundingBoxesOnImage(object):
             in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs_new, shape=self.shape)
 
+    def to_keypoints_on_image(self):
+        from . import KeypointsOnImage
+        return KeypointsOnImage.from_xy_array(
+            self.to_xyxy_array().reshape((-1, 2)),
+            shape=self.shape
+        )
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        assert len(kpsoi.keypoints) == len(self.bounding_boxes) * 2
+        for i, bb in enumerate(self.bounding_boxes):
+            xx = [kpsoi.keypoints[2*i+0].x, kpsoi.keypoints[2*i+1].x]
+            yy = [kpsoi.keypoints[2*i+0].y, kpsoi.keypoints[2*i+1].y]
+            bb.x1 = min(xx)
+            bb.y1 = min(yy)
+            bb.x2 = max(xx)
+            bb.y2 = max(yy)
+        self.shape = kpsoi.shape
+        return self
+
     def copy(self):
         """Create a shallow copy of the ``BoundingBoxesOnImage`` instance.
 
