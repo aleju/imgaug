@@ -546,6 +546,14 @@ class BatchInAugmentation(object):
         self.line_strings = line_strings
         self.data = data
 
+    @property
+    def nb_items(self):
+        for augm_name in _AUGMENTABLE_NAMES:
+            value = getattr(self, augm_name)
+            if value is not None:
+                return len(value)
+        return 0
+
     def get_augmentables_names(self):
         """Get the names of types of augmentables that contain data.
 
