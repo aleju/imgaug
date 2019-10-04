@@ -20,11 +20,11 @@ def recover_psois_(psois, psois_orig, recoverer, random_state):
 
     Parameters
     ----------
-    psois : list of imgaug.augmentables.polys.PolygonsOnImage
+    psois : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
         The possibly broken polygons, e.g. after augmentation.
         The `recoverer` is applied to them.
 
-    psois_orig : list of imgaug.augmentables.polys.PolygonsOnImage
+    psois_orig : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
         Original polygons that were later changed to `psois`.
         They are an extra input to `recoverer`.
 
@@ -36,17 +36,26 @@ def recover_psois_(psois, psois_orig, recoverer, random_state):
 
     Returns
     -------
-    list of imgaug.augmentables.polys.PolygonsOnImage
+    list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
         List of repaired polygons. Note that this is `psois`, which was
         changed in-place.
 
     """
+    input_was_list = True
+    if not isinstance(psois, list):
+        input_was_list = False
+        psois = [psois]
+        psois_orig = [psois_orig]
+
     for i, psoi in enumerate(psois):
         for j, polygon in enumerate(psoi.polygons):
             poly_rec = recoverer.recover_from(
                 polygon.exterior, psois_orig[i].polygons[j],
                 random_state)
             polygon.exterior[...] = poly_rec.exterior
+
+    if not input_was_list:
+        return psois[0]
     return psois
 
 
