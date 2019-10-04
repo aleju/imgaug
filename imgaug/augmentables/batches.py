@@ -572,7 +572,7 @@ class BatchInAugmentation(object):
     def get_augmentables(self):
         return _get_augmentables(self, "")
 
-    def get_itemwise_shapes(self):
+    def get_rowwise_shapes(self):
         nb_items = self.nb_items
         augmentables = self.get_augmentables()
         shapes = [None] * nb_items
