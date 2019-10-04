@@ -572,6 +572,49 @@ class BatchInAugmentation(object):
     def get_augmentables(self):
         return _get_augmentables(self, "")
 
+    def subselect_items_by_indices(self, indices):
+        kwargs = {"data": self.data}
+        for augm_name in _AUGMENTABLE_NAMES:
+            items = getattr(self, augm_name)
+            if items is not None:
+                if augm_name == "images" and ia.is_np_array(items):
+                    items = items[indices]
+                else:
+                    items = [items[index] for index in indices]
+            kwargs[augm_name] = items
+
+        return BatchInAugmentation(**kwargs)
+
+    def invert_subselect_items_by_indices_(self, indices, batch_subselected):
+        for augm_name in _AUGMENTABLE_NAMES:
+            items = getattr(self, augm_name)
+            if items is not None:
+                items_sub = getattr(batch_subselected, augm_name)
+                if augm_name == "images" and ia.is_np_array(items):
+                    # An array does not have to stay an array after
+                    # augmentation. The shapes and/or dtypes of items may
+                    # change, turning the array into a list.
+                    if ia.is_np_array(items_sub):
+                        shapes = {items.shape[1:], items_sub.shape[1:]}
+                        dtypes = {items.dtype.name, items_sub.dtype.name}
+                    else:
+                        shapes = set(
+                            [items.shape[1:]]
+                            + [image.shape for image in items_sub])
+                        dtypes = set(
+                            [items.dtype.name]
+                            + [image.dtype.name for image in items_sub])
+
+                    if len(shapes) == 1 and len(dtypes) == 1:
+                        items[indices] = items_sub
+                    else:
+                        self.images = list(items)
+                        for ith_index, index in enumerate(indices):
+                            self.images[index] = items_sub[ith_index]
+                else:
+                    for ith_index, index in enumerate(indices):
+                        items[index] = items_sub[ith_index]
+
     def propagation_hooks_ctx(self, augmenter, hooks, parents):
         return _BatchInAugmentationPropagationContext(
             self, augmenter=augmenter, hooks=hooks, parents=parents)
