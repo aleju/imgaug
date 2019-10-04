@@ -3287,133 +3287,8 @@ class SomeOf(Augmenter, list):
             random_state.shuffle(row)
         return augmenter_active
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(augmentables, augmenter=self,
-                                    parents=parents, default=True)
-        )
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        if not self._is_propagating(images, parents, hooks):
-            return images
-
-        input_is_array = ia.is_np_array(images)
-
-        # This must happen before creating the augmenter_active array,
-        # otherwise in case of determinism the number of augmented images
-        # would change the random_state's state, resulting in the order
-        # being dependent on the number of augmented images (and not be
-        # constant). By doing this first, the random state is always the
-        # same (when determinism is active), so the order is always the
-        # same.
-        augmenter_order = self._get_augmenter_order(random_state)
-
-        # create an array of active augmenters per image
-        # e.g.
-        #  [[0, 0, 1],
-        #   [1, 0, 1],
-        #   [1, 0, 0]]
-        # would signal, that augmenter 3 is active for the first image,
-        # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-        augmenter_active = self._get_augmenter_active(len(images),
-                                                      random_state)
-
-        for augmenter_index in augmenter_order:
-            active = augmenter_active[:, augmenter_index].nonzero()[0]
-            if len(active) > 0:
-                # pick images to augment, i.e. images for which
-                # augmenter at current index is active
-                if input_is_array:
-                    images_to_aug = images[active]
-                else:
-                    images_to_aug = [images[idx] for idx in active]
-
-                # augment the images
-                images_to_aug = self[augmenter_index].augment_images(
-                    images=images_to_aug,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-                output_is_array = ia.is_np_array(images_to_aug)
-                output_all_same_shape = len(
-                    set([img.shape for img in images_to_aug])) == 1
-
-                # Map them back to their position in the images array/list
-                # But it can happen that the augmented images have
-                # different shape(s) from the input image, as well as
-                # being suddenly a list instead of a numpy array.
-                # This is usually the case if a child augmenter has to
-                # change shapes, e.g. due to cropping (without resize
-                # afterwards). So accomodate here for that possibility.
-                if input_is_array:
-                    if not output_is_array and output_all_same_shape:
-                        images_to_aug = np.array(
-                            images_to_aug, dtype=images.dtype)
-                        output_is_array = True
-
-                    if (output_is_array
-                            and images_to_aug.shape[1:] == images.shape[1:]):
-                        images[active] = images_to_aug
-                    else:
-                        images = list(images)
-                        for aug_idx, original_idx in enumerate(active):
-                            images[original_idx] = images_to_aug[aug_idx]
-                        input_is_array = False
-                else:
-                    for aug_idx, original_idx in enumerate(active):
-                        images[original_idx] = images_to_aug[aug_idx]
-
-        return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(augmenter_, heatmaps_to_aug_, parents_, hooks_):
-            return augmenter_.augment_heatmaps(
-                heatmaps_to_aug_, parents_, hooks_)
-        return self._augment_non_images(heatmaps, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        def _augfunc(augmenter_, segmaps_to_aug_, parents_, hooks_):
-            return augmenter_.augment_segmentation_maps(
-                segmaps_to_aug_, parents_, hooks_)
-        return self._augment_non_images(segmaps, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
-            return augmenter_.augment_keypoints(
-                koi_to_aug_, parents_, hooks_)
-        return self._augment_non_images(keypoints_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
-            return augmenter_.augment_polygons(
-                polys_to_aug_, parents_, hooks_)
-        return self._augment_non_images(polygons_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
-            return augmenter_.augment_line_strings(
-                polys_to_aug_, parents_, hooks_)
-        return self._augment_non_images(line_strings_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        def _augfunc(augmenter_, bbs_to_aug_, parents_, hooks_):
-            return augmenter_.augment_bounding_boxes(
-                bbs_to_aug_, parents_, hooks_)
-        return self._augment_non_images(bounding_boxes_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
-        if self._is_propagating(inputs, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
             # This must happen before creating the augmenter_active array,
             # otherwise in case of determinism the number of augmented images
             # would change the random_state's state, resulting in the order
@@ -3430,26 +3305,22 @@ class SomeOf(Augmenter, list):
             #   [1, 0, 0]]
             # would signal, that augmenter 3 is active for the first image,
             # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(inputs),
+            augmenter_active = self._get_augmenter_active(batch.nb_items,
                                                           random_state)
 
             for augmenter_index in augmenter_order:
                 active = augmenter_active[:, augmenter_index].nonzero()[0]
+
                 if len(active) > 0:
-                    # pick images to augment, i.e. images for which
-                    # augmenter at current index is active
-                    koi_to_aug = [inputs[idx] for idx in active]
-
-                    # augment the image-related objects
-                    koi_to_aug = func(
-                        self[augmenter_index], koi_to_aug, parents + [self],
-                        hooks
+                    batch_sub = batch.subselect_items_by_indices(active)
+                    batch_sub = self[augmenter_index].augment_batch(
+                        batch_sub,
+                        parents=parents + [self],
+                        hooks=hooks
                     )
+                    batch.invert_subselect_items_by_indices_(active, batch_sub)
 
-                    # map them back to their position in the images array/list
-                    for aug_idx, original_idx in enumerate(active):
-                        inputs[original_idx] = koi_to_aug[aug_idx]
-        return inputs
+            return batch
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
