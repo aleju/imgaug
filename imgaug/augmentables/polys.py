@@ -1445,6 +1445,31 @@ class PolygonsOnImage(object):
         ]
         return PolygonsOnImage(polys_new, shape=self.shape)
 
+    def to_keypoints_on_image(self):
+        from . import KeypointsOnImage
+        if self.empty:
+            return KeypointsOnImage([], shape=self.shape)
+        exteriors = np.concatenate(
+            [poly.exterior for poly in self.polygons],
+            axis=0)
+        return KeypointsOnImage.from_xy_array(exteriors, shape=self.shape)
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        polys = self.polygons
+        exteriors = [poly.exterior for poly in polys]
+        nb_points = sum([len(exterior) for exterior in exteriors])
+        assert len(kpsoi.keypoints) == nb_points
+
+        xy_arr = kpsoi.to_xy_array()
+
+        counter = 0
+        for i, poly in enumerate(polys):
+            exterior = poly.exterior
+            exterior[:, :] = xy_arr[counter:counter+len(exterior), :]
+            counter += len(exterior)
+        self.shape = kpsoi.shape
+        return self
+
     def copy(self):
         """Create a shallow copy of this object.
 
