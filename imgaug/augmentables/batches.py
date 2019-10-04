@@ -572,6 +572,24 @@ class BatchInAugmentation(object):
     def get_augmentables(self):
         return _get_augmentables(self, "")
 
+    def get_itemwise_shapes(self):
+        nb_items = self.nb_items
+        augmentables = self.get_augmentables()
+        shapes = [None] * nb_items
+        found = np.zeros((nb_items,), dtype=bool)
+        for augm_name, augm_value, augm_attr_name in augmentables:
+            if augm_value is not None:
+                if augm_name == "images" and ia.is_np_array(augm_value):
+                    shapes = [augm_value.shape[1:]] * nb_items
+                else:
+                    for i, item in enumerate(augm_value):
+                        if item is not None:
+                            shapes[i] = item.shape
+                            found[i] = True
+                if np.all(found):
+                    return shapes
+        return shapes
+
     def subselect_items_by_indices(self, indices):
         kwargs = {"data": self.data}
         for augm_name in _AUGMENTABLE_NAMES:
