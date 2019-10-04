@@ -670,13 +670,16 @@ class KeypointsOnImage(object):
         shape : tuple of int or ndarray
             The shape of the image on which the keypoints are placed.
 
-
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
             :class:`KeypointsOnImage` object containing the array's keypoints.
 
         """
+        xy = np.array(xy, dtype=np.float32)
+        assert xy.ndim == 2 and xy.shape[-1] == 2, (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
         keypoints = [Keypoint(x=coord[0], y=coord[1]) for coord in xy]
         return KeypointsOnImage(keypoints, shape)
 
