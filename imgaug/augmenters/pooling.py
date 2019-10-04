@@ -23,6 +23,7 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 
 from abc import ABCMeta, abstractmethod
+import functools
 
 import six
 import numpy as np
@@ -68,29 +69,41 @@ class _AbstractPoolingBase(meta.Augmenter):
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
         """Apply pooling method with given kernel height/width to an image."""
 
-    def _draw_samples(self, augmentables, random_state):
-        nb_images = len(augmentables)
+    def _draw_samples(self, nb_items, random_state):
         rss = random_state.duplicate(2)
         mode = "single" if self.kernel_size[1] is None else "two"
         kernel_sizes_h = self.kernel_size[0].draw_samples(
-            (nb_images,),
+            (nb_items,),
             random_state=rss[0])
         if mode == "single":
             kernel_sizes_w = kernel_sizes_h
         else:
             kernel_sizes_w = self.kernel_size[1].draw_samples(
-                (nb_images,), random_state=rss[1])
+                (nb_items,), random_state=rss[1])
         return (
             np.clip(kernel_sizes_h, 1, None),
             np.clip(kernel_sizes_w, 1, None)
         )
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None and self.keep_size:
+            return batch
+
+        samples = self._draw_samples(batch.nb_items, random_state)
+        augmentables = batch.get_augmentables()
+        for augm_name, augm_value, augm_attr_name in augmentables:
+            if augm_value is not None:
+                augm_value_aug = getattr(
+                    self, "_augment_%s_by_samples" % (augm_name,)
+                )(augm_value, samples)
+                setattr(batch, augm_attr_name, augm_value_aug)
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         if not self.keep_size:
             images = list(images)
 
-        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
-            images, random_state)
+        kernel_sizes_h, kernel_sizes_w = samples
 
         gen = enumerate(zip(images, kernel_sizes_h, kernel_sizes_w))
         for i, (image, ksize_h, ksize_w) in gen:
@@ -104,18 +117,17 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return images
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(heatmaps, random_state)
+    def _augment_heatmaps_by_samples(self, heatmaps, samples):
+        return self._augment_hms_and_segmaps_by_samples(heatmaps, samples)
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(segmaps, random_state)
+    def _augment_segmentation_maps_by_samples(self, segmaps, samples):
+        return self._augment_hms_and_segmaps_by_samples(segmaps, samples)
 
-    def _augment_hms_and_segmaps(self, augmentables, random_state):
+    def _augment_hms_and_segmaps_by_samples(self, augmentables, samples):
         if self.keep_size:
             return augmentables
 
-        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
-            augmentables, random_state)
+        kernel_sizes_h, kernel_sizes_w = samples
 
         gen = zip(augmentables, kernel_sizes_h, kernel_sizes_w)
         for augmentable, ksize_h, ksize_w in gen:
@@ -130,13 +142,11 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return augmentables
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         if self.keep_size:
             return keypoints_on_images
 
-        kernel_sizes_h, kernel_sizes_w = self._draw_samples(
-            keypoints_on_images, random_state)
+        kernel_sizes_h, kernel_sizes_w = samples
 
         gen = enumerate(zip(keypoints_on_images, kernel_sizes_h,
                             kernel_sizes_w))
@@ -149,20 +159,23 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return keypoints_on_images
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+    def _augment_polygons_by_samples(self, polygons_on_images, samples):
+        func = functools.partial(self._augment_keypoints_by_samples,
+                                 samples=samples)
+        return self._apply_to_polygons_as_keypoints(polygons_on_images, func,
+                                                    recoverer=None)
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
+    def _augment_line_strings_by_samples(self, line_strings_on_images, samples):
+        func = functools.partial(self._augment_keypoints_by_samples,
+                                 samples=samples)
+        return self._apply_to_cbaois_as_keypoints(line_strings_on_images, func)
 
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
+    def _augment_bounding_boxes_by_samples(self, bounding_boxes_on_images,
+                                           samples):
+        func = functools.partial(self._augment_keypoints_by_samples,
+                                 samples=samples)
+        return self._apply_to_cbaois_as_keypoints(bounding_boxes_on_images,
+                                                  func)
 
     def get_parameters(self):
         return [self.kernel_size, self.keep_size]

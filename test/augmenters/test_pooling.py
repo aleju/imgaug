@@ -72,7 +72,7 @@ class _TestPoolingAugmentersBase(object):
         raise NotImplementedError()
 
     @mock.patch("imgaug.augmenters.pooling._AbstractPoolingBase."
-                "_augment_hms_and_segmaps")
+                "_augment_hms_and_segmaps_by_samples")
     def test_augment_segmaps(self, mock_aug_segmaps):
         from imgaug.augmentables.segmaps import SegmentationMapsOnImage
         arr = np.int32([
