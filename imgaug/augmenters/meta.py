@@ -1366,7 +1366,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImages
+        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImages or imgaug.augmentables.bbs.BoundingBoxesOnImages
             Bounding boxes to augment. They may be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -1381,7 +1381,7 @@ class Augmenter(object):
 
         Returns
         -------
-        list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage
             The augmented bounding boxes.
 
         """
@@ -1397,7 +1397,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
             Polygons to augment. They may be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -1418,7 +1418,7 @@ class Augmenter(object):
 
         Returns
         -------
-        list of imgaug.augmentables.polys.PolygonsOnImage
+        list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
             The augmented polygons.
 
         """
@@ -1437,7 +1437,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImages
+        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImages or imgaug.augmentables.lines.LineStringsOnImages
             Line strings to augment. They may be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -1452,7 +1452,7 @@ class Augmenter(object):
 
         Returns
         -------
-        list of imgaug.augmentables.lines.LineStringsOnImages
+        list of imgaug.augmentables.lines.LineStringsOnImages or imgaug.augmentables.lines.LineStringsOnImages
             The augmented line strings.
 
         """
@@ -1468,7 +1468,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
             Coordinate-based augmentables to augment. They may be changed
             in-place.
 
@@ -1484,7 +1484,7 @@ class Augmenter(object):
 
         Returns
         -------
-        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
             The augmented coordinate-based augmentables.
 
         """
@@ -1502,7 +1502,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
             Polygons to augment. They may be changed in-place.
 
         func : callable
@@ -1521,7 +1521,7 @@ class Augmenter(object):
 
         Returns
         -------
-        list of imgaug.augmentables.polys.PolygonsOnImage
+        list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
             The augmented polygons.
 
         """
@@ -1529,7 +1529,10 @@ class Augmenter(object):
 
         psois_orig = None
         if recoverer is not None:
-            psois_orig = [psoi.deepcopy() for psoi in polygons_on_images]
+            if isinstance(polygons_on_images, list):
+                psois_orig = [psoi.deepcopy() for psoi in polygons_on_images]
+            else:
+                psois_orig = polygons_on_images.deepcopy()
 
         psois = cls._apply_to_cbaois_as_keypoints(polygons_on_images, func)
 
@@ -1556,7 +1559,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
             Coordinate-based augmentables to augment. They may be changed
             in-place.
 
@@ -1567,7 +1570,7 @@ class Augmenter(object):
 
         Returns
         -------
-        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
             The augmented coordinate-based augmentables.
 
         """
