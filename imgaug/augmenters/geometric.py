@@ -24,7 +24,7 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 
 import math
-from functools import partial
+import functools
 
 import numpy as np
 from scipy import ndimage
@@ -3265,214 +3265,204 @@ class ElasticTransformation(meta.Augmenter):
         return _ElasticTransformationSamplingResult(
             rss[0:-5], alphas, sigmas, orders, cvals, modes)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        iadt.gate_dtypes(
-            images,
-            allowed=["bool",
-                     "uint8", "uint16", "uint32", "uint64",
-                     "int8", "int16", "int32", "int64",
-                     "float16", "float32", "float64"],
-            disallowed=["uint128", "uint256",
-                        "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=self)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is not None:
+            iadt.gate_dtypes(
+                batch.images,
+                allowed=["bool",
+                         "uint8", "uint16", "uint32", "uint64",
+                         "int8", "int16", "int32", "int64",
+                         "float16", "float32", "float64"],
+                disallowed=["uint128", "uint256",
+                            "int128", "int256",
+                            "float96", "float128", "float256"],
+                augmenter=self)
 
-        result = images
-        nb_images = len(images)
-        samples = self._draw_samples(nb_images, random_state)
+        shapes = batch.get_rowwise_shapes()
+        samples = self._draw_samples(len(shapes), random_state)
 
-        gen = enumerate(zip(images, samples.alphas, samples.sigmas,
-                            samples.cvals, samples.modes, samples.orders,
-                            samples.random_states))
-        for i, (image, alpha, sigma, cval, mode, order, random_state_i) in gen:
-            min_value, _center_value, max_value = \
-                iadt.get_value_range_of_dtype(image.dtype)
-            cval = max(min(cval, max_value), min_value)
-
-            input_dtype = image.dtype
-            if image.dtype.name == "float16":
-                image = image.astype(np.float32)
-
+        for i, shape in enumerate(shapes):
             dx, dy = self._generate_shift_maps(
-                image.shape[0:2],
-                alpha=alpha, sigma=sigma, random_state=random_state_i)
+                shape[0:2],
+                alpha=samples.alphas[i],
+                sigma=samples.sigmas[i],
+                random_state=samples.random_states[i])
 
-            image_aug = self._map_coordinates(
-                image, dx, dy, order=order, cval=cval, mode=mode)
+            if batch.images is not None:
+                batch.images[i] = self._augment_image_by_samples(
+                    batch.images[i], i, samples, dx, dy)
+            if batch.heatmaps is not None:
+                batch.heatmaps[i] = self._augment_hm_or_sm_by_samples(
+                    batch.heatmaps[i], i, samples, dx, dy, "arr_0to1",
+                    self._cval_heatmaps, self._mode_heatmaps,
+                    self._order_heatmaps)
+            if batch.segmentation_maps is not None:
+                batch.segmentation_maps[i] = self._augment_hm_or_sm_by_samples(
+                    batch.segmentation_maps[i], i, samples, dx, dy, "arr",
+                    self._cval_segmentation_maps, self._mode_segmentation_maps,
+                    self._order_segmentation_maps)
+            if batch.keypoints is not None:
+                batch.keypoints[i] = self._augment_kpsoi_by_samples(
+                    batch.keypoints[i], i, samples, dx, dy)
+            if batch.bounding_boxes is not None:
+                batch.bounding_boxes[i] = self._augment_bbsoi_by_samples(
+                    batch.bounding_boxes[i], i, samples, dx, dy)
+            if batch.polygons is not None:
+                batch.polygons[i] = self._augment_psoi_by_samples(
+                    batch.polygons[i], i, samples, dx, dy)
+            if batch.line_strings is not None:
+                batch.line_strings[i] = self._augment_lsoi_by_samples(
+                    batch.line_strings[i], i, samples, dx, dy)
 
-            if image.dtype.name != input_dtype.name:
-                image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
-            result[i] = image_aug
+        return batch
 
-        return result
+    def _augment_image_by_samples(self, image, row_idx, samples, dx, dy):
+        min_value, _center_value, max_value = \
+            iadt.get_value_range_of_dtype(image.dtype)
+        cval = max(min(samples.cvals[row_idx], max_value), min_value)
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            heatmaps, random_state, "arr_0to1", self._cval_heatmaps,
-            self._mode_heatmaps, self._order_heatmaps)
+        input_dtype = image.dtype
+        if image.dtype.name == "float16":
+            image = image.astype(np.float32)
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            segmaps, random_state, "arr", self._cval_segmentation_maps,
-            self._mode_segmentation_maps, self._order_segmentation_maps)
+        image_aug = self._map_coordinates(
+            image, dx, dy,
+            order=samples.orders[row_idx],
+            cval=cval,
+            mode=samples.modes[row_idx])
 
-    def _augment_hms_and_segmaps(self, augmentables, random_state,
-                                 arr_attr_name, cval, mode, order):
-        nb_images = len(augmentables)
-        samples = self._draw_samples(nb_images, random_state)
-        gen = enumerate(zip(augmentables, samples.alphas, samples.sigmas,
-                            samples.random_states))
-        for i, (augmentable, alpha, sigma, random_state_i) in gen:
-            # note that we do not have to check for zero-sized axes here,
-            # because _generate_shift_maps(), _map_coordinates(), .resize()
-            # and np.clip() are all known to handle arrays with zero-sized axes
+        if image.dtype.name != input_dtype.name:
+            image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
+        return image_aug
 
-            cval_i = cval if cval is not None else samples.cvals[i]
-            mode_i = mode if mode is not None else samples.modes[i]
-            order_i = order if order is not None else samples.orders[i]
+    def _augment_hm_or_sm_by_samples(self, augmentable, row_idx, samples,
+                                     dx, dy, arr_attr_name, cval, mode, order):
+        cval = cval if cval is not None else samples.cvals[row_idx]
+        mode = mode if mode is not None else samples.modes[row_idx]
+        order = order if order is not None else samples.orders[row_idx]
 
+        # note that we do not have to check for zero-sized axes here,
+        # because _generate_shift_maps(), _map_coordinates(), .resize()
+        # and np.clip() are all known to handle arrays with zero-sized axes
+
+        arr = getattr(augmentable, arr_attr_name)
+
+        if arr.shape[0:2] == augmentable.shape[0:2]:
+            arr_warped = self._map_coordinates(
+                arr, dx, dy, order=order, cval=cval, mode=mode)
+
+            # interpolation in map_coordinates() can cause some values to
+            # be below/above 1.0, so we clip here
+            if order >= 3 and isinstance(augmentable, ia.HeatmapsOnImage):
+                arr_warped = np.clip(arr_warped, 0.0, 1.0, out=arr_warped)
+
+            setattr(augmentable, arr_attr_name, arr_warped)
+        else:
+            # Heatmaps/Segmaps do not have the same size as augmented
+            # images. This may result in indices of moved pixels being
+            # different. To prevent this, we use the same image size as
+            # for the base images, but that requires resizing the heatmaps
+            # temporarily to the image sizes.
+            height_orig, width_orig = arr.shape[0:2]
+            augmentable = augmentable.resize(augmentable.shape[0:2])
             arr = getattr(augmentable, arr_attr_name)
 
-            if arr.shape[0:2] == augmentable.shape[0:2]:
-                dx, dy = self._generate_shift_maps(
-                    arr.shape[0:2],
-                    alpha=alpha, sigma=sigma, random_state=random_state_i)
+            # TODO will it produce similar results to first downscale the
+            #      shift maps and then remap? That would make the remap
+            #      step take less operations and would also mean that the
+            #      heatmaps wouldnt have to be scaled up anymore. It would
+            #      also simplify the code as this branch could be merged
+            #      with the one above.
+            arr_warped = self._map_coordinates(
+                arr, dx, dy, order=order, cval=cval, mode=mode)
 
-                arr_warped = self._map_coordinates(
-                    arr, dx, dy, order=order_i, cval=cval_i, mode=mode_i)
+            # interpolation in map_coordinates() can cause some values to
+            # be below/above 1.0, so we clip here
+            if order >= 3 and isinstance(augmentable, ia.HeatmapsOnImage):
+                arr_warped = np.clip(arr_warped, 0.0, 1.0, out=arr_warped)
 
-                # interpolation in map_coordinates() can cause some values to
-                # be below/above 1.0, so we clip here
-                if order_i >= 3 and isinstance(augmentable, ia.HeatmapsOnImage):
-                    arr_warped = np.clip(arr_warped, 0.0, 1.0, out=arr_warped)
+            setattr(augmentable, arr_attr_name, arr_warped)
 
-                setattr(augmentable, arr_attr_name, arr_warped)
-            else:
-                # Heatmaps/Segmaps do not have the same size as augmented
-                # images. This may result in indices of moved pixels being
-                # different. To prevent this, we use the same image size as
-                # for the base images, but that requires resizing the heatmaps
-                # temporarily to the image sizes.
-                height_orig, width_orig = arr.shape[0:2]
-                augmentable = augmentable.resize(augmentable.shape[0:2])
-                arr = getattr(augmentable, arr_attr_name)
-                dx, dy = self._generate_shift_maps(
-                    arr.shape[0:2],
-                    alpha=alpha, sigma=sigma, random_state=random_state_i)
+            augmentable = augmentable.resize((height_orig, width_orig))
 
-                # TODO will it produce similar results to first downscale the
-                #      shift maps and then remap? That would make the remap
-                #      step take less operations and would also mean that the
-                #      heatmaps wouldnt have to be scaled up anymore. It would
-                #      also simplify the code as this branch could be merged
-                #      with the one above.
-                arr_warped = self._map_coordinates(
-                    arr, dx, dy, order=order_i, cval=cval_i, mode=mode_i)
+        return augmentable
 
-                # interpolation in map_coordinates() can cause some values to
-                # be below/above 1.0, so we clip here
-                if order_i >= 3 and isinstance(augmentable, ia.HeatmapsOnImage):
-                    arr_warped = np.clip(arr_warped, 0.0, 1.0, out=arr_warped)
+    def _augment_kpsoi_by_samples(self, kpsoi, row_idx, samples, dx, dy):
+        height, width = kpsoi.shape[0:2]
+        alpha = samples.alphas[row_idx]
+        sigma = samples.sigmas[row_idx]
 
-                setattr(augmentable, arr_attr_name, arr_warped)
+        # TODO add test for keypoint alignment when keypoints are empty
+        # Note: this block must be placed after _generate_shift_maps() to
+        # keep samples aligned
+        # Note: we should stop for zero-sized axes early here, event though
+        # there is a height/width check for each keypoint, because the
+        # channel number can also be zero
+        image_has_zero_sized_axes = (0 in kpsoi.shape)
+        params_below_thresh = (
+            alpha <= self.KEYPOINT_AUG_ALPHA_THRESH
+            or sigma <= self.KEYPOINT_AUG_SIGMA_THRESH)
 
-                augmentable = augmentable.resize((height_orig, width_orig))
-                augmentables[i] = augmentable
+        if kpsoi.empty or image_has_zero_sized_axes or params_below_thresh:
+            # ElasticTransformation does not change the shape, hence we can
+            # skip the below steps
+            return kpsoi
 
-        return augmentables
+        for kp in kpsoi.keypoints:
+            within_image_plane = (0 <= kp.x < width and 0 <= kp.y < height)
+            if within_image_plane:
+                kp_neighborhood = kp.generate_similar_points_manhattan(
+                    self.NB_NEIGHBOURING_KEYPOINTS,
+                    self.NEIGHBOURING_KEYPOINTS_DISTANCE,
+                    return_array=True
+                )
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        result = keypoints_on_images
-        nb_images = len(keypoints_on_images)
-        samples = self._draw_samples(nb_images, random_state)
-        gen = enumerate(zip(keypoints_on_images, samples.alphas, samples.sigmas,
-                            samples.orders, samples.random_states))
-        for i, (kpsoi, alpha, sigma, order, random_state_i) in gen:
-            h, w = kpsoi.shape[0:2]
-            dx, dy = self._generate_shift_maps(
-                kpsoi.shape[0:2],
-                alpha=alpha,
-                sigma=sigma,
-                random_state=random_state_i
-            )
+                # We can clip here, because we made sure above that the
+                # keypoint is inside the image plane. Keypoints at the
+                # bottom row or right columns might be rounded outside
+                # the image plane, which we prevent here. We reduce
+                # neighbours to only those within the image plane as only
+                # for such points we know where to move them.
+                xx = np.round(kp_neighborhood[:, 0]).astype(np.int32)
+                yy = np.round(kp_neighborhood[:, 1]).astype(np.int32)
+                inside_image_mask = np.logical_and(
+                    np.logical_and(0 <= xx, xx < width),
+                    np.logical_and(0 <= yy, yy < height)
+                )
+                xx = xx[inside_image_mask]
+                yy = yy[inside_image_mask]
 
-            # TODO add test for keypoint alignment when keypoints are empty
-            # Note: this block must be placed after _generate_shift_maps() to
-            # keep samples aligned
-            # Note: we should stop for zero-sized axes early here, event though
-            # there is a height/width check for each keypoint, because the
-            # channel number can also be zero
-            image_has_zero_sized_axes = (0 in kpsoi.shape)
-            if not kpsoi.keypoints or image_has_zero_sized_axes:
-                # ElasticTransformation does not change the shape, hence we can
-                # skip the below steps
-                continue
+                xxyy = np.concatenate(
+                    [xx[:, np.newaxis], yy[:, np.newaxis]],
+                    axis=1)
 
-            kps_aug = []
-            for kp in kpsoi.keypoints:
-                # dont augment keypoints if alpha/sigma are too low or if the
-                # keypoint is outside of the image plane
-                params_above_thresh = (
-                    alpha > self.KEYPOINT_AUG_ALPHA_THRESH
-                    and sigma > self.KEYPOINT_AUG_SIGMA_THRESH)
-                within_image_plane = (0 <= kp.x < w and 0 <= kp.y < h)
-                if not params_above_thresh or not within_image_plane:
-                    kps_aug.append(kp)
-                else:
-                    kp_neighborhood = kp.generate_similar_points_manhattan(
-                        self.NB_NEIGHBOURING_KEYPOINTS,
-                        self.NEIGHBOURING_KEYPOINTS_DISTANCE,
-                        return_array=True
-                    )
+                xxyy_aug = np.copy(xxyy).astype(np.float32)
+                xxyy_aug[:, 0] += dx[yy, xx]
+                xxyy_aug[:, 1] += dy[yy, xx]
 
-                    # We can clip here, because we made sure above that the
-                    # keypoint is inside the image plane. Keypoints at the
-                    # bottom row or right columns might be rounded outside
-                    # the image plane, which we prevent here. We reduce
-                    # neighbours to only those within the image plane as only
-                    # for such points we know where to move them.
-                    xx = np.round(kp_neighborhood[:, 0]).astype(np.int32)
-                    yy = np.round(kp_neighborhood[:, 1]).astype(np.int32)
-                    inside_image_mask = np.logical_and(
-                        np.logical_and(0 <= xx, xx < w),
-                        np.logical_and(0 <= yy, yy < h)
-                    )
-                    xx = xx[inside_image_mask]
-                    yy = yy[inside_image_mask]
+                med = ia.compute_geometric_median(xxyy_aug)
+                # uncomment to use average instead of median
+                # med = np.average(xxyy_aug, 0)
+                kp.x = med[0]
+                kp.y = med[1]
 
-                    xxyy = np.concatenate(
-                        [xx[:, np.newaxis], yy[:, np.newaxis]],
-                        axis=1)
+        return kpsoi
 
-                    xxyy_aug = np.copy(xxyy).astype(np.float32)
-                    xxyy_aug[:, 0] += dx[yy, xx]
-                    xxyy_aug[:, 1] += dy[yy, xx]
+    def _augment_psoi_by_samples(self, psoi, row_idx, samples, dx, dy):
+        func = functools.partial(self._augment_kpsoi_by_samples,
+                                 row_idx=row_idx, samples=samples, dx=dx, dy=dy)
+        return self._apply_to_polygons_as_keypoints(
+            psoi, func, recoverer=self.polygon_recoverer)
 
-                    med = ia.compute_geometric_median(xxyy_aug)
-                    # uncomment to use average instead of median
-                    # med = np.average(xxyy_aug, 0)
-                    kps_aug.append(kp.deepcopy(x=med[0], y=med[1]))
+    def _augment_lsoi_by_samples(self, lsoi, row_idx, samples, dx, dy):
+        func = functools.partial(self._augment_kpsoi_by_samples,
+                                 row_idx=row_idx, samples=samples, dx=dx, dy=dy)
+        return self._apply_to_cbaois_as_keypoints(lsoi, func)
 
-            result[i] = kpsoi.deepcopy(keypoints=kps_aug)
-
-        return result
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks,
-            recoverer=self.polygon_recoverer)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
+    def _augment_bbsoi_by_samples(self, bbsoi, row_idx, samples, dx, dy):
+        func = functools.partial(self._augment_kpsoi_by_samples,
+                                 row_idx=row_idx, samples=samples, dx=dx, dy=dy)
+        return self._apply_to_cbaois_as_keypoints(bbsoi, func)
 
     def get_parameters(self):
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
