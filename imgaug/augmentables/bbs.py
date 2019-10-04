@@ -1260,7 +1260,9 @@ class BoundingBoxesOnImage(object):
             Note that the instance is also updated in-place.
 
         """
-        assert len(kpsoi.keypoints) == len(self.bounding_boxes) * 2
+        assert len(kpsoi.keypoints) == len(self.bounding_boxes) * 2, (
+            "Expected %d coordinates, got %d." % (
+                len(self.bounding_boxes) * 2, len(kpsoi.keypoints)))
         for i, bb in enumerate(self.bounding_boxes):
             xx = [kpsoi.keypoints[2*i+0].x, kpsoi.keypoints[2*i+1].x]
             yy = [kpsoi.keypoints[2*i+0].y, kpsoi.keypoints[2*i+1].y]

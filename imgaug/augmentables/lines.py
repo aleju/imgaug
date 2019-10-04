@@ -1864,8 +1864,10 @@ class LineStringsOnImage(object):
         """
         lss = self.line_strings
         coordss = [ls.coords for ls in lss]
-        nb_points = sum([len(coords) for coords in coordss])
-        assert len(kpsoi.keypoints) == nb_points
+        nb_points_exp = sum([len(coords) for coords in coordss])
+        assert len(kpsoi.keypoints) == nb_points_exp, (
+            "Expected %d coordinates, got %d." % (
+                nb_points_exp, len(kpsoi.keypoints)))
 
         xy_arr = kpsoi.to_xy_array()
 

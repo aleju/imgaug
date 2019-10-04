@@ -1520,8 +1520,10 @@ class PolygonsOnImage(object):
         """
         polys = self.polygons
         exteriors = [poly.exterior for poly in polys]
-        nb_points = sum([len(exterior) for exterior in exteriors])
-        assert len(kpsoi.keypoints) == nb_points
+        nb_points_exp = sum([len(exterior) for exterior in exteriors])
+        assert len(kpsoi.keypoints) == nb_points_exp, (
+            "Expected %d coordinates, got %d." % (
+                nb_points_exp, len(kpsoi.keypoints)))
 
         xy_arr = kpsoi.to_xy_array()
 
