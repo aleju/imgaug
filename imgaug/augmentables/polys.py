@@ -15,6 +15,41 @@ from .. import random as iarandom
 from .utils import normalize_shape, interpolate_points
 
 
+def recover_psois_(psois, psois_orig, recoverer, random_state):
+    """Apply a polygon recoverer to input polygons in-place.
+
+    Parameters
+    ----------
+    psois : list of imgaug.augmentables.polys.PolygonsOnImage
+        The possibly broken polygons, e.g. after augmentation.
+        The `recoverer` is applied to them.
+
+    psois_orig : list of imgaug.augmentables.polys.PolygonsOnImage
+        Original polygons that were later changed to `psois`.
+        They are an extra input to `recoverer`.
+
+    recoverer : imgaug.augmentables.polys._ConcavePolygonRecoverer
+        The polygon recoverer used to repair broken input polygons.
+
+    random_state : None or int or RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+        An RNG to use during the polygon recovery.
+
+    Returns
+    -------
+    list of imgaug.augmentables.polys.PolygonsOnImage
+        List of repaired polygons. Note that this is `psois`, which was
+        changed in-place.
+
+    """
+    for i, psoi in enumerate(psois):
+        for j, polygon in enumerate(psoi.polygons):
+            poly_rec = recoverer.recover_from(
+                polygon.exterior, psois_orig[i].polygons[j],
+                random_state)
+            polygon.exterior[...] = poly_rec.exterior
+    return psois
+
+
 # TODO somehow merge with BoundingBox
 # TODO add functions: simplify() (eg via shapely.ops.simplify()),
 # extend(all_sides=0, top=0, right=0, bottom=0, left=0),
