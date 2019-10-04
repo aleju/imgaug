@@ -3830,8 +3830,8 @@ class Noop(Augmenter):
         super(Noop, self).__init__(name=name, deterministic=deterministic,
                                    random_state=random_state)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        return images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        return batch
 
     def get_parameters(self):
         return []
