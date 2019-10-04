@@ -222,16 +222,19 @@ def convert_cbaois_to_kpsois(cbaois):
 
     Parameters
     ----------
-    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage
+    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
         Coordinate-based augmentables to convert, e.g. bounding boxes.
 
     Returns
     -------
-    list of imgaug.augmentables.kps.KeypointsOnImage
+    list of imgaug.augmentables.kps.KeypointsOnImage or imgaug.augmentables.kps.KeypointsOnImage
         ``KeypointsOnImage`` instances containing the coordinates of input
         `cbaois`.
 
     """
+    if not isinstance(cbaois, list):
+        return cbaois.to_keypoints_on_image()
+
     kpsois = []
     for cbaoi in cbaois:
         kpsois.append(cbaoi.to_keypoints_on_image())
@@ -245,7 +248,7 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
 
     Parameters
     ----------
-    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage
+    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
         Original coordinate-based augmentables before they were converted,
         i.e. the same inputs as provided to :func:`convert_to_kpsois`.
 
@@ -255,13 +258,20 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
 
     Returns
     -------
-    list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage
+    list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
         Parameter `cbaois`, with updated coordinates and shapes derived from
         `kpsois`. `cbaois` is modified in-place.
 
     """
+    if not isinstance(cbaois, list):
+        assert not isinstance(kpsois, list), (
+            "Expected non-list for `kpsois` when `cbaois` is non-list. "
+            "Got type %s." % (type(kpsois.__name__)),)
+        return cbaois.invert_to_keypoints_on_image_(kpsois)
+
     result = []
     for img_idx, (cbaoi, kpsoi) in enumerate(zip(cbaois, kpsois)):
         cbaoi_recovered = cbaoi.invert_to_keypoints_on_image_(kpsoi)
         result.append(cbaoi_recovered)
+
     return result
