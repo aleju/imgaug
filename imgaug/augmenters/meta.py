@@ -3499,119 +3499,37 @@ class Sometimes(Augmenter):
         self.else_list = handle_children_list(else_list, self.name, "else",
                                               default=None)
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(augmentables, augmenter=self,
-                                    parents=parents, default=True)
-        )
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            nb_items = batch.nb_items
+            samples = self.p.draw_samples((nb_items,),
+                                          random_state=random_state)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        input_is_np_array = ia.is_np_array(images)
-        if input_is_np_array:
-            input_dtype = images.dtype
+            # create lists/arrays of images for if and else lists (one for each)
+            # note that np.where returns tuple(array([0, 5, 9, ...])) or
+            # tuple(array([]))
+            indices_then_list = np.where(samples == 1)[0]
+            indices_else_list = np.where(samples == 0)[0]
 
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_images(augmentables_, parents_, hooks_)
+            indice_lists = [indices_then_list, indices_else_list]
+            augmenter_lists = [self.then_list, self.else_list]
 
-        result = self._augment_augmentables(images, random_state,
-                                            parents, hooks, _augfunc)
+            # For then_list: collect augmentables to be processed by then_list
+            # augmenters, apply them to the list, then map back to the output
+            # list. Analogous for else_list.
+            # TODO maybe this would be easier if augment_*() accepted a list
+            #      that can contain Nones
+            for indices, augmenters in zip(indice_lists, augmenter_lists):
+                if augmenters is not None and len(augmenters) > 0:
+                    batch_sub = batch.subselect_items_by_indices(indices)
+                    batch_sub = augmenters.augment_batch(
+                        batch_sub,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+                    batch.invert_subselect_items_by_indices_(indices, batch_sub)
 
-        # If input was a list, keep the output as a list too,
-        # otherwise it was a numpy array, so make the output a numpy array
-        # too. Note here though that shapes can differ between images,
-        # e.g. when using Crop without resizing. In these cases, the
-        # output has to be a list.
-        output_is_np_array = ia.is_np_array(result)
-        if input_is_np_array and not output_is_np_array:
-            all_same_shape = len(set([image.shape for image in result])) == 1
-            if all_same_shape:
-                result = np.array(result, dtype=input_dtype)
-
-        return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_heatmaps(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(heatmaps, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_segmentation_maps(augmentables_, parents_,
-                                                   hooks_)
-        return self._augment_augmentables(segmaps, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_keypoints(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(keypoints_on_images, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_polygons(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(polygons_on_images, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_line_strings(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(line_strings_on_images, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_bounding_boxes(augmentables_, parents_,
-                                                hooks_)
-        return self._augment_augmentables(bounding_boxes_on_images,
-                                          random_state, parents, hooks,
-                                          _augfunc)
-
-    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
-                              func):
-        result = augmentables
-        if not self._is_propagating(augmentables, parents, hooks):
-            return result
-
-        nb_images = len(augmentables)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-
-        # create lists/arrays of images for if and else lists (one for each)
-        # note that np.where returns tuple(array([0, 5, 9, ...])) or
-        # tuple(array([]))
-        indices_then_list = np.where(samples == 1)[0]
-        indices_else_list = np.where(samples == 0)[0]
-
-        result = [None] * len(augmentables)
-        indice_lists = [indices_then_list, indices_else_list]
-        augmenter_lists = [self.then_list, self.else_list]
-
-        # For then_list: collect augmentables to be processed by then_list
-        # augmenters, apply them to the list, then map back to the output
-        # list. Analogous for else_list.
-        # TODO maybe this would be easier if augment_*() accepted a list
-        #      that can contain Nones
-        for indices, augmenters in zip(indice_lists, augmenter_lists):
-            augmentables_this_list = [augmentables[i] for i in indices]
-
-            result_list = augmentables_this_list
-            if augmenters is not None and len(augmenters) > 0:
-                result_list = func(
-                    augmenters,
-                    augmentables_this_list, parents + [self], hooks
-                )
-
-            for idx_augmentation, idx_output in enumerate(indices):
-                result[idx_output] = result_list[idx_augmentation]
-
-        return result
+            return batch
 
     def _to_deterministic(self):
         aug = self.copy()
