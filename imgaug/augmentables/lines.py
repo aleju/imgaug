@@ -1822,6 +1822,32 @@ class LineStringsOnImage(object):
                    for ls in self.line_strings]
         return LineStringsOnImage(lss_new, shape=self.shape)
 
+    def to_keypoints_on_image(self):
+        from . import KeypointsOnImage
+        if self.empty:
+            return KeypointsOnImage([], shape=self.shape)
+        coords = np.concatenate(
+            [ls.coords for ls in self.line_strings],
+            axis=0)
+        return KeypointsOnImage.from_xy_array(coords,
+                                              shape=self.shape)
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        lss = self.line_strings
+        coordss = [ls.coords for ls in lss]
+        nb_points = sum([len(coords) for coords in coordss])
+        assert len(kpsoi.keypoints) == nb_points
+
+        xy_arr = kpsoi.to_xy_array()
+
+        counter = 0
+        for i, ls in enumerate(lss):
+            coords = ls.coords
+            coords[:, :] = xy_arr[counter:counter+len(coords), :]
+            counter += len(coords)
+        self.shape = kpsoi.shape
+        return self
+
     def copy(self, line_strings=None, shape=None):
         """Create a shallow copy of this object.
 
