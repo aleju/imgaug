@@ -34,6 +34,7 @@ from abc import ABCMeta, abstractmethod
 import copy as copy_module
 import re
 import itertools
+import functools
 import sys
 
 import numpy as np
@@ -1358,82 +1359,12 @@ class Augmenter(object):
             See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
 
         Returns
-        ----------
+        -------
         list of imgaug.augmentables.bbs.BoundingBoxesOnImage
             The augmented bounding boxes.
 
         """
         return bounding_boxes_on_images
-
-    def _augment_bounding_boxes_as_keypoints(
-            self, bounding_boxes_on_images, random_state, parents, hooks):
-        """
-        Augment bounding boxes by applying KP augmentation to their corners.
-
-        Parameters
-        ----------
-        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImage
-            Bounding boxes to augment. They may be changed in-place.
-
-        random_state : imgaug.random.RNG
-            The random state to use for all sampling tasks during the
-            augmentation.
-
-        parents : list of imgaug.augmenters.meta.Augmenter
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
-
-        hooks : imgaug.imgaug.HooksKeypoints or None
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
-
-        Returns
-        ----------
-        list of imgaug.augmentables.bbs.BoundingBoxesOnImage
-            The augmented bounding boxes.
-
-        """
-        from imgaug.augmentables.kps import KeypointsOnImage
-        from imgaug.augmentables.bbs import BoundingBoxesOnImage
-
-        kps_ois = []
-        kp_counts = []
-        for bbsoi in bounding_boxes_on_images:
-            kps = []
-            kp_counts_image = []
-            for item in bbsoi.items:
-                item_kps = [ia.Keypoint(x=x, y=y) for x, y in item.coords]
-                kps.extend(item_kps)
-                kp_counts_image.append(len(item_kps))
-            kps_ois.append(KeypointsOnImage(kps, shape=bbsoi.shape))
-            kp_counts.append(kp_counts_image)
-
-        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
-                                              hooks)
-
-        result = []
-        gen = enumerate(zip(kps_ois_aug, kp_counts))
-        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
-            bbs_aug = []
-            counter = 0
-            for i, count in enumerate(kp_counts_image):
-                item_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
-                item_old = bounding_boxes_on_images[img_idx].items[i]
-
-                x1 = item_kps_aug[0].x
-                y1 = item_kps_aug[0].y
-                x2 = item_kps_aug[1].x
-                y2 = item_kps_aug[1].y
-
-                bb_aug = item_old
-                bb_aug.x1 = min([x1, x2])
-                bb_aug.y1 = min([y1, y2])
-                bb_aug.x2 = max([x1, x2])
-                bb_aug.y2 = max([y1, y2])
-
-                bbs_aug.append(bb_aug)
-                counter += count
-            result.append(BoundingBoxesOnImage(bbs_aug, shape=kps_oi_aug.shape))
-
-        return result
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
@@ -1463,96 +1394,12 @@ class Augmenter(object):
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
         Returns
-        ----------
+        -------
         list of imgaug.augmentables.polys.PolygonsOnImage
             The augmented polygons.
 
         """
         return polygons_on_images
-
-    def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
-                                       parents, hooks, recoverer=None):
-        """
-        Augment polygons by applying keypoint augmentation to their vertices.
-
-        Parameters
-        ----------
-        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
-            Polygons to augment. They may be changed in-place.
-
-        random_state : imgaug.random.RNG
-            The random state to use for all sampling tasks during the
-            augmentation.
-
-        parents : list of imgaug.augmenters.meta.Augmenter
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
-
-        hooks : imgaug.imgaug.HooksKeypoints or None
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
-
-        recoverer : None or imgaug.augmentables.polys._ConcavePolygonRecoverer
-            An instance used to repair invalid polygons after augmentation.
-            Must offer the method
-            ``recover_from(new_exterior, old_polygon, random_state=0)``.
-            If ``None`` then invalid polygons are not repaired.
-
-        Returns
-        ----------
-        list of imgaug.augmentables.polys.PolygonsOnImage
-            The augmented polygons.
-
-        """
-        from imgaug.augmentables.kps import KeypointsOnImage
-        from imgaug.augmentables.polys import PolygonsOnImage
-
-        kps_ois = []
-        kp_counts = []
-        for polys_oi in polygons_on_images:
-            kps = []
-            kp_counts_image = []
-            for poly in polys_oi.polygons:
-                poly_kps = poly.to_keypoints()
-                kps.extend(poly_kps)
-                kp_counts_image.append(len(poly_kps))
-            kps_ois.append(KeypointsOnImage(kps, shape=polys_oi.shape))
-            kp_counts.append(kp_counts_image)
-
-        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
-                                              hooks)
-
-        # Its not really necessary to create an RNG copy for the recoverer
-        # here, as the augmentation of the polygons is already finished and
-        # used the same samples as the image augmentation. The recoverer might
-        # advance the RNG state, but the next call to e.g. augment() will then
-        # still use the same (advanced) RNG state for images and polygons.
-        # We copy here anyways as it seems cleaner.
-        random_state_recoverer = None
-        if recoverer is not None:
-            random_state_recoverer = random_state.copy()
-
-        result = []
-        gen = enumerate(zip(kps_ois_aug, kp_counts))
-        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
-            polys_aug = []
-            counter = 0
-            for i, count in enumerate(kp_counts_image):
-                poly_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
-                poly_old = polygons_on_images[img_idx].polygons[i]
-                if recoverer is not None:
-                    # make sure to not derive random state from random_state
-                    # at the start of this function, otherwise random_state
-                    # in _augment_keypoints() will be unaligned with images
-                    poly_aug = recoverer.recover_from(
-                        [(kp.x, kp.y) for kp in poly_kps_aug],
-                        poly_old,
-                        random_state=random_state_recoverer)
-                else:
-                    poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
-                polys_aug.append(poly_aug)
-                counter += count
-            result.append(PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
-
-        return result
 
     def _augment_line_strings(self, line_strings_on_images, random_state,
                               parents, hooks):
@@ -1583,21 +1430,92 @@ class Augmenter(object):
             See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
 
         Returns
-        ----------
+        -------
         list of imgaug.augmentables.lines.LineStringsOnImage
             The augmented line strings.
 
         """
         return line_strings_on_images
 
-    def _augment_line_strings_as_keypoints(self, line_strings_on_images,
-                                           random_state, parents, hooks):
+    def _augment_bounding_boxes_as_keypoints(self, bounding_boxes_on_images,
+                                             random_state, parents, hooks):
         """
-        Augment line strings by applying keypoint augmentation to their coords.
+        Augment BBs by applying keypoint augmentation to their corners.
 
         Parameters
         ----------
-        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
+        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImages
+            Bounding boxes to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        Returns
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            The augmented bounding boxes.
+
+        """
+        return self._augment_cbaois_as_keypoints(bounding_boxes_on_images,
+                                                 random_state=random_state,
+                                                 parents=parents,
+                                                 hooks=hooks)
+
+    def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
+                                       parents, hooks, recoverer=None):
+        """
+        Augment polygons by applying keypoint augmentation to their vertices.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        recoverer : None or imgaug.augmentables.polys._ConcavePolygonRecoverer
+            An instance used to repair invalid polygons after augmentation.
+            Must offer the method
+            ``recover_from(new_exterior, old_polygon, random_state=0)``.
+            If ``None`` then invalid polygons are not repaired.
+
+        Returns
+        -------
+        list of imgaug.augmentables.polys.PolygonsOnImage
+            The augmented polygons.
+
+        """
+        func = functools.partial(self._augment_keypoints,
+                                 random_state=random_state,
+                                 parents=parents,
+                                 hooks=hooks)
+
+        return self._apply_to_polygons_as_keypoints(polygons_on_images, func,
+                                                    recoverer, random_state)
+
+    def _augment_line_strings_as_keypoints(self, line_strings_on_images,
+                                           random_state, parents, hooks):
+        """
+        Augment BBs by applying keypoint augmentation to their corners.
+
+        Parameters
+        ----------
+        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImages
             Line strings to augment. They may be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -1611,47 +1529,132 @@ class Augmenter(object):
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
         Returns
-        ----------
-        list of imgaug.augmentables.lines.LineStringsOnImage
+        -------
+        list of imgaug.augmentables.lines.LineStringsOnImages
             The augmented line strings.
 
         """
-        # TODO this is very similar to the polygon augmentation method,
-        #      merge somehow
-        # TODO get rid of this deferred import:
-        from imgaug.augmentables.kps import KeypointsOnImage
-        from imgaug.augmentables.lines import LineStringsOnImage
+        return self._augment_cbaois_as_keypoints(line_strings_on_images,
+                                                 random_state=random_state,
+                                                 parents=parents,
+                                                 hooks=hooks)
 
-        kps_ois = []
-        kp_counts = []
-        for ls_oi in line_strings_on_images:
-            kps = []
-            kp_counts_image = []
-            for ls in ls_oi.line_strings:
-                ls_kps = ls.to_keypoints()
-                kps.extend(ls_kps)
-                kp_counts_image.append(len(ls_kps))
-            kps_ois.append(KeypointsOnImage(kps, shape=ls_oi.shape))
-            kp_counts.append(kp_counts_image)
+    def _augment_cbaois_as_keypoints(
+            self, cbaois, random_state, parents, hooks):
+        """
+        Augment bounding boxes by applying KP augmentation to their corners.
 
-        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
-                                              hooks)
+        Parameters
+        ----------
+        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+            Coordinate-based augmentables to augment. They may be changed
+            in-place.
 
-        result = []
-        gen = enumerate(zip(kps_ois_aug, kp_counts))
-        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
-            lss_aug = []
-            counter = 0
-            for i, count in enumerate(kp_counts_image):
-                ls_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
-                ls_old = line_strings_on_images[img_idx].line_strings[i]
-                ls_aug = ls_old.deepcopy(
-                    coords=[(kp.x, kp.y) for kp in ls_kps_aug])
-                lss_aug.append(ls_aug)
-                counter += count
-            result.append(LineStringsOnImage(lss_aug, shape=kps_oi_aug.shape))
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
 
-        return result
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        Returns
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+            The augmented coordinate-based augmentables.
+
+        """
+        func = functools.partial(self._augment_keypoints,
+                                 random_state=random_state,
+                                 parents=parents,
+                                 hooks=hooks)
+        return self._apply_to_cbaois_as_keypoints(cbaois, func)
+
+    @classmethod
+    def _apply_to_polygons_as_keypoints(cls, polygons_on_images, func,
+                                        recoverer=None, random_state=None):
+        """
+        Apply a callback to polygons in keypoint-representation.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        func : callable
+            The function to apply. Receives a list of
+            :class:`imgaug.augmentables.kps.KeypointsOnImage` instances as its
+            only parameter.
+
+        recoverer : None or imgaug.augmentables.polys._ConcavePolygonRecoverer
+            An instance used to repair invalid polygons after augmentation.
+            Must offer the method
+            ``recover_from(new_exterior, old_polygon, random_state=0)``.
+            If ``None`` then invalid polygons are not repaired.
+
+        random_state : None or imgaug.random.RNG
+            The random state to use for the recoverer.
+
+        Returns
+        -------
+        list of imgaug.augmentables.polys.PolygonsOnImage
+            The augmented polygons.
+
+        """
+        from ..augmentables.polys import recover_psois_
+
+        psois_orig = None
+        if recoverer is not None:
+            psois_orig = [psoi.deepcopy() for psoi in polygons_on_images]
+
+        psois = cls._apply_to_cbaois_as_keypoints(polygons_on_images, func)
+
+        if recoverer is None:
+            return psois
+
+        # Its not really necessary to create an RNG copy for the recoverer
+        # here, as the augmentation of the polygons is already finished and
+        # used the same samples as the image augmentation. The recoverer might
+        # advance the RNG state, but the next call to e.g. augment() will then
+        # still use the same (advanced) RNG state for images and polygons.
+        # We copy here anyways as it seems cleaner.
+        random_state_recoverer = (random_state.copy()
+                                  if random_state is not None else None)
+        psois = recover_psois_(psois, psois_orig, recoverer,
+                               random_state_recoverer)
+
+        return psois
+
+    @classmethod
+    def _apply_to_cbaois_as_keypoints(cls, cbaois, func):
+        """
+        Augment bounding boxes by applying KP augmentation to their corners.
+
+        Parameters
+        ----------
+        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+            Coordinate-based augmentables to augment. They may be changed
+            in-place.
+
+        func : callable
+            The function to apply. Receives a list of
+            :class:`imgaug.augmentables.kps.KeypointsOnImage` instances as its
+            only parameter.
+
+        Returns
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
+            The augmented coordinate-based augmentables.
+
+        """
+        from ..augmentables.utils import (convert_cbaois_to_kpsois,
+                                          invert_convert_cbaois_to_kpsois_)
+
+        kpsois = convert_cbaois_to_kpsois(cbaois)
+        kpsois_aug = func(kpsois)
+        return invert_convert_cbaois_to_kpsois_(cbaois, kpsois_aug)
 
     def augment(self, return_batch=False, hooks=None, **kwargs):
         """Augment a batch.
