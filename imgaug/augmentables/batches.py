@@ -547,6 +547,10 @@ class BatchInAugmentation(object):
         self.data = data
 
     @property
+    def empty(self):
+        return self.nb_items == 0
+
+    @property
     def nb_items(self):
         for augm_name in _AUGMENTABLE_NAMES:
             value = getattr(self, augm_name)
