@@ -1097,6 +1097,18 @@ class BoundingBoxesOnImage(object):
 
         return xyxy_array.astype(dtype)
 
+    def to_xy_array(self):
+        """Convert the ``BoundingBoxesOnImage`` object to an ``(N,2) ndarray``.
+
+        Returns
+        -------
+        ndarray
+            ``(2*B,2) ndarray`` of xy-coordinates, where ``B`` denotes the
+            number of bounding boxes.
+
+        """
+        return self.to_xyxy_array().reshape((-1, 2))
+
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
                       copy=True, raise_if_out_of_image=False, thickness=None):
         """Draw all bounding boxes onto a given image.
