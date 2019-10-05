@@ -1157,6 +1157,28 @@ class BoundingBoxesOnImage(object):
 
         return self
 
+    def fill_from_xy_array_(self, xy):
+        """Modify the BB coordinates of this instance in-place.
+
+        See
+        :func:`imgaug.augmentables.bbs.BoundingBoxesOnImage.fill_from_xyxy_array_`.
+
+        Parameters
+        ----------
+        xy : (2*B, 2) ndarray
+            Coordinates of ``B`` bounding boxes on an image, given as
+            a ``(2*B,2)`` array of two corner xy-coordinates per bounding box.
+            ``B`` must match the number of bounding boxes in this instance.
+
+        Returns
+        -------
+        BoundingBoxesOnImage
+            This instance itself, with updated bounding box coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        return self.fill_from_xyxy_array_(xy.reshape((-1, 4)))
+
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
                       copy=True, raise_if_out_of_image=False, thickness=None):
         """Draw all bounding boxes onto a given image.
