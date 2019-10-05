@@ -577,7 +577,7 @@ class BatchInAugmentation(object):
         augmentables = self.get_augmentables()
         shapes = [None] * nb_items
         found = np.zeros((nb_items,), dtype=bool)
-        for augm_name, augm_value, augm_attr_name in augmentables:
+        for augm_name, augm_value, _augm_attr_name in augmentables:
             if augm_value is not None:
                 if augm_name == "images" and ia.is_np_array(augm_value):
                     shapes = [augm_value.shape[1:]] * nb_items
@@ -642,7 +642,7 @@ class BatchInAugmentation(object):
             return None
 
         noned_info = []
-        for augm_name, value, attr_name in self.get_augmentables():
+        for _augm_name, value, attr_name in self.get_augmentables():
             is_prop = hooks.is_propagating(
                 value, augmenter=augmenter, parents=parents, default=True)
             if not is_prop:

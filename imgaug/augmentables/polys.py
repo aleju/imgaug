@@ -1537,7 +1537,7 @@ class PolygonsOnImage(object):
         xy_arr = kpsoi.to_xy_array()
 
         counter = 0
-        for i, poly in enumerate(polys):
+        for poly in polys:
             exterior = poly.exterior
             exterior[:, :] = xy_arr[counter:counter+len(exterior), :]
             counter += len(exterior)

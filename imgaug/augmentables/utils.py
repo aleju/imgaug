@@ -270,7 +270,7 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
         return cbaois.invert_to_keypoints_on_image_(kpsois)
 
     result = []
-    for img_idx, (cbaoi, kpsoi) in enumerate(zip(cbaois, kpsois)):
+    for cbaoi, kpsoi in zip(cbaois, kpsois):
         cbaoi_recovered = cbaoi.invert_to_keypoints_on_image_(kpsoi)
         result.append(cbaoi_recovered)
 

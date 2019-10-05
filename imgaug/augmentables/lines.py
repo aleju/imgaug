@@ -1872,7 +1872,7 @@ class LineStringsOnImage(object):
         xy_arr = kpsoi.to_xy_array()
 
         counter = 0
-        for i, ls in enumerate(lss):
+        for ls in lss:
             coords = ls.coords
             coords[:, :] = xy_arr[counter:counter+len(coords), :]
             counter += len(coords)
