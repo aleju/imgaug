@@ -423,23 +423,6 @@ class Batch(object):
         self.polygons_aug = batch_in_augmentation.polygons
         self.line_strings_aug = batch_in_augmentation.line_strings
 
-    @classmethod
-    def _deepcopy_obj(cls, obj):
-        if obj is None:
-            return None
-        elif ia.is_single_number(obj) or ia.is_string(obj):
-            return obj
-        elif isinstance(obj, list):
-            return [cls._deepcopy_obj(el) for el in obj]
-        elif isinstance(obj, tuple):
-            return tuple([cls._deepcopy_obj(el) for el in obj])
-        elif ia.is_np_array(obj):
-            return np.copy(obj)
-        elif hasattr(obj, "deepcopy"):
-            return obj.deepcopy()
-        else:
-            return copy.deepcopy(obj)
-
     def deepcopy(self,
                  images_unaug=DEFAULT,
                  images_aug=DEFAULT,
@@ -456,7 +439,7 @@ class Batch(object):
                  line_strings_unaug=DEFAULT,
                  line_strings_aug=DEFAULT):
         def _copy_optional(self_attr, arg):
-            return self._deepcopy_obj(arg if arg is not DEFAULT else self_attr)
+            return utils.deepcopy_fast(arg if arg is not DEFAULT else self_attr)
 
         batch = Batch(
             images=_copy_optional(self.images_unaug, images_unaug),
