@@ -546,6 +546,7 @@ class Augmenter(object):
 
         augms = batch.get_augmentables()
 
+        # TODO move this into the default implementation of _augment_batch()
         augseq = self
         if not self.deterministic:
             if len(augms) > 1:
