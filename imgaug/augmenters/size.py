@@ -1897,14 +1897,41 @@ class PadToFixedSize(meta.Augmenter):
         self._pad_cval_heatmaps = 0.0
         self._pad_cval_segmentation_maps = 0
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        nb_items = batch.nb_items
+        samples = self._draw_samples(nb_items, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, samples, self._pad_mode_heatmaps,
+                self._pad_cval_heatmaps)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, samples, self._pad_mode_heatmaps,
+                self._pad_cval_heatmaps)
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         result = []
-        nb_images = len(images)
         width_min, height_min = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images,
-                                                                  random_state)
-        for i in sm.xrange(nb_images):
-            image = images[i]
+        pad_xs, pad_ys, pad_modes, pad_cvals = samples
+        for i, image in enumerate(images):
             height_image, width_image = image.shape[:2]
             paddings = self._calculate_paddings(height_image, width_image,
                                                 height_min, width_min,
@@ -1921,45 +1948,28 @@ class PadToFixedSize(meta.Augmenter):
         #      some might have been larger than desired height/width)
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         result = []
-        nb_images = len(keypoints_on_images)
         width_min, height_min = self.size
-        pad_xs, pad_ys, _, _ = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            keypoints_on_image = keypoints_on_images[i]
-            height_image, width_image = keypoints_on_image.shape[:2]
+        pad_xs, pad_ys, _, _ = samples
+        for i, kpsoi in enumerate(keypoints_on_images):
+            height_image, width_image = kpsoi.shape[:2]
             paddings_img = self._calculate_paddings(height_image, width_image,
                                                     height_min, width_min,
                                                     pad_xs[i], pad_ys[i])
 
             keypoints_padded = _crop_and_pad_kpsoi(
-                keypoints_on_image, (0, 0, 0, 0), paddings_img,
+                kpsoi, (0, 0, 0, 0), paddings_img,
                 keep_size=False)
 
             result.append(keypoints_padded)
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_or_segmaps(
-            heatmaps,
-            self._pad_mode_heatmaps, self._pad_cval_heatmaps,
-            random_state)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        return self._augment_hms_or_segmaps(
-            segmaps,
-            self._pad_mode_segmentation_maps, self._pad_cval_segmentation_maps,
-            random_state)
-
-    def _augment_hms_or_segmaps(self, augmentables, pad_mode, pad_cval,
-                                random_state):
+    def _augment_maps_by_samples(self, augmentables, samples, pad_mode,
+                                 pad_cval):
         width_min, height_min = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(
-            len(augmentables), random_state)
+        pad_xs, pad_ys, pad_modes, pad_cvals = samples
 
         for i, augmentable in enumerate(augmentables):
             height_img, width_img = augmentable.shape[:2]
@@ -1983,21 +1993,6 @@ class PadToFixedSize(meta.Augmenter):
                 keep_size=False)
 
         return augmentables
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(4)
