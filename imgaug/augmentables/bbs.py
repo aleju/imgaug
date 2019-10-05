@@ -1057,7 +1057,13 @@ class BoundingBoxesOnImage(object):
             derived from the provided corner coordinates.
 
         """
-        assert xyxy.shape[1] == 4, (
+        xyxy = np.array(xyxy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        if xyxy.shape[0] == 0:
+            return BoundingBoxesOnImage([], shape)
+
+        assert xyxy.ndim == 2 and xyxy.shape[1] == 4, (
             "Expected input array of shape (N, 4), got shape %s." % (
                 xyxy.shape,))
 
