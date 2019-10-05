@@ -1489,6 +1489,20 @@ class PolygonsOnImage(object):
         ]
         return PolygonsOnImage(polys_new, shape=self.shape)
 
+    def to_xy_array(self):
+        """Convert all polygon coordinates to one array of shape ``(N,2)``.
+
+        Returns
+        -------
+        (N, 2) ndarray
+            Array containing all xy-coordinates of all polygons within this
+            instance.
+
+        """
+        if self.empty:
+            return np.zeros((0, 2), dtype=np.float32)
+        return np.concatenate([poly.exterior for poly in self.polygons])
+
     def to_keypoints_on_image(self):
         """Convert the polygons to one ``KeypointsOnImage`` instance.
 
