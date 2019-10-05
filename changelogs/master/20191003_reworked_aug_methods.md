@@ -48,13 +48,39 @@
 * Refactored `AveragePooling`, `MaxPooling`, `MinPooling`, `MedianPooling`
   to use single `_augment_batch()` method.
 * Refactored `ElasticTransformation` to use single `_augment_batch()` method.
+* Refactored `Alpha` to use single `_augment_batch()` method.
+* Refactored `AlphaElementwise` to use single `_augment_batch()` method.
+* Refactored `WithColorspace` to use single `_augment_batch()` method.
+* Refactored `WithHueAndSaturation` to use single `_augment_batch()` method.
+* Refactored `Fliplr` to use single `_augment_batch()` method.
+* Refactored `Flipud` to use single `_augment_batch()` method.
+* Refactored `Affine` to use single `_augment_batch()` method.
+* Refactored `Rot90` to use single `_augment_batch()` method.
+* Refactored `Resize` to use single `_augment_batch()` method.
+* Refactored `CropAndPad` to use single `_augment_batch()` method.
+* Refactored `PadToFixedSize` to use single `_augment_batch()` method.
+* Refactored `CropToFixedSize` to use single `_augment_batch()` method.
+* Refactored `KeepSizeByResize` to use single `_augment_batch()` method.
 * Added validation of input arguments to `KeypointsOnImage.from_xy_array()`.
+* Improved validation of input arguments to
+  `BoundingBoxesOnImage.from_xyxy_array()`.
 * Added method `BoundingBoxesOnImage.to_keypoints_on_image()`.
 * Added method `PolygonsOnImage.to_keypoints_on_image()`.
 * Added method `LineStringsOnImage.to_keypoints_on_image()`.
+* Added method `KeypointsOnImage.to_keypoints_on_image()`.
 * Added method `BoundingBoxesOnImage.invert_to_keypoints_on_image_()`.
 * Added method `PolygonsOnImage.invert_to_keypoints_on_image_()`.
 * Added method `LineStringsOnImage.invert_to_keypoints_on_image_()`.
+* Added method `KeypointsOnImage.invert_to_keypoints_on_image_()`.
 * Added method `imgaug.augmentables.polys.recover_psois_()`.
 * Added method `imgaug.augmentables.utils.convert_cbaois_to_kpsois()`.
 * Added method `imgaug.augmentables.utils.invert_convert_cbaois_to_kpsois_()`.
+* Added method `imgaug.augmentables.utils.deepcopy_fast()`.
+* Added method `imgaug.augmentables.kps.BoundingBoxesOnImage.to_xy_array()`.
+* Added method `imgaug.augmentables.kps.PolygonsOnImage.to_xy_array()`.
+* Added method `imgaug.augmentables.kps.LineStringsOnImage.to_xy_array()`.
+* Added method `imgaug.augmentables.kps.KeypointsOnImage.fill_from_xy_array_()`.
+* Added method `imgaug.augmentables.kps.BoundingBoxesOnImage.fill_from_xy_array_()`.
+* Added method `imgaug.augmentables.kps.PolygonsOnImage.fill_from_xy_array_()`.
+* Added method `imgaug.augmentables.kps.LineStringsOnImage.fill_from_xy_array_()`.
+* Added method `imgaug.augmentables.bbs.BoundingBoxesOnImage.fill_from_xyxy_array_()`.
