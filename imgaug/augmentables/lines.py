@@ -1822,6 +1822,20 @@ class LineStringsOnImage(object):
                    for ls in self.line_strings]
         return LineStringsOnImage(lss_new, shape=self.shape)
 
+    def to_xy_array(self):
+        """Convert all line string coordinates to one array of shape ``(N,2)``.
+
+        Returns
+        -------
+        (N, 2) ndarray
+            Array containing all xy-coordinates of all line strings within this
+            instance.
+
+        """
+        if self.empty:
+            return np.zeros((0, 2), dtype=np.float32)
+        return np.concatenate([ls.coords for ls in self.line_strings])
+
     def to_keypoints_on_image(self):
         """Convert the line strings to one ``KeypointsOnImage`` instance.
 
