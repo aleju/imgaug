@@ -1109,6 +1109,54 @@ class BoundingBoxesOnImage(object):
         """
         return self.to_xyxy_array().reshape((-1, 2))
 
+    def fill_from_xyxy_array_(self, xyxy):
+        """Modify the BB coordinates of this instance in-place.
+
+        .. note ::
+
+            This currently expects exactly one entry in `xyxy` per bounding
+            in this instance. (I.e. two corner coordinates per instance.)
+            Otherwise, an ``AssertionError`` will be raised.
+
+        .. note ::
+
+            This method will automatically flip x-coordinates if ``x1>x2``
+            for a bounding box. (Analogous for y-coordinates.)
+
+        Parameters
+        ----------
+        xyxy : (N, 4) ndarray
+            Coordinates of ``N`` bounding boxes on an image, given as
+            a ``(N,4)`` array of two corner xy-coordinates per bounding box.
+            ``N`` must match the number of bounding boxes in this instance.
+
+        Returns
+        -------
+        BoundingBoxesOnImage
+            This instance itself, with updated bounding box coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xyxy = np.array(xyxy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 4)
+        assert xyxy.shape[0] == 0 or (xyxy.ndim == 2 and xyxy.shape[-1] == 4), (
+            "Expected input array to have shape (N,4), "
+            "got shape %s." % (xyxy.shape,))
+
+        assert len(xyxy) == len(self.bounding_boxes), (
+            "Expected to receive an array with as many rows there are "
+            "bounding boxes in this instance. Got %d rows, expected %d." % (
+                len(xyxy), len(self.bounding_boxes)))
+
+        for bb, (x1, y1, x2, y2) in zip(self.bounding_boxes, xyxy):
+            bb.x1 = min([x1, x2])
+            bb.y1 = min([y1, y2])
+            bb.x2 = max([x1, x2])
+            bb.y2 = max([y1, y2])
+
+        return self
+
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
                       copy=True, raise_if_out_of_image=False, thickness=None):
         """Draw all bounding boxes onto a given image.
