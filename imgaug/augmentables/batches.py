@@ -720,3 +720,16 @@ class BatchInAugmentation(object):
         batch.polygons_aug = self.polygons
         batch.line_strings_aug = self.line_strings
         return batch
+
+    def deepcopy(self):
+        batch = BatchInAugmentation(
+            data=copy.deepcopy(self.data) if self.data is not None else None)
+
+        for augm_name in _AUGMENTABLE_NAMES:
+            value = getattr(self, augm_name)
+            if value is not None:
+                setattr(batch, augm_name, utils.copy_augmentables(value))
+
+        return batch
+
+
