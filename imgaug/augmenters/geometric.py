@@ -408,6 +408,17 @@ class _AffineSamplingResult(object):
     def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.0, 0.0)):
         return self.to_matrix(idx, arr_shape, fit_output, shift_add)
 
+    def copy(self):
+        return _AffineSamplingResult(
+            scale=self.scale,
+            translate=self.translate,
+            rotate=self.rotate,
+            shear=self.shear,
+            cval=self.cval,
+            mode=self.mode,
+            order=self.order
+        )
+
 
 def _is_identity_matrix(matrix, eps=1e-4):
     identity = np.float32([
@@ -966,13 +977,44 @@ class Affine(meta.Augmenter):
                     tuple_to_uniform=True, list_to_choice=True,
                     allow_floats=False)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        nb_images = len(images)
-        samples = self._draw_samples(nb_images, random_state)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        nb_items = batch.nb_items
+        samples = self._draw_samples(nb_items, random_state)
 
-        result = self._augment_images_by_samples(images, samples)
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
 
-        return result
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, samples, "arr_0to1", self._cval_heatmaps,
+                self._mode_heatmaps, self._order_heatmaps, "float32")
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, samples, "arr",
+                self._cval_segmentation_maps, self._mode_segmentation_maps,
+                self._order_segmentation_maps, "int32")
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                for i, cbaoi in enumerate(augm_value):
+                    matrix, output_shape = samples.to_matrix_cba(
+                        i, cbaoi.shape, self.fit_output)
+
+                    if (not _is_identity_matrix(matrix)
+                            and not cbaoi.empty
+                            and not (0 in cbaoi.shape[0:2])):
+                        coords = cbaoi.to_xy_array()
+                        coords_aug = tf.matrix_transform(coords, matrix.params)
+                        cbaoi = cbaoi.fill_from_xy_array_(coords_aug)
+
+                    cbaoi.shape = output_shape
+                    augm_value[i] = cbaoi
+
+        return batch
 
     def _augment_images_by_samples(self, images, samples,
                                    return_matrices=False):
@@ -1017,22 +1059,11 @@ class Affine(meta.Augmenter):
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            heatmaps, random_state, "arr_0to1",
-            self._cval_heatmaps, self._mode_heatmaps,
-            self._order_heatmaps, "float32")
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            segmaps, random_state, "arr",
-            self._cval_segmentation_maps, self._mode_segmentation_maps,
-            self._order_segmentation_maps, "int32")
-
-    def _augment_hms_and_segmaps(self, augmentables, random_state,
+    def _augment_maps_by_samples(self, augmentables, samples,
                                  arr_attr_name, cval, mode, order, cval_dtype):
         nb_images = len(augmentables)
-        samples = self._draw_samples(nb_images, random_state)
+
+        samples = samples.copy()
         if cval is not None:
             samples.cval = np.full((nb_images, 1), cval, dtype=cval_dtype)
         if mode is not None:
@@ -1069,45 +1100,6 @@ class Affine(meta.Augmenter):
                 output_shape_i = augmentable_i.shape
             augmentable_i.shape = output_shape_i
         return augmentables
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        result = []
-        nb_images = len(keypoints_on_images)
-        samples = self._draw_samples(nb_images, random_state)
-
-        for i, keypoints_on_image in enumerate(keypoints_on_images):
-            matrix, output_shape = samples.to_matrix_cba(
-                i, keypoints_on_image.shape, self.fit_output)
-
-            kps = keypoints_on_image.keypoints
-            if (not _is_identity_matrix(matrix)
-                    and not keypoints_on_image.empty
-                    and not (0 in keypoints_on_image.shape)):
-                coords = keypoints_on_image.to_xy_array()
-                coords_aug = tf.matrix_transform(coords, matrix.params)
-                kps = [kp.deepcopy(x=coords[0], y=coords[1])
-                       for kp, coords
-                       in zip(keypoints_on_image.keypoints, coords_aug)]
-
-            result.append(keypoints_on_image.deepcopy(
-                keypoints=kps, shape=output_shape))
-        return result
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_samples, random_state):
         rngs = random_state.duplicate(11)
