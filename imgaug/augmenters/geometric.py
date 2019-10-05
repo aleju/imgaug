@@ -3838,10 +3838,32 @@ class Rot90(meta.Augmenter):
     def _draw_samples(self, nb_images, random_state):
         return self.k.draw_samples((nb_images,), random_state=random_state)
 
-    def _augment_arrays(self, arrs, random_state, resize_func):
-        ks = self._draw_samples(len(arrs), random_state)
-        return self._augment_arrays_by_samples(
-            arrs, ks, self.keep_size, resize_func), ks
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        ks = self._draw_samples(batch.nb_items, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_arrays_by_samples(
+                batch.images, ks, self.keep_size, ia.imresize_single_image)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, "arr_0to1", ks)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, "arr", ks)
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    ks=ks)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
 
     @classmethod
     def _augment_arrays_by_samples(cls, arrs, ks, keep_size, resize_func):
@@ -3865,24 +3887,12 @@ class Rot90(meta.Augmenter):
                 arrs_aug = np.array(arrs_aug, dtype=input_dtype)
         return arrs_aug
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        resize_func = ia.imresize_single_image
-        images_aug, _ = self._augment_arrays(images, random_state, resize_func)
-        return images_aug
+    def _augment_maps_by_samples(self, augmentables, arr_attr_name, ks):
+        arrs = [getattr(map_i, arr_attr_name) for map_i in augmentables]
+        arrs_aug = self._augment_arrays_by_samples(
+            arrs, ks, self.keep_size, None)
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(heatmaps, "arr_0to1",
-                                             random_state)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(segmaps, "arr", random_state)
-
-    def _augment_hms_and_segmaps(self, augmentables, arr_attr_name,
-                                 random_state):
-        arrs = [getattr(segmaps_i, arr_attr_name)
-                for segmaps_i in augmentables]
-        arrs_aug, ks = self._augment_arrays(arrs, random_state, None)
-        segmaps_aug = []
+        maps_aug = []
         gen = zip(augmentables, arrs, arrs_aug, ks)
         for augmentable_i, arr, arr_aug, k_i in gen:
             shape_orig = arr.shape
@@ -3897,20 +3907,18 @@ class Rot90(meta.Augmenter):
                 # keep_size was False, but rotated by a multiple of 2,
                 # hence height and width do not change
                 pass
-            segmaps_aug.append(augmentable_i)
-        return segmaps_aug
+            maps_aug.append(augmentable_i)
+        return maps_aug
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        nb_images = len(keypoints_on_images)
-        ks = self._draw_samples(nb_images, random_state)
+    def _augment_keypoints_by_samples(self, keypoints_on_images, ks):
         result = []
         for kpsoi_i, k_i in zip(keypoints_on_images, ks):
+            shape_orig = kpsoi_i.shape
+
             if (k_i % 4) == 0:
                 result.append(kpsoi_i)
             else:
                 k_i = int(k_i) % 4  # this is also correct when k_i is negative
-                kps_aug = []
                 h, w = kpsoi_i.shape[0:2]
                 h_aug, w_aug = (h, w) if (k_i % 2) == 0 else (w, h)
 
@@ -3925,32 +3933,18 @@ class Rot90(meta.Augmenter):
                         # subpixel-accurate
                         xr, yr = hr - yr, xr
                         wr, hr = hr, wr
-                    kps_aug.append(kp.deepcopy(x=xr, y=yr))
+                    kp.x = xr
+                    kp.y = yr
 
                 shape_aug = tuple([h_aug, w_aug] + list(kpsoi_i.shape[2:]))
-                kpsoi_i_aug = kpsoi_i.deepcopy(keypoints=kps_aug,
-                                               shape=shape_aug)
+                kpsoi_i.shape = shape_aug
+
                 if self.keep_size and (h, w) != (h_aug, w_aug):
-                    kpsoi_i_aug = kpsoi_i_aug.on(kpsoi_i.shape)
-                    kpsoi_i_aug.shape = kpsoi_i.shape
+                    kpsoi_i = kpsoi_i.on(shape_orig)
+                    kpsoi_i.shape = shape_orig
 
-                result.append(kpsoi_i_aug)
+                result.append(kpsoi_i)
         return result
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
         return [self.k, self.keep_size]
