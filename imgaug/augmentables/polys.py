@@ -1503,6 +1503,60 @@ class PolygonsOnImage(object):
             return np.zeros((0, 2), dtype=np.float32)
         return np.concatenate([poly.exterior for poly in self.polygons])
 
+    def fill_from_xy_array_(self, xy):
+        """Modify the corner coordinates of all polygons in-place.
+
+        .. note ::
+
+            This currently expects that `xy` contains exactly as many
+            coordinates as the polygons within this instance have corner
+            points. Otherwise, an ``AssertionError`` will be raised.
+
+        .. warning ::
+
+            This does not validate the new coordinates or repair the resulting
+            polygons. If bad coordinates are provided, the result will be
+            invalid polygons (e.g. self-intersections).
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray
+            XY-Coordinates of ``N`` corner points. ``N`` must match the
+            number of corner points in all polygons within this instance.
+
+        Returns
+        -------
+        PolygonsOnImage
+            This instance itself, with updated coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
+
+        counter = 0
+        for poly in self.polygons:
+            nb_points = len(poly.exterior)
+            assert counter + nb_points <= len(xy), (
+                "Received fewer points than there are corner points in the "
+                "exteriors of all polygons. Got %d points, expected %d." % (
+                    len(xy), sum([len(p.exterior) for p in self.polygons])))
+
+            poly.exterior[:, ...] = xy[counter:counter+nb_points]
+            counter += nb_points
+
+        assert counter == len(xy), (
+            "Expected to get exactly as many xy-coordinates as there are "
+            "points in the exteriors of all polygons within this instance. "
+            "Got %d points, could only assign %d points." % (
+                len(xy), counter,))
+
+        return self
+
     def to_keypoints_on_image(self):
         """Convert the polygons to one ``KeypointsOnImage`` instance.
 
