@@ -585,11 +585,12 @@ class Augmenter(object):
         # is a custom implementation of _augment_batch(), then we should have
         # this here. It causes very little overhead.
         with _maybe_deterministic_ctx(augseq):
-            batch = augseq._augment_batch(
-                batch,
-                random_state=self.random_state,
-                parents=parents if parents is not None else [],
-                hooks=hooks)
+            if not batch.empty:
+                batch = augseq._augment_batch(
+                    batch,
+                    random_state=self.random_state,
+                    parents=parents if parents is not None else [],
+                    hooks=hooks)
 
         # revert augmentables being set to None for non-activated augmenters
         for augm_name, augm_value, augm_attr_name in set_to_none:
