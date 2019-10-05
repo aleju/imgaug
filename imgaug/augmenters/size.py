@@ -27,6 +27,7 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 
 import re
+import functools
 
 import numpy as np
 import six.moves as sm
@@ -573,57 +574,75 @@ class Resize(meta.Augmenter):
                 "got %s." % (type(interpolation),))
         return interpolation
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        nb_items = batch.nb_items
+        samples = self._draw_samples(nb_items, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            # TODO this uses the same interpolation as for images for heatmaps
+            #      while other augmenters resort to cubic
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, "arr_0to1", samples)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, "arr",
+                (samples[0], samples[1], [None] * nb_items))
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
+        input_was_array = False
+        input_dtype = None
+        if ia.is_np_array(images):
+            input_was_array = True
+            input_dtype = images.dtype
+
+        samples_a, samples_b, samples_ip = samples
         result = []
-        nb_images = len(images)
-        samples_a, samples_b, samples_ip = self._draw_samples(
-            nb_images, random_state, do_sample_ip=True)
-        for i in sm.xrange(nb_images):
-            image = images[i]
-            sample_a, sample_b, sample_ip = (samples_a[i], samples_b[i],
-                                             samples_ip[i])
-            h, w = self._compute_height_width(image.shape, sample_a, sample_b,
-                                              self.size_order)
+        for i, image in enumerate(images):
+            h, w = self._compute_height_width(image.shape, samples_a[i],
+                                              samples_b[i], self.size_order)
             image_rs = ia.imresize_single_image(image, (h, w),
-                                                interpolation=sample_ip)
+                                                interpolation=samples_ip[i])
             result.append(image_rs)
 
-        if not isinstance(images, list):
+        if input_was_array:
             all_same_size = (len(set([image.shape for image in result])) == 1)
             if all_same_size:
-                result = np.array(result, dtype=images.dtype)
+                result = np.array(result, dtype=input_dtype)
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_heatmaps_segmaps(heatmaps, random_state,
-                                              do_sample_ip=True)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_heatmaps_segmaps(segmaps, random_state,
-                                              do_sample_ip=False)
-
-    def _augment_heatmaps_segmaps(self, augmentables, random_state,
-                                  do_sample_ip):
+    def _augment_maps_by_samples(self, augmentables, arr_attr_name, samples):
         result = []
-        nb_items = len(augmentables)
-        samples_h, samples_w, samples_ip = self._draw_samples(
-            nb_items, random_state, do_sample_ip=do_sample_ip)
-        for i in sm.xrange(nb_items):
-            augmentable = augmentables[i]
-            arr_shape = (
-                augmentable.arr.shape
-                if hasattr(augmentable, "arr")
-                else augmentable.arr_0to1.shape)
+        samples_h, samples_w, samples_ip = samples
+
+        for i, augmentable in enumerate(augmentables):
+            arr = getattr(augmentable, arr_attr_name)
+            arr_shape = arr.shape
             img_shape = augmentable.shape
-            sample_h, sample_w = samples_h[i], samples_w[i]
             h_img, w_img = self._compute_height_width(
-                img_shape, sample_h, sample_w, self.size_order)
+                img_shape, samples_h[i], samples_w[i], self.size_order)
             h = int(np.round(h_img * (arr_shape[0] / img_shape[0])))
             w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
             h = max(h, 1)
             w = max(w, 1)
-            if do_sample_ip:
+            if samples_ip[0] is not None:
                 # TODO change this for heatmaps to always have cubic or
                 #      automatic interpolation?
                 augmentable_resize = augmentable.resize(
@@ -635,40 +654,20 @@ class Resize(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
-        nb_images = len(keypoints_on_images)
-        samples_a, samples_b, _samples_ip = self._draw_samples(
-            nb_images, random_state, do_sample_ip=False)
-        for i in sm.xrange(nb_images):
-            keypoints_on_image = keypoints_on_images[i]
-            sample_a, sample_b = samples_a[i], samples_b[i]
+        samples_a, samples_b, _samples_ip = samples
+        for i, kpsoi in enumerate(kpsois):
             h, w = self._compute_height_width(
-                keypoints_on_image.shape, sample_a, sample_b, self.size_order)
-            new_shape = (h, w) + keypoints_on_image.shape[2:]
-            keypoints_on_image_rs = keypoints_on_image.on(new_shape)
+                kpsoi.shape, samples_a[i], samples_b[i], self.size_order)
+            new_shape = (h, w) + kpsoi.shape[2:]
+            keypoints_on_image_rs = kpsoi.on(new_shape)
 
             result.append(keypoints_on_image_rs)
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
+    def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(3)
         if isinstance(self.size, tuple):
             samples_h = self.size[0].draw_samples(nb_images,
@@ -678,11 +677,9 @@ class Resize(meta.Augmenter):
         else:
             samples_h = self.size.draw_samples(nb_images, random_state=rngs[0])
             samples_w = samples_h
-        if do_sample_ip:
-            samples_ip = self.interpolation.draw_samples(nb_images,
-                                                         random_state=rngs[2])
-        else:
-            samples_ip = None
+
+        samples_ip = self.interpolation.draw_samples(nb_images,
+                                                     random_state=rngs[2])
         return samples_h, samples_w, samples_ip
 
     @classmethod
