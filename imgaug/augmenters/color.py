@@ -466,60 +466,28 @@ class WithColorspace(meta.Augmenter):
         self.from_colorspace = from_colorspace
         self.children = meta.handle_children_list(children, self.name, "then")
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        if self._is_propagating(images, hooks, parents):
-            result = change_colorspaces_(
-                result,
-                to_colorspaces=self.to_colorspace,
-                from_colorspaces=self.from_colorspace)
-            result = self.children.augment_images(
-                images=result,
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            # TODO this did not fail in the tests when there was only one
+            #      `if` with all three steps in it
+            if batch.images is not None:
+                batch.images = change_colorspaces_(
+                    batch.images,
+                    to_colorspaces=self.to_colorspace,
+                    from_colorspaces=self.from_colorspace)
+
+            batch = self.children.augment_batch(
+                batch,
                 parents=parents + [self],
                 hooks=hooks
             )
-            result = change_colorspaces_(
-                result,
-                to_colorspaces=self.from_colorspace,
-                from_colorspaces=self.to_colorspace)
-        return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_nonimages(
-            heatmaps, self.children.augment_heatmaps, parents,
-            hooks)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_nonimages(
-            segmaps, self.children.augment_segmentation_maps,
-            parents, hooks)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return self._augment_nonimages(
-            keypoints_on_images, self.children.augment_keypoints, parents,
-            hooks)
-
-    # TODO add test for this
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_nonimages(
-            polygons_on_images, self.children.augment_polygons, parents,
-            hooks)
-
-    def _augment_nonimages(self, augmentables, children_augfunc, parents,
-                           hooks):
-        if self._is_propagating(augmentables, hooks, parents):
-            augmentables = children_augfunc(
-                augmentables,
-                parents=parents + [self],
-                hooks=hooks
-            )
-        return augmentables
-
-    def _is_propagating(self, augmentables, hooks, parents):
-        return (hooks is None or hooks.is_propagating(
-            augmentables, augmenter=self, parents=parents, default=True))
+            if batch.images is not None:
+                batch.images = change_colorspaces_(
+                    batch.images,
+                    to_colorspaces=self.from_colorspace,
+                    from_colorspaces=self.to_colorspace)
+        return batch
 
     def _to_deterministic(self):
         aug = self.copy()
