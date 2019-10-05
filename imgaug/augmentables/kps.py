@@ -677,6 +677,10 @@ class KeypointsOnImage(object):
 
         """
         xy = np.array(xy, dtype=np.float32)
+
+        if xy.shape == (0,):
+            return KeypointsOnImage([], shape)
+
         assert xy.ndim == 2 and xy.shape[-1] == 2, (
             "Expected input array to have shape (N,2), "
             "got shape %s." % (xy.shape,))
