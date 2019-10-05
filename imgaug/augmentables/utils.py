@@ -252,7 +252,7 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
         Original coordinate-based augmentables before they were converted,
         i.e. the same inputs as provided to :func:`convert_to_kpsois`.
 
-    kpsois : list of imgaug.augmentables.kps.KeypointsOnImages
+    kpsois : list of imgaug.augmentables.kps.KeypointsOnImages or imgaug.augmentables.kps.KeypointsOnImages
         Keypoints to convert back to the types of `cbaois`, i.e. the outputs
         of :func:`convert_cbaois_to_kpsois`.
 
