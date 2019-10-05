@@ -399,6 +399,7 @@ class Batch(object):
 
         """
         def _copy(var):
+            # TODO first check here if _aug is set and if it is then use that?
             if var is not None:
                 return utils.copy_augmentables(var)
             return var
