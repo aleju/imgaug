@@ -972,6 +972,52 @@ class KeypointsOnImage(object):
             out_shape += (nb_channels,)
         return KeypointsOnImage(keypoints, shape=out_shape)
 
+    # TODO add to_keypoints_on_image_() and call that wherever possible
+    def to_keypoints_on_image(self):
+        """Convert the keypoints to one ``KeypointsOnImage`` instance.
+
+        This method exists for consistency with ``BoundingBoxesOnImage``,
+        ``PolygonsOnImage`` and ``LineStringsOnImage``.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Copy of this keypoints instance.
+
+        """
+        return self.deepcopy()
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``KeypointsOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to copy data from, i.e. the outputs of
+            ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        KeypointsOnImage
+            Keypoints container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
+        nb_points_exp = len(self.keypoints)
+        assert len(kpsoi.keypoints) == nb_points_exp, (
+            "Expected %d coordinates, got %d." % (
+                nb_points_exp, len(kpsoi.keypoints)))
+
+        for kp_target, kp_source in zip(self.keypoints, kpsoi.keypoints):
+            kp_target.x = kp_source.x
+            kp_target.y = kp_source.y
+
+        self.shape = kpsoi.shape
+        return self
+
     def copy(self, keypoints=None, shape=None):
         """Create a shallow copy of the ``KeypointsOnImage`` object.
 
