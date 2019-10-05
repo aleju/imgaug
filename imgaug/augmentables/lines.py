@@ -1836,6 +1836,55 @@ class LineStringsOnImage(object):
             return np.zeros((0, 2), dtype=np.float32)
         return np.concatenate([ls.coords for ls in self.line_strings])
 
+    def fill_from_xy_array_(self, xy):
+        """Modify the corner coordinates of all line strings in-place.
+
+        .. note ::
+
+            This currently expects that `xy` contains exactly as many
+            coordinates as the line strings within this instance have corner
+            points. Otherwise, an ``AssertionError`` will be raised.
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray
+            XY-Coordinates of ``N`` corner points. ``N`` must match the
+            number of corner points in all line strings within this instance.
+
+        Returns
+        -------
+        LineStringsOnImage
+            This instance itself, with updated coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
+
+        counter = 0
+        for ls in self.line_strings:
+            nb_points = len(ls.coords)
+            assert counter + nb_points <= len(xy), (
+                "Received fewer points than there are corner points in "
+                "all line strings. Got %d points, expected %d." % (
+                    len(xy),
+                    sum([len(ls_.coords) for ls_ in self.line_strings])))
+
+            ls.coords[:, ...] = xy[counter:counter+nb_points]
+            counter += nb_points
+
+        assert counter == len(xy), (
+            "Expected to get exactly as many xy-coordinates as there are "
+            "points in all line strings polygons within this instance. "
+            "Got %d points, could only assign %d points." % (
+                len(xy), counter,))
+
+        return self
+
     def to_keypoints_on_image(self):
         """Convert the line strings to one ``KeypointsOnImage`` instance.
 
