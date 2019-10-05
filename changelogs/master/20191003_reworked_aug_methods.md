@@ -1,4 +1,4 @@
-# Reworked Augmentation Methods
+# Reworked Augmentation Methods #451
 
 * Added method `to_normalized_batch()` to `imgaug.augmentables.batches.Batch`
   to have the same interface in `Batch` and `UnnormalizedBatch`.
