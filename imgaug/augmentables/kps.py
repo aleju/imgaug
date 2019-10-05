@@ -688,6 +688,47 @@ class KeypointsOnImage(object):
         keypoints = [Keypoint(x=coord[0], y=coord[1]) for coord in xy]
         return KeypointsOnImage(keypoints, shape)
 
+    def fill_from_xy_array_(self, xy):
+        """Modify the keypoint coordinates of this instance in-place.
+
+        .. note ::
+
+            This currently expects that `xy` contains exactly as many
+            coordinates as there are keypoints in this instance. Otherwise,
+            an ``AssertionError`` will be raised.
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray
+            Coordinates of ``N`` keypoints on an image, given as a ``(N,2)``
+            array of xy-coordinates. ``N`` must match the number of keypoints
+            in this instance.
+
+        Returns
+        -------
+        KeypointsOnImage
+            This instance itself, with updated keypoint coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
+
+        assert len(xy) == len(self.keypoints), (
+            "Expected to receive as many keypoint coordinates as there are "
+            "currently keypoints in this instance. Got %d, expected %d." % (
+                len(xy), len(self.keypoints)))
+
+        for kp, (x, y) in zip(self.keypoints, xy):
+            kp.x = x
+            kp.y = y
+
+        return self
+
     # TODO add to_gaussian_heatmaps(), from_gaussian_heatmaps()
     def to_keypoint_image(self, size=1):
         """Create an ``(H,W,N)`` image with keypoint coordinates set to ``255``.
