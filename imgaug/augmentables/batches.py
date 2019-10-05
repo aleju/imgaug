@@ -452,7 +452,7 @@ class Batch(object):
             polygons=_copy_optional(self.polygons_unaug, polygons_unaug),
             line_strings=_copy_optional(self.line_strings_unaug,
                                         line_strings_unaug),
-            data=copy.deepcopy(self.data)
+            data=copy.deepcopy(self.data) if self.data is not None else None
         )
         batch.images_aug = _copy_optional(self.images_aug, images_aug)
         batch.heatmaps_aug = _copy_optional(self.heatmaps_aug, heatmaps_aug)
