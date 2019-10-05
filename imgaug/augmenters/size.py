@@ -2169,13 +2169,39 @@ class CropToFixedSize(meta.Augmenter):
         # (0.0, 1.0) crops left and bottom, (1.0, 0.0) crops right and top.
         self.position = _handle_position_parameter(position)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        nb_items = batch.nb_items
+        samples = self._draw_samples(nb_items, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, samples)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, samples)
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         result = []
-        nb_images = len(images)
         w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            image = images[i]
+        offset_xs, offset_ys = samples
+        for i, image in enumerate(images):
             height_image, width_image = image.shape[0:2]
 
             croppings = self._calculate_crop_amounts(
@@ -2188,14 +2214,11 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
-        nb_images = len(keypoints_on_images)
         w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            kpsoi = keypoints_on_images[i]
+        offset_xs, offset_ys = samples
+        for i, kpsoi in enumerate(kpsois):
             height_image, width_image = kpsoi.shape[0:2]
 
             croppings_img = self._calculate_crop_amounts(
@@ -2208,39 +2231,17 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(heatmaps, random_state)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(segmaps, random_state)
-
-    def _augment_hms_and_segmaps(self, augmentables, random_state):
-        nb_images = len(augmentables)
+    def _augment_maps_by_samples(self, augmentables, samples):
         w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            height_image, width_image = augmentables[i].shape[0:2]
+        offset_xs, offset_ys = samples
+        for i, augmentable in enumerate(augmentables):
+            height_image, width_image = augmentable.shape[0:2]
 
             croppings_img = self._calculate_crop_amounts(
                 height_image, width_image, h, w, offset_ys[i], offset_xs[i])
 
             augmentables[i] = _crop_and_pad_hms_or_segmaps_(
-                augmentables[i], croppings_img, (0, 0, 0, 0), keep_size=False)
+                augmentable, croppings_img, (0, 0, 0, 0), keep_size=False)
 
         return augmentables
 
