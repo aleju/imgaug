@@ -520,7 +520,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch
+        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch or imgaug.augmentables.batch.BatchInAugmentation
             A single batch to augment.
 
         parents : None or list of imgaug.augmenters.Augmenter, optional
@@ -3574,127 +3574,129 @@ class WithChannels(Augmenter):
 
         self.children = handle_children_list(children, self.name, "then")
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(
-                augmentables, augmenter=self, parents=parents, default=True)
-        )
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if self.channels is not None and len(self.channels) == 0:
+            return batch
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        if self._is_propagating(images, parents, hooks):
-            if self.channels is None:
-                result = self.children.augment_images(
-                    images=images,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-            elif len(self.channels) == 0:
-                pass
-            else:
-                # save the shapes as images are augmented below in-place
-                shapes_orig = [image.shape for image in images]
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            batch_cp = batch.deepcopy()
 
-                if ia.is_np_array(images):
-                    images_then_list = images[..., self.channels]
-                else:
-                    images_then_list = [image[..., self.channels]
-                                        for image in images]
+            if batch.images is not None:
+                batch.images = self._reduce_images_to_channels(batch.images)
 
-                result_then_list = self.children.augment_images(
-                    images=images_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+            # Note that we augment here all data, including non-image data
+            # for which less than 50% of the corresponding image channels
+            # were augmented. This is because (a) the system does not yet
+            # understand None as cell values and (b) decreasing the length
+            # of columns leads to potential RNG misalignments.
+            # We replace non-image data that was not supposed to be augmented
+            # further below.
+            batch = self.children.augment_batch(
+                batch, parents=parents + [self], hooks=hooks)
 
-                shapes_same = (
-                    all([img_out.shape[0:2] == shape_orig[0:2]
-                         for img_out, shape_orig
-                         in zip(result_then_list, shapes_orig)]))
-                assert shapes_same, (
-                    "Heights/widths of images changed in WithChannels from "
-                    "%s to %s, but expected to be the same." % (
-                        str([shape_orig[0:2]
-                             for shape_orig in shapes_orig]),
-                        str([img_out.shape[0:2]
-                             for img_out in result_then_list]),
-                    ))
+            # If the shapes changed we cannot insert the augmented channels
+            # into the existing ones as the shapes of the non-augmented
+            # channels are still the same.
+            if batch.images is not None:
+                self._assert_lengths_not_changed(batch.images, batch_cp.images)
+                self._assert_shapes_not_changed(batch.images, batch_cp.images)
+                self._assert_dtypes_not_changed(batch.images, batch_cp.images)
 
-                if ia.is_np_array(images):
-                    result[..., self.channels] = result_then_list
-                else:
-                    for i in sm.xrange(len(images)):
-                        result[i][..., self.channels] = result_then_list[i]
+                batch.images = self._recover_images_array(batch.images,
+                                                          batch_cp.images)
 
-        return result
+            augms = batch.get_augmentables()
+            for augm_name, augm_value, augm_attr_name in augms:
+                if augm_name != "images":
+                    augm_value_old = getattr(batch_cp, augm_attr_name)
+                    augm_value = self._replace_unaugmented_cells(
+                        augm_value, augm_value_old)
+                    setattr(batch, augm_attr_name, augm_value)
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_heatmaps(inputs_, parents_, hooks_)
-        return self._augment_non_images(heatmaps, parents, hooks, _augfunc)
+            if batch.images is not None:
+                batch.images = self._invert_reduce_images_to_channels(
+                    batch.images, batch_cp.images)
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_segmentation_maps(
-                inputs_, parents_, hooks_)
-        return self._augment_non_images(segmaps, parents, hooks, _augfunc)
+        return batch
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_keypoints(inputs_, parents_, hooks_)
-        return self._augment_non_images(keypoints_on_images, parents, hooks,
-                                        _augfunc)
+    @classmethod
+    def _assert_lengths_not_changed(cls, images_aug, images):
+        assert len(images_aug) == len(images), (
+            "Expected that number of images does not change during "
+            "augmentation, but got %d vs. originally %d images." % (
+                len(images_aug), len(images)))
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_polygons(inputs_, parents_, hooks_)
-        return self._augment_non_images(polygons_on_images, parents, hooks,
-                                        _augfunc)
+    @classmethod
+    def _assert_shapes_not_changed(cls, images_aug, images):
+        if ia.is_np_array(images_aug) and ia.is_np_array(images):
+            shapes_same = (images_aug.shape[1:3] == images.shape[1:3])
+        else:
+            shapes_same = all(
+                [image_aug.shape[0:2] == image.shape[0:2]
+                 for image_aug, image
+                 in zip(images_aug, images)])
+        assert shapes_same, (
+            "Heights/widths of images changed in WithChannels from "
+            "%s to %s, but expected to be the same." % (
+                str([image.shape[0:2] for image in images]),
+                str([image_aug.shape[0:2] for image_aug in images_aug]),
+            ))
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_line_strings(inputs_, parents_, hooks_)
-        return self._augment_non_images(line_strings_on_images, parents, hooks,
-                                        _augfunc)
+    @classmethod
+    def _assert_dtypes_not_changed(cls, images_aug, images):
+        if ia.is_np_array(images_aug) and ia.is_np_array(images):
+            dtypes_same = (images_aug.dtype.name == images.dtype.name)
+        else:
+            dtypes_same = all(
+                [image_aug.dtype.name == image.dtype.name
+                 for image_aug, image
+                 in zip(images_aug, images)])
 
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_bounding_boxes(inputs_, parents_, hooks_)
-        return self._augment_non_images(bounding_boxes_on_images, parents,
-                                        hooks, _augfunc)
+        assert dtypes_same, (
+            "dtypes of images changed in WithChannels from "
+            "%s to %s, but expected to be the same." % (
+                str([image.dtype.name for image in images]),
+                str([image_aug.dtype.name for image_aug in images_aug]),
+            ))
 
-    def _augment_non_images(self, inputs, parents, hooks, func):
-        result = inputs
-        if self._is_propagating(inputs, parents, hooks):
-            # Augment the non-images in the style of the children if all
-            # channels or the majority of them are selected by this layer,
-            # otherwise don't change the non-images.
-            inputs_to_aug = []
-            indices = []
+    @classmethod
+    def _recover_images_array(cls, images_aug, images):
+        if ia.is_np_array(images):
+            return np.array(images_aug)
+        return images_aug
 
-            for i, inputs_i in enumerate(inputs):
-                nb_channels = (
-                    inputs_i.shape[2] if len(inputs_i.shape) >= 3 else 1)
-                did_augment_image = (
-                    self.channels is None
-                    or len(self.channels) > nb_channels*0.5)
-                if did_augment_image:
-                    inputs_to_aug.append(inputs_i)
-                    indices.append(i)
+    def _reduce_images_to_channels(self, images):
+        if self.channels is None:
+            return images
+        if ia.is_np_array(images):
+            return images[..., self.channels]
+        return [image[..., self.channels] for image in images]
 
-            if len(inputs_to_aug) > 0:
-                inputs_aug = func(self.children, inputs_to_aug,
-                                  parents + [self], hooks)
+    def _invert_reduce_images_to_channels(self, images_aug, images):
+        if self.channels is None:
+            return images_aug
 
-                for idx_orig, inputs_i_aug in zip(indices, inputs_aug):
-                    result[idx_orig] = inputs_i_aug
+        for image, image_aug in zip(images, images_aug):
+            image[..., self.channels] = image_aug
+        return images
 
+    def _replace_unaugmented_cells(self, augmentables_aug, augmentables):
+        if self.channels is None:
+            return augmentables_aug
+
+        nb_channels_to_aug = len(self.channels)
+        nb_channels_lst = [augm.shape[2] if len(augm.shape) > 2 else 1
+                           for augm in augmentables]
+
+        # We use the augmented form of a non-image if at least 50% of the
+        # corresponding image's channels were augmented. Otherwise we use
+        # the unaugmented form.
+        fraction_augmented_lst = [nb_channels_to_aug/nb_channels
+                                  for nb_channels in nb_channels_lst]
+        result = [
+            (augmentable_aug if fraction_augmented >= 0.5 else augmentable)
+            for augmentable_aug, augmentable, fraction_augmented
+            in zip(augmentables_aug, augmentables, fraction_augmented_lst)]
         return result
 
     def _to_deterministic(self):
