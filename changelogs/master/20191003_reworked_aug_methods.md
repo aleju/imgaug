@@ -38,7 +38,7 @@
   exception. This is more consistent with the behaviour in the other
   `augment_*` methods.
 * [breaking] Added parameter `parents` to
-  `imgaug.augmenters.meta.Augmenter.augment_batch()`. This breaks is one relied
+  `imgaug.augmenters.meta.Augmenter.augment_batch()`. This breaks if one relied
   on the order of arguments for that methods.
 * Changed `augment_images()` to no longer be abstract. It defaults
   to not changing the input images.
@@ -61,6 +61,9 @@
 * Refactored `PadToFixedSize` to use single `_augment_batch()` method.
 * Refactored `CropToFixedSize` to use single `_augment_batch()` method.
 * Refactored `KeepSizeByResize` to use single `_augment_batch()` method.
+* Refactored `PiecewiseAffine` to use single `_augment_batch()` method.
+* Refactored `PerspectiveTransform` to use single `_augment_batch()` method.
+* Refactored `WithChannels` to use single `_augment_batch()` method.
 * Added validation of input arguments to `KeypointsOnImage.from_xy_array()`.
 * Improved validation of input arguments to
   `BoundingBoxesOnImage.from_xyxy_array()`.
