@@ -2615,7 +2615,57 @@ class PerspectiveTransform(meta.Augmenter):
                 "of int/strings or StochasticParameter, got %s." % (
                     type(mode),))
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        samples_images = self._draw_samples(batch.get_rowwise_shapes(),
+                                            random_state.copy())
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples_images)
+
+        if batch.heatmaps is not None:
+            samples = self._draw_samples(
+                [augmentable.arr_0to1.shape
+                 for augmentable in batch.heatmaps],
+                random_state.copy())
+
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, "arr_0to1", samples, samples_images,
+                self._cval_heatmaps, self._mode_heatmaps, self._order_heatmaps)
+
+        if batch.segmentation_maps is not None:
+            samples = self._draw_samples(
+                [augmentable.arr.shape
+                 for augmentable in batch.segmentation_maps],
+                random_state.copy())
+
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, "arr", samples, samples_images,
+                self._cval_segmentation_maps, self._mode_segmentation_maps,
+                self._order_segmentation_maps)
+
+        # large scale values cause invalid polygons (unclear why that happens),
+        # hence the recoverer
+        # TODO add test for recoverer
+        if batch.polygons is not None:
+            func = functools.partial(
+                self._augment_keypoints_by_samples,
+                samples_images=samples_images)
+            batch.polygons = self._apply_to_polygons_as_keypoints(
+                batch.polygons, func, recoverer=self.polygon_recoverer)
+
+        for augm_name in ["keypoints", "bounding_boxes", "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples_images=samples_images)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         iadt.gate_dtypes(
             images,
             allowed=["bool",
@@ -2630,9 +2680,6 @@ class PerspectiveTransform(meta.Augmenter):
         result = images
         if not self.keep_size:
             result = list(result)
-
-        samples = self._create_matrices([image.shape for image in images],
-                                        random_state)
 
         gen = enumerate(zip(images, samples.matrices, samples.max_heights,
                             samples.max_widths, samples.cvals, samples.modes))
@@ -2689,37 +2736,18 @@ class PerspectiveTransform(meta.Augmenter):
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            heatmaps, random_state, "arr_0to1", self._cval_heatmaps,
-            self._mode_heatmaps, self._order_heatmaps)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            segmaps, random_state, "arr", self._cval_segmentation_maps,
-            self._mode_segmentation_maps, self._order_segmentation_maps)
-
-    def _augment_hms_and_segmaps(self, augmentables, random_state,
-                                 arr_attr_name, cval, mode, flags):
+    def _augment_maps_by_samples(self, augmentables, arr_attr_name,
+                                 samples, samples_images, cval, mode, flags):
         result = augmentables
-
-        samples = self._create_matrices(
-            [getattr(augmentable, arr_attr_name).shape
-             for augmentable in augmentables],
-            random_state.copy()
-        )
 
         # estimate max_heights/max_widths for the underlying images
         # this is only necessary if keep_size is False as then the underlying
         # image sizes change and we need to update them here
+        # TODO this was re-used from before _augment_batch() -- reoptimize
         if self.keep_size:
             max_heights_imgs = samples.max_heights
             max_widths_imgs = samples.max_widths
         else:
-            samples_images = self._create_matrices(
-                [augmentable_i.shape for augmentable_i in augmentables],
-                random_state.copy()
-            )
             max_heights_imgs = samples_images.max_heights
             max_widths_imgs = samples_images.max_widths
 
@@ -2771,72 +2799,36 @@ class PerspectiveTransform(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        result = keypoints_on_images
-        samples = self._create_matrices(
-            [kps.shape for kps in keypoints_on_images], random_state)
+    def _augment_keypoints_by_samples(self, kpsois, samples_images):
+        result = kpsois
 
-        gen = enumerate(zip(samples.matrices, samples.max_heights,
-                            samples.max_widths))
+        gen = enumerate(zip(kpsois,
+                            samples_images.matrices,
+                            samples_images.max_heights,
+                            samples_images.max_widths))
 
-        for i, (matrix, max_height, max_width) in gen:
-            kpsoi = keypoints_on_images[i]
+        for i, (kpsoi, matrix, max_height, max_width) in gen:
             image_has_zero_sized_axis = (0 in kpsoi.shape)
 
             if not image_has_zero_sized_axis:
-                new_shape = (max_height, max_width) + kpsoi.shape[2:]
-                if not kpsoi.keypoints:
-                    warped_kps = kpsoi.deepcopy(shape=new_shape)
-                else:
+                shape_orig = kpsoi.shape
+                shape_new = (max_height, max_width) + kpsoi.shape[2:]
+                kpsoi.shape = shape_new
+                if not kpsoi.empty:
                     kps_arr = kpsoi.to_xy_array()
                     warped = cv2.perspectiveTransform(
                         np.array([kps_arr], dtype=np.float32), matrix)
                     warped = warped[0]
-                    warped_kps = [kp.deepcopy(x=coords[0], y=coords[1])
-                                  for kp, coords
-                                  in zip(kpsoi.keypoints, warped)]
-                    warped_kps = kpsoi.deepcopy(keypoints=warped_kps,
-                                                shape=new_shape)
+                    for kp, coords in zip(kpsoi.keypoints, warped):
+                        kp.x = coords[0]
+                        kp.y = coords[1]
                 if self.keep_size:
-                    warped_kps = warped_kps.on(kpsoi.shape)
-                result[i] = warped_kps
+                    kpsoi = kpsoi.on(shape_orig)
+                result[i] = kpsoi
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        # large scale values cause invalid polygons (unclear why that happens),
-        # hence the recoverer
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks,
-            recoverer=self.polygon_recoverer)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _expand_transform(self, M, shape):
-        imgHeight, imgWidth = shape
-        rect = np.array([
-            [0, 0],
-            [imgWidth - 1, 0],
-            [imgWidth - 1, imgHeight - 1],
-            [0, imgHeight - 1]], dtype='float32')
-        dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
-        dst -= dst.min(axis=0, keepdims=True)
-        dst = np.around(dst, decimals=0)
-        M_expanded = cv2.getPerspectiveTransform(rect, dst)
-        maxWidth, maxHeight = dst.max(axis=0) + 1
-        return M_expanded, maxWidth, maxHeight
-
-    def _create_matrices(self, shapes, random_state):
+    def _draw_samples(self, shapes, random_state):
         # TODO change these to class attributes
         mode_str_to_int = {
             "replicate": cv2.BORDER_REPLICATE,
@@ -2970,6 +2962,20 @@ class PerspectiveTransform(meta.Augmenter):
 
         # return the ordered coordinates
         return pts_ordered
+
+    def _expand_transform(self, M, shape):
+        imgHeight, imgWidth = shape
+        rect = np.array([
+            [0, 0],
+            [imgWidth - 1, 0],
+            [imgWidth - 1, imgHeight - 1],
+            [0, imgHeight - 1]], dtype='float32')
+        dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
+        dst -= dst.min(axis=0, keepdims=True)
+        dst = np.around(dst, decimals=0)
+        M_expanded = cv2.getPerspectiveTransform(rect, dst)
+        maxWidth, maxHeight = dst.max(axis=0) + 1
+        return M_expanded, maxWidth, maxHeight
 
     def get_parameters(self):
         return [self.jitter, self.keep_size, self.cval, self.mode]
