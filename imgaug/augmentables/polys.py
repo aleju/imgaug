@@ -1566,7 +1566,7 @@ class _ConcavePolygonRecoverer(object):
             return polygon
 
         random_state = iarandom.RNG(random_state)
-        rss = random_state.derive_rngs_(3)
+        rss = random_state.duplicate(3)
 
         # remove consecutive duplicate points
         new_exterior = self._remove_consecutive_duplicate_points(new_exterior)
