@@ -1879,10 +1879,11 @@ class AffineCv2(meta.Augmenter):
 
 
 class _PiecewiseAffineSamplingResult(object):
-    def __init__(self, nb_rows, nb_cols, order, cval, mode):
+    def __init__(self, nb_rows, nb_cols, jitter, order, cval, mode):
         self.nb_rows = nb_rows
         self.nb_cols = nb_cols
         self.order = order
+        self.jitter = jitter
         self.cval = cval
         self.mode = mode
 
@@ -2064,7 +2065,45 @@ class PiecewiseAffine(meta.Augmenter):
         self._cval_heatmaps = 0
         self._cval_segmentation_maps = 0
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        nb_items = batch.nb_items
+        samples = self._draw_samples(nb_items, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, "arr_0to1", samples, self._cval_heatmaps,
+                self._mode_heatmaps, self._order_heatmaps)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, "arr", samples,
+                self._cval_segmentation_maps, self._mode_segmentation_maps,
+                self._order_segmentation_maps)
+
+        # TODO add test for recoverer
+        if batch.polygons is not None:
+            func = functools.partial(
+                self._augment_keypoints_by_samples,
+                samples=samples)
+            batch.polygons = self._apply_to_polygons_as_keypoints(
+                batch.polygons, func, recoverer=self.polygon_recoverer)
+
+        for augm_name in ["keypoints", "bounding_boxes", "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         iadt.gate_dtypes(
             images,
             allowed=["bool",
@@ -2077,18 +2116,11 @@ class PiecewiseAffine(meta.Augmenter):
             augmenter=self)
 
         result = images
-        nb_images = len(images)
-
-        samples = self._draw_samples(nb_images, random_state)
-
-        rss = random_state.duplicate(nb_images)
 
         for i, image in enumerate(images):
-            rs_image = rss[i]
-
             transformer = self._get_transformer(
                 image.shape, image.shape, samples.nb_rows[i],
-                samples.nb_cols[i], rs_image)
+                samples.nb_cols[i], samples.jitter[i])
 
             if transformer is not None:
                 input_dtype = image.dtype
@@ -2117,32 +2149,16 @@ class PiecewiseAffine(meta.Augmenter):
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            heatmaps, random_state, "arr_0to1", self._cval_heatmaps,
-            self._mode_heatmaps, self._order_heatmaps)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            segmaps, random_state, "arr", self._cval_segmentation_maps,
-            self._mode_segmentation_maps, self._order_segmentation_maps)
-
-    def _augment_hms_and_segmaps(self, augmentables, random_state,
-                                 arr_attr_name, cval, mode, order):
+    def _augment_maps_by_samples(self, augmentables, arr_attr_name, samples,
+                                 cval, mode, order):
         result = augmentables
-        nb_images = len(augmentables)
-
-        samples = self._draw_samples(nb_images, random_state)
-
-        rss = random_state.duplicate(nb_images)
 
         for i, augmentable in enumerate(augmentables):
             arr = getattr(augmentable, arr_attr_name)
 
-            rs_image = rss[i]
             transformer = self._get_transformer(
                 arr.shape, augmentable.shape, samples.nb_rows[i],
-                samples.nb_cols[i], rs_image)
+                samples.nb_cols[i], samples.jitter[i])
 
             if transformer is not None:
                 arr_warped = tf.warp(
@@ -2173,22 +2189,14 @@ class PiecewiseAffine(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
-        nb_images = len(keypoints_on_images)
 
-        samples = self._draw_samples(nb_images, random_state)
-
-        rss = random_state.duplicate(nb_images)
-
-        for i in sm.xrange(nb_images):
-            rs_image = rss[i]
-            kpsoi = keypoints_on_images[i]
+        for i, kpsoi in enumerate(kpsois):
             h, w = kpsoi.shape[0:2]
             transformer = self._get_transformer(
                 kpsoi.shape, kpsoi.shape, samples.nb_rows[i],
-                samples.nb_cols[i], rs_image)
+                samples.nb_cols[i], samples.jitter[i])
 
             if transformer is None or len(kpsoi.keypoints) == 0:
                 result.append(kpsoi)
@@ -2210,6 +2218,10 @@ class PiecewiseAffine(meta.Augmenter):
                 )
                 """
 
+                # TODO this could be done a little bit more efficient by
+                #      removing first all KPs that are outside of the image
+                #      plane so that no corresponding distance map has to
+                #      be augmented
                 # Image based augmentation routine. Draws the keypoints on
                 # the image plane using distance maps (more accurate than
                 # just marking the points),  then augments these images, then
@@ -2235,75 +2247,59 @@ class PiecewiseAffine(meta.Augmenter):
                         None if len(kpsoi.shape) < 3 else kpsoi.shape[2])
                 )
 
-                # use deepcopy() to copy old instance states as much as
-                # possible
-                kps_aug_post = kpsoi.deepcopy(
-                    keypoints=[kp.deepcopy(x=kp_aug.x, y=kp_aug.y)
-                               for kp, kp_aug
-                               in zip(kpsoi.keypoints, kps_aug.keypoints)]
-                )
+                for kp, kp_aug in zip(kpsoi.keypoints, kps_aug.keypoints):
+                    # Keypoints that were outside of the image plane before the
+                    # augmentation were replaced with (-1, -1) by default (as
+                    # they can't be drawn on the keypoint images).
+                    within_image = (0 <= kp.x < w and 0 <= kp.y < h)
+                    if within_image:
+                        kp.x = kp_aug.x
+                        kp.y = kp_aug.y
 
-                # Keypoints that were outside of the image plane before the
-                # augmentation will be replaced with (-1, -1) by default (as
-                # they can't be drawn on the keypoint images). They are now
-                # replaced by their old coordinates values.
-                ooi = [not 0 <= kp.x < w or not 0 <= kp.y < h
-                       for kp in kpsoi.keypoints]
-                for kp_idx in sm.xrange(len(kps_aug_post.keypoints)):
-                    if ooi[kp_idx]:
-                        kp_unaug = kpsoi.keypoints[kp_idx]
-                        kps_aug_post.keypoints[kp_idx] = kp_unaug
-
-                result.append(kps_aug_post)
+                result.append(kpsoi)
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks,
-            recoverer=self.polygon_recoverer)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
     def _draw_samples(self, nb_images, random_state):
-        rss = random_state.duplicate(5)
+        rss = random_state.duplicate(6)
 
         nb_rows_samples = self.nb_rows.draw_samples((nb_images,),
-                                                    random_state=rss[-5])
+                                                    random_state=rss[-6])
         nb_cols_samples = self.nb_cols.draw_samples((nb_images,),
-                                                    random_state=rss[-4])
+                                                    random_state=rss[-5])
         order_samples = self.order.draw_samples((nb_images,),
-                                                random_state=rss[-3])
+                                                random_state=rss[-4])
         cval_samples = self.cval.draw_samples((nb_images,),
-                                              random_state=rss[-2])
+                                              random_state=rss[-3])
         mode_samples = self.mode.draw_samples((nb_images,),
-                                              random_state=rss[-1])
+                                              random_state=rss[-2])
+
+        nb_rows_samples = np.clip(nb_rows_samples, 2, None)
+        nb_cols_samples = np.clip(nb_cols_samples, 2, None)
+        nb_cells = nb_rows_samples * nb_cols_samples
+        jitter = self.jitter.draw_samples((int(np.sum(nb_cells)), 2),
+                                          random_state=rss[-1])
+
+        jitter_by_image = []
+        counter = 0
+        for i, nb_cells_i in enumerate(nb_cells):
+            jitter_img = jitter[counter:counter+nb_cells_i, :]
+            jitter_by_image.append(jitter_img)
+            counter += nb_cells_i
 
         return _PiecewiseAffineSamplingResult(
             nb_rows=nb_rows_samples, nb_cols=nb_cols_samples,
+            jitter=jitter_by_image,
             order=order_samples, cval=cval_samples, mode=mode_samples)
 
     def _get_transformer(self, augmentable_shape, image_shape, nb_rows,
-                         nb_cols, random_state):
+                         nb_cols, jitter_img):
         # get coords on y and x axis of points to move around
         # these coordinates are supposed to be at the centers of each cell
         # (otherwise the first coordinate would be at (0, 0) and could hardly
         # be moved around before leaving the image),
         # so we use here (half cell height/width to H/W minus half
         # height/width) instead of (0, H/W)
-
-        nb_rows = max(nb_rows, 2)
-        nb_cols = max(nb_cols, 2)
-
         y = np.linspace(0, augmentable_shape[0], nb_rows)
         x = np.linspace(0, augmentable_shape[1], nb_cols)
 
@@ -2313,13 +2309,14 @@ class PiecewiseAffine(meta.Augmenter):
         # (1, HW, 2) => (HW, 2) for H=rows, W=cols
         points_src = np.dstack([yy_src.flat, xx_src.flat])[0]
 
-        jitter_img = self.jitter.draw_samples(points_src.shape,
-                                              random_state=random_state)
-
-        nb_nonzero = len(jitter_img.flatten().nonzero()[0])
-        if nb_nonzero == 0:
+        any_nonzero = np.any(jitter_img > 0)
+        if not any_nonzero:
             return None
         else:
+            # Without this, jitter gets changed between different augmentables.
+            # TODO if left out, only one test failed -- should be more
+            jitter_img = np.copy(jitter_img)
+
             if self.absolute_scale:
                 if image_shape[0] > 0:
                     jitter_img[:, 0] = jitter_img[:, 0] / image_shape[0]
