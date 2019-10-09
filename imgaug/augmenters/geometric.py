@@ -2547,7 +2547,7 @@ class PerspectiveTransform(meta.Augmenter):
     """
 
     def __init__(self, scale=0, cval=0, mode='constant', keep_size=True,
-                 polygon_recoverer="auto",
+                 polygon_recoverer="auto", fit_output=False,
                  name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -2572,6 +2572,8 @@ class PerspectiveTransform(meta.Augmenter):
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
+
+        self.fit_output = fit_output
 
         # Special order, mode and cval parameters for heatmaps and
         # segmentation maps. These may either be None or a fixed value.
@@ -2831,6 +2833,20 @@ class PerspectiveTransform(meta.Augmenter):
         return self._augment_bounding_boxes_as_keypoints(
             bounding_boxes_on_images, random_state, parents, hooks)
 
+    def _expand_transform(self, M, shape):
+        imgHeight, imgWidth = shape
+        rect = np.array([
+            [0, 0],
+            [imgWidth - 1, 0],
+            [imgWidth - 1, imgHeight - 1],
+            [0, imgHeight - 1]], dtype='float32')
+        dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
+        dst -= dst.min(axis=0, keepdims=True)
+        dst = np.around(dst, decimals=0)
+        M_expanded = cv2.getPerspectiveTransform(rect, dst)
+        maxWidth, maxHeight = dst.max(axis=0)
+        return M_expanded, maxWidth, maxHeight
+
     def _create_matrices(self, shapes, random_state):
         # TODO change these to class attributes
         mode_str_to_int = {
@@ -2929,6 +2945,10 @@ class PerspectiveTransform(meta.Augmenter):
 
             # compute the perspective transform matrix and then apply it
             m = cv2.getPerspectiveTransform(points, dst)
+
+            if self.fit_output:
+                m, max_width, max_height = self._expand_transform(m, (h, w))
+
             matrices.append(m)
             max_heights.append(max_height)
             max_widths.append(max_width)
