@@ -2844,7 +2844,7 @@ class PerspectiveTransform(meta.Augmenter):
         dst -= dst.min(axis=0, keepdims=True)
         dst = np.around(dst, decimals=0)
         M_expanded = cv2.getPerspectiveTransform(rect, dst)
-        maxWidth, maxHeight = dst.max(axis=0)
+        maxWidth, maxHeight = dst.max(axis=0) + 1
         return M_expanded, maxWidth, maxHeight
 
     def _create_matrices(self, shapes, random_state):
