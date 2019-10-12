@@ -9,8 +9,7 @@
   `imgaug.augmentables.batches.Batch` and
   `imgaug.augmentables.batches.UnnormalizedBatch`.
 * Added method `to_batch_in_augmentation()` to
-  `imgaug.augmentables.batches.Batch` and
-  `imgaug.augmentables.batches.UnnormalizedBatch`.
+  `imgaug.augmentables.batches.Batch`.
 * Added method `fill_from_batch_in_augmentation_()` to
   `imgaug.augmentables.batches.Batch` and
   `imgaug.augmentables.batches.UnnormalizedBatch`.

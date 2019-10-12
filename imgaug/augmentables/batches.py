@@ -213,17 +213,6 @@ class UnnormalizedBatch(object):
             data=self.data
         )
 
-    def to_batch_in_augmentation(self):
-        """Convert this batch to a :class:`BatchInAugmentation` instance.
-
-        Returns
-        -------
-        imgaug.augmentables.batches.BatchInAugmentation
-            The converted batch.
-
-        """
-        return self.to_normalized_batch().to_batch_in_augmentation()
-
     def fill_from_batch_in_augmentation_(self, batch_in_augmentation):
         """Set the columns in this batch to the column values of another batch.
 
