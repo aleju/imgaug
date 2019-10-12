@@ -11,8 +11,7 @@
 * Added method `to_batch_in_augmentation()` to
   `imgaug.augmentables.batches.Batch`.
 * Added method `fill_from_batch_in_augmentation_()` to
-  `imgaug.augmentables.batches.Batch` and
-  `imgaug.augmentables.batches.UnnormalizedBatch`.
+  `imgaug.augmentables.batches.Batch`.
 * Added class `imgaug.augmentables.batches.BatchInAugmentation`.
 * Added method `_augment_batch()` in `imgaug.augmenters.meta.Augmenter`.
   This method is now called from `augment_batch()`.

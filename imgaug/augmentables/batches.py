@@ -213,32 +213,6 @@ class UnnormalizedBatch(object):
             data=self.data
         )
 
-    def fill_from_batch_in_augmentation_(self, batch_in_augmentation):
-        """Set the columns in this batch to the column values of another batch.
-
-        This method works in-place.
-
-        Parameters
-        ----------
-        batch_in_augmentation : BatchInAugmentation
-            Batch of which to use the column values.
-            The values are *not* copied. Only their references are used.
-
-        Returns
-        -------
-        UnnormalizedBatch
-            The updated batch. (Modified in-place.)
-
-        """
-        self.images_aug = batch_in_augmentation.images
-        self.heatmaps_aug = batch_in_augmentation.heatmaps
-        self.segmentation_maps_aug = batch_in_augmentation.segmentation_maps
-        self.keypoints_aug = batch_in_augmentation.keypoints
-        self.bounding_boxes_aug = batch_in_augmentation.bounding_boxes
-        self.polygons_aug = batch_in_augmentation.polygons
-        self.line_strings_aug = batch_in_augmentation.line_strings
-        return self
-
     def fill_from_augmented_normalized_batch(self, batch_aug_norm):
         """
         Fill this batch with (normalized) augmentation results.
