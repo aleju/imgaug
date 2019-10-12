@@ -594,7 +594,7 @@ class _BatchInAugmentationPropagationContext(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.noned_info is not None:
-            self.batch.unapply_propagation_hooks_(self.noned_info)
+            self.batch.invert_apply_propagation_hooks_(self.noned_info)
 
 
 class BatchInAugmentation(object):
@@ -865,7 +865,7 @@ class BatchInAugmentation(object):
             Each tuple contains
             ``(column attribute name, column value before setting it to None)``.
             This information is required when calling
-            :func:`BatchInAugmentation.unapply_propagation_hooks_`.
+            :func:`BatchInAugmentation.invert_apply_propagation_hooks_`.
 
         """
         if hooks is None:
@@ -881,7 +881,7 @@ class BatchInAugmentation(object):
                 noned_info.append((column.attr_name, column.value))
         return noned_info
 
-    def unapply_propagation_hooks_(self, noned_info):
+    def invert_apply_propagation_hooks_(self, noned_info):
         """Set columns from ``None`` back to their original values.
 
         This is the inverse of
