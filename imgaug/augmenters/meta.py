@@ -3243,7 +3243,8 @@ class SomeOf(Augmenter, list):
                         parents=parents + [self],
                         hooks=hooks
                     )
-                    batch.invert_subselect_rows_by_indices_(active, batch_sub)
+                    batch = batch.invert_subselect_rows_by_indices_(active,
+                                                                    batch_sub)
 
             return batch
 
@@ -3451,7 +3452,8 @@ class Sometimes(Augmenter):
                         parents=parents + [self],
                         hooks=hooks
                     )
-                    batch.invert_subselect_rows_by_indices_(indices, batch_sub)
+                    batch = batch.invert_subselect_rows_by_indices_(indices,
+                                                                    batch_sub)
 
             return batch
 

@@ -780,6 +780,11 @@ class BatchInAugmentation(object):
             The batch after
             :func:`BatchInAugmentation.subselect_rows_by_indices` was called.
 
+        Returns
+        -------
+        BatchInAugmentation
+            The updated batch. (Modified in-place.)
+
         Examples
         --------
         >>> import numpy as np
@@ -819,6 +824,8 @@ class BatchInAugmentation(object):
                 else:
                     for ith_index, index in enumerate(indices):
                         items[index] = items_sub[ith_index]
+
+        return self
 
     def propagation_hooks_ctx(self, augmenter, hooks, parents):
         """Start a context in which propagation hooks are applied.
