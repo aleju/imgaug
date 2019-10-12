@@ -594,7 +594,8 @@ class _BatchInAugmentationPropagationContext(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.noned_info is not None:
-            self.batch.invert_apply_propagation_hooks_(self.noned_info)
+            self.batch = \
+                self.batch.invert_apply_propagation_hooks_(self.noned_info)
 
 
 class BatchInAugmentation(object):
@@ -896,9 +897,15 @@ class BatchInAugmentation(object):
             original values. This is the output of
             :func:`BatchInAugmentation.apply_propagation_hooks_`.
 
+        Returns
+        -------
+        BatchInAugmentation
+            The updated batch. (Modified in-place.)
+
         """
         for attr_name, value in noned_info:
             setattr(self, attr_name, value)
+        return self
 
     def to_batch_in_augmentation(self):
         """Convert this batch to a :class:`BatchInAugmentation` instance.
