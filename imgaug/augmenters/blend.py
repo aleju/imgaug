@@ -352,7 +352,7 @@ class Alpha(meta.Augmenter):
         batch_first, batch_second = self._generate_branch_outputs(
             batch, hooks, parents)
 
-        augms = batch.get_augmentables()
+        columns = batch.get_augmentables()
         shapes = batch.get_rowwise_shapes()
         nb_images = len(shapes)
         nb_channels_max = max([shape[2] if len(shape) > 2 else 1
@@ -389,11 +389,11 @@ class Alpha(meta.Augmenter):
             # TODO Use gradual blending for heatmaps here (as for images)?
             #      Heatmaps are probably the only augmentable where this makes
             #      sense.
-            for augm_name, augm_value, augm_attr_name in augms:
-                if augm_value is not None and augm_name != "images":
+            for column in columns:
+                if column.value is not None and column.name != "images":
                     batch_use = (batch_first if use_first_branch
                                  else batch_second)
-                    augm_value[i] = getattr(batch_use, augm_attr_name)[i]
+                    column.value[i] = getattr(batch_use, column.attr_name)[i]
 
         return batch
 

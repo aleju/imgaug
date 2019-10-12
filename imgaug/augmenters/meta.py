@@ -544,41 +544,41 @@ class Augmenter(object):
             batch_norm = batch_norm.to_normalized_batch()
         batch = batch_norm.to_batch_in_augmentation()
 
-        augms = batch.get_augmentables()
+        columns = batch.get_augmentables()
 
         # TODO move this into the default implementation of _augment_batch()
         augseq = self
         if not self.deterministic:
-            if len(augms) > 1:
+            if len(columns) > 1:
                 # note that to_deterministic() advances the RNG state, so we
                 # don't have to worry about executing many times the same augs
                 augseq = self.to_deterministic()
 
         # hooks preprocess
         if hooks is not None:
-            for augm_name, augm_value, augm_attr_name in augms:
-                augm_value = hooks.preprocess(
-                    augm_value, augmenter=self, parents=parents)
-                setattr(batch, augm_attr_name, augm_value)
+            for column in columns:
+                value = hooks.preprocess(
+                    column.value, augmenter=self, parents=parents)
+                setattr(batch, column.attr_name, value)
 
             # refresh so that values are updated for later functions
-            augms = batch.get_augmentables()
+            columns = batch.get_augmentables()
 
         # set augmentables to None if this augmenter is deactivated or hooks
         # demands it
         set_to_none = []
         if not self.activated:
-            for augm_name, augm_value, augm_attr_name in augms:
-                set_to_none.append((augm_name, augm_value, augm_attr_name))
-                setattr(batch, augm_attr_name, None)
+            for column in columns:
+                set_to_none.append(column)
+                setattr(batch, column.attr_name, None)
         elif hooks is not None:
-            for augm_name, augm_value, augm_attr_name in augms:
+            for column in columns:
                 activated = hooks.is_activated(
-                    augm_value, augmenter=self, parents=parents,
+                    column.value, augmenter=self, parents=parents,
                     default=self.activated)
                 if not activated:
-                    set_to_none.append((augm_name, augm_value, augm_attr_name))
-                    setattr(batch, augm_attr_name, None)
+                    set_to_none.append(column)
+                    setattr(batch, column.attr_name, None)
 
         # If _augment_batch() ends up calling _augment_images() and similar
         # methods, we don't need the deterministic context here. But if there
@@ -593,18 +593,18 @@ class Augmenter(object):
                     hooks=hooks)
 
         # revert augmentables being set to None for non-activated augmenters
-        for augm_name, augm_value, augm_attr_name in set_to_none:
-            setattr(batch, augm_attr_name, augm_value)
+        for column in set_to_none:
+            setattr(batch, column.attr_name, column.value)
 
         # hooks postprocess
         if hooks is not None:
             # refresh as contents may have been changed in _augment_batch()
-            augms = batch.get_augmentables()
+            columns = batch.get_augmentables()
 
-            for augm_name, augm_value, augm_attr_name in augms:
+            for column in columns:
                 augm_value = hooks.postprocess(
-                    augm_value, augmenter=self, parents=parents)
-                setattr(batch, augm_attr_name, augm_value)
+                    column.value, augmenter=self, parents=parents)
+                setattr(batch, column.attr_name, augm_value)
 
         batch_norm.fill_from_batch_in_augmentation_(batch)
         result = batch_norm
@@ -645,19 +645,19 @@ class Augmenter(object):
             The augmented batch.
 
         """
-        augms = batch.get_augmentables()
+        columns = batch.get_augmentables()
 
         # set attribute batch.T_aug with result of self.augment_T() for each
         # batch.T_unaug (that had any content)
-        for augm_name, augm_value, augm_attr_name in augms:
+        for column in columns:
             with _maybe_deterministic_ctx(random_state, self.deterministic):
                 # Checking for none here is not strictly necessary, but should
                 # improve performance a bit by saving some function calls.
-                if augm_value is not None:
-                    augm_value = getattr(self, "_augment_" + augm_name)(
-                        augm_value, random_state=random_state, parents=parents,
-                        hooks=hooks)
-                    setattr(batch, augm_attr_name, augm_value)
+                if column.value is not None:
+                    value = getattr(self, "_augment_" + column.name)(
+                        column.value, random_state=random_state,
+                        parents=parents, hooks=hooks)
+                    setattr(batch, column.attr_name, value)
 
         return batch
 
@@ -3605,13 +3605,13 @@ class WithChannels(Augmenter):
                 batch.images = self._recover_images_array(batch.images,
                                                           batch_cp.images)
 
-            augms = batch.get_augmentables()
-            for augm_name, augm_value, augm_attr_name in augms:
-                if augm_name != "images":
-                    augm_value_old = getattr(batch_cp, augm_attr_name)
-                    augm_value = self._replace_unaugmented_cells(
-                        augm_value, augm_value_old)
-                    setattr(batch, augm_attr_name, augm_value)
+            columns = batch.get_augmentables()
+            for column in columns:
+                if column.name != "images":
+                    value_old = getattr(batch_cp, column.attr_name)
+                    value = self._replace_unaugmented_cells(column.value,
+                                                            value_old)
+                    setattr(batch, column.attr_name, value)
 
             if batch.images is not None:
                 batch.images = self._invert_reduce_images_to_channels(

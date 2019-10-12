@@ -90,13 +90,13 @@ class _AbstractPoolingBase(meta.Augmenter):
             return batch
 
         samples = self._draw_samples(batch.nb_items, random_state)
-        augmentables = batch.get_augmentables()
-        for augm_name, augm_value, augm_attr_name in augmentables:
-            if augm_value is not None:
-                augm_value_aug = getattr(
-                    self, "_augment_%s_by_samples" % (augm_name,)
-                )(augm_value, samples)
-                setattr(batch, augm_attr_name, augm_value_aug)
+        columns = batch.get_augmentables()
+        for column in columns:
+            if column.value is not None:
+                value_aug = getattr(
+                    self, "_augment_%s_by_samples" % (column.name,)
+                )(column.value, samples)
+                setattr(batch, column.attr_name, value_aug)
         return batch
 
     def _augment_images_by_samples(self, images, samples):

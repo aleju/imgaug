@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import copy
+import collections
 
 import numpy as np
 
@@ -14,10 +15,14 @@ _AUGMENTABLE_NAMES = [
     "images", "heatmaps", "segmentation_maps", "keypoints",
     "bounding_boxes", "polygons", "line_strings"]
 
+_AugmentableColumn = collections.namedtuple(
+    "_AugmentableColumn",
+    ["name", "value", "attr_name"])
+
 
 def _get_augmentables_names(batch, postfix):
-    return [name
-            for name, value, attr_name
+    return [column.name
+            for column
             in _get_augmentables(batch, postfix)]
 
 
@@ -31,7 +36,7 @@ def _get_augmentables(batch, postfix):
         # as shape-changes are imagewise. Hence, we can afford to check
         # len() here.
         if value is not None and len(value) > 0:
-            result.append((name, value, attr_name))
+            result.append(_AugmentableColumn(name, value, attr_name))
     return result
 
 
@@ -562,15 +567,15 @@ class BatchInAugmentation(object):
 
     def get_rowwise_shapes(self):
         nb_items = self.nb_items
-        augmentables = self.get_augmentables()
+        columns = self.get_augmentables()
         shapes = [None] * nb_items
         found = np.zeros((nb_items,), dtype=bool)
-        for augm_name, augm_value, _augm_attr_name in augmentables:
-            if augm_value is not None:
-                if augm_name == "images" and ia.is_np_array(augm_value):
-                    shapes = [augm_value.shape[1:]] * nb_items
+        for column in columns:
+            if column.value is not None:
+                if column.name == "images" and ia.is_np_array(column.value):
+                    shapes = [column.value.shape[1:]] * nb_items
                 else:
-                    for i, item in enumerate(augm_value):
+                    for i, item in enumerate(column.value):
                         if item is not None:
                             shapes[i] = item.shape
                             found[i] = True
@@ -630,12 +635,13 @@ class BatchInAugmentation(object):
             return None
 
         noned_info = []
-        for _augm_name, value, attr_name in self.get_augmentables():
+        for column in self.get_augmentables():
             is_prop = hooks.is_propagating(
-                value, augmenter=augmenter, parents=parents, default=True)
+                column.value, augmenter=augmenter, parents=parents,
+                default=True)
             if not is_prop:
-                setattr(self, attr_name, None)
-                noned_info.append((attr_name, value))
+                setattr(self, column.attr_name, None)
+                noned_info.append((column.attr_name, column.value))
         return noned_info
 
     def unapply_propagation_hooks_(self, noned_info):
