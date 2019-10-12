@@ -642,6 +642,7 @@ class BatchInAugmentation(object):
         The line strings to augment.
 
     """
+
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
                  keypoints=None, bounding_boxes=None, polygons=None,
                  line_strings=None, data=None):
