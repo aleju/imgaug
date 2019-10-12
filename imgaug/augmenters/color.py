@@ -1215,10 +1215,12 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         return samples_hue, samples_saturation
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
 
-        result = images
+        images = batch.images
+        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         # surprisingly, placing this here seems to be slightly slower than
         # placing it inside the loop
@@ -1253,9 +1255,9 @@ class AddToHueAndSaturation(meta.Augmenter):
                 image_hsv,
                 to_colorspace=self.from_colorspace,
                 from_colorspace=CSPACE_HSV)
-            result[i] = image_rgb
+            batch.images[i] = image_rgb
 
-        return result
+        return batch
 
     def _transform_image_cv2(self, image_hsv, hue, saturation):
         # this has roughly the same speed as the numpy backend
@@ -1657,14 +1659,16 @@ class ChangeColorspace(meta.Augmenter):
             (n_augmentables,), random_state=rss[1])
         return alphas, to_colorspaces
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         alphas, to_colorspaces = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
+        for i, image in enumerate(images):
             alpha = alphas[i]
             to_colorspace = to_colorspaces[i]
-            image = images[i]
 
             assert to_colorspace in CSPACE_ALL, (
                 "Expected 'to_colorspace' to be one of %s. Got %s." % (
@@ -1675,9 +1679,10 @@ class ChangeColorspace(meta.Augmenter):
             else:
                 image_aug = change_colorspace_(image, to_colorspace,
                                                self.from_colorspace)
-                result[i] = blend.blend_alpha(image_aug, image, alpha, self.eps)
+                batch.images[i] = blend.blend_alpha(image_aug, image, alpha,
+                                                    self.eps)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.to_colorspace, self.alpha]
@@ -1788,14 +1793,18 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         return n_colors
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         rss = random_state.duplicate(1 + len(images))
         n_colors = self._draw_samples(len(images), rss[-1])
 
-        result = images
         for i, image in enumerate(images):
-            result[i] = self._augment_single_image(image, n_colors[i], rss[i])
-        return result
+            batch.images[i] = self._augment_single_image(image, n_colors[i],
+                                                         rss[i])
+        return batch
 
     def _augment_single_image(self, image, n_colors, random_state):
         assert image.shape[-1] in [1, 3, 4], (
