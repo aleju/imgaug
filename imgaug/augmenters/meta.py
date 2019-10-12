@@ -45,7 +45,8 @@ import imgaug as ia
 from .. import parameters as iap
 from .. import random as iarandom
 from .. import validation as iaval
-from imgaug.augmentables.batches import Batch, UnnormalizedBatch
+from imgaug.augmentables.batches import (Batch, UnnormalizedBatch,
+                                         BatchInAugmentation)
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
@@ -538,13 +539,27 @@ class Augmenter(object):
             Augmented batch.
 
         """
-        batch_orig = batch
-        batch_norm = batch
-        if isinstance(batch_norm, UnnormalizedBatch):
-            batch_norm = batch_norm.to_normalized_batch()
-        batch = batch_norm.to_batch_in_augmentation()
+        # this chain of if/elses would be more beautiful if it was
+        # (1st) UnnormalizedBatch, (2nd) Batch, (3rd) BatchInAugmenation.
+        # We check for BatchInAugmentation first as it is expected to be the
+        # most common input (due to child calls).
+        batch_unnorm = None
+        batch_norm = None
+        if isinstance(batch, BatchInAugmentation):
+            batch_inaug = batch
+        elif isinstance(batch, UnnormalizedBatch):
+            batch_unnorm = batch
+            batch_norm = batch.to_normalized_batch()
+            batch_inaug = batch_norm.to_batch_in_augmentation()
+        elif isinstance(batch, Batch):
+            batch_norm = batch
+            batch_inaug = batch_norm.to_batch_in_augmentation()
+        else:
+            raise ValueError(
+                "Expected UnnormalizedBatch, Batch or BatchInAugmentation, "
+                "got %s." % (type(batch).__name__,))
 
-        columns = batch.columns
+        columns = batch_inaug.columns
 
         # TODO move this into the default implementation of _augment_batch()
         augseq = self
@@ -559,10 +574,10 @@ class Augmenter(object):
             for column in columns:
                 value = hooks.preprocess(
                     column.value, augmenter=self, parents=parents)
-                setattr(batch, column.attr_name, value)
+                setattr(batch_inaug, column.attr_name, value)
 
             # refresh so that values are updated for later functions
-            columns = batch.columns
+            columns = batch_inaug.columns
 
         # set augmentables to None if this augmenter is deactivated or hooks
         # demands it
@@ -570,7 +585,7 @@ class Augmenter(object):
         if not self.activated:
             for column in columns:
                 set_to_none.append(column)
-                setattr(batch, column.attr_name, None)
+                setattr(batch_inaug, column.attr_name, None)
         elif hooks is not None:
             for column in columns:
                 activated = hooks.is_activated(
@@ -578,40 +593,47 @@ class Augmenter(object):
                     default=self.activated)
                 if not activated:
                     set_to_none.append(column)
-                    setattr(batch, column.attr_name, None)
+                    setattr(batch_inaug, column.attr_name, None)
 
         # If _augment_batch() ends up calling _augment_images() and similar
         # methods, we don't need the deterministic context here. But if there
         # is a custom implementation of _augment_batch(), then we should have
         # this here. It causes very little overhead.
         with _maybe_deterministic_ctx(augseq):
-            if not batch.empty:
-                batch = augseq._augment_batch(
-                    batch,
+            if not batch_inaug.empty:
+                batch_inaug = augseq._augment_batch(
+                    batch_inaug,
                     random_state=self.random_state,
                     parents=parents if parents is not None else [],
                     hooks=hooks)
 
         # revert augmentables being set to None for non-activated augmenters
         for column in set_to_none:
-            setattr(batch, column.attr_name, column.value)
+            setattr(batch_inaug, column.attr_name, column.value)
 
         # hooks postprocess
         if hooks is not None:
             # refresh as contents may have been changed in _augment_batch()
-            columns = batch.columns
+            columns = batch_inaug.columns
 
             for column in columns:
                 augm_value = hooks.postprocess(
                     column.value, augmenter=self, parents=parents)
-                setattr(batch, column.attr_name, augm_value)
+                setattr(batch_inaug, column.attr_name, augm_value)
 
-        batch_norm = batch_norm.fill_from_batch_in_augmentation_(batch)
-        result = batch_norm
-        if isinstance(batch_orig, UnnormalizedBatch):
+        if batch_unnorm is not None:
             # TODO make fill_from_augmented_normalized_batch inplace
-            result = batch_orig.fill_from_augmented_normalized_batch(batch_norm)
-        return result
+            batch_norm = batch_norm.fill_from_batch_in_augmentation_(
+                batch_inaug)
+            batch_unnorm = batch_unnorm.fill_from_augmented_normalized_batch(
+                batch_norm)
+            return batch_unnorm
+        elif batch_norm is not None:
+            batch_norm = batch_norm.fill_from_batch_in_augmentation_(
+                batch_inaug)
+            return batch_norm
+        else:
+            return batch_inaug
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         """Augment a batch in-place.
