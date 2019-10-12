@@ -762,11 +762,11 @@ class BatchInAugmentation(object):
 
         return BatchInAugmentation(**kwargs)
 
-    def invert_subselect_items_by_indices_(self, indices, batch_subselected):
+    def invert_subselect_rows_by_indices_(self, indices, batch_subselected):
         """Reverse the subselection of rows in-place.
 
         This is the inverse of
-        :func:`BatchInAugmentation.subselect_items_by_indices`.
+        :func:`BatchInAugmentation.subselect_rows_by_indices`.
 
         This method has to be executed on the batch *before* subselection.
 
@@ -777,7 +777,7 @@ class BatchInAugmentation(object):
 
         batch_subselected : BatchInAugmentation
             The batch after
-            :func:`BatchInAugmentation.subselect_items_by_indices` was called.
+            :func:`BatchInAugmentation.subselect_rows_by_indices` was called.
 
         Examples
         --------
@@ -787,7 +787,7 @@ class BatchInAugmentation(object):
         >>> batch = BatchInAugmentation(images=images)
         >>> batch_sub = batch.subselect_rows_by_indices([0])
         >>> batch_sub.images += 1
-        >>> batch.invert_subselect_items_by_indices_([0], batch_sub)
+        >>> batch.invert_subselect_rows_by_indices_([0], batch_sub)
 
         """
         for augm_name in _AUGMENTABLE_NAMES:
