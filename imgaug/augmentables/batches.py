@@ -797,33 +797,33 @@ class BatchInAugmentation(object):
 
         """
         for augm_name in _AUGMENTABLE_NAMES:
-            items = getattr(self, augm_name)
-            if items is not None:
-                items_sub = getattr(batch_subselected, augm_name)
-                if augm_name == "images" and ia.is_np_array(items):
+            column = getattr(self, augm_name)
+            if column is not None:
+                column_sub = getattr(batch_subselected, augm_name)
+                if augm_name == "images" and ia.is_np_array(column):
                     # An array does not have to stay an array after
-                    # augmentation. The shapes and/or dtypes of items may
+                    # augmentation. The shapes and/or dtypes of rows may
                     # change, turning the array into a list.
-                    if ia.is_np_array(items_sub):
-                        shapes = {items.shape[1:], items_sub.shape[1:]}
-                        dtypes = {items.dtype.name, items_sub.dtype.name}
+                    if ia.is_np_array(column_sub):
+                        shapes = {column.shape[1:], column_sub.shape[1:]}
+                        dtypes = {column.dtype.name, column_sub.dtype.name}
                     else:
                         shapes = set(
-                            [items.shape[1:]]
-                            + [image.shape for image in items_sub])
+                            [column.shape[1:]]
+                            + [image.shape for image in column_sub])
                         dtypes = set(
-                            [items.dtype.name]
-                            + [image.dtype.name for image in items_sub])
+                            [column.dtype.name]
+                            + [image.dtype.name for image in column_sub])
 
                     if len(shapes) == 1 and len(dtypes) == 1:
-                        items[indices] = items_sub
+                        column[indices] = column_sub
                     else:
-                        self.images = list(items)
+                        self.images = list(column)
                         for ith_index, index in enumerate(indices):
-                            self.images[index] = items_sub[ith_index]
+                            self.images[index] = column_sub[ith_index]
                 else:
                     for ith_index, index in enumerate(indices):
-                        items[index] = items_sub[ith_index]
+                        column[index] = column_sub[ith_index]
 
         return self
 
