@@ -603,6 +603,7 @@ class _BatchInAugmentationPropagationContext(object):
         if self.hooks is not None:
             self.noned_info = self.batch.apply_propagation_hooks_(
                 self.augmenter, self.hooks, self.parents)
+        return self.batch
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.noned_info is not None:
