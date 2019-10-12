@@ -65,7 +65,7 @@ class TestUnnormalizedBatch(unittest.TestCase):
         batch_norm = batch.to_normalized_batch()
 
         assert isinstance(batch_norm, ia.Batch)
-        assert ia.is_np_array(batch_norm.images)
+        assert ia.is_np_array(batch_norm.images_unaug)
         assert batch_norm.images_unaug.shape == (1, 2, 2, 3)
         assert batch_norm.get_column_names() == ["images"]
 
@@ -83,7 +83,7 @@ class TestUnnormalizedBatch(unittest.TestCase):
         batch_norm = batch.to_normalized_batch()
 
         assert isinstance(batch_norm, ia.Batch)
-        assert ia.is_np_array(batch_norm.images)
+        assert ia.is_np_array(batch_norm.images_unaug)
         assert batch_norm.images_unaug.shape == (1, 2, 2, 3)
         assert isinstance(batch_norm.heatmaps_unaug[0], ia.HeatmapsOnImage)
         assert isinstance(batch_norm.segmentation_maps_unaug[0],
