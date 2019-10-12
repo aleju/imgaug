@@ -773,6 +773,9 @@ class BatchInAugmentation(object):
                     rows = rows[indices]
                 else:
                     rows = [rows[index] for index in indices]
+
+                if len(rows) == 0:
+                    rows = None
             kwargs[augm_name] = rows
 
         return BatchInAugmentation(**kwargs)
@@ -814,7 +817,13 @@ class BatchInAugmentation(object):
             column = getattr(self, augm_name)
             if column is not None:
                 column_sub = getattr(batch_subselected, augm_name)
-                if augm_name == "images" and ia.is_np_array(column):
+                if column_sub is None:
+                    # list of indices was empty, resulting in the columns
+                    # in the subselected batch being empty and replaced
+                    # by Nones. We can just re-use the columns before
+                    # subselection.
+                    pass
+                elif augm_name == "images" and ia.is_np_array(column):
                     # An array does not have to stay an array after
                     # augmentation. The shapes and/or dtypes of rows may
                     # change, turning the array into a list.
