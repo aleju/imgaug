@@ -606,7 +606,7 @@ class Augmenter(object):
                     column.value, augmenter=self, parents=parents)
                 setattr(batch, column.attr_name, augm_value)
 
-        batch_norm.fill_from_batch_in_augmentation_(batch)
+        batch_norm = batch_norm.fill_from_batch_in_augmentation_(batch)
         result = batch_norm
         if isinstance(batch_orig, UnnormalizedBatch):
             # TODO make fill_from_augmented_normalized_batch inplace

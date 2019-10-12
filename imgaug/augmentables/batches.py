@@ -235,6 +235,11 @@ class UnnormalizedBatch(object):
             Batch of which to use the column values.
             The values are *not* copied. Only their references are used.
 
+        Returns
+        -------
+        UnnormalizedBatch
+            The updated batch. (Modified in-place.)
+
         """
         self.images_aug = batch_in_augmentation.images
         self.heatmaps_aug = batch_in_augmentation.heatmaps
@@ -243,6 +248,7 @@ class UnnormalizedBatch(object):
         self.bounding_boxes_aug = batch_in_augmentation.bounding_boxes
         self.polygons_aug = batch_in_augmentation.polygons
         self.line_strings_aug = batch_in_augmentation.line_strings
+        return self
 
     def fill_from_augmented_normalized_batch(self, batch_aug_norm):
         """
@@ -445,6 +451,11 @@ class Batch(object):
             Batch of which to use the column values.
             The values are *not* copied. Only their references are used.
 
+        Returns
+        -------
+        Batch
+            The updated batch. (Modified in-place.)
+
         """
         self.images_aug = batch_in_augmentation.images
         self.heatmaps_aug = batch_in_augmentation.heatmaps
@@ -453,6 +464,7 @@ class Batch(object):
         self.bounding_boxes_aug = batch_in_augmentation.bounding_boxes
         self.polygons_aug = batch_in_augmentation.polygons
         self.line_strings_aug = batch_in_augmentation.line_strings
+        return self
 
     def deepcopy(self,
                  images_unaug=DEFAULT,
@@ -939,9 +951,14 @@ class BatchInAugmentation(object):
             Batch of which to use the column values.
             The values are *not* copied. Only their references are used.
 
+        Returns
+        -------
+        BatchInAugmentation
+            The updated batch. (Modified in-place.)
+
         """
         if batch_in_augmentation is self:
-            return
+            return self
 
         self.images = batch_in_augmentation.images
         self.heatmaps = batch_in_augmentation.heatmaps
@@ -950,6 +967,8 @@ class BatchInAugmentation(object):
         self.bounding_boxes = batch_in_augmentation.bounding_boxes
         self.polygons = batch_in_augmentation.polygons
         self.line_strings = batch_in_augmentation.line_strings
+
+        return self
 
     def to_batch(self, batch_before_aug):
         """Convert this batch into a :class:`Batch` instance.
