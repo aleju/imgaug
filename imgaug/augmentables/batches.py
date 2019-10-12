@@ -806,7 +806,7 @@ class BatchInAugmentation(object):
         >>> batch = BatchInAugmentation(images=images)
         >>> batch_sub = batch.subselect_rows_by_indices([0])
         >>> batch_sub.images += 1
-        >>> batch.invert_subselect_rows_by_indices_([0], batch_sub)
+        >>> batch = batch.invert_subselect_rows_by_indices_([0], batch_sub)
 
         """
         for augm_name in _AUGMENTABLE_NAMES:
