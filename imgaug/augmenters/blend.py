@@ -352,7 +352,7 @@ class Alpha(meta.Augmenter):
         batch_first, batch_second = self._generate_branch_outputs(
             batch, hooks, parents)
 
-        columns = batch.get_augmentables()
+        columns = batch.columns
         shapes = batch.get_rowwise_shapes()
         nb_images = len(shapes)
         nb_channels_max = max([shape[2] if len(shape) > 2 else 1

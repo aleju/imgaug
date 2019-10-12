@@ -20,13 +20,13 @@ _AugmentableColumn = collections.namedtuple(
     ["name", "value", "attr_name"])
 
 
-def _get_augmentables_names(batch, postfix):
+def _get_column_names(batch, postfix):
     return [column.name
             for column
-            in _get_augmentables(batch, postfix)]
+            in _get_columns(batch, postfix)]
 
 
-def _get_augmentables(batch, postfix):
+def _get_columns(batch, postfix):
     result = []
     for name in _AUGMENTABLE_NAMES:
         attr_name = name + postfix
@@ -148,7 +148,7 @@ class UnnormalizedBatch(object):
         self.line_strings_aug = None
         self.data = data
 
-    def get_augmentables_names(self):
+    def get_column_names(self):
         """Get the names of types of augmentables that contain data.
 
         This method is intended for situations where one wants to know which
@@ -161,7 +161,7 @@ class UnnormalizedBatch(object):
             Names of types of augmentables. E.g. ``["images", "polygons"]``.
 
         """
-        return _get_augmentables_names(self, "_unaug")
+        return _get_column_names(self, "_unaug")
 
     def to_normalized_batch(self):
         """Convert this unnormalized batch to an instance of Batch.
@@ -365,7 +365,7 @@ class Batch(object):
     def bounding_boxes(self):
         return self.bounding_boxes_unaug
 
-    def get_augmentables_names(self):
+    def get_column_names(self):
         """Get the names of types of augmentables that contain data.
 
         This method is intended for situations where one wants to know which
@@ -378,7 +378,7 @@ class Batch(object):
             Names of types of augmentables. E.g. ``["images", "polygons"]``.
 
         """
-        return _get_augmentables_names(self, "_unaug")
+        return _get_column_names(self, "_unaug")
 
     def to_normalized_batch(self):
         """Return this batch.
@@ -547,7 +547,11 @@ class BatchInAugmentation(object):
                 return len(value)
         return 0
 
-    def get_augmentables_names(self):
+    @property
+    def columns(self):
+        return _get_columns(self, "")
+
+    def get_column_names(self):
         """Get the names of types of augmentables that contain data.
 
         This method is intended for situations where one wants to know which
@@ -560,14 +564,11 @@ class BatchInAugmentation(object):
             Names of types of augmentables. E.g. ``["images", "polygons"]``.
 
         """
-        return _get_augmentables_names(self, "")
-
-    def get_augmentables(self):
-        return _get_augmentables(self, "")
+        return _get_column_names(self, "")
 
     def get_rowwise_shapes(self):
         nb_items = self.nb_items
-        columns = self.get_augmentables()
+        columns = self.columns
         shapes = [None] * nb_items
         found = np.zeros((nb_items,), dtype=bool)
         for column in columns:
@@ -634,7 +635,7 @@ class BatchInAugmentation(object):
             return None
 
         noned_info = []
-        for column in self.get_augmentables():
+        for column in self.columns:
             is_prop = hooks.is_propagating(
                 column.value, augmenter=augmenter, parents=parents,
                 default=True)

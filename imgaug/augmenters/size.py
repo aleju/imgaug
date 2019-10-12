@@ -2530,8 +2530,7 @@ class KeepSizeByResize(meta.Augmenter):
     @classmethod
     def get_shapes(cls, batch):
         result = dict()
-        columns = batch.get_augmentables()
-        for column in columns:
+        for column in batch.columns:
             result[column.name] = [cell.shape for cell in column.value]
 
         if batch.heatmaps is not None:

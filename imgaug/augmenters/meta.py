@@ -544,7 +544,7 @@ class Augmenter(object):
             batch_norm = batch_norm.to_normalized_batch()
         batch = batch_norm.to_batch_in_augmentation()
 
-        columns = batch.get_augmentables()
+        columns = batch.columns
 
         # TODO move this into the default implementation of _augment_batch()
         augseq = self
@@ -562,7 +562,7 @@ class Augmenter(object):
                 setattr(batch, column.attr_name, value)
 
             # refresh so that values are updated for later functions
-            columns = batch.get_augmentables()
+            columns = batch.columns
 
         # set augmentables to None if this augmenter is deactivated or hooks
         # demands it
@@ -599,7 +599,7 @@ class Augmenter(object):
         # hooks postprocess
         if hooks is not None:
             # refresh as contents may have been changed in _augment_batch()
-            columns = batch.get_augmentables()
+            columns = batch.columns
 
             for column in columns:
                 augm_value = hooks.postprocess(
@@ -645,11 +645,9 @@ class Augmenter(object):
             The augmented batch.
 
         """
-        columns = batch.get_augmentables()
-
         # set attribute batch.T_aug with result of self.augment_T() for each
         # batch.T_unaug (that had any content)
-        for column in columns:
+        for column in batch.columns:
             with _maybe_deterministic_ctx(random_state, self.deterministic):
                 value = getattr(self, "_augment_" + column.name)(
                     column.value, random_state=random_state,
@@ -3602,8 +3600,7 @@ class WithChannels(Augmenter):
                 batch.images = self._recover_images_array(batch.images,
                                                           batch_cp.images)
 
-            columns = batch.get_augmentables()
-            for column in columns:
+            for column in batch.columns:
                 if column.name != "images":
                     value_old = getattr(batch_cp, column.attr_name)
                     value = self._replace_unaugmented_cells(column.value,
