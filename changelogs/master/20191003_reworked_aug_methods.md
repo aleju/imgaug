@@ -79,6 +79,12 @@
 * Refactored `ChangeColorspace` to use single `_augment_batch()` method.
 * Refactored `_AbstractColorQuantization` to use single `_augment_batch()`
   method.
+* Refactored `_ContrastFuncWrapper` to use single `_augment_batch()` method.
+* Refactored `AllChannelsCLAHE` to use single `_augment_batch()` method.
+* Refactored `CLAHE` to use single `_augment_batch()` method.
+* Refactored `AllChannelsHistogramEqualization` to use single `_augment_batch()`
+  method.
+* Refactored `HistogramEqualization` to use single `_augment_batch()` method.
 * Added validation of input arguments to `KeypointsOnImage.from_xy_array()`.
 * Improved validation of input arguments to
   `BoundingBoxesOnImage.from_xyxy_array()`.

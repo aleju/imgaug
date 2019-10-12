@@ -34,6 +34,7 @@ from . import color as color_lib
 import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
+from ..augmentables import batches as iabatches
 
 
 class _ContrastFuncWrapper(meta.Augmenter):
@@ -49,7 +50,12 @@ class _ContrastFuncWrapper(meta.Augmenter):
         self.dtypes_allowed = dtypes_allowed
         self.dtypes_disallowed = dtypes_disallowed
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         if self.dtypes_allowed is not None:
             iadt.gate_dtypes(images,
                              allowed=self.dtypes_allowed,
@@ -61,7 +67,6 @@ class _ContrastFuncWrapper(meta.Augmenter):
         per_channel = self.per_channel.draw_samples((nb_images,),
                                                     random_state=rss[0])
 
-        result = images
         gen = enumerate(zip(images, per_channel, rss[1:]))
         for i, (image, per_channel_i, rs) in gen:
             nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
@@ -82,8 +87,8 @@ class _ContrastFuncWrapper(meta.Augmenter):
                 # than keeping the numpy values
                 args = tuple([image] + samples_i)
                 image_aug = self.func(*args)
-            result[i] = image_aug
-        return result
+            batch.images[i] = image_aug
+        return batch
 
     def get_parameters(self):
         return self.params1d
@@ -975,7 +980,12 @@ class AllChannelsCLAHE(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         iadt.gate_dtypes(
             images,
             allowed=["uint8", "uint16"],
@@ -1033,8 +1043,8 @@ class AllChannelsCLAHE(meta.Augmenter):
             # combine channels to one image
             image_warped = np.stack(image_warped, axis=-1)
 
-            images[i] = image_warped
-        return images
+            batch.images[i] = image_warped
+        return batch
 
     def get_parameters(self):
         return [self.clip_limit, self.tile_grid_size_px,
@@ -1218,7 +1228,12 @@ class CLAHE(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
             from_colorspace, to_colorspace, name=name)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         iadt.gate_dtypes(
             images,
             allowed=["uint8"],
@@ -1231,13 +1246,16 @@ class CLAHE(meta.Augmenter):
 
         def _augment_all_channels_clahe(images_normalized,
                                         random_state_derived):
-            return self.all_channel_clahe._augment_images(
-                images_normalized, random_state_derived, parents + [self],
-                hooks)
+            batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
+            return self.all_channel_clahe._augment_batch(
+                batch_imgs, random_state_derived, parents + [self],
+                hooks
+            ).images
 
-        return self.intensity_channel_based_applier.apply(
+        batch.images = self.intensity_channel_based_applier.apply(
             images, random_state, parents + [self], hooks,
             _augment_all_channels_clahe)
+        return batch
 
     def get_parameters(self):
         ac_clahe = self.all_channel_clahe
@@ -1309,7 +1327,12 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
         super(AllChannelsHistogramEqualization, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         iadt.gate_dtypes(
             images,
             allowed=["uint8"],
@@ -1329,8 +1352,8 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
             image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
             image_warped = image_warped.transpose((1, 2, 0))
 
-            images[i] = image_warped
-        return images
+            batch.images[i] = image_warped
+        return batch
 
     def get_parameters(self):
         return []
@@ -1450,7 +1473,12 @@ class HistogramEqualization(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
             from_colorspace, to_colorspace, name=name)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         iadt.gate_dtypes(
             images,
             allowed=["uint8"],
@@ -1463,13 +1491,16 @@ class HistogramEqualization(meta.Augmenter):
 
         def _augment_all_channels_histogram_equalization(images_normalized,
                                                          random_state_derived):
-            return self.all_channel_histogram_equalization._augment_images(
-                images_normalized, random_state_derived, parents + [self],
-                hooks)
+            batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
+            return self.all_channel_histogram_equalization._augment_batch(
+                batch_imgs, random_state_derived, parents + [self],
+                hooks
+            ).images
 
-        return self.intensity_channel_based_applier.apply(
+        batch.images = self.intensity_channel_based_applier.apply(
             images, random_state, parents + [self], hooks,
             _augment_all_channels_histogram_equalization)
+        return batch
 
     def get_parameters(self):
         icb_applier = self.intensity_channel_based_applier
