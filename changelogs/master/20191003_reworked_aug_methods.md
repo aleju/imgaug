@@ -71,6 +71,10 @@
 * Refactored `ReplaceElementwise` to use single `_augment_batch()` method.
 * Refactored `Invert` to use single `_augment_batch()` method.
 * Refactored `JpegCompression` to use single `_augment_batch()` method.
+* Refactored `GaussianBlur` to use single `_augment_batch()` method.
+* Refactored `AverageBlur` to use single `_augment_batch()` method.
+* Refactored `MedianBlur` to use single `_augment_batch()` method.
+* Refactored `BilateralBlur` to use single `_augment_batch()` method.
 * Added validation of input arguments to `KeypointsOnImage.from_xy_array()`.
 * Improved validation of input arguments to
   `BoundingBoxesOnImage.from_xyxy_array()`.
