@@ -4582,15 +4582,20 @@ class ChannelShuffle(Augmenter):
                 type(channels),))
         self.channels = channels
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         nb_images = len(images)
         p_samples = self.p.draw_samples((nb_images,),
                                         random_state=random_state)
         rss = random_state.duplicate(nb_images)
         for i, (image, p_i, rs) in enumerate(zip(images, p_samples, rss)):
             if p_i >= 1-1e-4:
-                images[i] = shuffle_channels(image, rs, self.channels)
-        return images
+                batch.images[i] = shuffle_channels(image, rs, self.channels)
+        return batch
 
     def get_parameters(self):
         return [self.p, self.channels]

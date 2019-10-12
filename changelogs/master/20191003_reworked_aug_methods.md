@@ -87,6 +87,7 @@
 * Refactored `HistogramEqualization` to use single `_augment_batch()` method.
 * Refactored `Convolve` to use single `_augment_batch()` method.
 * Refactored `Canny` to use single `_augment_batch()` method.
+* Refactored `ChannelShuffle` to use single `_augment_batch()` method.
 * Added validation of input arguments to `KeypointsOnImage.from_xy_array()`.
 * Improved validation of input arguments to
   `BoundingBoxesOnImage.from_xyxy_array()`.
