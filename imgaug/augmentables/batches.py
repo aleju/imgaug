@@ -990,8 +990,7 @@ class BatchInAugmentation(object):
             Deep copy of this batch.
 
         """
-        batch = BatchInAugmentation(
-            data=copy.deepcopy(self.data) if self.data is not None else None)
+        batch = BatchInAugmentation(data=utils.deepcopy_fast(self.data))
 
         for augm_name in _AUGMENTABLE_NAMES:
             value = getattr(self, augm_name)
