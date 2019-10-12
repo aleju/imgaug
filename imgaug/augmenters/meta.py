@@ -651,13 +651,10 @@ class Augmenter(object):
         # batch.T_unaug (that had any content)
         for column in columns:
             with _maybe_deterministic_ctx(random_state, self.deterministic):
-                # Checking for none here is not strictly necessary, but should
-                # improve performance a bit by saving some function calls.
-                if column.value is not None:
-                    value = getattr(self, "_augment_" + column.name)(
-                        column.value, random_state=random_state,
-                        parents=parents, hooks=hooks)
-                    setattr(batch, column.attr_name, value)
+                value = getattr(self, "_augment_" + column.name)(
+                    column.value, random_state=random_state,
+                    parents=parents, hooks=hooks)
+                setattr(batch, column.attr_name, value)
 
         return batch
 

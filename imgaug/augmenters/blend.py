@@ -390,7 +390,7 @@ class Alpha(meta.Augmenter):
             #      Heatmaps are probably the only augmentable where this makes
             #      sense.
             for column in columns:
-                if column.value is not None and column.name != "images":
+                if column.name != "images":
                     batch_use = (batch_first if use_first_branch
                                  else batch_second)
                     column.value[i] = getattr(batch_use, column.attr_name)[i]

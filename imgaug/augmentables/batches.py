@@ -571,16 +571,15 @@ class BatchInAugmentation(object):
         shapes = [None] * nb_items
         found = np.zeros((nb_items,), dtype=bool)
         for column in columns:
-            if column.value is not None:
-                if column.name == "images" and ia.is_np_array(column.value):
-                    shapes = [column.value.shape[1:]] * nb_items
-                else:
-                    for i, item in enumerate(column.value):
-                        if item is not None:
-                            shapes[i] = item.shape
-                            found[i] = True
-                if np.all(found):
-                    return shapes
+            if column.name == "images" and ia.is_np_array(column.value):
+                shapes = [column.value.shape[1:]] * nb_items
+            else:
+                for i, item in enumerate(column.value):
+                    if item is not None:
+                        shapes[i] = item.shape
+                        found[i] = True
+            if np.all(found):
+                return shapes
         return shapes
 
     def subselect_items_by_indices(self, indices):
