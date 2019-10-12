@@ -736,7 +736,7 @@ class BatchInAugmentation(object):
                 return shapes
         return shapes
 
-    def subselect_items_by_indices(self, indices):
+    def subselect_rows_by_indices(self, indices):
         """Reduce this batch to a subset of rows based on their row indices.
 
         Parameters
@@ -752,13 +752,13 @@ class BatchInAugmentation(object):
         """
         kwargs = {"data": self.data}
         for augm_name in _AUGMENTABLE_NAMES:
-            items = getattr(self, augm_name)
-            if items is not None:
-                if augm_name == "images" and ia.is_np_array(items):
-                    items = items[indices]
+            rows = getattr(self, augm_name)
+            if rows is not None:
+                if augm_name == "images" and ia.is_np_array(rows):
+                    rows = rows[indices]
                 else:
-                    items = [items[index] for index in indices]
-            kwargs[augm_name] = items
+                    rows = [rows[index] for index in indices]
+            kwargs[augm_name] = rows
 
         return BatchInAugmentation(**kwargs)
 
@@ -785,7 +785,7 @@ class BatchInAugmentation(object):
         >>> from imgaug.augmentables.batches import BatchInAugmentation
         >>> images = np.zeros((2, 10, 20, 3), dtype=np.uint8)
         >>> batch = BatchInAugmentation(images=images)
-        >>> batch_sub = batch.subselect_items_by_indices([0])
+        >>> batch_sub = batch.subselect_rows_by_indices([0])
         >>> batch_sub.images += 1
         >>> batch.invert_subselect_items_by_indices_([0], batch_sub)
 

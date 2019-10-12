@@ -3237,7 +3237,7 @@ class SomeOf(Augmenter, list):
                 active = augmenter_active[:, augmenter_index].nonzero()[0]
 
                 if len(active) > 0:
-                    batch_sub = batch.subselect_items_by_indices(active)
+                    batch_sub = batch.subselect_rows_by_indices(active)
                     batch_sub = self[augmenter_index].augment_batch(
                         batch_sub,
                         parents=parents + [self],
@@ -3445,7 +3445,7 @@ class Sometimes(Augmenter):
             #      that can contain Nones
             for indices, augmenters in zip(indice_lists, augmenter_lists):
                 if augmenters is not None and len(augmenters) > 0:
-                    batch_sub = batch.subselect_items_by_indices(indices)
+                    batch_sub = batch.subselect_rows_by_indices(indices)
                     batch_sub = augmenters.augment_batch(
                         batch_sub,
                         parents=parents + [self],
