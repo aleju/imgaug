@@ -64,6 +64,13 @@
 * Refactored `PiecewiseAffine` to use single `_augment_batch()` method.
 * Refactored `PerspectiveTransform` to use single `_augment_batch()` method.
 * Refactored `WithChannels` to use single `_augment_batch()` method.
+* Refactored `Add` to use single `_augment_batch()` method.
+* Refactored `AddElementwise` to use single `_augment_batch()` method.
+* Refactored `Multiply` to use single `_augment_batch()` method.
+* Refactored `MultiplyElementwise` to use single `_augment_batch()` method.
+* Refactored `ReplaceElementwise` to use single `_augment_batch()` method.
+* Refactored `Invert` to use single `_augment_batch()` method.
+* Refactored `JpegCompression` to use single `_augment_batch()` method.
 * Added validation of input arguments to `KeypointsOnImage.from_xy_array()`.
 * Improved validation of input arguments to
   `BoundingBoxesOnImage.from_xyxy_array()`.
