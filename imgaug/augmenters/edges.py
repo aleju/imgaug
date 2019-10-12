@@ -409,7 +409,12 @@ class Canny(meta.Augmenter):
 
         return alpha_samples, hthresh_samples, sobel_samples
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         iadt.gate_dtypes(images,
                          allowed=["uint8"],
                          disallowed=[
@@ -452,9 +457,10 @@ class Canny(meta.Augmenter):
                 image_canny_color = self.colorizer.colorize(
                     image_canny, image, nth_image=i, random_state=rss[i])
 
-                result[i] = blend.blend_alpha(image_canny_color, image, alpha)
+                batch.images[i] = blend.blend_alpha(image_canny_color, image,
+                                                    alpha)
 
-        return result
+        return batch
 
     def get_parameters(self):
         return [self.alpha, self.hysteresis_thresholds, self.sobel_kernel_size,
