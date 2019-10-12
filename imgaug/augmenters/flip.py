@@ -859,8 +859,8 @@ class Fliplr(meta.Augmenter):
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self.p.draw_samples((nb_items,), random_state=random_state)
+        samples = self.p.draw_samples((batch.nb_rows,),
+                                      random_state=random_state)
         for i, sample in enumerate(samples):
             if sample >= 0.5:
                 if batch.images is not None:
@@ -958,8 +958,8 @@ class Flipud(meta.Augmenter):
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self.p.draw_samples((nb_items,), random_state=random_state)
+        samples = self.p.draw_samples((batch.nb_rows,),
+                                      random_state=random_state)
         for i, sample in enumerate(samples):
             if sample >= 0.5:
                 if batch.images is not None:

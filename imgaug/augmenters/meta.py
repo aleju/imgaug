@@ -3230,7 +3230,7 @@ class SomeOf(Augmenter, list):
             #   [1, 0, 0]]
             # would signal, that augmenter 3 is active for the first image,
             # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(batch.nb_items,
+            augmenter_active = self._get_augmenter_active(batch.nb_rows,
                                                           random_state)
 
             for augmenter_index in augmenter_order:
@@ -3426,8 +3426,7 @@ class Sometimes(Augmenter):
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
-            nb_items = batch.nb_items
-            samples = self.p.draw_samples((nb_items,),
+            samples = self.p.draw_samples((batch.nb_rows,),
                                           random_state=random_state)
 
             # create lists/arrays of images for if and else lists (one for each)

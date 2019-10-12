@@ -978,8 +978,7 @@ class Affine(meta.Augmenter):
                     allow_floats=False)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self._draw_samples(nb_items, random_state)
+        samples = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -2066,8 +2065,7 @@ class PiecewiseAffine(meta.Augmenter):
         self._cval_segmentation_maps = 0
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self._draw_samples(nb_items, random_state)
+        samples = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -3842,7 +3840,7 @@ class Rot90(meta.Augmenter):
         return self.k.draw_samples((nb_images,), random_state=random_state)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        ks = self._draw_samples(batch.nb_items, random_state)
+        ks = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_arrays_by_samples(

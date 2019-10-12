@@ -69,17 +69,17 @@ class _AbstractPoolingBase(meta.Augmenter):
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
         """Apply pooling method with given kernel height/width to an image."""
 
-    def _draw_samples(self, nb_items, random_state):
+    def _draw_samples(self, nb_rows, random_state):
         rss = random_state.duplicate(2)
         mode = "single" if self.kernel_size[1] is None else "two"
         kernel_sizes_h = self.kernel_size[0].draw_samples(
-            (nb_items,),
+            (nb_rows,),
             random_state=rss[0])
         if mode == "single":
             kernel_sizes_w = kernel_sizes_h
         else:
             kernel_sizes_w = self.kernel_size[1].draw_samples(
-                (nb_items,), random_state=rss[1])
+                (nb_rows,), random_state=rss[1])
         return (
             np.clip(kernel_sizes_h, 1, None),
             np.clip(kernel_sizes_w, 1, None)
@@ -89,7 +89,7 @@ class _AbstractPoolingBase(meta.Augmenter):
         if batch.images is None and self.keep_size:
             return batch
 
-        samples = self._draw_samples(batch.nb_items, random_state)
+        samples = self._draw_samples(batch.nb_rows, random_state)
         for column in batch.columns:
             value_aug = getattr(
                 self, "_augment_%s_by_samples" % (column.name,)

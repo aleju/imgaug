@@ -537,10 +537,10 @@ class BatchInAugmentation(object):
 
     @property
     def empty(self):
-        return self.nb_items == 0
+        return self.nb_rows == 0
 
     @property
-    def nb_items(self):
+    def nb_rows(self):
         for augm_name in _AUGMENTABLE_NAMES:
             value = getattr(self, augm_name)
             if value is not None:
@@ -567,13 +567,13 @@ class BatchInAugmentation(object):
         return _get_column_names(self, "")
 
     def get_rowwise_shapes(self):
-        nb_items = self.nb_items
+        nb_rows = self.nb_rows
         columns = self.columns
-        shapes = [None] * nb_items
-        found = np.zeros((nb_items,), dtype=bool)
+        shapes = [None] * nb_rows
+        found = np.zeros((nb_rows,), dtype=bool)
         for column in columns:
             if column.name == "images" and ia.is_np_array(column.value):
-                shapes = [column.value.shape[1:]] * nb_items
+                shapes = [column.value.shape[1:]] * nb_rows
             else:
                 for i, item in enumerate(column.value):
                     if item is not None:

@@ -575,8 +575,8 @@ class Resize(meta.Augmenter):
         return interpolation
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self._draw_samples(nb_items, random_state)
+        nb_rows = batch.nb_rows
+        samples = self._draw_samples(nb_rows, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -591,7 +591,7 @@ class Resize(meta.Augmenter):
         if batch.segmentation_maps is not None:
             batch.segmentation_maps = self._augment_maps_by_samples(
                 batch.segmentation_maps, "arr",
-                (samples[0], samples[1], [None] * nb_items))
+                (samples[0], samples[1], [None] * nb_rows))
 
         for augm_name in ["keypoints", "bounding_boxes", "polygons",
                           "line_strings"]:
@@ -1229,33 +1229,33 @@ class CropAndPad(meta.Augmenter):
         return result
 
     def _draw_samples(self, random_state, shapes):
-        nb_items = len(shapes)
+        nb_rows = len(shapes)
 
         if self.mode == "noop":
-            top = right = bottom = left = np.full((nb_items,), 0,
+            top = right = bottom = left = np.full((nb_rows,), 0,
                                                   dtype=np.int32)
         else:
             if self.all_sides is not None:
                 if self.sample_independently:
                     samples = self.all_sides.draw_samples(
-                        (nb_items, 4), random_state=random_state)
+                        (nb_rows, 4), random_state=random_state)
                     top = samples[:, 0]
                     right = samples[:, 1]
                     bottom = samples[:, 2]
                     left = samples[:, 3]
                 else:
                     sample = self.all_sides.draw_samples(
-                        (nb_items,), random_state=random_state)
+                        (nb_rows,), random_state=random_state)
                     top = right = bottom = left = sample
             else:
                 top = self.top.draw_samples(
-                    (nb_items,), random_state=random_state)
+                    (nb_rows,), random_state=random_state)
                 right = self.right.draw_samples(
-                    (nb_items,), random_state=random_state)
+                    (nb_rows,), random_state=random_state)
                 bottom = self.bottom.draw_samples(
-                    (nb_items,), random_state=random_state)
+                    (nb_rows,), random_state=random_state)
                 left = self.left.draw_samples(
-                    (nb_items,), random_state=random_state)
+                    (nb_rows,), random_state=random_state)
 
             if self.mode == "px":
                 # no change necessary for pixel values
@@ -1289,9 +1289,9 @@ class CropAndPad(meta.Augmenter):
         pad_bottom = _only_above_zero(bottom)
         pad_left = _only_above_zero(left)
 
-        pad_mode = self.pad_mode.draw_samples((nb_items,),
+        pad_mode = self.pad_mode.draw_samples((nb_rows,),
                                               random_state=random_state)
-        pad_cval = self.pad_cval.draw_samples((nb_items,),
+        pad_cval = self.pad_cval.draw_samples((nb_rows,),
                                               random_state=random_state)
 
         # TODO vectorize this part -- especially return only one instance
@@ -1898,8 +1898,7 @@ class PadToFixedSize(meta.Augmenter):
         self._pad_cval_segmentation_maps = 0
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self._draw_samples(nb_items, random_state)
+        samples = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -2170,8 +2169,7 @@ class CropToFixedSize(meta.Augmenter):
         self.position = _handle_position_parameter(position)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        nb_items = batch.nb_items
-        samples = self._draw_samples(nb_items, random_state)
+        samples = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -2440,7 +2438,7 @@ class KeepSizeByResize(meta.Augmenter):
                 images_were_array = ia.is_np_array(batch.images)
             shapes_orig = self.get_shapes(batch)
 
-            samples = self._draw_samples(batch.nb_items, random_state)
+            samples = self._draw_samples(batch.nb_rows, random_state)
 
             batch = self.children.augment_batch(
                 batch, parents=parents + [self], hooks=hooks)
