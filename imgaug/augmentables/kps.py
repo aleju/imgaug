@@ -467,8 +467,10 @@ class KeypointsOnImage(object):
     keypoints : list of imgaug.augmentables.kps.Keypoint
         List of keypoints on the image.
 
-    shape : tuple of int
-        The shape of the image on which the keypoints are placed.
+    shape : tuple of int or ndarray
+        The shape of the image on which the objects are placed.
+        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
+        such an image shape.
 
     Examples
     --------

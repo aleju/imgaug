@@ -937,8 +937,10 @@ class BoundingBoxesOnImage(object):
     bounding_boxes : list of imgaug.augmentables.bbs.BoundingBox
         List of bounding boxes on the image.
 
-    shape : tuple of int
-        The shape of the image on which the bounding boxes are placed.
+    shape : tuple of int or ndarray
+        The shape of the image on which the objects are placed.
+        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
+        such an image shape.
 
     Examples
     --------

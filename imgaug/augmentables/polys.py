@@ -1219,7 +1219,7 @@ class PolygonsOnImage(object):
     polygons : list of imgaug.augmentables.polys.Polygon
         List of polygons on the image.
 
-    shape : tuple of int
+    shape : tuple of int or ndarray
         The shape of the image on which the objects are placed.
         Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
         such an image shape.
