@@ -651,6 +651,48 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert np.isclose(kpi.keypoints[1].x, 3)
         assert np.isclose(kpi.keypoints[1].y, 4)
 
+    def test_fill_from_xy_array___empty_array(self):
+        xy = np.zeros((0, 2), dtype=np.float32)
+        kps = ia.KeypointsOnImage([], shape=(2, 2, 3))
+
+        kps = kps.fill_from_xy_array_(xy)
+
+        assert len(kps.keypoints) == 0
+
+    def test_fill_from_xy_array___empty_list(self):
+        xy = []
+        kps = ia.KeypointsOnImage([], shape=(2, 2, 3))
+
+        kps = kps.fill_from_xy_array_(xy)
+
+        assert len(kps.keypoints) == 0
+
+    def test_fill_from_xy_array___array_with_two_coords(self):
+        xy = np.array([(0, 0), (1, 2)], dtype=np.float32)
+        kps = ia.KeypointsOnImage([ia.Keypoint(10, 20), ia.Keypoint(30, 40)],
+                                  shape=(2, 2, 3))
+
+        kps = kps.fill_from_xy_array_(xy)
+
+        assert len(kps.keypoints) == 2
+        assert kps.keypoints[0].x == 0
+        assert kps.keypoints[0].y == 0
+        assert kps.keypoints[1].x == 1
+        assert kps.keypoints[1].y == 2
+
+    def test_fill_from_xy_array___list_with_two_coords(self):
+        xy = [(0, 0), (1, 2)]
+        kps = ia.KeypointsOnImage([ia.Keypoint(10, 20), ia.Keypoint(30, 40)],
+                                  shape=(2, 2, 3))
+
+        kps = kps.fill_from_xy_array_(xy)
+
+        assert len(kps.keypoints) == 2
+        assert kps.keypoints[0].x == 0
+        assert kps.keypoints[0].y == 0
+        assert kps.keypoints[1].x == 1
+        assert kps.keypoints[1].y == 2
+
     def test_to_keypoint_image_size_1(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
@@ -967,6 +1009,32 @@ class TestKeypointsOnImage(unittest.TestCase):
                 threshold=0.09)
 
         assert "Expected if_not_found_coords to be" in str(context.exception)
+
+    def test_to_keypoints_on_image(self):
+        kps = ia.KeypointsOnImage([ia.Keypoint(0, 0), ia.Keypoint(1, 2)],
+                                  shape=(1, 2, 3))
+        kps.deepcopy = mock.MagicMock()
+        kps.deepcopy.return_value = "foo"
+
+        kps_cp = kps.to_keypoints_on_image()
+
+        assert kps.deepcopy.call_count == 1
+        assert kps_cp == "foo"
+
+    def test_invert_to_keypoints_on_image_(self):
+        kps1 = ia.KeypointsOnImage([ia.Keypoint(0, 0), ia.Keypoint(1, 2)],
+                                   shape=(2, 3, 4))
+        kps2 = ia.KeypointsOnImage([ia.Keypoint(10, 10), ia.Keypoint(11, 12)],
+                                   shape=(3, 4, 5))
+
+        kps3 = kps1.invert_to_keypoints_on_image_(kps2)
+
+        assert kps3 is not kps2
+        assert kps3.shape == (3, 4, 5)
+        assert kps3.keypoints[0].x == 10
+        assert kps3.keypoints[0].y == 10
+        assert kps3.keypoints[1].x == 11
+        assert kps3.keypoints[1].y == 12
 
     def test_copy(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
