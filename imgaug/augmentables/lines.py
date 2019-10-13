@@ -1847,7 +1847,7 @@ class LineStringsOnImage(object):
 
         Parameters
         ----------
-        xy : (N, 2) ndarray
+        xy : (N, 2) ndarray or iterable of iterable of number
             XY-Coordinates of ``N`` corner points. ``N`` must match the
             number of corner points in all line strings within this instance.
 

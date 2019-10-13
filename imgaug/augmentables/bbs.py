@@ -1127,7 +1127,7 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        xyxy : (N, 4) ndarray
+        xyxy : (N, 4) ndarray or iterable of iterable of number
             Coordinates of ``N`` bounding boxes on an image, given as
             a ``(N,4)`` array of two corner xy-coordinates per bounding box.
             ``N`` must match the number of bounding boxes in this instance.
@@ -1167,7 +1167,7 @@ class BoundingBoxesOnImage(object):
 
         Parameters
         ----------
-        xy : (2*B, 2) ndarray
+        xy : (2*B, 2) ndarray or iterable of iterable of number
             Coordinates of ``B`` bounding boxes on an image, given as
             a ``(2*B,2)`` array of two corner xy-coordinates per bounding box.
             ``B`` must match the number of bounding boxes in this instance.

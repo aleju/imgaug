@@ -665,7 +665,7 @@ class KeypointsOnImage(object):
 
         Parameters
         ----------
-        xy : (N, 2) ndarray
+        xy : (N, 2) ndarray or iterable of iterable of number
             Coordinates of ``N`` keypoints on an image, given as a ``(N,2)``
             array of xy-coordinates.
 
@@ -701,7 +701,7 @@ class KeypointsOnImage(object):
 
         Parameters
         ----------
-        xy : (N, 2) ndarray
+        xy : (N, 2) ndarray or iterable of iterable of number
             Coordinates of ``N`` keypoints on an image, given as a ``(N,2)``
             array of xy-coordinates. ``N`` must match the number of keypoints
             in this instance.
