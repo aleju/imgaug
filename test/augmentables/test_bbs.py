@@ -824,6 +824,88 @@ class TestBoundingBox(unittest.TestCase):
 
         assert not equal
 
+    def test_from_point_soup__empty_list(self):
+        with self.assertRaises(AssertionError) as ctx:
+            _ = ia.BoundingBox.from_point_soup([])
+        assert "Expected to get at least one point" in str(ctx.exception)
+
+    def test_from_point_soup__empty_array(self):
+        with self.assertRaises(AssertionError) as ctx:
+            _ = ia.BoundingBox.from_point_soup(np.zeros((0, 2)))
+        assert "Expected to get at least one point" in str(ctx.exception)
+
+    def test_from_point_soup__list_with_single_point(self):
+        points = [(1, 2)]
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 1
+        assert bb.y2 == 2
+
+    def test_from_point_soup__list_with_single_point__single_level(self):
+        points = [1, 2]
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 1
+        assert bb.y2 == 2
+
+    def test_from_point_soup__list_with_two_points(self):
+        points = [(1, 2), (3, 4)]
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 3
+        assert bb.y2 == 4
+
+    def test_from_point_soup__list_with_three_points(self):
+        points = [(1, 4), (3, 2), (15, 16)]
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 15
+        assert bb.y2 == 16
+
+    def test_from_point_soup__array_with_single_point(self):
+        points = np.float32([(1, 2)])
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 1
+        assert bb.y2 == 2
+
+    def test_from_point_soup__array_with_single_point__single_level(self):
+        points = np.float32([1, 2])
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 1
+        assert bb.y2 == 2
+
+    def test_from_point_soup__array_with_two_points__single_level(self):
+        points = np.float32([1, 2, 3, 4])
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 3
+        assert bb.y2 == 4
+
+    def test_from_point_soup__array_with_two_points(self):
+        points = np.float32([(1, 2), (3, 4)])
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 3
+        assert bb.y2 == 4
+
+    def test_from_point_soup__array_with_three_points(self):
+        points = np.float32([(1, 4), (3, 2), (15, 16)])
+        bb = ia.BoundingBox.from_point_soup(points)
+        assert bb.x1 == 1
+        assert bb.y1 == 2
+        assert bb.x2 == 15
+        assert bb.y2 == 16
+
     def test_copy(self):
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3, label="test")
 
@@ -1012,6 +1094,31 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert np.allclose(bbsoi.bounding_boxes[1].y2, 4.0)
         assert bbsoi.shape == (40, 50, 3)
 
+    def test_from_xyxy_array_float_3d(self):
+        xyxy = np.float32([
+            [
+                [0.0, 0.0],
+                [1.0, 1.0]
+            ],
+            [
+                [1.0, 2.0],
+                [3.0, 4.0]
+            ]
+        ])
+
+        bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(xyxy, shape=(40, 50, 3))
+
+        assert len(bbsoi.bounding_boxes) == 2
+        assert np.allclose(bbsoi.bounding_boxes[0].x1, 0.0)
+        assert np.allclose(bbsoi.bounding_boxes[0].y1, 0.0)
+        assert np.allclose(bbsoi.bounding_boxes[0].x2, 1.0)
+        assert np.allclose(bbsoi.bounding_boxes[0].y2, 1.0)
+        assert np.allclose(bbsoi.bounding_boxes[1].x1, 1.0)
+        assert np.allclose(bbsoi.bounding_boxes[1].y1, 2.0)
+        assert np.allclose(bbsoi.bounding_boxes[1].x2, 3.0)
+        assert np.allclose(bbsoi.bounding_boxes[1].y2, 4.0)
+        assert bbsoi.shape == (40, 50, 3)
+
     def test_from_xyxy_array_int32(self):
         xyxy = np.int32([
             [0, 0, 1, 1],
@@ -1035,6 +1142,80 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         xyxy = np.zeros((0, 4), dtype=np.float32)
 
         bbsoi = ia.BoundingBoxesOnImage.from_xyxy_array(xyxy, shape=(40, 50, 3))
+
+        assert len(bbsoi.bounding_boxes) == 0
+        assert bbsoi.shape == (40, 50, 3)
+
+    def test_from_point_soups__2d_array(self):
+        xy = np.float32([
+            [7, 3,
+             11, 5,
+             1, 7,
+             12, 19]
+        ])
+
+        bbsoi = ia.BoundingBoxesOnImage.from_point_soups(
+            xy, shape=(40, 50, 3))
+
+        assert len(bbsoi.bounding_boxes) == 1
+        assert bbsoi.bounding_boxes[0].x1 == 1
+        assert bbsoi.bounding_boxes[0].y1 == 3
+        assert bbsoi.bounding_boxes[0].x2 == 12
+        assert bbsoi.bounding_boxes[0].y2 == 19
+        assert bbsoi.shape == (40, 50, 3)
+
+    def test_from_point_soups__3d_array(self):
+        xy = np.float32([
+            [
+                [7, 3],
+                [11, 5],
+                [1, 7],
+                [12, 19]
+            ]
+        ])
+
+        bbsoi = ia.BoundingBoxesOnImage.from_point_soups(
+            xy, shape=(40, 50, 3))
+
+        assert len(bbsoi.bounding_boxes) == 1
+        assert bbsoi.bounding_boxes[0].x1 == 1
+        assert bbsoi.bounding_boxes[0].y1 == 3
+        assert bbsoi.bounding_boxes[0].x2 == 12
+        assert bbsoi.bounding_boxes[0].y2 == 19
+        assert bbsoi.shape == (40, 50, 3)
+
+    def test_from_point_soups__2d_list(self):
+        xy = [
+            [7, 3,
+             11, 5,
+             1, 7,
+             12, 19]
+        ]
+
+        bbsoi = ia.BoundingBoxesOnImage.from_point_soups(
+            xy, shape=(40, 50, 3))
+
+        assert len(bbsoi.bounding_boxes) == 1
+        assert bbsoi.bounding_boxes[0].x1 == 1
+        assert bbsoi.bounding_boxes[0].y1 == 3
+        assert bbsoi.bounding_boxes[0].x2 == 12
+        assert bbsoi.bounding_boxes[0].y2 == 19
+        assert bbsoi.shape == (40, 50, 3)
+
+    def test_from_point_soups__empty_array(self):
+        xy = np.zeros((0, 4), dtype=np.float32)
+
+        bbsoi = ia.BoundingBoxesOnImage.from_point_soups(
+            xy, shape=(40, 50, 3))
+
+        assert len(bbsoi.bounding_boxes) == 0
+        assert bbsoi.shape == (40, 50, 3)
+
+    def test_from_point_soups__empty_list(self):
+        xy = []
+
+        bbsoi = ia.BoundingBoxesOnImage.from_point_soups(
+            xy, shape=(40, 50, 3))
 
         assert len(bbsoi.bounding_boxes) == 0
         assert bbsoi.shape == (40, 50, 3)
@@ -1302,15 +1483,25 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
 
         kpsoi = bbsoi.to_keypoints_on_image()
 
-        assert len(kpsoi.keypoints) == 2*2
+        assert len(kpsoi.keypoints) == 2*4
+
         assert kpsoi.keypoints[0].x == 0
         assert kpsoi.keypoints[0].y == 1
         assert kpsoi.keypoints[1].x == 2
-        assert kpsoi.keypoints[1].y == 3
-        assert kpsoi.keypoints[2].x == 10
-        assert kpsoi.keypoints[2].y == 20
-        assert kpsoi.keypoints[3].x == 30
-        assert kpsoi.keypoints[3].y == 40
+        assert kpsoi.keypoints[1].y == 1
+        assert kpsoi.keypoints[2].x == 2
+        assert kpsoi.keypoints[2].y == 3
+        assert kpsoi.keypoints[3].x == 0
+        assert kpsoi.keypoints[3].y == 3
+
+        assert kpsoi.keypoints[4].x == 10
+        assert kpsoi.keypoints[4].y == 20
+        assert kpsoi.keypoints[5].x == 30
+        assert kpsoi.keypoints[5].y == 20
+        assert kpsoi.keypoints[6].x == 30
+        assert kpsoi.keypoints[6].y == 40
+        assert kpsoi.keypoints[7].x == 10
+        assert kpsoi.keypoints[7].y == 40
 
     def test_to_keypoints_on_image__empty_instance(self):
         bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
@@ -1326,7 +1517,9 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
             shape=(1, 2, 3))
         kpsoi = ia.KeypointsOnImage(
             [ia.Keypoint(100, 101), ia.Keypoint(102, 103),
-             ia.Keypoint(110, 120), ia.Keypoint(130, 140)],
+             ia.Keypoint(104, 105), ia.Keypoint(106, 107),
+             ia.Keypoint(110, 120), ia.Keypoint(130, 140),
+             ia.Keypoint(150, 160), ia.Keypoint(170, 180)],
             shape=(10, 20, 30))
 
         bbsoi_inv = bbsoi.invert_to_keypoints_on_image_(kpsoi)
@@ -1335,12 +1528,12 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert bbsoi_inv.shape == (10, 20, 30)
         assert bbsoi_inv.bounding_boxes[0].x1 == 100
         assert bbsoi_inv.bounding_boxes[0].y1 == 101
-        assert bbsoi_inv.bounding_boxes[0].x2 == 102
-        assert bbsoi_inv.bounding_boxes[0].y2 == 103
+        assert bbsoi_inv.bounding_boxes[0].x2 == 106
+        assert bbsoi_inv.bounding_boxes[0].y2 == 107
         assert bbsoi_inv.bounding_boxes[1].x1 == 110
         assert bbsoi_inv.bounding_boxes[1].y1 == 120
-        assert bbsoi_inv.bounding_boxes[1].x2 == 130
-        assert bbsoi_inv.bounding_boxes[1].y2 == 140
+        assert bbsoi_inv.bounding_boxes[1].x2 == 170
+        assert bbsoi_inv.bounding_boxes[1].y2 == 180
 
     def test_invert_to_keypoints_on_image___empty_instance(self):
         bbsoi = ia.BoundingBoxesOnImage([], shape=(1, 2, 3))
