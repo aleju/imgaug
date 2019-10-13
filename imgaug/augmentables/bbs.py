@@ -1179,6 +1179,7 @@ class BoundingBoxesOnImage(object):
             Note that the instance was modified in-place.
 
         """
+        xy = np.array(xy, dtype=np.float32)
         return self.fill_from_xyxy_array_(xy.reshape((-1, 4)))
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
