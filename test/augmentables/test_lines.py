@@ -1690,6 +1690,10 @@ class TestLineString(unittest.TestCase):
                 assert observed == expected
 
 
+# TODO test to_keypoints_on_image()
+#      test invert_to_keypoints_on_image()
+#      test to_xy_array()
+#      test fill_from_xy_array_()
 class TestLineStringsOnImage(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -2047,6 +2051,146 @@ class TestLineStringsOnImage(unittest.TestCase):
 
         assert len(observed.line_strings) == 0
         assert observed.shape == (100, 100, 3)
+
+    def test_to_xy_array(self):
+        lsoi = ia.LineStringsOnImage(
+            [ia.LineString([(0, 0), (1, 2)]),
+             ia.LineString([(10, 20), (30, 40)])],
+            shape=(1, 2, 3))
+
+        xy_out = lsoi.to_xy_array()
+
+        expected = np.float32([
+            [0.0, 0.0],
+            [1.0, 2.0],
+            [10.0, 20.0],
+            [30.0, 40.0]
+        ])
+        assert xy_out.shape == (4, 2)
+        assert np.allclose(xy_out, expected)
+        assert xy_out.dtype.name == "float32"
+
+    def test_to_xy_array__empty_object(self):
+        lsoi = ia.LineStringsOnImage(
+            [],
+            shape=(1, 2, 3))
+
+        xy_out = lsoi.to_xy_array()
+
+        assert xy_out.shape == (0, 2)
+        assert xy_out.dtype.name == "float32"
+
+    def test_fill_from_xy_array___empty_array(self):
+        xy = np.zeros((0, 2), dtype=np.float32)
+        lsoi = ia.LineStringsOnImage([], shape=(2, 2, 3))
+
+        lsoi = lsoi.fill_from_xy_array_(xy)
+
+        assert len(lsoi.line_strings) == 0
+
+    def test_fill_from_xy_array___empty_list(self):
+        xy = []
+        lsoi = ia.LineStringsOnImage([], shape=(2, 2, 3))
+
+        lsoi = lsoi.fill_from_xy_array_(xy)
+
+        assert len(lsoi.line_strings) == 0
+
+    def test_fill_from_xy_array___array_with_two_coords(self):
+        xy = np.array(
+            [(100, 101),
+             (102, 103),
+             (200, 201),
+             (202, 203)], dtype=np.float32)
+        lsoi = ia.LineStringsOnImage(
+            [ia.LineString([(0, 0), (1, 2)]),
+             ia.LineString([(10, 20), (30, 40)])],
+            shape=(2, 2, 3))
+
+        lsoi = lsoi.fill_from_xy_array_(xy)
+
+        assert len(lsoi.line_strings) == 2
+        assert np.allclose(
+            lsoi.line_strings[0].coords,
+            [(100, 101), (102, 103)])
+        assert np.allclose(
+            lsoi.line_strings[1].coords,
+            [(200, 201), (202, 203)])
+
+    def test_fill_from_xy_array___list_with_two_coords(self):
+        xy = [(100, 101),
+              (102, 103),
+              (200, 201),
+              (202, 203)]
+        lsoi = ia.LineStringsOnImage(
+            [ia.LineString([(0, 0), (1, 2)]),
+             ia.LineString([(10, 20), (30, 40)])],
+            shape=(2, 2, 3))
+
+        lsoi = lsoi.fill_from_xy_array_(xy)
+
+        assert len(lsoi.line_strings) == 2
+        assert np.allclose(
+            lsoi.line_strings[0].coords,
+            [(100, 101), (102, 103)])
+        assert np.allclose(
+            lsoi.line_strings[1].coords,
+            [(200, 201), (202, 203)])
+
+    def test_to_keypoints_on_image(self):
+        lsoi = ia.LineStringsOnImage(
+            [ia.LineString([(0, 0), (1, 2)]),
+             ia.LineString([(10, 20), (30, 40)])],
+            shape=(1, 2, 3))
+
+        kpsoi = lsoi.to_keypoints_on_image()
+
+        assert len(kpsoi.keypoints) == 2*2
+        assert kpsoi.keypoints[0].x == 0
+        assert kpsoi.keypoints[0].y == 0
+        assert kpsoi.keypoints[1].x == 1
+        assert kpsoi.keypoints[1].y == 2
+        assert kpsoi.keypoints[2].x == 10
+        assert kpsoi.keypoints[2].y == 20
+        assert kpsoi.keypoints[3].x == 30
+        assert kpsoi.keypoints[3].y == 40
+
+    def test_to_keypoints_on_image__empty_instance(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+
+        kpsoi = lsoi.to_keypoints_on_image()
+
+        assert len(kpsoi.keypoints) == 0
+
+    def test_invert_to_keypoints_on_image_(self):
+        lsoi = ia.LineStringsOnImage(
+            [ia.LineString([(0, 0), (1, 2)]),
+             ia.LineString([(10, 20), (30, 40)])],
+            shape=(1, 2, 3))
+        kpsoi = ia.KeypointsOnImage(
+            [ia.Keypoint(100, 101), ia.Keypoint(102, 103),
+             ia.Keypoint(110, 120), ia.Keypoint(130, 140)],
+            shape=(10, 20, 30))
+
+        lsoi_inv = lsoi.invert_to_keypoints_on_image_(kpsoi)
+
+        assert len(lsoi_inv.line_strings) == 2
+        assert lsoi_inv.shape == (10, 20, 30)
+        assert np.allclose(
+            lsoi.line_strings[0].coords,
+            [(100, 101), (102, 103)])
+        assert np.allclose(
+            lsoi.line_strings[1].coords,
+            [(110, 120), (130, 140)])
+
+    def test_invert_to_keypoints_on_image___empty_instance(self):
+        lsoi = ia.LineStringsOnImage([], shape=(1, 2, 3))
+        kpsoi = ia.KeypointsOnImage([], shape=(10, 20, 30))
+
+        lsoi_inv = lsoi.invert_to_keypoints_on_image_(kpsoi)
+
+        assert len(lsoi_inv.line_strings) == 0
+        assert lsoi_inv.shape == (10, 20, 30)
 
     def test_copy_with_two_line_strings(self):
         # basic test, without labels
