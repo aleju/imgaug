@@ -1115,6 +1115,40 @@ class BoundingBoxesOnImage(object):
 
         return cls(boxes, shape)
 
+    @classmethod
+    def from_point_soups(cls, xy, shape):
+        """Convert an ``(N, 2P) or (N, P, 2) ndarray`` to a BBsOI instance.
+
+        Parameters
+        ----------
+        xy : (N, 2P) ndarray or (N, P, 2) array or iterable of iterable of number or iterable of iterable of iterable of number
+            Array containing the corner coordinates of ``N`` bounding boxes.
+            Each bounding box is represented by a soup of ``P`` points.
+            If ``(N, P)`` then the second axis is expected to be in
+            xy-form (e.g. ``x1``, ``y1``, ``x2``, ``y2``, ...).
+            The final bounding box coordinates will be derived using ``min``
+            and ``max`` operations on the xy-values.
+            The array should usually be of dtype ``float32``.
+
+        shape : tuple of int
+            Shape of the image on which the bounding boxes are placed.
+            Should usually be ``(H, W, C)`` or ``(H, W)``.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Object containing a list of :class:`BoundingBox` instances
+            derived from the provided point soups.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # from_xy_array() already checks the ndim/shape, so we don't have to
+        # do it here
+        boxes = [BoundingBox.from_point_soup(row) for row in xy]
+
+        return cls(boxes, shape)
+
     def to_xyxy_array(self, dtype=np.float32):
         """Convert the ``BoundingBoxesOnImage`` object to an ``(N,4) ndarray``.
 
