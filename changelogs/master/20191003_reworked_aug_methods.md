@@ -114,3 +114,7 @@
 * Added method `imgaug.augmentables.kps.PolygonsOnImage.fill_from_xy_array_()`.
 * Added method `imgaug.augmentables.kps.LineStringsOnImage.fill_from_xy_array_()`.
 * Added method `imgaug.augmentables.bbs.BoundingBoxesOnImage.fill_from_xyxy_array_()`.
+* Added method `imgaug.augmentables.bbs.BoundingBox.from_point_soup()`.
+* Added method `imgaug.augmentables.bbs.BoundingBoxesOnImages.from_point_soups()`.
+* Changed `imgaug.augmentables.BoundingBoxesOnImage.from_xyxy_array()` to also
+  accept `(N, 2, 2)` arrays instead of only `(N, 4)`.
