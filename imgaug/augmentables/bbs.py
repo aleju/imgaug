@@ -1398,13 +1398,27 @@ class BoundingBoxesOnImage(object):
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
-            A keypoints instance containing ``N*2`` coordinates for ``N``
+            A keypoints instance containing ``N*4`` coordinates for ``N``
             bounding boxes. Order matches the order in ``bounding_boxes``.
 
         """
         from .kps import KeypointsOnImage
+
+        # This currently uses 4 points instead of 2 points as the method
+        # is primarily used during augmentation and 4 points are overall
+        # the better choice there.
+        arr = np.zeros((len(self.bounding_boxes), 2*4), dtype=np.float32)
+
+        for i, box in enumerate(self.bounding_boxes):
+            arr[i] = [
+                box.x1, box.y1,
+                box.x2, box.y1,
+                box.x2, box.y2,
+                box.x1, box.y2
+            ]
+
         return KeypointsOnImage.from_xy_array(
-            self.to_xyxy_array().reshape((-1, 2)),
+            arr.reshape((-1, 2)),
             shape=self.shape
         )
 
@@ -1427,12 +1441,14 @@ class BoundingBoxesOnImage(object):
             Note that the instance is also updated in-place.
 
         """
-        assert len(kpsoi.keypoints) == len(self.bounding_boxes) * 2, (
+        assert len(kpsoi.keypoints) == len(self.bounding_boxes) * 4, (
             "Expected %d coordinates, got %d." % (
                 len(self.bounding_boxes) * 2, len(kpsoi.keypoints)))
         for i, bb in enumerate(self.bounding_boxes):
-            xx = [kpsoi.keypoints[2*i+0].x, kpsoi.keypoints[2*i+1].x]
-            yy = [kpsoi.keypoints[2*i+0].y, kpsoi.keypoints[2*i+1].y]
+            xx = [kpsoi.keypoints[4*i+0].x, kpsoi.keypoints[4*i+1].x,
+                  kpsoi.keypoints[4*i+2].x, kpsoi.keypoints[4*i+3].x]
+            yy = [kpsoi.keypoints[4*i+0].y, kpsoi.keypoints[4*i+1].y,
+                  kpsoi.keypoints[4*i+2].y, kpsoi.keypoints[4*i+3].y]
             bb.x1 = min(xx)
             bb.y1 = min(yy)
             bb.x2 = max(xx)
