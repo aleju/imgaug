@@ -1074,17 +1074,18 @@ class BoundingBoxesOnImage(object):
 
     @classmethod
     def from_xyxy_array(cls, xyxy, shape):
-        """Convert an ``(N,4) ndarray`` to a ``BoundingBoxesOnImage`` instance.
+        """Convert an ``(N, 4) or (N, 2, 2) ndarray`` to a BBsOI instance.
 
         This is the inverse of
         :func:`imgaug.BoundingBoxesOnImage.to_xyxy_array`.
 
         Parameters
         ----------
-        xyxy : (N,4) ndarray
-            Array containing the corner coordinates (top-left, bottom-right)
-            of ``N`` bounding boxes in the form ``(x1, y1, x2, y2)``.
-            Should usually be of dtype ``float32``.
+        xyxy : (N, 4) ndarray or (N, 2, 2) array
+            Array containing the corner coordinates of ``N`` bounding boxes.
+            Each bounding box is represented by its top-left and bottom-right
+            coordinates.
+            The array should usually be of dtype ``float32``.
 
         shape : tuple of int
             Shape of the image on which the bounding boxes are placed.
@@ -1103,11 +1104,14 @@ class BoundingBoxesOnImage(object):
         if xyxy.shape[0] == 0:
             return BoundingBoxesOnImage([], shape)
 
-        assert xyxy.ndim == 2 and xyxy.shape[1] == 4, (
-            "Expected input array of shape (N, 4), got shape %s." % (
-                xyxy.shape,))
+        assert (
+            (xyxy.ndim == 2 and xyxy.shape[-1] == 4)
+            or (xyxy.ndim == 3 and xyxy.shape[1:3] == (2, 2))), (
+            "Expected input array of shape (N, 4) or (N, 2, 2), "
+            "got shape %s." % (xyxy.shape,))
 
-        boxes = [BoundingBox(*row) for row in xyxy]
+        xyxy = xyxy.reshape((-1, 2, 2))
+        boxes = [BoundingBox.from_point_soup(row) for row in xyxy]
 
         return cls(boxes, shape)
 
