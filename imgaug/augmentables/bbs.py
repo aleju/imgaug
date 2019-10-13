@@ -1368,7 +1368,7 @@ class BoundingBoxesOnImage(object):
             bounding boxes. Order matches the order in ``bounding_boxes``.
 
         """
-        from . import KeypointsOnImage
+        from .kps import KeypointsOnImage
         return KeypointsOnImage.from_xy_array(
             self.to_xyxy_array().reshape((-1, 2)),
             shape=self.shape
