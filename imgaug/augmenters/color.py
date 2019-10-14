@@ -337,10 +337,10 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
         The images to convert from one colorspace into another.
         Either a list of ``(H,W,3)`` arrays or a single ``(N,H,W,3)`` array.
 
-    to_colorspaces : str or list of str
+    to_colorspaces : str or iterable of str
         The target colorspaces. Either a single string (all images will be
-        converted to the same colorspace) or a list of strings (one per image).
-        See the ``CSPACE`` constants, e.g.
+        converted to the same colorspace) or an iterable of strings (one per
+        image). See the ``CSPACE`` constants, e.g.
         ``imgaug.augmenters.color.CSPACE_RGB``.
 
     from_colorspaces : str or list of str, optional
@@ -377,16 +377,18 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
 
     """
     def _validate(arg, arg_name):
-        if isinstance(arg, list):
+        if ia.is_string(arg):
+            arg = [arg] * len(images)
+        else:
+            assert ia.is_iterable(arg), (
+                "Expected `%s` to be either an iterable of strings or a single "
+                "string. Got type: %s." % (arg_name, type(arg).__name__)
+            )
             assert len(arg) == len(images), (
                 "If `%s` is provided as a list it must have the same length "
                 "as `images`. Got length %d, expected %d." % (
                     arg_name, len(arg), len(images)))
-        else:
-            assert ia.is_string(arg), (
-                "Expected `%s` to be either a list of strings or a single "
-                "string. Got type %s." % (arg_name, type(arg)))
-            arg = [arg] * len(images)
+
         return arg
 
     to_colorspaces = _validate(to_colorspaces, "to_colorspaces")
