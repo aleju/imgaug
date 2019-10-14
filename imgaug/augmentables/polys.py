@@ -52,7 +52,13 @@ def recover_psois_(psois, psois_orig, recoverer, random_state):
             poly_rec = recoverer.recover_from(
                 polygon.exterior, psois_orig[i].polygons[j],
                 random_state)
-            polygon.exterior[...] = poly_rec.exterior
+
+            # Don't write into `polygon.exterior[...] = ...` because the
+            # shapes might have changed. We could also first check if the
+            # shapes are identical and only then write in-place, but as the
+            # array for `poly_rec.exterior` was already created, that would
+            # not provide any benefits.
+            polygon.exterior = poly_rec.exterior
 
     if not input_was_list:
         return psois[0]
