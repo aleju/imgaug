@@ -135,6 +135,29 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
                 allowed_type, allowed_type, list_str, name, type(param),))
 
 
+def handle_categorical_string_param(param, name, valid_values):
+    if param == ia.ALL:
+        return Choice(list(valid_values))
+    elif ia.is_string(param):
+        assert param in valid_values, (
+            "Expected parameter '%s' to be one of: %s. Got: %s." % (
+                name, ", ".join(list(valid_values)), param))
+        return Deterministic(param)
+    elif isinstance(param, list):
+        assert all([ia.is_string(val) for val in param]), (
+            "Expected list provided for parameter '%s' to only contain "
+            "strings, got types: %s." % (
+                name, ", ".join([type(v).__name__ for v in param])))
+        return Choice(param)
+    elif isinstance(param, StochasticParameter):
+        return param
+    else:
+        raise Exception(
+            "Expected parameter '%s' to be imgaug.ALL, a string, a list of "
+            "strings or StochasticParameter, got %s." % (
+                name, type(param).__name__,))
+
+
 def handle_discrete_kernel_size_param(param, name, value_range=(1, None),
                                       allow_floats=True):
     if (ia.is_single_integer(param)
