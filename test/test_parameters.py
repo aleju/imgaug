@@ -403,6 +403,89 @@ class Test_handle_discrete_param(unittest.TestCase):
             "Unexpected input for value_range" in str(context.exception))
 
 
+class Test_handle_categorical_string_param(unittest.TestCase):
+    def test_arg_is_all(self):
+        valid_values = ["class1", "class2"]
+
+        param = iap.handle_categorical_string_param(
+            ia.ALL, "foo", valid_values)
+
+        assert isinstance(param, iap.Choice)
+        assert param.a == valid_values
+
+    def test_arg_is_valid_str(self):
+        valid_values = ["class1", "class2"]
+
+        param = iap.handle_categorical_string_param(
+            "class1", "foo", valid_values)
+
+        assert isinstance(param, iap.Deterministic)
+        assert param.value == "class1"
+
+    def test_arg_is_invalid_str(self):
+        valid_values = ["class1", "class2"]
+
+        with self.assertRaises(AssertionError) as ctx:
+            _param = iap.handle_categorical_string_param(
+                "class3", "foo", valid_values)
+
+        expected = (
+            "Expected parameter 'foo' to be one of: class1, class2. "
+            "Got: class3.")
+        assert expected == str(ctx.exception)
+
+    def test_arg_is_valid_list(self):
+        valid_values = ["class1", "class2", "class3"]
+
+        param = iap.handle_categorical_string_param(
+            ["class1", "class3"], "foo", valid_values)
+
+        assert isinstance(param, iap.Choice)
+        assert param.a == ["class1", "class3"]
+
+    def test_arg_is_list_with_invalid_types(self):
+        valid_values = ["class1", "class2", "class3"]
+
+        with self.assertRaises(AssertionError) as ctx:
+            _param = iap.handle_categorical_string_param(
+                ["class1", False], "foo", valid_values)
+
+        expected = (
+            "Expected list provided for parameter 'foo' to only contain "
+            "strings, got types: str, bool."
+        )
+        assert expected in str(ctx.exception)
+
+    def test_arg_is_invalid_list(self):
+        valid_values = ["class1", "class2", "class3"]
+
+        with self.assertRaises(AssertionError) as ctx:
+            _param = iap.handle_categorical_string_param(
+                ["class1", "class4"], "foo", valid_values)
+
+        expected = (
+            "Expected list provided for parameter 'foo' to only contain "
+            "the following allowed strings: class1, class2, class3. "
+            "Got strings: class1, class4."
+        )
+        assert expected in str(ctx.exception)
+
+    def test_arg_is_stochastic_param(self):
+        param = iap.Deterministic("class1")
+
+        param_out = iap.handle_categorical_string_param(
+            param, "foo", ["class1"])
+
+        assert param_out is param
+
+    def test_arg_is_invalid_datatype(self):
+        with self.assertRaises(Exception) as ctx:
+            _ = iap.handle_categorical_string_param(
+                False, "foo", ["class1"])
+
+        expected = "Expected parameter 'foo' to be imgaug.ALL"
+        assert expected in str(ctx.exception)
+
 class Test_handle_probability_param(unittest.TestCase):
     def test_bool_like_values(self):
         for val in [True, False, 0, 1, 0.0, 1.0]:
