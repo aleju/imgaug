@@ -1,4 +1,4 @@
-# New brightness augmenters
+# New brightness augmenters #455
 
 * Added augmenter `imgaug.augmenters.color.WithBrightnessChannels`.
 * Added augmenter `imgaug.augmenters.color.MultiplyAndAddToBrightness`.
