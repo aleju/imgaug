@@ -1226,6 +1226,9 @@ class WithBrightnessChannels(meta.Augmenter):
 class MultiplyAndAddToBrightness(WithBrightnessChannels):
     """Multiply and add to the brightness channels of input images.
 
+    This is a wrapper around :class:`WithBrightnessChannels` and hence
+    performs internally the same projection to random colorspaces.
+
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1302,6 +1305,56 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
                 self.children.random_order,
                 self.name,
                 self.deterministic)
+        )
+
+
+class MultiplyBrightness(MultiplyAndAddToBrightness):
+    """Multiply the brightness channels of input images.
+
+    This is a wrapper around :class:`WithBrightnessChannels` and hence
+    performs internally the same projection to random colorspaces.
+
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Multiply`.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    from_colorspace : str, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, mul=(0.7, 1.3),
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV],
+                 from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        super(MultiplyBrightness, self).__init__(
+            mul=mul,
+            add=0,
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
         )
 
 
