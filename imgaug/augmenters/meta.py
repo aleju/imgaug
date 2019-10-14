@@ -881,27 +881,6 @@ class Augmenter(object):
         """
         return heatmaps
 
-    def _augment_heatmaps_as_images(self, heatmaps, parents, hooks):
-        # TODO documentation
-        # TODO keep this? it is afaik not used anywhere
-        heatmaps_uint8 = [heatmaps_i.to_uint8() for heatmaps_i in heatmaps]
-        heatmaps_uint8_aug = [
-            self.augment_images([heatmaps_uint8_i],
-                                parents=parents, hooks=hooks)[0]
-            for heatmaps_uint8_i
-            in heatmaps_uint8
-        ]
-        return [
-            ia.HeatmapsOnImage.from_uint8(
-                heatmaps_aug,
-                shape=heatmaps_i.shape,
-                min_value=heatmaps_i.min_value,
-                max_value=heatmaps_i.max_value
-            )
-            for heatmaps_aug, heatmaps_i
-            in zip(heatmaps_uint8_aug, heatmaps)
-        ]
-
     def augment_segmentation_maps(self, segmaps, parents=None, hooks=None):
         """Augment a batch of segmentation maps.
 
