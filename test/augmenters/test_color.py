@@ -541,6 +541,19 @@ class TestWithBrightnessChannels(unittest.TestCase):
         assert np.isclose(kpsoi_aug.keypoints[0].x, 1.0)
         assert np.isclose(kpsoi_aug.keypoints[0].y, 2.0)
 
+    def test_to_deterministic(self):
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+        aug = iaa.WithBrightnessChannels(iaa.Add((-100, 100)))
+        aug_det = aug.to_deterministic()
+
+        images = np.tile(image[np.newaxis, ...], (50, 1, 1, 1))
+
+        images_aug1 = aug_det(images=images)
+        images_aug2 = aug_det(images=images)
+
+        assert not np.array_equal(images_aug1, images)
+        assert np.array_equal(images_aug1, images_aug2)
+
     def test_get_parameters(self):
         aug = iaa.WithBrightnessChannels(to_colorspace=iaa.CSPACE_HSV)
 
