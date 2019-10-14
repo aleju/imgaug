@@ -135,6 +135,7 @@ def _handle_cval_arg(cval):
 
 
 # currently used for Affine and PiecewiseAffine
+# TODO use iap.handle_categorical_string_param() here
 def _handle_mode_arg(mode):
     if mode == ia.ALL:
         return iap.Choice(["constant", "edge", "symmetric",

@@ -957,6 +957,7 @@ def InColorspace(to_colorspace, from_colorspace="RGB", children=None,
                           deterministic, random_state)
 
 
+# TODO add tests
 class WithColorspace(meta.Augmenter):
     """
     Apply child augmenters within a specific colorspace.
