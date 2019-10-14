@@ -978,8 +978,8 @@ class WithColorspace(meta.Augmenter):
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.change_colorspace_`.
 
-    children : None or Augmenter or list of Augmenters, optional
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to converted images.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1092,8 +1092,10 @@ class WithHueAndSaturation(meta.Augmenter):
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.change_colorspace_`.
 
-    children : None or Augmenter or list of Augmenters, optional
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to converted images.
+        They receive ``int16`` images with two channels (hue, saturation)
+        and have to modify these.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
