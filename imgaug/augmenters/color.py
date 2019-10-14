@@ -1229,6 +1229,10 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
 
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.WithBrightnessChannels`.
+
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1314,6 +1318,10 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
 
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.MultiplyAndAddToBrightness`.
+
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1363,6 +1371,10 @@ class AddToBrightness(MultiplyAndAddToBrightness):
 
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.MultiplyAndAddToBrightness`.
 
     Parameters
     ----------
