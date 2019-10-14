@@ -44,7 +44,6 @@ import six.moves as sm
 import imgaug as ia
 from .. import parameters as iap
 from .. import random as iarandom
-from .. import validation as iaval
 from imgaug.augmentables.batches import (Batch, UnnormalizedBatch,
                                          BatchInAugmentation)
 
