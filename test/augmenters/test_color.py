@@ -476,8 +476,9 @@ class TestWithBrightnessChannels(unittest.TestCase):
         expected_hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)[:, :, 1:1+1]
 
         child = _BatchCapturingDummyAugmenter()
-        aug = iaa.WithBrightnessChannels(children=child,
-                                 to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_HLS])
+        aug = iaa.WithBrightnessChannels(
+            children=child,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_HLS])
 
         images = [np.copy(image) for _ in sm.xrange(100)]
 
@@ -496,9 +497,10 @@ class TestWithBrightnessChannels(unittest.TestCase):
 
     def test_from_colorspace_is_not_rgb(self):
         child = _BatchCapturingDummyAugmenter()
-        aug = iaa.WithBrightnessChannels(children=child,
-                                 to_colorspace=iaa.CSPACE_HSV,
-                                 from_colorspace=iaa.CSPACE_BGR)
+        aug = iaa.WithBrightnessChannels(
+            children=child,
+            to_colorspace=iaa.CSPACE_HSV,
+            from_colorspace=iaa.CSPACE_BGR)
 
         image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
         expected_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)[:, :, 2:2+1]
@@ -509,8 +511,9 @@ class TestWithBrightnessChannels(unittest.TestCase):
         assert np.array_equal(observed[0], expected_hsv)
 
     def test_changes_from_child_propagate(self):
-        aug = iaa.WithBrightnessChannels(children=iaa.Add(100),
-                                 to_colorspace=iaa.CSPACE_HSV)
+        aug = iaa.WithBrightnessChannels(
+            children=iaa.Add(100),
+            to_colorspace=iaa.CSPACE_HSV)
         image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
 
         image_aug = aug(image=image)
@@ -521,9 +524,10 @@ class TestWithBrightnessChannels(unittest.TestCase):
         def _propagator(images, augmenter, parents, default):
             return False if augmenter.name == "foo" else default
 
-        aug = iaa.WithBrightnessChannels(children=iaa.Add(100),
-                                 to_colorspace=iaa.CSPACE_HSV,
-                                 name="foo")
+        aug = iaa.WithBrightnessChannels(
+            children=iaa.Add(100),
+            to_colorspace=iaa.CSPACE_HSV,
+            name="foo")
         image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
 
         image_aug = aug(image=image,
@@ -532,7 +536,8 @@ class TestWithBrightnessChannels(unittest.TestCase):
         assert np.array_equal(image_aug, image)
 
     def test_batch_without_images(self):
-        aug = iaa.WithBrightnessChannels(children=iaa.Affine(translate_px={"x": 1}))
+        aug = iaa.WithBrightnessChannels(
+            children=iaa.Affine(translate_px={"x": 1}))
 
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=0, y=2)],
                                     shape=(1, 1, 3))
