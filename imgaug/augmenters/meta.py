@@ -561,14 +561,6 @@ class Augmenter(object):
 
         columns = batch_inaug.columns
 
-        # TODO move this into the default implementation of _augment_batch()
-        augseq = self
-        if not self.deterministic:
-            if len(columns) > 1:
-                # note that to_deterministic() advances the RNG state, so we
-                # don't have to worry about executing many times the same augs
-                augseq = self.to_deterministic()
-
         # hooks preprocess
         if hooks is not None:
             for column in columns:
@@ -595,13 +587,14 @@ class Augmenter(object):
                     set_to_none.append(column)
                     setattr(batch_inaug, column.attr_name, None)
 
-        # If _augment_batch() ends up calling _augment_images() and similar
-        # methods, we don't need the deterministic context here. But if there
-        # is a custom implementation of _augment_batch(), then we should have
-        # this here. It causes very little overhead.
-        with _maybe_deterministic_ctx(augseq):
+        # If _augment_batch() follows legacy-style and ends up calling
+        # _augment_images() and similar methods, we don't need the
+        # deterministic context here. But if there is a custom implementation
+        # of _augment_batch(), then we should have this here. It causes very
+        # little overhead.
+        with _maybe_deterministic_ctx(self):
             if not batch_inaug.empty:
-                batch_inaug = augseq._augment_batch(
+                batch_inaug = self._augment_batch(
                     batch_inaug,
                     random_state=self.random_state,
                     parents=parents if parents is not None else [],
@@ -667,14 +660,29 @@ class Augmenter(object):
             The augmented batch.
 
         """
+        columns = batch.columns
+        multiple_columns = len(columns) > 1
+
+        # For multi-column data (e.g. images + BBs) we need deterministic mode
+        # within this batch, otherwise the datatypes within this batch would
+        # get different samples.
+        deterministic = self.deterministic or multiple_columns
+
         # set attribute batch.T_aug with result of self.augment_T() for each
         # batch.T_unaug (that had any content)
-        for column in batch.columns:
-            with _maybe_deterministic_ctx(random_state, self.deterministic):
+        for column in columns:
+            with _maybe_deterministic_ctx(random_state, deterministic):
                 value = getattr(self, "_augment_" + column.name)(
                     column.value, random_state=random_state,
                     parents=parents, hooks=hooks)
                 setattr(batch, column.attr_name, value)
+
+        # If the augmenter was alread in deterministic mode, we can expect
+        # that to_deterministic() was called, which advances the RNG. But
+        # if it wasn't and we had to auto-switch for the batch, there was not
+        # advancement yet.
+        if multiple_columns and not self.deterministic:
+            random_state.advance_()
 
         return batch
 
