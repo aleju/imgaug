@@ -598,6 +598,34 @@ class TestMultiplyBrightness(unittest.TestCase):
         assert np.average(image_aug) > np.average(image)
 
 
+# AddToBrightness re-used MultiplyAndAddToBrightness, so we don't have
+# to test much here.
+class TestAddToBrightness(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def valid_colorspaces(self):
+        return iaa.WithBrightnessChannels._VALID_COLORSPACES
+
+    def test___init___defaults(self):
+        aug = iaa.AddToBrightness()
+        assert isinstance(aug.children, iaa.Augmenter)
+        assert isinstance(aug.children[1], iaa.Add)
+        assert len(aug.to_colorspace.a) == len(self.valid_colorspaces)
+        for cspace in self.valid_colorspaces:
+            assert cspace in aug.to_colorspace.a
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test_single_image(self):
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+        aug = iaa.AddToBrightness(100)
+
+        image_aug = aug(image=image)
+
+        assert np.average(image_aug) > np.average(image)
+
+
 class TestMultiplyAndAddToBrightness(unittest.TestCase):
     def setUp(self):
         reseed()
