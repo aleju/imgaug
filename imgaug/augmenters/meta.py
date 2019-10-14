@@ -792,6 +792,13 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
+
         Parameters
         ----------
         images : (N,H,W,C) ndarray or list of (H,W,C) ndarray
@@ -861,6 +868,13 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
+
         Parameters
         ----------
         heatmaps : list of imgaug.augmentables.heatmaps.HeatmapsOnImage
@@ -921,6 +935,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -1019,6 +1040,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -1258,6 +1286,13 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
+
         Parameters
         ----------
         bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImage
@@ -1292,6 +1327,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -1328,6 +1370,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -1387,6 +1436,14 @@ class Augmenter(object):
                                        parents, hooks, recoverer=None):
         """
         Augment polygons by applying keypoint augmentation to their vertices.
+
+        .. warning ::
+
+            This method calls
+            :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints` and
+            expects it to do keypoint augmentation. The default for that
+            method is to do nothing. It must therefore be overwritten,
+            otherwise the polygon augmentation will also do nothing.
 
         Parameters
         ----------
