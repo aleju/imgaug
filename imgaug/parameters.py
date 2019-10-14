@@ -148,6 +148,11 @@ def handle_categorical_string_param(param, name, valid_values):
             "Expected list provided for parameter '%s' to only contain "
             "strings, got types: %s." % (
                 name, ", ".join([type(v).__name__ for v in param])))
+        assert all([val in valid_values for val in param]), (
+            "Expected list provided for parameter '%s' to only contain "
+            "the following allowed strings: %s. Got strings: %s." % (
+                name, ", ".join(valid_values), ", ".join(param)
+            ))
         return Choice(param)
     elif isinstance(param, StochasticParameter):
         return param
