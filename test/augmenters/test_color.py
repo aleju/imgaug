@@ -12,6 +12,7 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
+import copy as copylib
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -350,6 +351,210 @@ class Test_change_color_temperature_(unittest.TestCase):
         assert np.array_equal(image_temp, expected)
 
 
+class _BatchCapturingDummyAugmenter(iaa.Augmenter):
+    def __init__(self):
+        super(_BatchCapturingDummyAugmenter, self).__init__()
+        self.last_batch = None
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        self.last_batch = copylib.deepcopy(batch.deepcopy())
+        return batch
+
+    def get_parameters(self):
+        return []
+
+
+class TestWithBrightnessChannels(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def valid_colorspaces(self):
+        return iaa.WithBrightnessChannels._VALID_COLORSPACES
+
+    def test___init___defaults(self):
+        aug = iaa.WithBrightnessChannels()
+        assert isinstance(aug.children, iaa.Augmenter)
+        assert len(aug.to_colorspace.a) == len(self.valid_colorspaces)
+        for cspace in self.valid_colorspaces:
+            assert cspace in aug.to_colorspace.a
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___to_colorspace_is_all(self):
+        aug = iaa.WithBrightnessChannels(to_colorspace=ia.ALL)
+        assert isinstance(aug.children, iaa.Augmenter)
+        assert len(aug.to_colorspace.a) == len(self.valid_colorspaces)
+        for cspace in self.valid_colorspaces:
+            assert cspace in aug.to_colorspace.a
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___to_colorspace_is_cspace(self):
+        aug = iaa.WithBrightnessChannels(to_colorspace=iaa.CSPACE_YUV)
+        assert isinstance(aug.children, iaa.Augmenter)
+        assert aug.to_colorspace.value == iaa.CSPACE_YUV
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___to_colorspace_is_stochastic_parameter(self):
+        aug = iaa.WithBrightnessChannels(
+            to_colorspace=iap.Deterministic(iaa.CSPACE_YUV))
+        assert isinstance(aug.children, iaa.Augmenter)
+        assert aug.to_colorspace.value == iaa.CSPACE_YUV
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test_every_colorspace(self):
+        def _image_to_channel(image, cspace):
+            if cspace == iaa.CSPACE_YCrCb:
+                image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2YCR_CB)
+                return image_cvt[:, :, 0:0+1]
+            elif cspace == iaa.CSPACE_HSV:
+                image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+                return image_cvt[:, :, 2:2+1]
+            elif cspace == iaa.CSPACE_HLS:
+                image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
+                return image_cvt[:, :, 1:1+1]
+            elif cspace == iaa.CSPACE_Lab:
+                if hasattr(cv2, "COLOR_RGB2Lab"):
+                    image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2Lab)
+                else:
+                    image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+                return image_cvt[:, :, 0:0+1]
+            elif cspace == iaa.CSPACE_Luv:
+                if hasattr(cv2, "COLOR_RGB2Luv"):
+                    image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2Luv)
+                else:
+                    image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
+                return image_cvt[:, :, 0:0+1]
+            elif cspace == iaa.CSPACE_YUV:
+                image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+                return image_cvt[:, :, 0:0+1]
+            else:
+                assert cspace == iaa.CSPACE_CIE
+                image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2XYZ)
+                return image_cvt[:, :, 1:1+1]
+
+        # Max differences between input image and image after augmentation
+        # when no child augmenter is used (for the given example image below).
+        # For some colorspaces the conversion to input colorspace isn't
+        # perfect.
+        # Values were manually checked.
+        max_diff_expected = {
+            iaa.CSPACE_YCrCb: 1,
+            iaa.CSPACE_HSV: 0,
+            iaa.CSPACE_HLS: 0,
+            iaa.CSPACE_Lab: 2,
+            iaa.CSPACE_Luv: 4,
+            iaa.CSPACE_YUV: 1,
+            iaa.CSPACE_CIE: 2
+        }
+
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+
+        for cspace in self.valid_colorspaces:
+            with self.subTest(colorspace=cspace):
+                child = _BatchCapturingDummyAugmenter()
+                aug = iaa.WithBrightnessChannels(
+                    children=child,
+                    to_colorspace=cspace)
+
+                image_aug = aug(image=image)
+
+                expected = _image_to_channel(image, cspace)
+                diff = np.abs(
+                    image.astype(np.int32) - image_aug.astype(np.int32))
+                assert np.all(diff <= max_diff_expected[cspace])
+                assert np.array_equal(child.last_batch.images[0], expected)
+
+    def test_random_colorspace(self):
+        def _images_to_cspaces(images, choices):
+            result = np.full((len(images),), -1, dtype=np.int32)
+            for i, image_aug in enumerate(images):
+                for j, choice in enumerate(choices):
+                    if np.array_equal(image_aug, choice):
+                        result[i] = j
+                        break
+            assert np.all(result != -1)
+            return result
+
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+        expected_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)[:, :, 2:2+1]
+        expected_hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)[:, :, 1:1+1]
+
+        child = _BatchCapturingDummyAugmenter()
+        aug = iaa.WithBrightnessChannels(children=child,
+                                 to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_HLS])
+
+        images = [np.copy(image) for _ in sm.xrange(100)]
+
+        _ = aug(images=images)
+        images_aug1 = child.last_batch.images
+
+        _ = aug(images=images)
+        images_aug2 = child.last_batch.images
+
+        cspaces1 = _images_to_cspaces(images_aug1, [expected_hsv, expected_hls])
+        cspaces2 = _images_to_cspaces(images_aug2, [expected_hsv, expected_hls])
+
+        assert np.any(cspaces1 != cspaces2)
+        assert len(np.unique(cspaces1)) > 1
+        assert len(np.unique(cspaces2)) > 1
+
+    def test_from_colorspace_is_not_rgb(self):
+        child = _BatchCapturingDummyAugmenter()
+        aug = iaa.WithBrightnessChannels(children=child,
+                                 to_colorspace=iaa.CSPACE_HSV,
+                                 from_colorspace=iaa.CSPACE_BGR)
+
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+        expected_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)[:, :, 2:2+1]
+
+        _ = aug(image=image)
+        observed = child.last_batch.images
+
+        assert np.array_equal(observed[0], expected_hsv)
+
+    def test_changes_from_child_propagate(self):
+        aug = iaa.WithBrightnessChannels(children=iaa.Add(100),
+                                 to_colorspace=iaa.CSPACE_HSV)
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+
+        image_aug = aug(image=image)
+
+        assert not np.array_equal(image_aug, image)
+
+    def test_using_hooks_to_deactivate_propagation(self):
+        def _propagator(images, augmenter, parents, default):
+            return False if augmenter.name == "foo" else default
+
+        aug = iaa.WithBrightnessChannels(children=iaa.Add(100),
+                                 to_colorspace=iaa.CSPACE_HSV,
+                                 name="foo")
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+
+        image_aug = aug(image=image,
+                        hooks=ia.HooksImages(propagator=_propagator))
+
+        assert np.array_equal(image_aug, image)
+
+    def test_batch_without_images(self):
+        aug = iaa.WithBrightnessChannels(children=iaa.Affine(translate_px={"x": 1}))
+
+        kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=0, y=2)],
+                                    shape=(1, 1, 3))
+        kpsoi_aug = aug(keypoints=kpsoi)
+
+        assert np.isclose(kpsoi_aug.keypoints[0].x, 1.0)
+        assert np.isclose(kpsoi_aug.keypoints[0].y, 2.0)
+
+    def test_get_parameters(self):
+        aug = iaa.WithBrightnessChannels(to_colorspace=iaa.CSPACE_HSV)
+
+        params = aug.get_parameters()
+
+        assert params[0].value == iaa.CSPACE_HSV
+        assert params[1] == iaa.CSPACE_RGB
+
+
+# TODO add tests for prop hooks
 class TestWithHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()

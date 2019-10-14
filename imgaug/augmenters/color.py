@@ -1062,6 +1062,158 @@ class WithColorspace(meta.Augmenter):
         )
 
 
+class WithBrightnessChannels(meta.Augmenter):
+    """Augmenter to apply child augmenters to brightness-related image channels.
+
+    This augmenter first converts an image to a random colorspace containing a
+    brightness-related channel (e.g. `V` in `HSV`), then extracts that
+    channel and applies its child augmenters to this one channel. Afterwards,
+    it reintegrates the augmented channel into the full image and converts
+    back to the input colorspace.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+
+    Parameters
+    ----------
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to the brightness channels.
+        They receive images with a single channel and have to modify these.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        Colorspace in which to extract the brightness-related channels.
+        Currently, ``imgaug.augmenters.color.CSPACE_YCrCb``, ``CSPACE_HSV``,
+        ``CSPACE_HLS``, ``CSPACE_Lab``, ``CSPACE_Luv``, ``CSPACE_YUV``,
+        ``CSPACE_CIE`` are supported.
+
+            * If ``imgaug.ALL``: Will pick imagewise a random colorspace from
+              all supported colorspaces.
+            * If ``str``: Will always use this colorspace.
+            * If ``list`` or ``str``: Will pick imagewise a random colorspace
+              from this list.
+            * If :class:`imgaug.parameters.StochasticParameter`:
+              A parameter that will be queried once per batch to generate
+              all target colorspaces. Expected to return strings matching the
+              ``CSPACE_*`` constants.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    _CSPACE_TO_CHANNEL_ID = {
+        CSPACE_YCrCb: 0,
+        CSPACE_HSV: 2,
+        CSPACE_HLS: 1,
+        CSPACE_Lab: 0,
+        CSPACE_Luv: 0,
+        CSPACE_YUV: 0,
+        CSPACE_CIE: 1  # Y in XYZ
+    }
+
+    _VALID_COLORSPACES = set(_CSPACE_TO_CHANNEL_ID.keys())
+
+    def __init__(self, children=None,
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV,
+                     CSPACE_CIE],
+                 from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        super(WithBrightnessChannels, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+
+        self.children = meta.handle_children_list(children, self.name, "then")
+        self.to_colorspace = iap.handle_categorical_string_param(
+            to_colorspace, "to_colorspace",
+            valid_values=self._VALID_COLORSPACES)
+        self.from_colorspace = from_colorspace
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            images_cvt = None
+            to_colorspaces = None
+
+            if batch.images is not None:
+                to_colorspaces = self.to_colorspace.draw_samples(
+                    (len(batch.images),), random_state)
+                images_cvt = change_colorspaces_(
+                    batch.images,
+                    from_colorspaces=self.from_colorspace,
+                    to_colorspaces=to_colorspaces,)
+                brightness_channels = self._extract_brightness_channels(
+                    images_cvt, to_colorspaces)
+
+                batch.images = brightness_channels
+
+            batch = self.children.augment_batch(
+                    batch, parents=parents + [self], hooks=hooks)
+
+            if batch.images is not None:
+                batch.images = self._invert_extract_brightness_channels(
+                    batch.images, images_cvt, to_colorspaces)
+
+                batch.images = change_colorspaces_(
+                    batch.images,
+                    from_colorspaces=to_colorspaces,
+                    to_colorspaces=self.from_colorspace)
+
+        return batch
+
+    def _extract_brightness_channels(self, images, colorspaces):
+        result = []
+        for image, colorspace in zip(images, colorspaces):
+            channel_id = self._CSPACE_TO_CHANNEL_ID[colorspace]
+            # Note that augmenters expect (H,W,C) and not (H,W), so cannot
+            # just use image[:, :, channel_id] here.
+            channel = image[:, :, channel_id:channel_id+1]
+            result.append(channel)
+        return result
+
+    def _invert_extract_brightness_channels(self, channels, images,
+                                            colorspaces):
+        for channel, image, colorspace in zip(channels, images, colorspaces):
+            channel_id = self._CSPACE_TO_CHANNEL_ID[colorspace]
+            image[:, :, channel_id:channel_id+1] = channel
+        return images
+
+    def _to_deterministic(self):
+        aug = self.copy()
+        aug.children = aug.children.to_deterministic()
+        aug.deterministic = True
+        aug.random_state = self.random_state.derive_rng_()
+        return aug
+
+    def get_parameters(self):
+        return [self.to_colorspace, self.from_colorspace]
+
+    def get_children_lists(self):
+        return [self.children]
+
+    def __str__(self):
+        return (
+            "WithBrightness(to_colorspace=%s, from_colorspace=%s, "
+            "name=%s, children=[%s], deterministic=%s)" % (
+                self.to_colorspace, self.from_colorspace, self.name,
+                self.children, self.deterministic)
+        )
+
+
 # TODO Merge this into WithColorspace? A bit problematic due to int16
 #      conversion that would make WithColorspace less flexible.
 # TODO add option to choose overflow behaviour for hue and saturation channels,
