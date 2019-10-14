@@ -54,11 +54,11 @@ CSPACE_GRAY = "GRAY"
 CSPACE_YCrCb = "YCrCb"
 CSPACE_HSV = "HSV"
 CSPACE_HLS = "HLS"
-CSPACE_Lab = "Lab"
+CSPACE_Lab = "Lab"  # aka CIELAB
 # TODO add Luv to various color/contrast augmenters as random default choice?
-CSPACE_Luv = "Luv"
-CSPACE_YUV = "YUV"
-CSPACE_CIE = "CIE"  # XYZ in OpenCV
+CSPACE_Luv = "Luv"  # aka CIE 1976, aka CIELUV
+CSPACE_YUV = "YUV"  # aka CIE 1960
+CSPACE_CIE = "CIE"  # aka CIE 1931, aka XYZ in OpenCV
 CSPACE_ALL = {CSPACE_RGB, CSPACE_BGR, CSPACE_GRAY, CSPACE_YCrCb,
               CSPACE_HSV, CSPACE_HLS, CSPACE_Lab, CSPACE_Luv,
               CSPACE_YUV, CSPACE_CIE}
