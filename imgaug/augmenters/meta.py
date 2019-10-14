@@ -34,6 +34,7 @@ from abc import ABCMeta, abstractmethod
 import copy as copy_module
 import re
 import itertools
+import functools
 import sys
 
 import numpy as np
@@ -43,8 +44,8 @@ import six.moves as sm
 import imgaug as ia
 from .. import parameters as iap
 from .. import random as iarandom
-from .. import validation as iaval
-from imgaug.augmentables.batches import Batch, UnnormalizedBatch
+from imgaug.augmentables.batches import (Batch, UnnormalizedBatch,
+                                         BatchInAugmentation)
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
@@ -180,18 +181,44 @@ def _remove_added_channel_axis(arrs_added, arrs_orig):
     ]
 
 
-class _maybe_deterministic_context(object):
-    def __init__(self, augmenter):
-        self.augmenter = augmenter
+class _maybe_deterministic_ctx(object):
+    """Context that resets an RNG to its initial state upon exit.
+
+    This allows to execute some sampling functions and leave the code block
+    with the used RNG in the same state as before.
+
+    Parameters
+    ----------
+    random_state : imgaug.random.RNG or imgaug.augmenters.meta.Augmenter
+        The RNG to reset. If this is an augmenter, then the augmenter's
+        RNG will be used.
+
+    deterministic : None or bool
+        Whether to reset the RNG upon exit (``True``) or not (``False``).
+        Allowed to be ``None`` iff `random_state` was an augmenter, in which
+        case that augmenter's ``deterministic`` attribute will be used.
+
+    """
+
+    def __init__(self, random_state, deterministic=None):
+        if deterministic is None:
+            augmenter = random_state
+            self.random_state = augmenter.random_state
+            self.deterministic = augmenter.deterministic
+        else:
+            assert deterministic is not None, (
+                "Expected boolean as `deterministic`, got None.")
+            self.random_state = random_state
+            self.deterministic = deterministic
         self.old_state = None
 
     def __enter__(self):
-        if self.augmenter.deterministic:
-            self.old_state = self.augmenter.random_state.state
+        if self.deterministic:
+            self.old_state = self.random_state.state
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         if self.old_state is not None:
-            self.augmenter.random_state.state = self.old_state
+            self.random_state.state = self.old_state
 
 
 @six.add_metaclass(ABCMeta)
@@ -487,14 +514,19 @@ class Augmenter(object):
                     del id_to_batch_orig[idx]
                     yield batch_unnormalized
 
-    def augment_batch(self, batch, hooks=None):
+    def augment_batch(self, batch, parents=None, hooks=None):
         """
         Augment a single batch.
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch
+        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch or imgaug.augmentables.batch.BatchInAugmentation
             A single batch to augment.
+
+        parents : None or list of imgaug.augmenters.Augmenter, optional
+            Parent augmenters that have previously been called before the
+            call to this function. Usually you can leave this parameter as
+            ``None``. It is set automatically for child augmenters.
 
         hooks : None or imgaug.HooksImages, optional
             HooksImages object to dynamically interfere with the augmentation
@@ -506,41 +538,152 @@ class Augmenter(object):
             Augmented batch.
 
         """
-        batch_orig = batch
-        if isinstance(batch, UnnormalizedBatch):
-            batch = batch.to_normalized_batch()
+        # this chain of if/elses would be more beautiful if it was
+        # (1st) UnnormalizedBatch, (2nd) Batch, (3rd) BatchInAugmenation.
+        # We check for BatchInAugmentation first as it is expected to be the
+        # most common input (due to child calls).
+        batch_unnorm = None
+        batch_norm = None
+        if isinstance(batch, BatchInAugmentation):
+            batch_inaug = batch
+        elif isinstance(batch, UnnormalizedBatch):
+            batch_unnorm = batch
+            batch_norm = batch.to_normalized_batch()
+            batch_inaug = batch_norm.to_batch_in_augmentation()
+        elif isinstance(batch, Batch):
+            batch_norm = batch
+            batch_inaug = batch_norm.to_batch_in_augmentation()
+        else:
+            raise ValueError(
+                "Expected UnnormalizedBatch, Batch or BatchInAugmentation, "
+                "got %s." % (type(batch).__name__,))
 
-        augmentables = [(attr_name[:-len("_unaug")], attr)
-                        for attr_name, attr
-                        in batch.__dict__.items()
-                        if attr_name.endswith("_unaug") and attr is not None]
+        columns = batch_inaug.columns
 
-        augseq = self
-        if len(augmentables) > 1 and not self.deterministic:
-            augseq = self.to_deterministic()
+        # hooks preprocess
+        if hooks is not None:
+            for column in columns:
+                value = hooks.preprocess(
+                    column.value, augmenter=self, parents=parents)
+                setattr(batch_inaug, column.attr_name, value)
+
+            # refresh so that values are updated for later functions
+            columns = batch_inaug.columns
+
+        # set augmentables to None if this augmenter is deactivated or hooks
+        # demands it
+        set_to_none = []
+        if not self.activated:
+            for column in columns:
+                set_to_none.append(column)
+                setattr(batch_inaug, column.attr_name, None)
+        elif hooks is not None:
+            for column in columns:
+                activated = hooks.is_activated(
+                    column.value, augmenter=self, parents=parents,
+                    default=self.activated)
+                if not activated:
+                    set_to_none.append(column)
+                    setattr(batch_inaug, column.attr_name, None)
+
+        # If _augment_batch() follows legacy-style and ends up calling
+        # _augment_images() and similar methods, we don't need the
+        # deterministic context here. But if there is a custom implementation
+        # of _augment_batch(), then we should have this here. It causes very
+        # little overhead.
+        with _maybe_deterministic_ctx(self):
+            if not batch_inaug.empty:
+                batch_inaug = self._augment_batch(
+                    batch_inaug,
+                    random_state=self.random_state,
+                    parents=parents if parents is not None else [],
+                    hooks=hooks)
+
+        # revert augmentables being set to None for non-activated augmenters
+        for column in set_to_none:
+            setattr(batch_inaug, column.attr_name, column.value)
+
+        # hooks postprocess
+        if hooks is not None:
+            # refresh as contents may have been changed in _augment_batch()
+            columns = batch_inaug.columns
+
+            for column in columns:
+                augm_value = hooks.postprocess(
+                    column.value, augmenter=self, parents=parents)
+                setattr(batch_inaug, column.attr_name, augm_value)
+
+        if batch_unnorm is not None:
+            # TODO make fill_from_augmented_normalized_batch inplace
+            batch_norm = batch_norm.fill_from_batch_in_augmentation_(
+                batch_inaug)
+            batch_unnorm = batch_unnorm.fill_from_augmented_normalized_batch(
+                batch_norm)
+            return batch_unnorm
+        elif batch_norm is not None:
+            batch_norm = batch_norm.fill_from_batch_in_augmentation_(
+                batch_inaug)
+            return batch_norm
+        else:
+            return batch_inaug
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        """Augment a batch in-place.
+
+        This is the internal version of :func:`Augmenter.augment_batch`.
+        It is called from :func:`Augmenter.augment_batch` and should usually
+        not be called directly.
+        This method may transform the batches in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        Parameters
+        ----------
+        batch : imgaug.augmentables.batches.BatchInAugmentation
+            The normalized batch to augment. May be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        hooks : imgaug.imgaug.HooksImages or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        Returns
+        ----------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The augmented batch.
+
+        """
+        columns = batch.columns
+        multiple_columns = len(columns) > 1
+
+        # For multi-column data (e.g. images + BBs) we need deterministic mode
+        # within this batch, otherwise the datatypes within this batch would
+        # get different samples.
+        deterministic = self.deterministic or multiple_columns
 
         # set attribute batch.T_aug with result of self.augment_T() for each
-        # batch.T_unaug that was not None
-        for attr_name, attr in augmentables:
-            aug = getattr(augseq, "augment_%s" % (attr_name,))(
-                attr, hooks=hooks)
-            setattr(batch, "%s_aug" % (attr_name,), aug)
+        # batch.T_unaug (that had any content)
+        for column in columns:
+            with _maybe_deterministic_ctx(random_state, deterministic):
+                value = getattr(self, "_augment_" + column.name)(
+                    column.value, random_state=random_state,
+                    parents=parents, hooks=hooks)
+                setattr(batch, column.attr_name, value)
 
-        if isinstance(batch_orig, UnnormalizedBatch):
-            batch = batch_orig.fill_from_augmented_normalized_batch(batch)
+        # If the augmenter was alread in deterministic mode, we can expect
+        # that to_deterministic() was called, which advances the RNG. But
+        # if it wasn't and we had to auto-switch for the batch, there was not
+        # advancement yet.
+        if multiple_columns and not self.deterministic:
+            random_state.advance_()
+
         return batch
-
-    def _is_activated_with_hooks(self, augmentables, parents, hooks):
-        is_activated = (
-            (hooks is None and self.activated)
-            or (
-                hooks is not None
-                and hooks.is_activated(
-                    augmentables, augmenter=self, parents=parents,
-                    default=self.activated)
-            )
-        )
-        return is_activated
 
     def augment_image(self, image, hooks=None):
         """Augment a single image.
@@ -561,7 +704,7 @@ class Augmenter(object):
 
         Returns
         -------
-        img : ndarray
+        ndarray
             The corresponding augmented image.
 
         """
@@ -618,96 +761,25 @@ class Augmenter(object):
         gaussian blurring to them.
 
         """
-        with _maybe_deterministic_context(self):
-            if parents is not None and len(parents) > 0 and hooks is None:
-                # This is a child call. The data has already been validated and
-                # copied. We don't need to copy it again for hooks, as these
-                # don't exist. So we can augment here fully in-place.
-                if not self.activated or len(images) == 0:
-                    return images
+        # TODO place that warning somehow in augment_batch()
+        if ia.is_np_array(images):
+            if images.ndim == 3 and images.shape[-1] in [1, 3]:
+                ia.warn(
+                    "You provided a numpy array of shape %s as input to "
+                    "augment_images(), which was interpreted as "
+                    "(N, H, W). The last dimension however has value 1 or "
+                    "3, which indicates that you provided a single image "
+                    "with shape (H, W, C) instead. If that is the case, "
+                    "you should use augment_image(image) or "
+                    "augment_images([image]), otherwise you will not get "
+                    "the expected augmentations." % (images.shape,))
 
-                images_result = self._augment_images(
-                    images,
-                    random_state=self.random_state,
-                    parents=parents,
-                    hooks=hooks
-                )
-                # move "forward" the random state, so that the next call to
-                # augment_images() will use different random values
-                # This is currently deactivated as the RNG is no longer copied
-                # for the _augment_* call.
-                # self.random_state.advance_()
+        return self.augment_batch(
+            UnnormalizedBatch(images=images),
+            parents=parents,
+            hooks=hooks
+        ).images_aug
 
-                return images_result
-
-            #
-            # Everything below is for non-in-place augmentation.
-            # It was either the first call (no parents) or hooks were provided.
-            #
-            if parents is None:
-                parents = []
-
-            if ia.is_np_array(images):
-                assert images.ndim in [3, 4], (
-                    "Expected 3d/4d array of form (N, height, width) or (N, "
-                    "height, width, channels), got shape %s." % (images.shape,))
-
-                if images.ndim == 3 and images.shape[-1] in [1, 3]:
-                    ia.warn(
-                        "You provided a numpy array of shape %s as input to "
-                        "augment_images(), which was interpreted as "
-                        "(N, H, W). The last dimension however has value 1 or "
-                        "3, which indicates that you provided a single image "
-                        "with shape (H, W, C) instead. If that is the case, "
-                        "you should use augment_image(image) or "
-                        "augment_images([image]), otherwise you will not get "
-                        "the expected augmentations." % (images.shape,))
-            elif ia.is_iterable(images):
-                if images:
-                    assert all(image.ndim in [2, 3] for image in images), (
-                        "Expected list of images with each image having shape "
-                        "(height, width) or (height, width, channels), got "
-                        "shapes %s." % ([image.shape for image in images],))
-            else:
-                raise Exception(
-                    "Expected images as one numpy array or list/tuple of "
-                    "numpy arrays, got %s." % (type(images),))
-
-            images_orig = images
-            images_copy = _add_channel_axis(copy_arrays(images))
-
-            if hooks is not None:
-                images_copy = hooks.preprocess(images_copy, augmenter=self,
-                                               parents=parents)
-
-            # the is_activated() call allows to use hooks that selectively
-            # deactivate specific augmenters in previously defined augmentation
-            # sequences
-            images_result = images_copy
-            if self._is_activated_with_hooks(images_copy, parents, hooks):
-                # don't use "if images:" here, because `images` can be a
-                # numpy array, leading to an 'ambiguous truth' error
-                if len(images) > 0:
-                    images_result = self._augment_images(
-                        images_copy,
-                        random_state=self.random_state,
-                        parents=parents,
-                        hooks=hooks
-                    )
-                    # move "forward" the random state, so that the next call to
-                    # augment_images() will use different random values
-                    # This is currently deactivated as the RNG is no longer
-                    # copied for the _augment_* call.
-                    # self.random_state.advance_()
-
-            if hooks is not None:
-                images_result = hooks.postprocess(images_result, augmenter=self,
-                                                  parents=parents)
-
-            # remove temporarily added channel axis for 2D input images
-            return _remove_added_channel_axis(images_result, images_orig)
-
-    @abstractmethod
     def _augment_images(self, images, random_state, parents, hooks):
         """Augment a batch of images in-place.
 
@@ -719,6 +791,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -743,11 +822,11 @@ class Augmenter(object):
 
         Returns
         ----------
-        images : (N,H,W,C) ndarray or list of (H,W,C) ndarray
+        (N,H,W,C) ndarray or list of (H,W,C) ndarray
             The augmented images.
 
         """
-        raise NotImplementedError()
+        return images
 
     def augment_heatmaps(self, heatmaps, parents=None, hooks=None):
         """Augment a batch of heatmaps.
@@ -774,44 +853,9 @@ class Augmenter(object):
             Corresponding augmented heatmap(s).
 
         """
-        with _maybe_deterministic_context(self):
-            if parents is None:
-                parents = []
-
-            input_was_single_instance = False
-            if isinstance(heatmaps, ia.HeatmapsOnImage):
-                input_was_single_instance = True
-                heatmaps = [heatmaps]
-
-            iaval.assert_is_iterable_of(heatmaps, ia.HeatmapsOnImage)
-
-            # copy, but only if topmost call or hooks are provided
-            heatmaps_copy = heatmaps
-            if len(parents) == 0 or hooks is not None:
-                heatmaps_copy = [hm_i.deepcopy() for hm_i in heatmaps]
-
-            if hooks is not None:
-                heatmaps_copy = hooks.preprocess(
-                    heatmaps_copy, augmenter=self, parents=parents)
-
-            heatmaps_result = heatmaps_copy
-            if self._is_activated_with_hooks(heatmaps_copy, parents, hooks):
-                if len(heatmaps_copy) > 0:
-                    heatmaps_result = self._augment_heatmaps(
-                        heatmaps_copy,
-                        random_state=self.random_state,
-                        parents=parents,
-                        hooks=hooks
-                    )
-                    # self.random_state.advance_()
-
-            if hooks is not None:
-                heatmaps_result = hooks.postprocess(
-                    heatmaps_result, augmenter=self, parents=parents)
-
-            if input_was_single_instance:
-                return heatmaps_result[0]
-            return heatmaps_result
+        return self.augment_batch(
+            UnnormalizedBatch(heatmaps=heatmaps), parents=parents, hooks=hooks
+        ).heatmaps_aug
 
     def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
         """Augment a batch of heatmaps in-place.
@@ -823,6 +867,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -842,27 +893,6 @@ class Augmenter(object):
 
         """
         return heatmaps
-
-    def _augment_heatmaps_as_images(self, heatmaps, parents, hooks):
-        # TODO documentation
-        # TODO keep this? it is afaik not used anywhere
-        heatmaps_uint8 = [heatmaps_i.to_uint8() for heatmaps_i in heatmaps]
-        heatmaps_uint8_aug = [
-            self.augment_images([heatmaps_uint8_i],
-                                parents=parents, hooks=hooks)[0]
-            for heatmaps_uint8_i
-            in heatmaps_uint8
-        ]
-        return [
-            ia.HeatmapsOnImage.from_uint8(
-                heatmaps_aug,
-                shape=heatmaps_i.shape,
-                min_value=heatmaps_i.min_value,
-                max_value=heatmaps_i.max_value
-            )
-            for heatmaps_aug, heatmaps_i
-            in zip(heatmaps_uint8_aug, heatmaps)
-        ]
 
     def augment_segmentation_maps(self, segmaps, parents=None, hooks=None):
         """Augment a batch of segmentation maps.
@@ -888,44 +918,11 @@ class Augmenter(object):
             Corresponding augmented segmentation map(s).
 
         """
-        with _maybe_deterministic_context(self):
-            if parents is None:
-                parents = []
-
-            input_was_single_instance = False
-            if isinstance(segmaps, ia.SegmentationMapsOnImage):
-                input_was_single_instance = True
-                segmaps = [segmaps]
-
-            iaval.assert_is_iterable_of(segmaps, ia.SegmentationMapsOnImage)
-
-            # copy, but only if topmost call or hooks are provided
-            segmaps_copy = segmaps
-            if len(parents) == 0 or hooks is not None:
-                segmaps_copy = [segmaps_i.deepcopy() for segmaps_i in segmaps]
-
-            if hooks is not None:
-                segmaps_copy = hooks.preprocess(
-                    segmaps_copy, augmenter=self, parents=parents)
-
-            segmaps_result = segmaps_copy
-            if self._is_activated_with_hooks(segmaps_copy, parents, hooks):
-                if len(segmaps_copy) > 0:
-                    segmaps_result = self._augment_segmentation_maps(
-                        segmaps_copy,
-                        random_state=self.random_state,
-                        parents=parents,
-                        hooks=hooks
-                    )
-                    # self.random_state.advance_()
-
-            if hooks is not None:
-                segmaps_result = hooks.postprocess(
-                    segmaps_result, augmenter=self, parents=parents)
-
-            if input_was_single_instance:
-                return segmaps_result[0]
-            return segmaps_result
+        return self.augment_batch(
+            UnnormalizedBatch(segmentation_maps=segmaps),
+            parents=parents,
+            hooks=hooks
+        ).segmentation_maps_aug
 
     def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
         """Augment a batch of segmentation in-place.
@@ -938,6 +935,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -1019,46 +1023,11 @@ class Augmenter(object):
             Augmented keypoints.
 
         """
-        kpsois = keypoints_on_images
-
-        with _maybe_deterministic_context(self):
-            if parents is None:
-                parents = []
-
-            input_was_single_instance = False
-            if isinstance(kpsois, ia.KeypointsOnImage):
-                input_was_single_instance = True
-                kpsois = [kpsois]
-
-            iaval.assert_is_iterable_of(kpsois, ia.KeypointsOnImage)
-
-            # copy, but only if topmost call or hooks are provided
-            kpsois_copy = kpsois
-            if len(parents) == 0 or hooks is not None:
-                kpsois_copy = [kpsoi.deepcopy() for kpsoi in kpsois]
-
-            if hooks is not None:
-                kpsois_copy = hooks.preprocess(
-                    kpsois_copy, augmenter=self, parents=parents)
-
-            kpsois_result = kpsois_copy
-            if self._is_activated_with_hooks(kpsois_copy, parents, hooks):
-                if len(kpsois_copy) > 0:
-                    kpsois_result = self._augment_keypoints(
-                        kpsois_copy,
-                        random_state=self.random_state,
-                        parents=parents,
-                        hooks=hooks
-                    )
-                    # self.random_state.advance_()
-
-            if hooks is not None:
-                kpsois_result = hooks.postprocess(
-                    kpsois_result, augmenter=self, parents=parents)
-
-            if input_was_single_instance:
-                return kpsois_result[0]
-            return kpsois_result
+        return self.augment_batch(
+            UnnormalizedBatch(keypoints=keypoints_on_images),
+            parents=parents,
+            hooks=hooks
+        ).keypoints_aug
 
     def _augment_keypoints(self, keypoints_on_images, random_state, parents,
                            hooks):
@@ -1071,6 +1040,13 @@ class Augmenter(object):
         This method does not have to care about determinism or the
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
 
         Parameters
         ----------
@@ -1156,15 +1132,11 @@ class Augmenter(object):
             Augmented bounding boxes.
 
         """
-        from imgaug.augmentables.bbs import BoundingBoxesOnImage
-
-        return self._augment_coord_augables(
-            cls_expected=BoundingBoxesOnImage,
-            subaugment_func=self._augment_bounding_boxes,
-            augables_ois=bounding_boxes_on_images,
+        return self.augment_batch(
+            UnnormalizedBatch(bounding_boxes=bounding_boxes_on_images),
             parents=parents,
             hooks=hooks
-        )
+        ).bounding_boxes_aug
 
     def augment_polygons(self, polygons_on_images, parents=None, hooks=None):
         """Augment a batch of polygons.
@@ -1226,15 +1198,11 @@ class Augmenter(object):
             Augmented polygons.
 
         """
-        from imgaug.augmentables.polys import PolygonsOnImage
-
-        return self._augment_coord_augables(
-            cls_expected=PolygonsOnImage,
-            subaugment_func=self._augment_polygons,
-            augables_ois=polygons_on_images,
+        return self.augment_batch(
+            UnnormalizedBatch(polygons=polygons_on_images),
             parents=parents,
             hooks=hooks
-        )
+        ).polygons_aug
 
     def augment_line_strings(self, line_strings_on_images, parents=None,
                              hooks=None):
@@ -1299,93 +1267,11 @@ class Augmenter(object):
             Augmented line strings.
 
         """
-        from imgaug.augmentables.lines import LineStringsOnImage
-
-        return self._augment_coord_augables(
-            cls_expected=LineStringsOnImage,
-            subaugment_func=self._augment_line_strings,
-            augables_ois=line_strings_on_images,
+        return self.augment_batch(
+            UnnormalizedBatch(line_strings=line_strings_on_images),
             parents=parents,
             hooks=hooks
-        )
-
-    def _augment_coord_augables(self, cls_expected, subaugment_func,
-                                augables_ois, parents=None,
-                                hooks=None):
-        """Augment a batch of coordinate-based augmentables.
-
-        This is an generic function called by keypoints, bounding boxes,
-        polygons and line strings.
-        TODO keypoints currently missing -- add them
-
-        Parameters
-        ----------
-        cls_expected : class
-            Class type that is expected. `augmentables_ois` will be
-            verified to use that class.
-
-        subaugment_func : callable
-            Function that will be called to actually augment the data.
-
-        augables_ois : imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
-            The augmentables to augment. `augables_ois` is the abbreviation for
-            "augmentables_on_images". Expected are the augmentables on a
-            single image (single instance) or >=1 images (list of instances).
-
-        parents : None or list of imgaug.augmenters.meta.Augmenter, optional
-            Parent augmenters that have previously been called before the
-            call to this function. Usually you can leave this parameter as None.
-            It is set automatically for child augmenters.
-
-        hooks : None or imgaug.imgaug.HooksKeypoints, optional
-            :class:`imgaug.imgaug.HooksKeypoints` object to dynamically
-            interfere with the augmentation process.
-
-        Returns
-        -------
-        imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage or list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage
-            Augmented augmentables.
-
-        """
-        with _maybe_deterministic_context(self):
-            if parents is None:
-                parents = []
-
-            input_was_single_instance = False
-            if isinstance(augables_ois, cls_expected):
-                input_was_single_instance = True
-                augables_ois = [augables_ois]
-
-            iaval.assert_is_iterable_of(augables_ois, cls_expected)
-
-            # copy, but only if topmost call or hooks are provided
-            augables_ois_copy = augables_ois
-            if len(parents) == 0 or hooks is not None:
-                augables_ois_copy = [
-                    augable_oi.deepcopy() for augable_oi in augables_ois]
-
-            if hooks is not None:
-                augables_ois_copy = hooks.preprocess(
-                    augables_ois_copy, augmenter=self, parents=parents)
-
-            augables_ois_result = augables_ois_copy
-            if self._is_activated_with_hooks(augables_ois_copy, parents, hooks):
-                if len(augables_ois) > 0:
-                    augables_ois_result = subaugment_func(
-                        augables_ois_copy,
-                        self.random_state,
-                        parents,
-                        hooks
-                    )
-                    # self.random_state.advance_()
-
-            if hooks is not None:
-                augables_ois_result = hooks.postprocess(
-                    augables_ois_result, augmenter=self, parents=parents)
-
-            if input_was_single_instance:
-                return augables_ois_result[0]
-            return augables_ois_result
+        ).line_strings_aug
 
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
@@ -1400,6 +1286,13 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
+
         Parameters
         ----------
         bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImage
@@ -1416,82 +1309,12 @@ class Augmenter(object):
             See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
 
         Returns
-        ----------
+        -------
         list of imgaug.augmentables.bbs.BoundingBoxesOnImage
             The augmented bounding boxes.
 
         """
         return bounding_boxes_on_images
-
-    def _augment_bounding_boxes_as_keypoints(
-            self, bounding_boxes_on_images, random_state, parents, hooks):
-        """
-        Augment bounding boxes by applying KP augmentation to their corners.
-
-        Parameters
-        ----------
-        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImage
-            Bounding boxes to augment. They may be changed in-place.
-
-        random_state : imgaug.random.RNG
-            The random state to use for all sampling tasks during the
-            augmentation.
-
-        parents : list of imgaug.augmenters.meta.Augmenter
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
-
-        hooks : imgaug.imgaug.HooksKeypoints or None
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_bounding_boxes`.
-
-        Returns
-        ----------
-        list of imgaug.augmentables.bbs.BoundingBoxesOnImage
-            The augmented bounding boxes.
-
-        """
-        from imgaug.augmentables.kps import KeypointsOnImage
-        from imgaug.augmentables.bbs import BoundingBoxesOnImage
-
-        kps_ois = []
-        kp_counts = []
-        for bbsoi in bounding_boxes_on_images:
-            kps = []
-            kp_counts_image = []
-            for item in bbsoi.items:
-                item_kps = [ia.Keypoint(x=x, y=y) for x, y in item.coords]
-                kps.extend(item_kps)
-                kp_counts_image.append(len(item_kps))
-            kps_ois.append(KeypointsOnImage(kps, shape=bbsoi.shape))
-            kp_counts.append(kp_counts_image)
-
-        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
-                                              hooks)
-
-        result = []
-        gen = enumerate(zip(kps_ois_aug, kp_counts))
-        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
-            bbs_aug = []
-            counter = 0
-            for i, count in enumerate(kp_counts_image):
-                item_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
-                item_old = bounding_boxes_on_images[img_idx].items[i]
-
-                x1 = item_kps_aug[0].x
-                y1 = item_kps_aug[0].y
-                x2 = item_kps_aug[1].x
-                y2 = item_kps_aug[1].y
-
-                bb_aug = item_old
-                bb_aug.x1 = min([x1, x2])
-                bb_aug.y1 = min([y1, y2])
-                bb_aug.x2 = max([x1, x2])
-                bb_aug.y2 = max([y1, y2])
-
-                bbs_aug.append(bb_aug)
-                counter += count
-            result.append(BoundingBoxesOnImage(bbs_aug, shape=kps_oi_aug.shape))
-
-        return result
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
@@ -1505,6 +1328,13 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
+
         Parameters
         ----------
         polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
@@ -1521,21 +1351,103 @@ class Augmenter(object):
             See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
 
         Returns
-        ----------
+        -------
         list of imgaug.augmentables.polys.PolygonsOnImage
             The augmented polygons.
 
         """
         return polygons_on_images
 
+    def _augment_line_strings(self, line_strings_on_images, random_state,
+                              parents, hooks):
+        """Augment a batch of line strings in-place.
+
+        This is the internal version of
+        :func:`Augmenter.augment_line_strings`.
+        It is called from :func:`Augmenter.augment_line_strings` and should
+        usually not be called directly.
+        This method may transform the line strings in-place.
+        This method does not have to care about determinism or the
+        Augmenter instance's ``random_state`` variable. The parameter
+        ``random_state`` takes care of both of these.
+
+        .. note ::
+
+            This method exists mostly for legacy-support.
+            Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
+            is now the preferred way of implementing custom augmentation
+            routines.
+
+        Parameters
+        ----------
+        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
+            Line strings to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
+
+        Returns
+        -------
+        list of imgaug.augmentables.lines.LineStringsOnImage
+            The augmented line strings.
+
+        """
+        return line_strings_on_images
+
+    def _augment_bounding_boxes_as_keypoints(self, bounding_boxes_on_images,
+                                             random_state, parents, hooks):
+        """
+        Augment BBs by applying keypoint augmentation to their corners.
+
+        Parameters
+        ----------
+        bounding_boxes_on_images : list of imgaug.augmentables.bbs.BoundingBoxesOnImages or imgaug.augmentables.bbs.BoundingBoxesOnImages
+            Bounding boxes to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        Returns
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage
+            The augmented bounding boxes.
+
+        """
+        return self._augment_cbaois_as_keypoints(bounding_boxes_on_images,
+                                                 random_state=random_state,
+                                                 parents=parents,
+                                                 hooks=hooks)
+
     def _augment_polygons_as_keypoints(self, polygons_on_images, random_state,
                                        parents, hooks, recoverer=None):
         """
         Augment polygons by applying keypoint augmentation to their vertices.
 
+        .. warning ::
+
+            This method calls
+            :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints` and
+            expects it to do keypoint augmentation. The default for that
+            method is to do nothing. It must therefore be overwritten,
+            otherwise the polygon augmentation will also do nothing.
+
         Parameters
         ----------
-        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
             Polygons to augment. They may be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -1555,28 +1467,127 @@ class Augmenter(object):
             If ``None`` then invalid polygons are not repaired.
 
         Returns
-        ----------
-        list of imgaug.augmentables.polys.PolygonsOnImage
+        -------
+        list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
             The augmented polygons.
 
         """
-        from imgaug.augmentables.kps import KeypointsOnImage
-        from imgaug.augmentables.polys import PolygonsOnImage
+        func = functools.partial(self._augment_keypoints,
+                                 random_state=random_state,
+                                 parents=parents,
+                                 hooks=hooks)
 
-        kps_ois = []
-        kp_counts = []
-        for polys_oi in polygons_on_images:
-            kps = []
-            kp_counts_image = []
-            for poly in polys_oi.polygons:
-                poly_kps = poly.to_keypoints()
-                kps.extend(poly_kps)
-                kp_counts_image.append(len(poly_kps))
-            kps_ois.append(KeypointsOnImage(kps, shape=polys_oi.shape))
-            kp_counts.append(kp_counts_image)
+        return self._apply_to_polygons_as_keypoints(polygons_on_images, func,
+                                                    recoverer, random_state)
 
-        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
-                                              hooks)
+    def _augment_line_strings_as_keypoints(self, line_strings_on_images,
+                                           random_state, parents, hooks):
+        """
+        Augment BBs by applying keypoint augmentation to their corners.
+
+        Parameters
+        ----------
+        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImages or imgaug.augmentables.lines.LineStringsOnImages
+            Line strings to augment. They may be changed in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
+
+        Returns
+        -------
+        list of imgaug.augmentables.lines.LineStringsOnImages or imgaug.augmentables.lines.LineStringsOnImages
+            The augmented line strings.
+
+        """
+        return self._augment_cbaois_as_keypoints(line_strings_on_images,
+                                                 random_state=random_state,
+                                                 parents=parents,
+                                                 hooks=hooks)
+
+    def _augment_cbaois_as_keypoints(
+            self, cbaois, random_state, parents, hooks):
+        """
+        Augment bounding boxes by applying KP augmentation to their corners.
+
+        Parameters
+        ----------
+        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
+            Coordinate-based augmentables to augment. They may be changed
+            in-place.
+
+        random_state : imgaug.random.RNG
+            The random state to use for all sampling tasks during the
+            augmentation.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        hooks : imgaug.imgaug.HooksKeypoints or None
+            See :func:`imgaug.augmenters.meta.Augmenter.augment_batch`.
+
+        Returns
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
+            The augmented coordinate-based augmentables.
+
+        """
+        func = functools.partial(self._augment_keypoints,
+                                 random_state=random_state,
+                                 parents=parents,
+                                 hooks=hooks)
+        return self._apply_to_cbaois_as_keypoints(cbaois, func)
+
+    @classmethod
+    def _apply_to_polygons_as_keypoints(cls, polygons_on_images, func,
+                                        recoverer=None, random_state=None):
+        """
+        Apply a callback to polygons in keypoint-representation.
+
+        Parameters
+        ----------
+        polygons_on_images : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
+            Polygons to augment. They may be changed in-place.
+
+        func : callable
+            The function to apply. Receives a list of
+            :class:`imgaug.augmentables.kps.KeypointsOnImage` instances as its
+            only parameter.
+
+        recoverer : None or imgaug.augmentables.polys._ConcavePolygonRecoverer
+            An instance used to repair invalid polygons after augmentation.
+            Must offer the method
+            ``recover_from(new_exterior, old_polygon, random_state=0)``.
+            If ``None`` then invalid polygons are not repaired.
+
+        random_state : None or imgaug.random.RNG
+            The random state to use for the recoverer.
+
+        Returns
+        -------
+        list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
+            The augmented polygons.
+
+        """
+        from ..augmentables.polys import recover_psois_
+
+        psois_orig = None
+        if recoverer is not None:
+            if isinstance(polygons_on_images, list):
+                psois_orig = [psoi.deepcopy() for psoi in polygons_on_images]
+            else:
+                psois_orig = polygons_on_images.deepcopy()
+
+        psois = cls._apply_to_cbaois_as_keypoints(polygons_on_images, func)
+
+        if recoverer is None:
+            return psois
 
         # Its not really necessary to create an RNG copy for the recoverer
         # here, as the augmentation of the polygons is already finished and
@@ -1584,132 +1595,41 @@ class Augmenter(object):
         # advance the RNG state, but the next call to e.g. augment() will then
         # still use the same (advanced) RNG state for images and polygons.
         # We copy here anyways as it seems cleaner.
-        random_state_recoverer = None
-        if recoverer is not None:
-            random_state_recoverer = random_state.copy()
+        random_state_recoverer = (random_state.copy()
+                                  if random_state is not None else None)
+        psois = recover_psois_(psois, psois_orig, recoverer,
+                               random_state_recoverer)
 
-        result = []
-        gen = enumerate(zip(kps_ois_aug, kp_counts))
-        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
-            polys_aug = []
-            counter = 0
-            for i, count in enumerate(kp_counts_image):
-                poly_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
-                poly_old = polygons_on_images[img_idx].polygons[i]
-                if recoverer is not None:
-                    # make sure to not derive random state from random_state
-                    # at the start of this function, otherwise random_state
-                    # in _augment_keypoints() will be unaligned with images
-                    poly_aug = recoverer.recover_from(
-                        [(kp.x, kp.y) for kp in poly_kps_aug],
-                        poly_old,
-                        random_state=random_state_recoverer)
-                else:
-                    poly_aug = poly_old.deepcopy(exterior=poly_kps_aug)
-                polys_aug.append(poly_aug)
-                counter += count
-            result.append(PolygonsOnImage(polys_aug, shape=kps_oi_aug.shape))
+        return psois
 
-        return result
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        """Augment a batch of line strings in-place.
-
-        This is the internal version of
-        :func:`Augmenter.augment_line_strings`.
-        It is called from :func:`Augmenter.augment_line_strings` and should
-        usually not be called directly.
-        This method may transform the line strings in-place.
-        This method does not have to care about determinism or the
-        Augmenter instance's ``random_state`` variable. The parameter
-        ``random_state`` takes care of both of these.
+    @classmethod
+    def _apply_to_cbaois_as_keypoints(cls, cbaois, func):
+        """
+        Augment bounding boxes by applying KP augmentation to their corners.
 
         Parameters
         ----------
-        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
-            Line strings to augment. They may be changed in-place.
+        cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
+            Coordinate-based augmentables to augment. They may be changed
+            in-place.
 
-        random_state : imgaug.random.RNG
-            The random state to use for all sampling tasks during the
-            augmentation.
-
-        parents : list of imgaug.augmenters.meta.Augmenter
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
-
-        hooks : imgaug.imgaug.HooksKeypoints or None
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_line_strings`.
+        func : callable
+            The function to apply. Receives a list of
+            :class:`imgaug.augmentables.kps.KeypointsOnImage` instances as its
+            only parameter.
 
         Returns
-        ----------
-        list of imgaug.augmentables.lines.LineStringsOnImage
-            The augmented line strings.
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.polys.PolygonsOnImage or list of imgaug.augmentables.lines.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.lines.LineStringsOnImage
+            The augmented coordinate-based augmentables.
 
         """
-        return line_strings_on_images
+        from ..augmentables.utils import (convert_cbaois_to_kpsois,
+                                          invert_convert_cbaois_to_kpsois_)
 
-    def _augment_line_strings_as_keypoints(self, line_strings_on_images,
-                                           random_state, parents, hooks):
-        """
-        Augment line strings by applying keypoint augmentation to their coords.
-
-        Parameters
-        ----------
-        line_strings_on_images : list of imgaug.augmentables.lines.LineStringsOnImage
-            Line strings to augment. They may be changed in-place.
-
-        random_state : imgaug.random.RNG
-            The random state to use for all sampling tasks during the
-            augmentation.
-
-        parents : list of imgaug.augmenters.meta.Augmenter
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
-
-        hooks : imgaug.imgaug.HooksKeypoints or None
-            See :func:`imgaug.augmenters.meta.Augmenter.augment_polygons`.
-
-        Returns
-        ----------
-        list of imgaug.augmentables.lines.LineStringsOnImage
-            The augmented line strings.
-
-        """
-        # TODO this is very similar to the polygon augmentation method,
-        #      merge somehow
-        # TODO get rid of this deferred import:
-        from imgaug.augmentables.kps import KeypointsOnImage
-        from imgaug.augmentables.lines import LineStringsOnImage
-
-        kps_ois = []
-        kp_counts = []
-        for ls_oi in line_strings_on_images:
-            kps = []
-            kp_counts_image = []
-            for ls in ls_oi.line_strings:
-                ls_kps = ls.to_keypoints()
-                kps.extend(ls_kps)
-                kp_counts_image.append(len(ls_kps))
-            kps_ois.append(KeypointsOnImage(kps, shape=ls_oi.shape))
-            kp_counts.append(kp_counts_image)
-
-        kps_ois_aug = self._augment_keypoints(kps_ois, random_state, parents,
-                                              hooks)
-
-        result = []
-        gen = enumerate(zip(kps_ois_aug, kp_counts))
-        for img_idx, (kps_oi_aug, kp_counts_image) in gen:
-            lss_aug = []
-            counter = 0
-            for i, count in enumerate(kp_counts_image):
-                ls_kps_aug = kps_oi_aug.keypoints[counter:counter+count]
-                ls_old = line_strings_on_images[img_idx].line_strings[i]
-                ls_aug = ls_old.deepcopy(
-                    coords=[(kp.x, kp.y) for kp in ls_kps_aug])
-                lss_aug.append(ls_aug)
-                counter += count
-            result.append(LineStringsOnImage(lss_aug, shape=kps_oi_aug.shape))
-
-        return result
+        kpsois = convert_cbaois_to_kpsois(cbaois)
+        kpsois_aug = func(kpsois)
+        return invert_convert_cbaois_to_kpsois_(cbaois, kpsois_aug)
 
     def augment(self, return_batch=False, hooks=None, **kwargs):
         """Augment a batch.
@@ -3097,64 +3017,20 @@ class Sequential(Augmenter, list):
                 type(random_order),))
         self.random_order = random_order
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(augmentables, augmenter=self,
-                                    parents=parents, default=True)
-        )
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        return self._augment_augmentables(
-            images, random_state, parents, hooks, "augment_images")
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_augmentables(
-            heatmaps, random_state, parents, hooks, "augment_heatmaps")
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_augmentables(
-            segmaps, random_state, parents, hooks, "augment_segmentation_maps")
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return self._augment_augmentables(
-            keypoints_on_images, random_state, parents, hooks,
-            "augment_keypoints")
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_augmentables(
-            polygons_on_images, random_state, parents, hooks,
-            "augment_polygons")
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_augmentables(
-            line_strings_on_images, random_state, parents, hooks,
-            "augment_line_strings")
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_augmentables(
-            bounding_boxes_on_images, random_state, parents, hooks,
-            "augment_bounding_boxes")
-
-    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
-                              augfunc_name):
-        if self._is_propagating(augmentables, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
             if self.random_order:
                 order = random_state.permutation(len(self))
             else:
                 order = sm.xrange(len(self))
 
             for index in order:
-                augmentables = getattr(self[index], augfunc_name)(
-                    augmentables,
+                batch = self[index].augment_batch(
+                    batch,
                     parents=parents + [self],
                     hooks=hooks
                 )
-        return augmentables
+        return batch
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
@@ -3389,133 +3265,8 @@ class SomeOf(Augmenter, list):
             random_state.shuffle(row)
         return augmenter_active
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(augmentables, augmenter=self,
-                                    parents=parents, default=True)
-        )
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        if not self._is_propagating(images, parents, hooks):
-            return images
-
-        input_is_array = ia.is_np_array(images)
-
-        # This must happen before creating the augmenter_active array,
-        # otherwise in case of determinism the number of augmented images
-        # would change the random_state's state, resulting in the order
-        # being dependent on the number of augmented images (and not be
-        # constant). By doing this first, the random state is always the
-        # same (when determinism is active), so the order is always the
-        # same.
-        augmenter_order = self._get_augmenter_order(random_state)
-
-        # create an array of active augmenters per image
-        # e.g.
-        #  [[0, 0, 1],
-        #   [1, 0, 1],
-        #   [1, 0, 0]]
-        # would signal, that augmenter 3 is active for the first image,
-        # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-        augmenter_active = self._get_augmenter_active(len(images),
-                                                      random_state)
-
-        for augmenter_index in augmenter_order:
-            active = augmenter_active[:, augmenter_index].nonzero()[0]
-            if len(active) > 0:
-                # pick images to augment, i.e. images for which
-                # augmenter at current index is active
-                if input_is_array:
-                    images_to_aug = images[active]
-                else:
-                    images_to_aug = [images[idx] for idx in active]
-
-                # augment the images
-                images_to_aug = self[augmenter_index].augment_images(
-                    images=images_to_aug,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-                output_is_array = ia.is_np_array(images_to_aug)
-                output_all_same_shape = len(
-                    set([img.shape for img in images_to_aug])) == 1
-
-                # Map them back to their position in the images array/list
-                # But it can happen that the augmented images have
-                # different shape(s) from the input image, as well as
-                # being suddenly a list instead of a numpy array.
-                # This is usually the case if a child augmenter has to
-                # change shapes, e.g. due to cropping (without resize
-                # afterwards). So accomodate here for that possibility.
-                if input_is_array:
-                    if not output_is_array and output_all_same_shape:
-                        images_to_aug = np.array(
-                            images_to_aug, dtype=images.dtype)
-                        output_is_array = True
-
-                    if (output_is_array
-                            and images_to_aug.shape[1:] == images.shape[1:]):
-                        images[active] = images_to_aug
-                    else:
-                        images = list(images)
-                        for aug_idx, original_idx in enumerate(active):
-                            images[original_idx] = images_to_aug[aug_idx]
-                        input_is_array = False
-                else:
-                    for aug_idx, original_idx in enumerate(active):
-                        images[original_idx] = images_to_aug[aug_idx]
-
-        return images
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(augmenter_, heatmaps_to_aug_, parents_, hooks_):
-            return augmenter_.augment_heatmaps(
-                heatmaps_to_aug_, parents_, hooks_)
-        return self._augment_non_images(heatmaps, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        def _augfunc(augmenter_, segmaps_to_aug_, parents_, hooks_):
-            return augmenter_.augment_segmentation_maps(
-                segmaps_to_aug_, parents_, hooks_)
-        return self._augment_non_images(segmaps, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _augfunc(augmenter_, koi_to_aug_, parents_, hooks_):
-            return augmenter_.augment_keypoints(
-                koi_to_aug_, parents_, hooks_)
-        return self._augment_non_images(keypoints_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
-            return augmenter_.augment_polygons(
-                polys_to_aug_, parents_, hooks_)
-        return self._augment_non_images(polygons_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        def _augfunc(augmenter_, polys_to_aug_, parents_, hooks_):
-            return augmenter_.augment_line_strings(
-                polys_to_aug_, parents_, hooks_)
-        return self._augment_non_images(line_strings_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        def _augfunc(augmenter_, bbs_to_aug_, parents_, hooks_):
-            return augmenter_.augment_bounding_boxes(
-                bbs_to_aug_, parents_, hooks_)
-        return self._augment_non_images(bounding_boxes_on_images, random_state,
-                                        parents, hooks, _augfunc)
-
-    def _augment_non_images(self, inputs, random_state, parents, hooks, func):
-        if self._is_propagating(inputs, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
             # This must happen before creating the augmenter_active array,
             # otherwise in case of determinism the number of augmented images
             # would change the random_state's state, resulting in the order
@@ -3532,26 +3283,23 @@ class SomeOf(Augmenter, list):
             #   [1, 0, 0]]
             # would signal, that augmenter 3 is active for the first image,
             # augmenter 1 and 3 for the 2nd image and augmenter 1 for the 3rd.
-            augmenter_active = self._get_augmenter_active(len(inputs),
+            augmenter_active = self._get_augmenter_active(batch.nb_rows,
                                                           random_state)
 
             for augmenter_index in augmenter_order:
                 active = augmenter_active[:, augmenter_index].nonzero()[0]
+
                 if len(active) > 0:
-                    # pick images to augment, i.e. images for which
-                    # augmenter at current index is active
-                    koi_to_aug = [inputs[idx] for idx in active]
-
-                    # augment the image-related objects
-                    koi_to_aug = func(
-                        self[augmenter_index], koi_to_aug, parents + [self],
-                        hooks
+                    batch_sub = batch.subselect_rows_by_indices(active)
+                    batch_sub = self[augmenter_index].augment_batch(
+                        batch_sub,
+                        parents=parents + [self],
+                        hooks=hooks
                     )
+                    batch = batch.invert_subselect_rows_by_indices_(active,
+                                                                    batch_sub)
 
-                    # map them back to their position in the images array/list
-                    for aug_idx, original_idx in enumerate(active):
-                        inputs[original_idx] = koi_to_aug[aug_idx]
-        return inputs
+            return batch
 
     def _to_deterministic(self):
         augs = [aug.to_deterministic() for aug in self]
@@ -3730,119 +3478,37 @@ class Sometimes(Augmenter):
         self.else_list = handle_children_list(else_list, self.name, "else",
                                               default=None)
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(augmentables, augmenter=self,
-                                    parents=parents, default=True)
-        )
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            samples = self.p.draw_samples((batch.nb_rows,),
+                                          random_state=random_state)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        input_is_np_array = ia.is_np_array(images)
-        if input_is_np_array:
-            input_dtype = images.dtype
+            # create lists/arrays of images for if and else lists (one for each)
+            # note that np.where returns tuple(array([0, 5, 9, ...])) or
+            # tuple(array([]))
+            indices_then_list = np.where(samples == 1)[0]
+            indices_else_list = np.where(samples == 0)[0]
 
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_images(augmentables_, parents_, hooks_)
+            indice_lists = [indices_then_list, indices_else_list]
+            augmenter_lists = [self.then_list, self.else_list]
 
-        result = self._augment_augmentables(images, random_state,
-                                            parents, hooks, _augfunc)
+            # For then_list: collect augmentables to be processed by then_list
+            # augmenters, apply them to the list, then map back to the output
+            # list. Analogous for else_list.
+            # TODO maybe this would be easier if augment_*() accepted a list
+            #      that can contain Nones
+            for indices, augmenters in zip(indice_lists, augmenter_lists):
+                if augmenters is not None and len(augmenters) > 0:
+                    batch_sub = batch.subselect_rows_by_indices(indices)
+                    batch_sub = augmenters.augment_batch(
+                        batch_sub,
+                        parents=parents + [self],
+                        hooks=hooks
+                    )
+                    batch = batch.invert_subselect_rows_by_indices_(indices,
+                                                                    batch_sub)
 
-        # If input was a list, keep the output as a list too,
-        # otherwise it was a numpy array, so make the output a numpy array
-        # too. Note here though that shapes can differ between images,
-        # e.g. when using Crop without resizing. In these cases, the
-        # output has to be a list.
-        output_is_np_array = ia.is_np_array(result)
-        if input_is_np_array and not output_is_np_array:
-            all_same_shape = len(set([image.shape for image in result])) == 1
-            if all_same_shape:
-                result = np.array(result, dtype=input_dtype)
-
-        return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_heatmaps(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(heatmaps, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_segmentation_maps(augmentables_, parents_,
-                                                   hooks_)
-        return self._augment_augmentables(segmaps, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_keypoints(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(keypoints_on_images, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_polygons(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(polygons_on_images, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_line_strings(augmentables_, parents_, hooks_)
-        return self._augment_augmentables(line_strings_on_images, random_state,
-                                          parents, hooks, _augfunc)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        def _augfunc(augs_, augmentables_, parents_, hooks_):
-            return augs_.augment_bounding_boxes(augmentables_, parents_,
-                                                hooks_)
-        return self._augment_augmentables(bounding_boxes_on_images,
-                                          random_state, parents, hooks,
-                                          _augfunc)
-
-    def _augment_augmentables(self, augmentables, random_state, parents, hooks,
-                              func):
-        result = augmentables
-        if not self._is_propagating(augmentables, parents, hooks):
-            return result
-
-        nb_images = len(augmentables)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-
-        # create lists/arrays of images for if and else lists (one for each)
-        # note that np.where returns tuple(array([0, 5, 9, ...])) or
-        # tuple(array([]))
-        indices_then_list = np.where(samples == 1)[0]
-        indices_else_list = np.where(samples == 0)[0]
-
-        result = [None] * len(augmentables)
-        indice_lists = [indices_then_list, indices_else_list]
-        augmenter_lists = [self.then_list, self.else_list]
-
-        # For then_list: collect augmentables to be processed by then_list
-        # augmenters, apply them to the list, then map back to the output
-        # list. Analogous for else_list.
-        # TODO maybe this would be easier if augment_*() accepted a list
-        #      that can contain Nones
-        for indices, augmenters in zip(indice_lists, augmenter_lists):
-            augmentables_this_list = [augmentables[i] for i in indices]
-
-            result_list = augmentables_this_list
-            if augmenters is not None and len(augmenters) > 0:
-                result_list = func(
-                    augmenters,
-                    augmentables_this_list, parents + [self], hooks
-                )
-
-            for idx_augmentation, idx_output in enumerate(indices):
-                result[idx_output] = result_list[idx_augmentation]
-
-        return result
+            return batch
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -3957,127 +3623,128 @@ class WithChannels(Augmenter):
 
         self.children = handle_children_list(children, self.name, "then")
 
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(
-                augmentables, augmenter=self, parents=parents, default=True)
-        )
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if self.channels is not None and len(self.channels) == 0:
+            return batch
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        if self._is_propagating(images, parents, hooks):
-            if self.channels is None:
-                result = self.children.augment_images(
-                    images=images,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-            elif len(self.channels) == 0:
-                pass
-            else:
-                # save the shapes as images are augmented below in-place
-                shapes_orig = [image.shape for image in images]
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            batch_cp = batch.deepcopy()
 
-                if ia.is_np_array(images):
-                    images_then_list = images[..., self.channels]
-                else:
-                    images_then_list = [image[..., self.channels]
-                                        for image in images]
+            if batch.images is not None:
+                batch.images = self._reduce_images_to_channels(batch.images)
 
-                result_then_list = self.children.augment_images(
-                    images=images_then_list,
-                    parents=parents + [self],
-                    hooks=hooks
-                )
+            # Note that we augment here all data, including non-image data
+            # for which less than 50% of the corresponding image channels
+            # were augmented. This is because (a) the system does not yet
+            # understand None as cell values and (b) decreasing the length
+            # of columns leads to potential RNG misalignments.
+            # We replace non-image data that was not supposed to be augmented
+            # further below.
+            batch = self.children.augment_batch(
+                batch, parents=parents + [self], hooks=hooks)
 
-                shapes_same = (
-                    all([img_out.shape[0:2] == shape_orig[0:2]
-                         for img_out, shape_orig
-                         in zip(result_then_list, shapes_orig)]))
-                assert shapes_same, (
-                    "Heights/widths of images changed in WithChannels from "
-                    "%s to %s, but expected to be the same." % (
-                        str([shape_orig[0:2]
-                             for shape_orig in shapes_orig]),
-                        str([img_out.shape[0:2]
-                             for img_out in result_then_list]),
-                    ))
+            # If the shapes changed we cannot insert the augmented channels
+            # into the existing ones as the shapes of the non-augmented
+            # channels are still the same.
+            if batch.images is not None:
+                self._assert_lengths_not_changed(batch.images, batch_cp.images)
+                self._assert_shapes_not_changed(batch.images, batch_cp.images)
+                self._assert_dtypes_not_changed(batch.images, batch_cp.images)
 
-                if ia.is_np_array(images):
-                    result[..., self.channels] = result_then_list
-                else:
-                    for i in sm.xrange(len(images)):
-                        result[i][..., self.channels] = result_then_list[i]
+                batch.images = self._recover_images_array(batch.images,
+                                                          batch_cp.images)
 
-        return result
+            for column in batch.columns:
+                if column.name != "images":
+                    value_old = getattr(batch_cp, column.attr_name)
+                    value = self._replace_unaugmented_cells(column.value,
+                                                            value_old)
+                    setattr(batch, column.attr_name, value)
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_heatmaps(inputs_, parents_, hooks_)
-        return self._augment_non_images(heatmaps, parents, hooks, _augfunc)
+            if batch.images is not None:
+                batch.images = self._invert_reduce_images_to_channels(
+                    batch.images, batch_cp.images)
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_segmentation_maps(
-                inputs_, parents_, hooks_)
-        return self._augment_non_images(segmaps, parents, hooks, _augfunc)
+        return batch
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_keypoints(inputs_, parents_, hooks_)
-        return self._augment_non_images(keypoints_on_images, parents, hooks,
-                                        _augfunc)
+    @classmethod
+    def _assert_lengths_not_changed(cls, images_aug, images):
+        assert len(images_aug) == len(images), (
+            "Expected that number of images does not change during "
+            "augmentation, but got %d vs. originally %d images." % (
+                len(images_aug), len(images)))
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_polygons(inputs_, parents_, hooks_)
-        return self._augment_non_images(polygons_on_images, parents, hooks,
-                                        _augfunc)
+    @classmethod
+    def _assert_shapes_not_changed(cls, images_aug, images):
+        if ia.is_np_array(images_aug) and ia.is_np_array(images):
+            shapes_same = (images_aug.shape[1:3] == images.shape[1:3])
+        else:
+            shapes_same = all(
+                [image_aug.shape[0:2] == image.shape[0:2]
+                 for image_aug, image
+                 in zip(images_aug, images)])
+        assert shapes_same, (
+            "Heights/widths of images changed in WithChannels from "
+            "%s to %s, but expected to be the same." % (
+                str([image.shape[0:2] for image in images]),
+                str([image_aug.shape[0:2] for image_aug in images_aug]),
+            ))
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_line_strings(inputs_, parents_, hooks_)
-        return self._augment_non_images(line_strings_on_images, parents, hooks,
-                                        _augfunc)
+    @classmethod
+    def _assert_dtypes_not_changed(cls, images_aug, images):
+        if ia.is_np_array(images_aug) and ia.is_np_array(images):
+            dtypes_same = (images_aug.dtype.name == images.dtype.name)
+        else:
+            dtypes_same = all(
+                [image_aug.dtype.name == image.dtype.name
+                 for image_aug, image
+                 in zip(images_aug, images)])
 
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        def _augfunc(children_, inputs_, parents_, hooks_):
-            return children_.augment_bounding_boxes(inputs_, parents_, hooks_)
-        return self._augment_non_images(bounding_boxes_on_images, parents,
-                                        hooks, _augfunc)
+        assert dtypes_same, (
+            "dtypes of images changed in WithChannels from "
+            "%s to %s, but expected to be the same." % (
+                str([image.dtype.name for image in images]),
+                str([image_aug.dtype.name for image_aug in images_aug]),
+            ))
 
-    def _augment_non_images(self, inputs, parents, hooks, func):
-        result = inputs
-        if self._is_propagating(inputs, parents, hooks):
-            # Augment the non-images in the style of the children if all
-            # channels or the majority of them are selected by this layer,
-            # otherwise don't change the non-images.
-            inputs_to_aug = []
-            indices = []
+    @classmethod
+    def _recover_images_array(cls, images_aug, images):
+        if ia.is_np_array(images):
+            return np.array(images_aug)
+        return images_aug
 
-            for i, inputs_i in enumerate(inputs):
-                nb_channels = (
-                    inputs_i.shape[2] if len(inputs_i.shape) >= 3 else 1)
-                did_augment_image = (
-                    self.channels is None
-                    or len(self.channels) > nb_channels*0.5)
-                if did_augment_image:
-                    inputs_to_aug.append(inputs_i)
-                    indices.append(i)
+    def _reduce_images_to_channels(self, images):
+        if self.channels is None:
+            return images
+        if ia.is_np_array(images):
+            return images[..., self.channels]
+        return [image[..., self.channels] for image in images]
 
-            if len(inputs_to_aug) > 0:
-                inputs_aug = func(self.children, inputs_to_aug,
-                                  parents + [self], hooks)
+    def _invert_reduce_images_to_channels(self, images_aug, images):
+        if self.channels is None:
+            return images_aug
 
-                for idx_orig, inputs_i_aug in zip(indices, inputs_aug):
-                    result[idx_orig] = inputs_i_aug
+        for image, image_aug in zip(images, images_aug):
+            image[..., self.channels] = image_aug
+        return images
 
+    def _replace_unaugmented_cells(self, augmentables_aug, augmentables):
+        if self.channels is None:
+            return augmentables_aug
+
+        nb_channels_to_aug = len(self.channels)
+        nb_channels_lst = [augm.shape[2] if len(augm.shape) > 2 else 1
+                           for augm in augmentables]
+
+        # We use the augmented form of a non-image if at least 50% of the
+        # corresponding image's channels were augmented. Otherwise we use
+        # the unaugmented form.
+        fraction_augmented_lst = [nb_channels_to_aug/nb_channels
+                                  for nb_channels in nb_channels_lst]
+        result = [
+            (augmentable_aug if fraction_augmented >= 0.5 else augmentable)
+            for augmentable_aug, augmentable, fraction_augmented
+            in zip(augmentables_aug, augmentables, fraction_augmented_lst)]
         return result
 
     def _to_deterministic(self):
@@ -4143,8 +3810,8 @@ class Noop(Augmenter):
         super(Noop, self).__init__(name=name, deterministic=deterministic,
                                    random_state=random_state)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        return images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        return batch
 
     def get_parameters(self):
         return []
@@ -4963,15 +4630,20 @@ class ChannelShuffle(Augmenter):
                 type(channels),))
         self.channels = channels
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         nb_images = len(images)
         p_samples = self.p.draw_samples((nb_images,),
                                         random_state=random_state)
         rss = random_state.duplicate(nb_images)
         for i, (image, p_i, rs) in enumerate(zip(images, p_samples, rss)):
             if p_i >= 1-1e-4:
-                images[i] = shuffle_channels(image, rs, self.channels)
-        return images
+                batch.images[i] = shuffle_channels(image, rs, self.channels)
+        return batch
 
     def get_parameters(self):
         return [self.p, self.channels]

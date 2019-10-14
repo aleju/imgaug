@@ -858,67 +858,54 @@ class Fliplr(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        nb_images = len(images)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i, (image, sample) in enumerate(zip(images, samples)):
-            if sample > 0.5:
-                images[i] = fliplr(image)
-        return images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        samples = self.p.draw_samples((batch.nb_rows,),
+                                      random_state=random_state)
+        for i, sample in enumerate(samples):
+            if sample >= 0.5:
+                if batch.images is not None:
+                    batch.images[i] = fliplr(batch.images[i])
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        arrs_flipped = self._augment_images(
-            [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps],
-            random_state=random_state,
-            parents=parents,
-            hooks=hooks
-        )
-        for heatmaps_i, arr_flipped in zip(heatmaps, arrs_flipped):
-            heatmaps_i.arr_0to1 = arr_flipped
-        return heatmaps
+                if batch.heatmaps is not None:
+                    batch.heatmaps[i].arr_0to1 = fliplr(
+                        batch.heatmaps[i].arr_0to1)
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        arrs_flipped = self._augment_images(
-            [segmaps_i.arr for segmaps_i in segmaps],
-            random_state=random_state,
-            parents=parents,
-            hooks=hooks
-        )
-        for segmaps_i, arr_flipped in zip(segmaps, arrs_flipped):
-            segmaps_i.arr = arr_flipped
-        return segmaps
+                if batch.segmentation_maps is not None:
+                    batch.segmentation_maps[i].arr = fliplr(
+                        batch.segmentation_maps[i].arr)
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        nb_images = len(keypoints_on_images)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if not keypoints_on_image.keypoints:
-                continue
-            elif samples[i] > 0.5:
-                width = keypoints_on_image.shape[1]
-                for keypoint in keypoints_on_image.keypoints:
-                    keypoint.x = width - float(keypoint.x)
-        return keypoints_on_images
+                if batch.keypoints is not None:
+                    kpsoi = batch.keypoints[i]
+                    width = kpsoi.shape[1]
+                    for kp in kpsoi.keypoints:
+                        kp.x = width - float(kp.x)
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        # TODO maybe reverse the order of points afterwards? the flip probably
-        #      inverts them
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+                if batch.bounding_boxes is not None:
+                    bbsoi = batch.bounding_boxes[i]
+                    width = bbsoi.shape[1]
+                    for bb in bbsoi.bounding_boxes:
+                        # after flip, x1 ends up right of x2
+                        x1, x2 = bb.x1, bb.x2
+                        bb.x1 = width - x2
+                        bb.x2 = width - x1
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        # TODO maybe reverse the order of points afterwards? the flip probably
-        #      inverts them
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
+                if batch.polygons is not None:
+                    psoi = batch.polygons[i]
+                    width = psoi.shape[1]
+                    for poly in psoi.polygons:
+                        # TODO maybe reverse the order of points afterwards?
+                        #      the flip probably inverts them
+                        poly.exterior[:, 0] = width - poly.exterior[:, 0]
 
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
+                if batch.line_strings is not None:
+                    lsoi = batch.line_strings[i]
+                    width = lsoi.shape[1]
+                    for ls in lsoi.line_strings:
+                        # TODO maybe reverse the order of points afterwards?
+                        #      the flip probably inverts them
+                        ls.coords[:, 0] = width - ls.coords[:, 0]
+
+        return batch
 
     def get_parameters(self):
         return [self.p]
@@ -970,67 +957,56 @@ class Flipud(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        nb_images = len(images)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i, (image, sample) in enumerate(zip(images, samples)):
-            if sample > 0.5:
-                # We currently do not use flip.flipud() here, because that
-                # saves a function call.
-                images[i] = image[::-1, ...]
-        return images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        samples = self.p.draw_samples((batch.nb_rows,),
+                                      random_state=random_state)
+        for i, sample in enumerate(samples):
+            if sample >= 0.5:
+                if batch.images is not None:
+                    # We currently do not use flip.flipud() here, because that
+                    # saves a function call.
+                    batch.images[i] = batch.images[i][::-1, ...]
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        arrs_flipped = self._augment_images(
-            [heatmaps_i.arr_0to1 for heatmaps_i in heatmaps],
-            random_state=random_state,
-            parents=parents,
-            hooks=hooks
-        )
-        for heatmaps_i, arr_flipped in zip(heatmaps, arrs_flipped):
-            heatmaps_i.arr_0to1 = arr_flipped
-        return heatmaps
+                if batch.heatmaps is not None:
+                    batch.heatmaps[i].arr_0to1 = \
+                        batch.heatmaps[i].arr_0to1[::-1, ...]
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        arrs_flipped = self._augment_images(
-            [segmaps_i.arr for segmaps_i in segmaps],
-            random_state=random_state,
-            parents=parents,
-            hooks=hooks
-        )
-        for segmaps_i, arr_flipped in zip(segmaps, arrs_flipped):
-            segmaps_i.arr = arr_flipped
-        return segmaps
+                if batch.segmentation_maps is not None:
+                    batch.segmentation_maps[i].arr = \
+                        batch.segmentation_maps[i].arr[::-1, ...]
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        nb_images = len(keypoints_on_images)
-        samples = self.p.draw_samples((nb_images,), random_state=random_state)
-        for i, keypoints_on_image in enumerate(keypoints_on_images):
-            if not keypoints_on_image.keypoints:
-                continue
-            elif samples[i] > 0.5:
-                height = keypoints_on_image.shape[0]
-                for keypoint in keypoints_on_image.keypoints:
-                    keypoint.y = height - float(keypoint.y)
-        return keypoints_on_images
+                if batch.keypoints is not None:
+                    kpsoi = batch.keypoints[i]
+                    height = kpsoi.shape[0]
+                    for kp in kpsoi.keypoints:
+                        kp.y = height - float(kp.y)
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        # TODO how does flipping affect the point order?
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+                if batch.bounding_boxes is not None:
+                    bbsoi = batch.bounding_boxes[i]
+                    height = bbsoi.shape[0]
+                    for bb in bbsoi.bounding_boxes:
+                        # after flip, y1 ends up right of y2
+                        y1, y2 = bb.y1, bb.y2
+                        bb.y1 = height - y2
+                        bb.y2 = height - y1
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        # TODO how does flipping affect the point order?
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
+                if batch.polygons is not None:
+                    psoi = batch.polygons[i]
+                    height = psoi.shape[0]
+                    for poly in psoi.polygons:
+                        # TODO maybe reverse the order of points afterwards?
+                        #      the flip probably inverts them
+                        poly.exterior[:, 1] = height - poly.exterior[:, 1]
 
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
+                if batch.line_strings is not None:
+                    lsoi = batch.line_strings[i]
+                    height = lsoi.shape[0]
+                    for ls in lsoi.line_strings:
+                        # TODO maybe reverse the order of points afterwards?
+                        #      the flip probably inverts them
+                        ls.coords[:, 1] = height - ls.coords[:, 1]
+
+        return batch
 
     def get_parameters(self):
         return [self.p]

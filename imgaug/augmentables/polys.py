@@ -15,6 +15,56 @@ from .. import random as iarandom
 from .utils import normalize_shape, interpolate_points
 
 
+def recover_psois_(psois, psois_orig, recoverer, random_state):
+    """Apply a polygon recoverer to input polygons in-place.
+
+    Parameters
+    ----------
+    psois : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
+        The possibly broken polygons, e.g. after augmentation.
+        The `recoverer` is applied to them.
+
+    psois_orig : list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
+        Original polygons that were later changed to `psois`.
+        They are an extra input to `recoverer`.
+
+    recoverer : imgaug.augmentables.polys._ConcavePolygonRecoverer
+        The polygon recoverer used to repair broken input polygons.
+
+    random_state : None or int or RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+        An RNG to use during the polygon recovery.
+
+    Returns
+    -------
+    list of imgaug.augmentables.polys.PolygonsOnImage or imgaug.augmentables.polys.PolygonsOnImage
+        List of repaired polygons. Note that this is `psois`, which was
+        changed in-place.
+
+    """
+    input_was_list = True
+    if not isinstance(psois, list):
+        input_was_list = False
+        psois = [psois]
+        psois_orig = [psois_orig]
+
+    for i, psoi in enumerate(psois):
+        for j, polygon in enumerate(psoi.polygons):
+            poly_rec = recoverer.recover_from(
+                polygon.exterior, psois_orig[i].polygons[j],
+                random_state)
+
+            # Don't write into `polygon.exterior[...] = ...` because the
+            # shapes might have changed. We could also first check if the
+            # shapes are identical and only then write in-place, but as the
+            # array for `poly_rec.exterior` was already created, that would
+            # not provide any benefits.
+            polygon.exterior = poly_rec.exterior
+
+    if not input_was_list:
+        return psois[0]
+    return psois
+
+
 # TODO somehow merge with BoundingBox
 # TODO add functions: simplify() (eg via shapely.ops.simplify()),
 # extend(all_sides=0, top=0, right=0, bottom=0, left=0),
@@ -1175,7 +1225,7 @@ class PolygonsOnImage(object):
     polygons : list of imgaug.augmentables.polys.Polygon
         List of polygons on the image.
 
-    shape : tuple of int
+    shape : tuple of int or ndarray
         The shape of the image on which the objects are placed.
         Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
         such an image shape.
@@ -1444,6 +1494,129 @@ class PolygonsOnImage(object):
             in self.polygons
         ]
         return PolygonsOnImage(polys_new, shape=self.shape)
+
+    def to_xy_array(self):
+        """Convert all polygon coordinates to one array of shape ``(N,2)``.
+
+        Returns
+        -------
+        (N, 2) ndarray
+            Array containing all xy-coordinates of all polygons within this
+            instance.
+
+        """
+        if self.empty:
+            return np.zeros((0, 2), dtype=np.float32)
+        return np.concatenate([poly.exterior for poly in self.polygons])
+
+    def fill_from_xy_array_(self, xy):
+        """Modify the corner coordinates of all polygons in-place.
+
+        .. note ::
+
+            This currently expects that `xy` contains exactly as many
+            coordinates as the polygons within this instance have corner
+            points. Otherwise, an ``AssertionError`` will be raised.
+
+        .. warning ::
+
+            This does not validate the new coordinates or repair the resulting
+            polygons. If bad coordinates are provided, the result will be
+            invalid polygons (e.g. self-intersections).
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray or iterable of iterable of number
+            XY-Coordinates of ``N`` corner points. ``N`` must match the
+            number of corner points in all polygons within this instance.
+
+        Returns
+        -------
+        PolygonsOnImage
+            This instance itself, with updated coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
+
+        counter = 0
+        for poly in self.polygons:
+            nb_points = len(poly.exterior)
+            assert counter + nb_points <= len(xy), (
+                "Received fewer points than there are corner points in the "
+                "exteriors of all polygons. Got %d points, expected %d." % (
+                    len(xy), sum([len(p.exterior) for p in self.polygons])))
+
+            poly.exterior[:, ...] = xy[counter:counter+nb_points]
+            counter += nb_points
+
+        assert counter == len(xy), (
+            "Expected to get exactly as many xy-coordinates as there are "
+            "points in the exteriors of all polygons within this instance. "
+            "Got %d points, could only assign %d points." % (
+                len(xy), counter,))
+
+        return self
+
+    def to_keypoints_on_image(self):
+        """Convert the polygons to one ``KeypointsOnImage`` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            A keypoints instance containing ``N`` coordinates for a total
+            of ``N`` points in all exteriors of the polygons within this
+            container. Order matches the order in ``polygons``.
+
+        """
+        from . import KeypointsOnImage
+        if self.empty:
+            return KeypointsOnImage([], shape=self.shape)
+        exteriors = np.concatenate(
+            [poly.exterior for poly in self.polygons],
+            axis=0)
+        return KeypointsOnImage.from_xy_array(exteriors, shape=self.shape)
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``PolygonsOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to convert back to polygons, i.e. the outputs
+            of ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        PolygonsOnImage
+            Polygons container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
+        polys = self.polygons
+        exteriors = [poly.exterior for poly in polys]
+        nb_points_exp = sum([len(exterior) for exterior in exteriors])
+        assert len(kpsoi.keypoints) == nb_points_exp, (
+            "Expected %d coordinates, got %d." % (
+                nb_points_exp, len(kpsoi.keypoints)))
+
+        xy_arr = kpsoi.to_xy_array()
+
+        counter = 0
+        for poly in polys:
+            exterior = poly.exterior
+            exterior[:, :] = xy_arr[counter:counter+len(exterior), :]
+            counter += len(exterior)
+        self.shape = kpsoi.shape
+        return self
 
     def copy(self):
         """Create a shallow copy of this object.

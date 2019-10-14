@@ -467,8 +467,10 @@ class KeypointsOnImage(object):
     keypoints : list of imgaug.augmentables.kps.Keypoint
         List of keypoints on the image.
 
-    shape : tuple of int
-        The shape of the image on which the keypoints are placed.
+    shape : tuple of int or ndarray
+        The shape of the image on which the objects are placed.
+        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
+        such an image shape.
 
     Examples
     --------
@@ -663,13 +665,12 @@ class KeypointsOnImage(object):
 
         Parameters
         ----------
-        xy : (N, 2) ndarray
+        xy : (N, 2) ndarray or iterable of iterable of number
             Coordinates of ``N`` keypoints on an image, given as a ``(N,2)``
             array of xy-coordinates.
 
         shape : tuple of int or ndarray
             The shape of the image on which the keypoints are placed.
-
 
         Returns
         -------
@@ -677,8 +678,58 @@ class KeypointsOnImage(object):
             :class:`KeypointsOnImage` object containing the array's keypoints.
 
         """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        if xy.shape[0] == 0:
+            return KeypointsOnImage([], shape)
+
+        assert xy.ndim == 2 and xy.shape[-1] == 2, (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
         keypoints = [Keypoint(x=coord[0], y=coord[1]) for coord in xy]
         return KeypointsOnImage(keypoints, shape)
+
+    def fill_from_xy_array_(self, xy):
+        """Modify the keypoint coordinates of this instance in-place.
+
+        .. note ::
+
+            This currently expects that `xy` contains exactly as many
+            coordinates as there are keypoints in this instance. Otherwise,
+            an ``AssertionError`` will be raised.
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray or iterable of iterable of number
+            Coordinates of ``N`` keypoints on an image, given as a ``(N,2)``
+            array of xy-coordinates. ``N`` must match the number of keypoints
+            in this instance.
+
+        Returns
+        -------
+        KeypointsOnImage
+            This instance itself, with updated keypoint coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
+
+        assert len(xy) == len(self.keypoints), (
+            "Expected to receive as many keypoint coordinates as there are "
+            "currently keypoints in this instance. Got %d, expected %d." % (
+                len(xy), len(self.keypoints)))
+
+        for kp, (x, y) in zip(self.keypoints, xy):
+            kp.x = x
+            kp.y = y
+
+        return self
 
     # TODO add to_gaussian_heatmaps(), from_gaussian_heatmaps()
     def to_keypoint_image(self, size=1):
@@ -964,6 +1015,52 @@ class KeypointsOnImage(object):
         if nb_channels is not None:
             out_shape += (nb_channels,)
         return KeypointsOnImage(keypoints, shape=out_shape)
+
+    # TODO add to_keypoints_on_image_() and call that wherever possible
+    def to_keypoints_on_image(self):
+        """Convert the keypoints to one ``KeypointsOnImage`` instance.
+
+        This method exists for consistency with ``BoundingBoxesOnImage``,
+        ``PolygonsOnImage`` and ``LineStringsOnImage``.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Copy of this keypoints instance.
+
+        """
+        return self.deepcopy()
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``KeypointsOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to copy data from, i.e. the outputs of
+            ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        KeypointsOnImage
+            Keypoints container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
+        nb_points_exp = len(self.keypoints)
+        assert len(kpsoi.keypoints) == nb_points_exp, (
+            "Expected %d coordinates, got %d." % (
+                nb_points_exp, len(kpsoi.keypoints)))
+
+        for kp_target, kp_source in zip(self.keypoints, kpsoi.keypoints):
+            kp_target.x = kp_source.x
+            kp_target.y = kp_source.y
+
+        self.shape = kpsoi.shape
+        return self
 
     def copy(self, keypoints=None, shape=None):
         """Create a shallow copy of the ``KeypointsOnImage`` object.

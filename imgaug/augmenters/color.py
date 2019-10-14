@@ -466,60 +466,28 @@ class WithColorspace(meta.Augmenter):
         self.from_colorspace = from_colorspace
         self.children = meta.handle_children_list(children, self.name, "then")
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        if self._is_propagating(images, hooks, parents):
-            result = change_colorspaces_(
-                result,
-                to_colorspaces=self.to_colorspace,
-                from_colorspaces=self.from_colorspace)
-            result = self.children.augment_images(
-                images=result,
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            # TODO this did not fail in the tests when there was only one
+            #      `if` with all three steps in it
+            if batch.images is not None:
+                batch.images = change_colorspaces_(
+                    batch.images,
+                    to_colorspaces=self.to_colorspace,
+                    from_colorspaces=self.from_colorspace)
+
+            batch = self.children.augment_batch(
+                batch,
                 parents=parents + [self],
                 hooks=hooks
             )
-            result = change_colorspaces_(
-                result,
-                to_colorspaces=self.from_colorspace,
-                from_colorspaces=self.to_colorspace)
-        return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_nonimages(
-            heatmaps, self.children.augment_heatmaps, parents,
-            hooks)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_nonimages(
-            segmaps, self.children.augment_segmentation_maps,
-            parents, hooks)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return self._augment_nonimages(
-            keypoints_on_images, self.children.augment_keypoints, parents,
-            hooks)
-
-    # TODO add test for this
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_nonimages(
-            polygons_on_images, self.children.augment_polygons, parents,
-            hooks)
-
-    def _augment_nonimages(self, augmentables, children_augfunc, parents,
-                           hooks):
-        if self._is_propagating(augmentables, hooks, parents):
-            augmentables = children_augfunc(
-                augmentables,
-                parents=parents + [self],
-                hooks=hooks
-            )
-        return augmentables
-
-    def _is_propagating(self, augmentables, hooks, parents):
-        return (hooks is None or hooks.is_propagating(
-            augmentables, augmenter=self, parents=parents, default=True))
+            if batch.images is not None:
+                batch.images = change_colorspaces_(
+                    batch.images,
+                    to_colorspaces=self.from_colorspace,
+                    from_colorspaces=self.to_colorspace)
+        return batch
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -627,97 +595,71 @@ class WithHueAndSaturation(meta.Augmenter):
         # for Add or Multiply
         self._internal_dtype = np.int16
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
-        if self._is_propagating(images, hooks, parents):
-            # RGB (or other source colorspace) -> HSV
-            images_hsv = change_colorspaces_(
-                images, CSPACE_HSV, self.from_colorspace)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            images_hs, images_hsv = self._images_to_hsv_(batch.images)
+            batch.images = images_hs
 
-            # HSV -> HS
-            hue_and_sat = []
-            for image_hsv in images_hsv:
-                image_hsv = image_hsv.astype(np.int16)
-                # project hue from [0,180] to [0,255] so that child augmenters
-                # can assume the same value range for all channels
-                hue = (
-                    (image_hsv[:, :, 0].astype(np.float32) / 180.0) * 255.0
-                ).astype(self._internal_dtype)
-                saturation = image_hsv[:, :, 1]
-                hue_and_sat.append(np.stack([hue, saturation], axis=-1))
-            if ia.is_np_array(images_hsv):
-                hue_and_sat = np.stack(hue_and_sat, axis=0)
+            batch = self.children.augment_batch(
+                batch, parents=parents + [self], hooks=hooks)
 
-            # apply child augmenters to HS
-            hue_and_sat_aug = self.children.augment_images(
-                images=hue_and_sat,
-                parents=parents + [self],
-                hooks=hooks
+            batch.images = self._hs_to_images_(batch.images, images_hsv)
+
+        return batch
+
+    def _images_to_hsv_(self, images):
+        if images is None:
+            return None, None
+
+        # RGB (or other source colorspace) -> HSV
+        images_hsv = change_colorspaces_(
+            images, CSPACE_HSV, self.from_colorspace)
+
+        # HSV -> HS
+        images_hs = []
+        for image_hsv in images_hsv:
+            image_hsv = image_hsv.astype(np.int16)
+            # project hue from [0,180] to [0,255] so that child augmenters
+            # can assume the same value range for all channels
+            hue = (
+                (image_hsv[:, :, 0].astype(np.float32) / 180.0) * 255.0
+            ).astype(self._internal_dtype)
+            saturation = image_hsv[:, :, 1]
+            images_hs.append(np.stack([hue, saturation], axis=-1))
+        if ia.is_np_array(images_hsv):
+            images_hs = np.stack(images_hs, axis=0)
+        return images_hs, images_hsv
+
+    def _hs_to_images_(self, images_hs, images_hsv):
+        if images_hs is None:
+            return None
+        # postprocess augmented HS int16 data
+        # hue: modulo to [0, 255] then project to [0, 360/2]
+        # saturation: clip to [0, 255]
+        # + convert to uint8
+        # + re-attach V channel to HS
+        hue_and_sat_proj = []
+        for i, hs_aug in enumerate(images_hs):
+            hue_aug = hs_aug[:, :, 0]
+            sat_aug = hs_aug[:, :, 1]
+            hue_aug = (
+                (np.mod(hue_aug, 255).astype(np.float32) / 255.0)
+                * (360/2)
+            ).astype(np.uint8)
+            sat_aug = iadt.clip_(sat_aug, 0, 255).astype(np.uint8)
+            hue_and_sat_proj.append(
+                np.stack([hue_aug, sat_aug, images_hsv[i][:, :, 2]],
+                         axis=-1)
             )
+        if ia.is_np_array(images_hs):
+            hue_and_sat_proj = np.uint8(hue_and_sat_proj)
 
-            # postprocess augmented HS int16 data
-            # hue: modulo to [0, 255] then project to [0, 360/2]
-            # saturation: clip to [0, 255]
-            # + convert to uint8
-            # + re-attach V channel to HS
-            hue_and_sat_proj = []
-            for i, hs_aug in enumerate(hue_and_sat_aug):
-                hue_aug = hs_aug[:, :, 0]
-                sat_aug = hs_aug[:, :, 1]
-                hue_aug = (
-                    (np.mod(hue_aug, 255).astype(np.float32) / 255.0) * (360/2)
-                ).astype(np.uint8)
-                sat_aug = iadt.clip_(sat_aug, 0, 255).astype(np.uint8)
-                hue_and_sat_proj.append(
-                    np.stack([hue_aug, sat_aug, images_hsv[i][:, :, 2]],
-                             axis=-1)
-                )
-            if ia.is_np_array(hue_and_sat_aug):
-                hue_and_sat_proj = np.uint8(hue_and_sat_proj)
-
-            # HSV -> RGB (or whatever the source colorspace was)
-            result = change_colorspaces_(
-                hue_and_sat_proj,
-                to_colorspaces=self.from_colorspace,
-                from_colorspaces=CSPACE_HSV)
-        return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_nonimages(
-            heatmaps, self.children.augment_heatmaps, parents,
-            hooks)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        return self._augment_nonimages(
-            segmaps, self.children.augment_segmentation_maps,
-            parents, hooks)
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return self._augment_nonimages(
-            keypoints_on_images, self.children.augment_keypoints, parents,
-            hooks)
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_nonimages(
-            polygons_on_images, self.children.augment_polygons, parents,
-            hooks)
-
-    def _augment_nonimages(self, augmentables, children_augfunc, parents,
-                           hooks):
-        if self._is_propagating(augmentables, hooks, parents):
-            augmentables = children_augfunc(
-                augmentables,
-                parents=parents + [self],
-                hooks=hooks
-            )
-        return augmentables
-
-    def _is_propagating(self, augmentables, hooks, parents):
-        return (hooks is None or hooks.is_propagating(
-            augmentables, augmenter=self, parents=parents, default=True))
+        # HSV -> RGB (or whatever the source colorspace was)
+        images_rgb = change_colorspaces_(
+            hue_and_sat_proj,
+            to_colorspaces=self.from_colorspace,
+            from_colorspaces=CSPACE_HSV)
+        return images_rgb
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -1273,10 +1215,12 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         return samples_hue, samples_saturation
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
 
-        result = images
+        images = batch.images
+        input_dtypes = iadt.copy_dtypes_for_restore(images, force_list=True)
 
         # surprisingly, placing this here seems to be slightly slower than
         # placing it inside the loop
@@ -1311,9 +1255,9 @@ class AddToHueAndSaturation(meta.Augmenter):
                 image_hsv,
                 to_colorspace=self.from_colorspace,
                 from_colorspace=CSPACE_HSV)
-            result[i] = image_rgb
+            batch.images[i] = image_rgb
 
-        return result
+        return batch
 
     def _transform_image_cv2(self, image_hsv, hue, saturation):
         # this has roughly the same speed as the numpy backend
@@ -1715,14 +1659,16 @@ class ChangeColorspace(meta.Augmenter):
             (n_augmentables,), random_state=rss[1])
         return alphas, to_colorspaces
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         alphas, to_colorspaces = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
+        for i, image in enumerate(images):
             alpha = alphas[i]
             to_colorspace = to_colorspaces[i]
-            image = images[i]
 
             assert to_colorspace in CSPACE_ALL, (
                 "Expected 'to_colorspace' to be one of %s. Got %s." % (
@@ -1733,9 +1679,10 @@ class ChangeColorspace(meta.Augmenter):
             else:
                 image_aug = change_colorspace_(image, to_colorspace,
                                                self.from_colorspace)
-                result[i] = blend.blend_alpha(image_aug, image, alpha, self.eps)
+                batch.images[i] = blend.blend_alpha(image_aug, image, alpha,
+                                                    self.eps)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.to_colorspace, self.alpha]
@@ -1846,14 +1793,18 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         return n_colors
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         rss = random_state.duplicate(1 + len(images))
         n_colors = self._draw_samples(len(images), rss[-1])
 
-        result = images
         for i, image in enumerate(images):
-            result[i] = self._augment_single_image(image, n_colors[i], rss[i])
-        return result
+            batch.images[i] = self._augment_single_image(image, n_colors[i],
+                                                         rss[i])
+        return batch
 
     def _augment_single_image(self, image, n_colors, random_state):
         assert image.shape[-1] in [1, 3, 4], (

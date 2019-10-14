@@ -73,6 +73,73 @@ class TestNormalization(unittest.TestCase):
         assert observed[0].dtype.name == "uint8"
         assert observed[1].dtype.name == "uint8"
 
+        # ---------
+        # images turned to list during augmentation
+        # ---------
+        # different shapes, each 3D
+        images = [np.zeros((3, 4, 1), dtype=np.uint8),
+                  np.zeros((4, 3, 1), dtype=np.uint8)]
+        images_old = np.zeros((2, 4, 4, 1), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(images, images_old)
+        assert isinstance(observed, list)
+        assert len(observed) == 2
+        assert observed[0] is images[0]
+        assert observed[1] is images[1]
+
+        # different shapes, each 2D
+        images = [np.zeros((3, 4, 1), dtype=np.uint8),
+                  np.zeros((4, 3, 1), dtype=np.uint8)]
+        images_old = np.zeros((2, 4, 4), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(images, images_old)
+        assert isinstance(observed, list)
+        assert len(observed) == 2
+        assert observed[0].shape == (3, 4)
+        assert observed[1].shape == (4, 3)
+
+        # same shapes, each 3D
+        images = [np.zeros((3, 4, 1), dtype=np.uint8),
+                  np.zeros((3, 4, 1), dtype=np.uint8)]
+        images_old = np.zeros((2, 4, 4, 1), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(images, images_old)
+        # assert ia.is_np_array(observed)
+        # assert observed.shape == (2, 3, 4, 1)
+        assert isinstance(observed, list)
+        assert len(observed) == 2
+        assert observed[0] is images[0]
+        assert observed[1] is images[1]
+
+        # same shapes, each 2D
+        images = [np.zeros((3, 4, 1), dtype=np.uint8),
+                  np.zeros((3, 4, 1), dtype=np.uint8)]
+        images_old = np.zeros((2, 4, 4), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(images, images_old)
+        # assert ia.is_np_array(observed)
+        # assert observed.shape == (2, 3, 4)
+        assert isinstance(observed, list)
+        assert len(observed) == 2
+        assert observed[0].shape == (3, 4)
+        assert observed[1].shape == (3, 4)
+
+        # single item in list
+        images = [np.zeros((3, 4, 1), dtype=np.uint8)]
+        images_old = np.zeros((1, 4, 4), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(images, images_old)
+        # assert ia.is_np_array(observed)
+        # assert observed.shape == (1, 3, 4)
+        assert isinstance(observed, list)
+        assert len(observed) == 1
+        assert observed[0].shape == (3, 4)
+
+        # single item in list, original was 2D
+        images = [np.zeros((3, 4, 1), dtype=np.uint8)]
+        images_old = np.zeros((4, 4), dtype=np.uint8)
+        observed = normalization.invert_normalize_images(images, images_old)
+        # assert ia.is_np_array(observed)
+        # assert observed.shape == (3, 4)
+        assert isinstance(observed, list)
+        assert len(observed) == 1
+        assert observed[0].shape == (3, 4)
+
         with self.assertRaises(ValueError):
             normalization.invert_normalize_images(False, False)
 

@@ -155,9 +155,13 @@ class FastSnowyLandscape(meta.Augmenter):
             (nb_augmentables,), rss[0])
         return thresh_samples, lmul_samples
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         thresh_samples, lmul_samples = self._draw_samples(images, random_state)
-        result = images
 
         gen = enumerate(zip(images, thresh_samples, lmul_samples))
         for i, (image, thresh, lmul) in gen:
@@ -173,9 +177,9 @@ class FastSnowyLandscape(meta.Augmenter):
             image_rgb = colorlib.change_colorspace_(
                 image_hls, self.from_colorspace, colorlib.CSPACE_HLS)
 
-            result[i] = image_rgb
+            batch.images[i] = image_rgb
 
-        return result
+        return batch
 
     def get_parameters(self):
         return [self.lightness_threshold, self.lightness_multiplier]
@@ -347,12 +351,16 @@ class CloudLayer(meta.Augmenter):
         self.density_multiplier = iap.handle_continuous_param(
             density_multiplier, "density_multiplier")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         rss = random_state.duplicate(len(images))
-        result = images
         for i, (image, rs) in enumerate(zip(images, rss)):
-            result[i] = self.draw_on_image(image, rs)
-        return result
+            batch.images[i] = self.draw_on_image(image, rs)
+        return batch
 
     def get_parameters(self):
         return [self.intensity_mean,
@@ -815,12 +823,16 @@ class SnowflakesLayer(meta.Augmenter):
         # (height, width), same for all images
         self.gate_noise_size = (8, 8)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         rss = random_state.duplicate(len(images))
-        result = images
         for i, (image, rs) in enumerate(zip(images, rss)):
-            result[i] = self.draw_on_image(image, rs)
-        return result
+            batch.images[i] = self.draw_on_image(image, rs)
+        return batch
 
     def get_parameters(self):
         return [self.density,

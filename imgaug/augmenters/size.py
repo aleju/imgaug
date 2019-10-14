@@ -27,6 +27,7 @@ List of augmenters:
 from __future__ import print_function, division, absolute_import
 
 import re
+import functools
 
 import numpy as np
 import six.moves as sm
@@ -573,57 +574,75 @@ class Resize(meta.Augmenter):
                 "got %s." % (type(interpolation),))
         return interpolation
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        nb_rows = batch.nb_rows
+        samples = self._draw_samples(nb_rows, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            # TODO this uses the same interpolation as for images for heatmaps
+            #      while other augmenters resort to cubic
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, "arr_0to1", samples)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, "arr",
+                (samples[0], samples[1], [None] * nb_rows))
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
+        input_was_array = False
+        input_dtype = None
+        if ia.is_np_array(images):
+            input_was_array = True
+            input_dtype = images.dtype
+
+        samples_a, samples_b, samples_ip = samples
         result = []
-        nb_images = len(images)
-        samples_a, samples_b, samples_ip = self._draw_samples(
-            nb_images, random_state, do_sample_ip=True)
-        for i in sm.xrange(nb_images):
-            image = images[i]
-            sample_a, sample_b, sample_ip = (samples_a[i], samples_b[i],
-                                             samples_ip[i])
-            h, w = self._compute_height_width(image.shape, sample_a, sample_b,
-                                              self.size_order)
+        for i, image in enumerate(images):
+            h, w = self._compute_height_width(image.shape, samples_a[i],
+                                              samples_b[i], self.size_order)
             image_rs = ia.imresize_single_image(image, (h, w),
-                                                interpolation=sample_ip)
+                                                interpolation=samples_ip[i])
             result.append(image_rs)
 
-        if not isinstance(images, list):
+        if input_was_array:
             all_same_size = (len(set([image.shape for image in result])) == 1)
             if all_same_size:
-                result = np.array(result, dtype=images.dtype)
+                result = np.array(result, dtype=input_dtype)
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_heatmaps_segmaps(heatmaps, random_state,
-                                              do_sample_ip=True)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_heatmaps_segmaps(segmaps, random_state,
-                                              do_sample_ip=False)
-
-    def _augment_heatmaps_segmaps(self, augmentables, random_state,
-                                  do_sample_ip):
+    def _augment_maps_by_samples(self, augmentables, arr_attr_name, samples):
         result = []
-        nb_items = len(augmentables)
-        samples_h, samples_w, samples_ip = self._draw_samples(
-            nb_items, random_state, do_sample_ip=do_sample_ip)
-        for i in sm.xrange(nb_items):
-            augmentable = augmentables[i]
-            arr_shape = (
-                augmentable.arr.shape
-                if hasattr(augmentable, "arr")
-                else augmentable.arr_0to1.shape)
+        samples_h, samples_w, samples_ip = samples
+
+        for i, augmentable in enumerate(augmentables):
+            arr = getattr(augmentable, arr_attr_name)
+            arr_shape = arr.shape
             img_shape = augmentable.shape
-            sample_h, sample_w = samples_h[i], samples_w[i]
             h_img, w_img = self._compute_height_width(
-                img_shape, sample_h, sample_w, self.size_order)
+                img_shape, samples_h[i], samples_w[i], self.size_order)
             h = int(np.round(h_img * (arr_shape[0] / img_shape[0])))
             w = int(np.round(w_img * (arr_shape[1] / img_shape[1])))
             h = max(h, 1)
             w = max(w, 1)
-            if do_sample_ip:
+            if samples_ip[0] is not None:
                 # TODO change this for heatmaps to always have cubic or
                 #      automatic interpolation?
                 augmentable_resize = augmentable.resize(
@@ -635,40 +654,20 @@ class Resize(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
-        nb_images = len(keypoints_on_images)
-        samples_a, samples_b, _samples_ip = self._draw_samples(
-            nb_images, random_state, do_sample_ip=False)
-        for i in sm.xrange(nb_images):
-            keypoints_on_image = keypoints_on_images[i]
-            sample_a, sample_b = samples_a[i], samples_b[i]
+        samples_a, samples_b, _samples_ip = samples
+        for i, kpsoi in enumerate(kpsois):
             h, w = self._compute_height_width(
-                keypoints_on_image.shape, sample_a, sample_b, self.size_order)
-            new_shape = (h, w) + keypoints_on_image.shape[2:]
-            keypoints_on_image_rs = keypoints_on_image.on(new_shape)
+                kpsoi.shape, samples_a[i], samples_b[i], self.size_order)
+            new_shape = (h, w) + kpsoi.shape[2:]
+            keypoints_on_image_rs = kpsoi.on(new_shape)
 
             result.append(keypoints_on_image_rs)
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _draw_samples(self, nb_images, random_state, do_sample_ip=True):
+    def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(3)
         if isinstance(self.size, tuple):
             samples_h = self.size[0].draw_samples(nb_images,
@@ -678,11 +677,9 @@ class Resize(meta.Augmenter):
         else:
             samples_h = self.size.draw_samples(nb_images, random_state=rngs[0])
             samples_w = samples_h
-        if do_sample_ip:
-            samples_ip = self.interpolation.draw_samples(nb_images,
-                                                         random_state=rngs[2])
-        else:
-            samples_ip = None
+
+        samples_ip = self.interpolation.draw_samples(nb_images,
+                                                     random_state=rngs[2])
         return samples_h, samples_w, samples_ip
 
     @classmethod
@@ -1143,17 +1140,46 @@ class CropAndPad(meta.Augmenter):
                 "StochasticParameter, got type %s." % (type(percent),))
         return all_sides, top, right, bottom, left
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        shapes = batch.get_rowwise_shapes()
+        samples = self._draw_samples(random_state, shapes)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps,
+                self._pad_mode_heatmaps, self._pad_cval_heatmaps,
+                samples)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps,
+                self._pad_mode_segmentation_maps,
+                self._pad_cval_segmentation_maps, samples)
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         result = []
-        nb_images = len(images)
-        rngs = random_state.duplicate(nb_images)
-        for image, rng in zip(images, rngs):
-            height, width = image.shape[0:2]
-            samples = self._draw_samples_image(rng, height, width)
+        for i, image in enumerate(images):
+            samples_i = samples[i]
 
             image_cr_pa = _crop_and_pad_arr(
-                image, samples.croppings, samples.paddings, samples.pad_mode,
-                samples.pad_cval, self.keep_size)
+                image, samples_i.croppings, samples_i.paddings,
+                samples_i.pad_mode, samples_i.pad_cval, self.keep_size)
 
             result.append(image_cr_pa)
 
@@ -1167,25 +1193,11 @@ class CropAndPad(meta.Augmenter):
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            heatmaps,
-            self._pad_mode_heatmaps, self._pad_cval_heatmaps,
-            random_state)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            segmaps,
-            self._pad_mode_segmentation_maps, self._pad_cval_segmentation_maps,
-            random_state)
-
-    def _augment_hms_and_segmaps(self, augmentables, pad_mode, pad_cval,
-                                 random_state):
+    def _augment_maps_by_samples(self, augmentables, pad_mode, pad_cval,
+                                 samples):
         result = []
-        rngs = random_state.duplicate(len(augmentables))
-        for augmentable, rng in zip(augmentables, rngs):
-            height_img, width_img = augmentable.shape[0:2]
-            samples_img = self._draw_samples_image(rng, height_img, width_img)
+        for i, augmentable in enumerate(augmentables):
+            samples_img = samples[i]
 
             augmentable = _crop_and_pad_hms_or_segmaps_(
                 augmentable,
@@ -1204,126 +1216,130 @@ class CropAndPad(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         result = []
-        nb_images = len(keypoints_on_images)
-        rngs = random_state.duplicate(nb_images)
-        for keypoints_on_image, rng in zip(keypoints_on_images, rngs):
-            height, width = keypoints_on_image.shape[0:2]
-            samples = self._draw_samples_image(rng, height, width)
+        for i, keypoints_on_image in enumerate(keypoints_on_images):
+            samples_i = samples[i]
 
             kpsoi_aug = _crop_and_pad_kpsoi(
-                keypoints_on_image, croppings_img=samples.croppings,
-                paddings_img=samples.paddings, keep_size=self.keep_size)
+                keypoints_on_image, croppings_img=samples_i.croppings,
+                paddings_img=samples_i.paddings, keep_size=self.keep_size)
             result.append(kpsoi_aug)
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
+    def _draw_samples(self, random_state, shapes):
+        nb_rows = len(shapes)
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _draw_samples_image(self, random_state, height, width):
         if self.mode == "noop":
-            top = right = bottom = left = 0
+            top = right = bottom = left = np.full((nb_rows,), 0,
+                                                  dtype=np.int32)
         else:
             if self.all_sides is not None:
                 if self.sample_independently:
                     samples = self.all_sides.draw_samples(
-                        (4,), random_state=random_state)
-                    top, right, bottom, left = samples
+                        (nb_rows, 4), random_state=random_state)
+                    top = samples[:, 0]
+                    right = samples[:, 1]
+                    bottom = samples[:, 2]
+                    left = samples[:, 3]
                 else:
-                    sample = self.all_sides.draw_sample(
-                        random_state=random_state)
+                    sample = self.all_sides.draw_samples(
+                        (nb_rows,), random_state=random_state)
                     top = right = bottom = left = sample
             else:
-                top = self.top.draw_sample(random_state=random_state)
-                right = self.right.draw_sample(random_state=random_state)
-                bottom = self.bottom.draw_sample(random_state=random_state)
-                left = self.left.draw_sample(random_state=random_state)
+                top = self.top.draw_samples(
+                    (nb_rows,), random_state=random_state)
+                right = self.right.draw_samples(
+                    (nb_rows,), random_state=random_state)
+                bottom = self.bottom.draw_samples(
+                    (nb_rows,), random_state=random_state)
+                left = self.left.draw_samples(
+                    (nb_rows,), random_state=random_state)
 
             if self.mode == "px":
                 # no change necessary for pixel values
                 pass
             elif self.mode == "percent":
                 # percentage values have to be transformed to pixel values
-                top = _int_r(height * top)
-                right = _int_r(width * right)
-                bottom = _int_r(height * bottom)
-                left = _int_r(width * left)
+                shapes_arr = np.array([shape[0:2] for shape in shapes],
+                                      dtype=np.float32)
+                heights = shapes_arr[:, 0]
+                widths = shapes_arr[:, 1]
+                top = np.round(heights * top).astype(np.int32)
+                right = np.round(widths * right).astype(np.int32)
+                bottom = np.round(heights * bottom).astype(np.int32)
+                left = np.round(widths * left).astype(np.int32)
             else:
                 raise Exception("Invalid mode")
 
-        crop_top = (-1) * top if top < 0 else 0
-        crop_right = (-1) * right if right < 0 else 0
-        crop_bottom = (-1) * bottom if bottom < 0 else 0
-        crop_left = (-1) * left if left < 0 else 0
+        def _only_above_zero(arr):
+            arr = np.copy(arr)
+            mask = (arr < 0)
+            arr[mask] = 0
+            return arr
 
-        pad_top = top if top > 0 else 0
-        pad_right = right if right > 0 else 0
-        pad_bottom = bottom if bottom > 0 else 0
-        pad_left = left if left > 0 else 0
+        crop_top = _only_above_zero((-1) * top)
+        crop_right = _only_above_zero((-1) * right)
+        crop_bottom = _only_above_zero((-1) * bottom)
+        crop_left = _only_above_zero((-1) * left)
 
-        pad_mode = self.pad_mode.draw_sample(random_state=random_state)
-        pad_cval = self.pad_cval.draw_sample(random_state=random_state)
+        pad_top = _only_above_zero(top)
+        pad_right = _only_above_zero(right)
+        pad_bottom = _only_above_zero(bottom)
+        pad_left = _only_above_zero(left)
 
-        crop_top, crop_right, crop_bottom, crop_left = _crop_prevent_zero_size(
-            height, width, crop_top, crop_right, crop_bottom, crop_left)
+        pad_mode = self.pad_mode.draw_samples((nb_rows,),
+                                              random_state=random_state)
+        pad_cval = self.pad_cval.draw_samples((nb_rows,),
+                                              random_state=random_state)
 
-        assert (
-            crop_top >= 0
-            and crop_right >= 0
-            and crop_bottom >= 0
-            and crop_left >= 0), (
-            "Expected to generate only crop amounts >=0, "
-            "got %d, %d, %d, %d (top, right, bottom, left)." % (
-                crop_top, crop_right, crop_bottom, crop_left))
+        # TODO vectorize this part -- especially return only one instance
+        result = []
+        for i, shape in enumerate(shapes):
+            height, width = shape[0:2]
+            crop_top_i, crop_right_i, crop_bottom_i, crop_left_i = \
+                _crop_prevent_zero_size(
+                    height, width,
+                    crop_top[i], crop_right[i], crop_bottom[i], crop_left[i])
 
-        any_crop_y = (crop_top > 0 or crop_bottom > 0)
-        if any_crop_y and crop_top + crop_bottom >= height:
-            ia.warn(
-                "Expected generated crop amounts in CropAndPad for top and "
-                "bottom image side to be less than the image's height, but "
-                "got %d (top) and %d (bottom) vs. image height %d. This will "
-                "result in an image with output height=1 (if input height "
-                "was >=1) or output height=0 (if input height was 0)." % (
-                    crop_top, crop_bottom, height)
-            )
+            # add here any_crop_y to not warn in case of zero height/width
+            # images
+            any_crop_y = (crop_top_i > 0 or crop_bottom_i > 0)
+            if any_crop_y and crop_top_i + crop_bottom_i >= height:
+                ia.warn(
+                    "Expected generated crop amounts in CropAndPad for top and "
+                    "bottom image side to be less than the image's height, but "
+                    "got %d (top) and %d (bottom) vs. image height %d. This "
+                    "will result in an image with output height=1 (if input "
+                    "height was >=1) or output height=0 (if input height "
+                    "was 0)." % (crop_top_i, crop_bottom_i, height))
 
-        any_crop_x = (crop_left > 0 or crop_right > 0)
-        if any_crop_x and crop_left + crop_right >= width:
-            ia.warn(
-                "Expected generated crop amounts in CropAndPad for left and "
-                "right image side to be less than the image's width, but "
-                "got %d (left) and %d (right) vs. image width %d. This will "
-                "result in an image with output width=1 (if input width "
-                "was >=1) or output width=0 (if input width was 0)." % (
-                    crop_left, crop_right, width)
-            )
+            # add here any_crop_x to not warn in case of zero height/width
+            # images
+            any_crop_x = (crop_left_i > 0 or crop_right_i > 0)
+            if any_crop_x and crop_left_i + crop_right_i >= width:
+                ia.warn(
+                    "Expected generated crop amounts in CropAndPad for left "
+                    "and right image side to be less than the image's width, "
+                    "but got %d (left) and %d (right) vs. image width %d. "
+                    "This will result in an image with output width=1 (if "
+                    "input width was >=1) or output width=0 (if input width "
+                    "was 0)." % (crop_left_i, crop_right_i, width))
 
-        return _CropAndPadSamplingResult(
-            crop_top=crop_top,
-            crop_right=crop_right,
-            crop_bottom=crop_bottom,
-            crop_left=crop_left,
-            pad_top=pad_top,
-            pad_right=pad_right,
-            pad_bottom=pad_bottom,
-            pad_left=pad_left,
-            pad_mode=pad_mode,
-            pad_cval=pad_cval)
+            result.append(
+                _CropAndPadSamplingResult(
+                    crop_top=crop_top_i,
+                    crop_right=crop_right_i,
+                    crop_bottom=crop_bottom_i,
+                    crop_left=crop_left_i,
+                    pad_top=pad_top[i],
+                    pad_right=pad_right[i],
+                    pad_bottom=pad_bottom[i],
+                    pad_left=pad_left[i],
+                    pad_mode=pad_mode[i],
+                    pad_cval=pad_cval[i]))
+        return result
 
     def get_parameters(self):
         return [self.all_sides, self.top, self.right, self.bottom, self.left,
@@ -1881,14 +1897,40 @@ class PadToFixedSize(meta.Augmenter):
         self._pad_cval_heatmaps = 0.0
         self._pad_cval_segmentation_maps = 0
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        samples = self._draw_samples(batch.nb_rows, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, samples, self._pad_mode_heatmaps,
+                self._pad_cval_heatmaps)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, samples, self._pad_mode_heatmaps,
+                self._pad_cval_heatmaps)
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         result = []
-        nb_images = len(images)
         width_min, height_min = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(nb_images,
-                                                                  random_state)
-        for i in sm.xrange(nb_images):
-            image = images[i]
+        pad_xs, pad_ys, pad_modes, pad_cvals = samples
+        for i, image in enumerate(images):
             height_image, width_image = image.shape[:2]
             paddings = self._calculate_paddings(height_image, width_image,
                                                 height_min, width_min,
@@ -1905,45 +1947,28 @@ class PadToFixedSize(meta.Augmenter):
         #      some might have been larger than desired height/width)
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         result = []
-        nb_images = len(keypoints_on_images)
         width_min, height_min = self.size
-        pad_xs, pad_ys, _, _ = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            keypoints_on_image = keypoints_on_images[i]
-            height_image, width_image = keypoints_on_image.shape[:2]
+        pad_xs, pad_ys, _, _ = samples
+        for i, kpsoi in enumerate(keypoints_on_images):
+            height_image, width_image = kpsoi.shape[:2]
             paddings_img = self._calculate_paddings(height_image, width_image,
                                                     height_min, width_min,
                                                     pad_xs[i], pad_ys[i])
 
             keypoints_padded = _crop_and_pad_kpsoi(
-                keypoints_on_image, (0, 0, 0, 0), paddings_img,
+                kpsoi, (0, 0, 0, 0), paddings_img,
                 keep_size=False)
 
             result.append(keypoints_padded)
 
         return result
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_or_segmaps(
-            heatmaps,
-            self._pad_mode_heatmaps, self._pad_cval_heatmaps,
-            random_state)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        return self._augment_hms_or_segmaps(
-            segmaps,
-            self._pad_mode_segmentation_maps, self._pad_cval_segmentation_maps,
-            random_state)
-
-    def _augment_hms_or_segmaps(self, augmentables, pad_mode, pad_cval,
-                                random_state):
+    def _augment_maps_by_samples(self, augmentables, samples, pad_mode,
+                                 pad_cval):
         width_min, height_min = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = self._draw_samples(
-            len(augmentables), random_state)
+        pad_xs, pad_ys, pad_modes, pad_cvals = samples
 
         for i, augmentable in enumerate(augmentables):
             height_img, width_img = augmentable.shape[:2]
@@ -1967,21 +1992,6 @@ class PadToFixedSize(meta.Augmenter):
                 keep_size=False)
 
         return augmentables
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(4)
@@ -2158,13 +2168,38 @@ class CropToFixedSize(meta.Augmenter):
         # (0.0, 1.0) crops left and bottom, (1.0, 0.0) crops right and top.
         self.position = _handle_position_parameter(position)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        samples = self._draw_samples(batch.nb_rows, random_state)
+
+        if batch.images is not None:
+            batch.images = self._augment_images_by_samples(batch.images,
+                                                           samples)
+
+        if batch.heatmaps is not None:
+            batch.heatmaps = self._augment_maps_by_samples(
+                batch.heatmaps, samples)
+
+        if batch.segmentation_maps is not None:
+            batch.segmentation_maps = self._augment_maps_by_samples(
+                batch.segmentation_maps, samples)
+
+        for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            augm_value = getattr(batch, augm_name)
+            if augm_value is not None:
+                func = functools.partial(
+                    self._augment_keypoints_by_samples,
+                    samples=samples)
+                cbaois = self._apply_to_cbaois_as_keypoints(augm_value, func)
+                setattr(batch, augm_name, cbaois)
+
+        return batch
+
+    def _augment_images_by_samples(self, images, samples):
         result = []
-        nb_images = len(images)
         w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            image = images[i]
+        offset_xs, offset_ys = samples
+        for i, image in enumerate(images):
             height_image, width_image = image.shape[0:2]
 
             croppings = self._calculate_crop_amounts(
@@ -2177,14 +2212,11 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
+    def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
-        nb_images = len(keypoints_on_images)
         w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            kpsoi = keypoints_on_images[i]
+        offset_xs, offset_ys = samples
+        for i, kpsoi in enumerate(kpsois):
             height_image, width_image = kpsoi.shape[0:2]
 
             croppings_img = self._calculate_crop_amounts(
@@ -2197,39 +2229,17 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(heatmaps, random_state)
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(segmaps, random_state)
-
-    def _augment_hms_and_segmaps(self, augmentables, random_state):
-        nb_images = len(augmentables)
+    def _augment_maps_by_samples(self, augmentables, samples):
         w, h = self.size
-        offset_xs, offset_ys = self._draw_samples(nb_images, random_state)
-        for i in sm.xrange(nb_images):
-            height_image, width_image = augmentables[i].shape[0:2]
+        offset_xs, offset_ys = samples
+        for i, augmentable in enumerate(augmentables):
+            height_image, width_image = augmentable.shape[0:2]
 
             croppings_img = self._calculate_crop_amounts(
                 height_image, width_image, h, w, offset_ys[i], offset_xs[i])
 
             augmentables[i] = _crop_and_pad_hms_or_segmaps_(
-                augmentables[i], croppings_img, (0, 0, 0, 0), keep_size=False)
+                augmentable, croppings_img, (0, 0, 0, 0), keep_size=False)
 
         return augmentables
 
@@ -2421,6 +2431,116 @@ class KeepSizeByResize(meta.Augmenter):
         self.interpolation_segmaps = _validate_param(interpolation_segmaps,
                                                      True)
 
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            images_were_array = None
+            if batch.images is not None:
+                images_were_array = ia.is_np_array(batch.images)
+            shapes_orig = self.get_shapes(batch)
+
+            samples = self._draw_samples(batch.nb_rows, random_state)
+
+            batch = self.children.augment_batch(
+                batch, parents=parents + [self], hooks=hooks)
+
+            if batch.images is not None:
+                batch.images = self._keep_size_images(
+                    batch.images, shapes_orig["images"], images_were_array,
+                    samples)
+
+            if batch.heatmaps is not None:
+                # dont use shapes_orig["images"] because they might be None
+                batch.heatmaps = self._keep_size_maps(
+                    batch.heatmaps, shapes_orig["heatmaps"],
+                    shapes_orig["heatmaps_arr"], samples[1])
+
+            if batch.segmentation_maps is not None:
+                # dont use shapes_orig["images"] because they might be None
+                batch.segmentation_maps = self._keep_size_maps(
+                    batch.segmentation_maps, shapes_orig["segmentation_maps"],
+                    shapes_orig["segmentation_maps_arr"], samples[2])
+
+            for augm_name in ["keypoints", "bounding_boxes", "polygons",
+                              "line_strings"]:
+                augm_value = getattr(batch, augm_name)
+                if augm_value is not None:
+                    func = functools.partial(
+                        self._keep_size_keypoints,
+                        shapes_orig=shapes_orig[augm_name],
+                        interpolations=samples[0])
+                    cbaois = self._apply_to_cbaois_as_keypoints(augm_value,
+                                                                func)
+                    setattr(batch, augm_name, cbaois)
+        return batch
+
+    @classmethod
+    def _keep_size_images(cls, images, shapes_orig, images_were_array,
+                          samples):
+        interpolations, _, _ = samples
+
+        gen = zip(images, interpolations, shapes_orig)
+        result = []
+        for image, interpolation, input_shape in gen:
+            if interpolation == KeepSizeByResize.NO_RESIZE:
+                result.append(image)
+            else:
+                result.append(
+                    ia.imresize_single_image(image, input_shape[0:2],
+                                             interpolation))
+
+        if images_were_array:
+            # note here that NO_RESIZE can have led to different shapes
+            nb_shapes = len(set([image.shape for image in result]))
+            if nb_shapes == 1:
+                result = np.array(result, dtype=images.dtype)
+
+        return result
+
+    @classmethod
+    def _keep_size_maps(cls, augmentables, shapes_orig_images,
+                        shapes_orig_arrs, interpolations):
+        result = []
+        gen = zip(augmentables, interpolations,
+                  shapes_orig_arrs, shapes_orig_images)
+        for augmentable, interpolation, arr_shape_orig, img_shape_orig in gen:
+            if interpolation == "NO_RESIZE":
+                result.append(augmentable)
+            else:
+                augmentable = augmentable.resize(
+                    arr_shape_orig[0:2], interpolation=interpolation)
+                augmentable.shape = img_shape_orig
+                result.append(augmentable)
+
+        return result
+
+    @classmethod
+    def _keep_size_keypoints(cls, kps_aug, shapes_orig, interpolations):
+        result = []
+        gen = zip(kps_aug, interpolations, shapes_orig)
+        for kps_aug, interpolation, input_shape in gen:
+            if interpolation == KeepSizeByResize.NO_RESIZE:
+                result.append(kps_aug)
+            else:
+                result.append(kps_aug.on(input_shape))
+
+        return result
+
+    @classmethod
+    def get_shapes(cls, batch):
+        result = dict()
+        for column in batch.columns:
+            result[column.name] = [cell.shape for cell in column.value]
+
+        if batch.heatmaps is not None:
+            result["heatmaps_arr"] = [
+                cell.arr_0to1.shape for cell in batch.heatmaps]
+
+        if batch.segmentation_maps is not None:
+            result["segmentation_maps_arr"] = [
+                cell.arr.shape for cell in batch.segmentation_maps]
+
+        return result
+
     def _draw_samples(self, nb_images, random_state):
         rngs = random_state.duplicate(3)
         interpolations = self.interpolation.draw_samples((nb_images,),
@@ -2466,148 +2586,6 @@ class KeepSizeByResize(meta.Augmenter):
                 interpolations[same_as_imgs_idx]
 
         return interpolations, interpolations_heatmaps, interpolations_segmaps
-
-    def _is_propagating(self, augmentables, parents, hooks):
-        return (
-            hooks is None
-            or hooks.is_propagating(
-                augmentables, augmenter=self, parents=parents, default=True)
-        )
-
-    def _augment_images(self, images, random_state, parents, hooks):
-        input_was_array = ia.is_np_array(images)
-        if self._is_propagating(images, parents, hooks):
-            interpolations, _, _ = self._draw_samples(len(images),
-                                                      random_state)
-            input_shapes = [image.shape[0:2] for image in images]
-
-            images_aug = self.children.augment_images(
-                images=images,
-                parents=parents + [self],
-                hooks=hooks
-            )
-
-            gen = zip(images_aug, interpolations, input_shapes)
-            result = []
-            for image_aug, interpolation, input_shape in gen:
-                if interpolation == KeepSizeByResize.NO_RESIZE:
-                    result.append(image_aug)
-                else:
-                    result.append(
-                        ia.imresize_single_image(image_aug, input_shape[0:2],
-                                                 interpolation))
-
-            if input_was_array:
-                # note here that NO_RESIZE can have led to different shapes
-                nb_shapes = len(set([image.shape for image in result]))
-                if nb_shapes == 1:
-                    result = np.array(result, dtype=images.dtype)
-        else:
-            result = images
-        return result
-
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        if self._is_propagating(heatmaps, parents, hooks):
-            nb_heatmaps = len(heatmaps)
-            _, interpolations_heatmaps, _ = self._draw_samples(
-                nb_heatmaps, random_state)
-            input_arr_shapes = [heatmaps_i.arr_0to1.shape
-                                for heatmaps_i in heatmaps]
-
-            # augment according to if and else list
-            heatmaps_aug = self.children.augment_heatmaps(
-                heatmaps,
-                parents=parents + [self],
-                hooks=hooks
-            )
-
-            result = []
-            gen = zip(heatmaps, heatmaps_aug, interpolations_heatmaps,
-                      input_arr_shapes)
-            for heatmap, heatmap_aug, interpolation, input_arr_shape in gen:
-                if interpolation == "NO_RESIZE":
-                    result.append(heatmap_aug)
-                else:
-                    heatmap_aug = heatmap_aug.resize(
-                        input_arr_shape[0:2], interpolation=interpolation)
-                    heatmap_aug.shape = heatmap.shape
-                    result.append(heatmap_aug)
-        else:
-            result = heatmaps
-
-        return result
-
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        if self._is_propagating(segmaps, parents, hooks):
-            nb_segmaps = len(segmaps)
-            _, _, interpolations_segmaps = self._draw_samples(nb_segmaps,
-                                                              random_state)
-            input_arr_shapes = [segmaps_i.arr.shape for segmaps_i in segmaps]
-
-            # augment according to if and else list
-            segmaps_aug = self.children.augment_segmentation_maps(
-                segmaps,
-                parents=parents + [self],
-                hooks=hooks
-            )
-
-            result = []
-            gen = zip(segmaps, segmaps_aug, interpolations_segmaps,
-                      input_arr_shapes)
-            for segmaps, segmaps_aug, interpolation, input_arr_shape in gen:
-                if interpolation == "NO_RESIZE":
-                    result.append(segmaps_aug)
-                else:
-                    segmaps_aug = segmaps_aug.resize(
-                        input_arr_shape[0:2], interpolation=interpolation)
-                    segmaps_aug.shape = segmaps.shape
-                    result.append(segmaps_aug)
-        else:
-            result = segmaps
-
-        return result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        if self._is_propagating(keypoints_on_images, parents, hooks):
-            interpolations, _, _ = self._draw_samples(
-                len(keypoints_on_images), random_state)
-            input_shapes = [kpsoi_i.shape for kpsoi_i in keypoints_on_images]
-
-            # augment according to if and else list
-            kps_aug = self.children.augment_keypoints(
-                keypoints_on_images=keypoints_on_images,
-                parents=parents + [self],
-                hooks=hooks
-            )
-
-            result = []
-            gen = zip(keypoints_on_images, kps_aug, interpolations,
-                      input_shapes)
-            for kps, kps_aug, interpolation, input_shape in gen:
-                if interpolation == KeepSizeByResize.NO_RESIZE:
-                    result.append(kps_aug)
-                else:
-                    result.append(kps_aug.on(input_shape))
-        else:
-            result = keypoints_on_images
-
-        return result
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_polygons_as_keypoints(
-            polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_line_strings_as_keypoints(
-            line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_bounding_boxes_as_keypoints(
-            bounding_boxes_on_images, random_state, parents, hooks)
 
     def _to_deterministic(self):
         aug = self.copy()

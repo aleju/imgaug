@@ -2339,6 +2339,166 @@ class TestPolygonsOnImage_shift(unittest.TestCase):
         assert poly_oi_shifted.shape == (10, 11, 3)
 
 
+class TestPolygonsOnImage_to_xy_array(unittest.TestCase):
+    def test_filled_object(self):
+        psoi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(10, 10), (20, 0), (20, 20)])],
+            shape=(2, 2, 3))
+
+        xy_out = psoi.to_xy_array()
+
+        expected = np.float32([
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [10.0, 10.0],
+            [20.0, 0.0],
+            [20.0, 20.0]
+        ])
+        assert xy_out.shape == (6, 2)
+        assert np.allclose(xy_out, expected)
+        assert xy_out.dtype.name == "float32"
+
+    def test_empty_object(self):
+        psoi = ia.PolygonsOnImage(
+            [],
+            shape=(1, 2, 3))
+
+        xy_out = psoi.to_xy_array()
+
+        assert xy_out.shape == (0, 2)
+        assert xy_out.dtype.name == "float32"
+
+
+class TestPolygonsOnImage_fill_from_xy_array_(unittest.TestCase):
+    def test_empty_array(self):
+        xy = np.zeros((0, 2), dtype=np.float32)
+        psoi = ia.PolygonsOnImage([], shape=(2, 2, 3))
+
+        psoi = psoi.fill_from_xy_array_(xy)
+
+        assert len(psoi.polygons) == 0
+
+    def test_empty_list(self):
+        xy = []
+        psoi = ia.PolygonsOnImage([], shape=(2, 2, 3))
+
+        psoi = psoi.fill_from_xy_array_(xy)
+
+        assert len(psoi.polygons) == 0
+
+    def test_array_with_two_coords(self):
+        xy = np.array(
+            [(100, 100),
+             (101, 100),
+             (101, 101),
+             (110, 110),
+             (120, 100),
+             (120, 120)], dtype=np.float32)
+        psoi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(10, 10), (20, 0), (20, 20)])],
+            shape=(2, 2, 3))
+
+        psoi = psoi.fill_from_xy_array_(xy)
+
+        assert len(psoi.polygons) == 2
+        assert np.allclose(
+            psoi.polygons[0].coords,
+            [(100, 100), (101, 100), (101, 101)])
+        assert np.allclose(
+            psoi.polygons[1].coords,
+            [(110, 110), (120, 100), (120, 120)])
+
+    def test_list_with_two_coords(self):
+        xy = [(100, 100),
+              (101, 100),
+              (101, 101),
+              (110, 110),
+              (120, 100),
+              (120, 120)]
+        psoi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(10, 10), (20, 0), (20, 20)])],
+            shape=(2, 2, 3))
+
+        psoi = psoi.fill_from_xy_array_(xy)
+
+        assert len(psoi.polygons) == 2
+        assert np.allclose(
+            psoi.polygons[0].coords,
+            [(100, 100), (101, 100), (101, 101)])
+        assert np.allclose(
+            psoi.polygons[1].coords,
+            [(110, 110), (120, 100), (120, 120)])
+
+
+class TestPolygonsOnImage_to_keypoints_on_image(unittest.TestCase):
+    def test_filled_instance(self):
+        psoi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(10, 10), (20, 0), (20, 20)])],
+            shape=(1, 2, 3))
+
+        kpsoi = psoi.to_keypoints_on_image()
+
+        assert len(kpsoi.keypoints) == 2*3
+        assert kpsoi.keypoints[0].x == 0
+        assert kpsoi.keypoints[0].y == 0
+        assert kpsoi.keypoints[1].x == 1
+        assert kpsoi.keypoints[1].y == 0
+        assert kpsoi.keypoints[2].x == 1
+        assert kpsoi.keypoints[2].y == 1
+        assert kpsoi.keypoints[3].x == 10
+        assert kpsoi.keypoints[3].y == 10
+        assert kpsoi.keypoints[4].x == 20
+        assert kpsoi.keypoints[4].y == 0
+        assert kpsoi.keypoints[5].x == 20
+        assert kpsoi.keypoints[5].y == 20
+
+    def test_empty_instance(self):
+        psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
+
+        kpsoi = psoi.to_keypoints_on_image()
+
+        assert len(kpsoi.keypoints) == 0
+
+
+class TestPolygonsOnImage_invert_to_keypoints_on_image(unittest.TestCase):
+    def test_filled_instance(self):
+        psoi = ia.PolygonsOnImage(
+            [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+             ia.Polygon([(10, 10), (20, 0), (20, 20)])],
+            shape=(1, 2, 3))
+        kpsoi = ia.KeypointsOnImage(
+            [ia.Keypoint(100, 100), ia.Keypoint(101, 100),
+             ia.Keypoint(101, 101),
+             ia.Keypoint(110, 110), ia.Keypoint(120, 100),
+             ia.Keypoint(120, 120)],
+            shape=(10, 20, 30))
+
+        psoi_inv = psoi.invert_to_keypoints_on_image_(kpsoi)
+
+        assert len(psoi_inv.polygons) == 2
+        assert psoi_inv.shape == (10, 20, 30)
+        assert np.allclose(
+            psoi.polygons[0].coords,
+            [(100, 100), (101, 100), (101, 101)])
+        assert np.allclose(
+            psoi.polygons[1].coords,
+            [(110, 110), (120, 100), (120, 120)])
+
+    def test_empty_instance(self):
+        psoi = ia.PolygonsOnImage([], shape=(1, 2, 3))
+        kpsoi = ia.KeypointsOnImage([], shape=(10, 20, 30))
+
+        psoi_inv = psoi.invert_to_keypoints_on_image_(kpsoi)
+
+        assert len(psoi_inv.polygons) == 0
+        assert psoi_inv.shape == (10, 20, 30)
+
+
 class TestPolygonsOnImage_copy(unittest.TestCase):
     def test_with_two_polygons(self):
         poly_oi = ia.PolygonsOnImage(

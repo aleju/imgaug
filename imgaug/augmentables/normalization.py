@@ -524,31 +524,45 @@ def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
 def invert_normalize_images(images, images_old):
     if images_old is None:
         assert images is None, (
-            "Expected (normalized) 'images' to be None due (unnormalized) "
+            "Expected (normalized) 'images' to be None due to (unnormalized) "
             "'images_old' being None. Got type %s instead." % (type(images),))
         return None
     elif ia.is_np_array(images_old):
-        if images_old.ndim == 2:
-            assert images.shape[0] == 1, (
-                "Expected normalized images of shape (N,H,W,C) to have "
-                "N=1 due to the unnormalized images being a single 2D image. "
-                "Got instead N=%d and shape %s." % (
-                    images.shape[0], images.shape))
-            assert images.shape[3] == 1, (
-                "Expected normalized images of shape (N,H,W,C) to have "
-                "C=1 due to the unnormalized images being a single 2D image. "
-                "Got instead C=%d and shape %s." % (
-                    images.shape[3], images.shape))
-            return images[0, ..., 0]
-        elif images_old.ndim == 3:
-            assert images.shape[3] == 1, (
-                "Expected normalized images of shape (N,H,W,C) to have "
-                "C=1 due to unnormalized images being a single 3D image. "
-                "Got instead C=%d and shape %s" % (
-                    images.shape[3], images.shape))
-            return images[..., 0]
+        if not ia.is_np_array(images):
+            # Images were turned from array to list during augmentation.
+            # This can happen for e.g. crop operations.
+            # We will proceed as if the old images were a list.
+            # One could also generate an array-output if all shapes and dtypes
+            # in `images` are the same. This was not done here, because
+            # (a) that would incur a performance penalty and (b) it would
+            # lead to less consistent outputs.
+            if images_old.ndim == 2:
+                # dont interpret first axis as N if `images_old` was a single
+                # image
+                return invert_normalize_images(images, [images_old])
+            return invert_normalize_images(images, list(images_old))
         else:
-            return images
+            if images_old.ndim == 2:
+                assert images.shape[0] == 1, (
+                    "Expected normalized images of shape (N,H,W,C) to have "
+                    "N=1 due to the unnormalized images being a single 2D "
+                    "image. Got instead N=%d and shape %s." % (
+                        images.shape[0], images.shape))
+                assert images.shape[3] == 1, (
+                    "Expected normalized images of shape (N,H,W,C) to have "
+                    "C=1 due to the unnormalized images being a single 2D "
+                    "image. Got instead C=%d and shape %s." % (
+                        images.shape[3], images.shape))
+                return images[0, ..., 0]
+            elif images_old.ndim == 3:
+                assert images.shape[3] == 1, (
+                    "Expected normalized images of shape (N,H,W,C) to have "
+                    "C=1 due to unnormalized images being a single 3D image. "
+                    "Got instead C=%d and shape %s" % (
+                        images.shape[3], images.shape))
+                return images[..., 0]
+            else:
+                return images
     elif ia.is_iterable(images_old):
         result = []
         for image, image_old in zip(images, images_old):

@@ -1995,11 +1995,6 @@ class TestAugmenter(unittest.TestCase):
             in str(caught_warnings[-1].message)
         )
 
-    def test_augment_images_invalid_datatype(self):
-        aug = _DummyAugmenter()
-        with self.assertRaises(Exception):
-            _ = aug.augment_images(None)
-
     def test_augment_images_array_in_list_out(self):
         self._test_augment_images_array_in_list_out_varying_channels(
             [3] * 20)
@@ -2107,13 +2102,6 @@ class TestAugmenter(unittest.TestCase):
 
         observed = noaug.augment_images(images_list2d3d)
         assert array_equal_lists(observed, images_list2d3d)
-
-    def test__augment_images_by_default_not_implemented(self):
-        # test case to cover the "raise NotImplementedError" in
-        # Augmenter._augment_images()
-        aug = _DummyAugmenterCallsParent()
-        with self.assertRaises(NotImplementedError):
-            _ = aug.augment_images(np.zeros((2, 4, 4, 3), dtype=np.uint8))
 
     def test_augment_keypoints_single_instance(self):
         kpsoi = ia.KeypointsOnImage([ia.Keypoint(10, 10)], shape=(32, 32, 3))
@@ -3592,10 +3580,11 @@ class TestAugmenter_augment_bounding_boxes(_TestAugmenter_augment_cbaois,
 
 # the method is mostly tested indirectly, so very few tests here
 class TestAugmenter_augment_bounding_boxes_by_keypoints(unittest.TestCase):
-    def test_x1_x2_can_get_flipped(self):
-        # ensure that invalid BBs with x2 > x1 after aug get their x-coords
-        # flipped so that x1 < x2
-        class _FlippingX1X2Augmenter(iaa.Augmenter):
+    def test_x_min_max(self):
+        # ensure that min() and max() are applied to augmented x-coordinates
+        # when they are converted back to BBs
+
+        class _ShiftingXCoordAugmenter(iaa.Augmenter):
             def _augment_images(self, images, random_state, parents, hooks):
                 return images
 
@@ -3607,6 +3596,69 @@ class TestAugmenter_augment_bounding_boxes_by_keypoints(unittest.TestCase):
             def _augment_keypoints(self, keypoints_on_images, random_state,
                                    parents, hooks):
                 keypoints_on_images[0].keypoints[0].x += 10
+                keypoints_on_images[0].keypoints[1].x -= 10
+                return keypoints_on_images
+
+            def get_parameters(self):
+                return []
+
+        aug = _ShiftingXCoordAugmenter()
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)], shape=(10, 10, 3))
+        observed = aug(bounding_boxes=bbsoi)
+        assert np.allclose(
+            observed.bounding_boxes[0].coords,
+            [(2-10, 1), (0+10, 3)]
+        )
+
+    def test_y_min_max(self):
+        # ensure that min() and max() are applied to augmented y-coordinates
+        # when they are converted back to BBs
+
+        class _ShiftingYCoordAugmenter(iaa.Augmenter):
+            def _augment_images(self, images, random_state, parents, hooks):
+                return images
+
+            def _augment_bounding_boxes(self, bounding_boxes_on_images,
+                                        random_state, parents, hooks):
+                return self._augment_bounding_boxes_as_keypoints(
+                    bounding_boxes_on_images, random_state, parents, hooks)
+
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                keypoints_on_images[0].keypoints[0].y += 10
+                keypoints_on_images[0].keypoints[1].y -= 10
+                return keypoints_on_images
+
+            def get_parameters(self):
+                return []
+
+        aug = _ShiftingYCoordAugmenter()
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)], shape=(10, 10, 3))
+        observed = aug(bounding_boxes=bbsoi)
+        assert np.allclose(
+            observed.bounding_boxes[0].coords,
+            [(0, 1-10), (2, 1+10)]
+        )
+
+    def test_x1_x2_can_get_flipped(self):
+        # ensure that augmented x-coordinates where x1>x2 are flipped
+        # before creating BBs from them
+
+        class _FlippingX1X2Augmenter(iaa.Augmenter):
+            def _augment_images(self, images, random_state, parents, hooks):
+                return images
+
+            def _augment_bounding_boxes(self, bounding_boxes_on_images,
+                                        random_state, parents, hooks):
+                return self._augment_bounding_boxes_as_keypoints(
+                    bounding_boxes_on_images, random_state, parents, hooks)
+
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                keypoints_on_images[0].keypoints[0].x += 10  # top left
+                keypoints_on_images[0].keypoints[3].x += 10  # bottom left
                 return keypoints_on_images
 
             def get_parameters(self):
@@ -3622,8 +3674,9 @@ class TestAugmenter_augment_bounding_boxes_by_keypoints(unittest.TestCase):
         )
 
     def test_y1_y2_can_get_flipped(self):
-        # ensure that invalid BBs with y2 > y1 after aug get their y-coords
-        # flipped so that y1 < y2
+        # ensure that augmented y-coordinates where y1>y2 are flipped
+        # before creating BBs from them
+
         class _FlippingY1Y2Augmenter(iaa.Augmenter):
             def _augment_images(self, images, random_state, parents, hooks):
                 return images
@@ -3635,7 +3688,8 @@ class TestAugmenter_augment_bounding_boxes_by_keypoints(unittest.TestCase):
 
             def _augment_keypoints(self, keypoints_on_images, random_state,
                                    parents, hooks):
-                keypoints_on_images[0].keypoints[0].y += 10
+                keypoints_on_images[0].keypoints[0].y += 10  # top left
+                keypoints_on_images[0].keypoints[1].y += 10  # top right
                 return keypoints_on_images
 
             def get_parameters(self):

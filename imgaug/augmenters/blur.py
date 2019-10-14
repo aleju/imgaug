@@ -352,13 +352,17 @@ class GaussianBlur(meta.Augmenter):
         # apply the blur
         self.eps = 1e-3
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         samples = self.sigma.draw_samples((nb_images,),
                                           random_state=random_state)
         for image, sig in zip(images, samples):
             image[...] = blur_gaussian_(image, sigma=sig, eps=self.eps)
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.sigma]
@@ -497,7 +501,12 @@ class AverageBlur(meta.Augmenter):
                 "Expected int, tuple/list with 2 entries or "
                 "StochasticParameter. Got %s." % (type(k),))
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
+
         iadt.gate_dtypes(
             images,
             allowed=["bool",
@@ -552,8 +561,8 @@ class AverageBlur(meta.Augmenter):
                 elif input_dtype.name in ["int8", "float16"]:
                     image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
-                images[i] = image_aug
-        return images
+                batch.images[i] = image_aug
+        return batch
 
     def get_parameters(self):
         return [self.k]
@@ -640,7 +649,11 @@ class MedianBlur(meta.Augmenter):
                 "Expected all values in iterable k to be odd, but at least "
                 "one was not. Add or subtract 1 to/from that value.")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
         for i, (image, ki) in enumerate(zip(images, samples)):
@@ -662,8 +675,8 @@ class MedianBlur(meta.Augmenter):
                     ]
                     image_aug = np.stack(channels, axis=-1)
 
-                images[i] = image_aug
-        return images
+                batch.images[i] = image_aug
+        return batch
 
     def get_parameters(self):
         return [self.k]
@@ -782,7 +795,12 @@ class BilateralBlur(meta.Augmenter):
             sigma_space, "sigma_space", value_range=(1, None),
             tuple_to_uniform=True, list_to_choice=True)
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch is None:
+            return batch
+
+        images = batch.images
+
         # Make sure that all images have 3 channels
         assert all([image.shape[2] == 3 for image in images]), (
             "BilateralBlur can currently only be applied to images with 3 "
@@ -801,9 +819,9 @@ class BilateralBlur(meta.Augmenter):
         for i, (image, di, sigma_color_i, sigma_space_i) in gen:
             has_zero_sized_axes = (image.size == 0)
             if di != 1 and not has_zero_sized_axes:
-                images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
-                                                sigma_space_i)
-        return images
+                batch.images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
+                                                      sigma_space_i)
+        return batch
 
     def get_parameters(self):
         return [self.d, self.sigma_color, self.sigma_space]

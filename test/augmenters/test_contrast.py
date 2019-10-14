@@ -27,6 +27,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import contrast as contrast_lib
+from imgaug.augmentables import batches as iabatches
 from imgaug.testutils import ArgCopyingMagicMock, keypoints_equal, reseed
 
 
@@ -1273,14 +1274,16 @@ class TestCLAHE(unittest.TestCase):
         ]
         img = np.uint8(img)
 
+        mocked_batch = iabatches.BatchInAugmentation(
+            images=[img[..., np.newaxis] + 2])
+
         def _side_effect(image, _to_colorspace, _from_colorspace):
             return image + 1
 
         mock_cs.side_effect = _side_effect
 
-        mock_all_channel_clahe = mock.Mock()
-        mock_all_channel_clahe._augment_images.return_value = \
-            [img[..., np.newaxis] + 2]
+        mock_all_channel_clahe = ArgCopyingMagicMock()
+        mock_all_channel_clahe._augment_batch.return_value = mocked_batch
 
         clahe = iaa.CLAHE(
             clip_limit=1,
@@ -1293,10 +1296,8 @@ class TestCLAHE(unittest.TestCase):
         img_aug = clahe.augment_image(img)
         assert np.array_equal(img_aug, img+2)
 
-        mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-
         assert mock_cs.call_count == 0
-        assert mock_all_channel_clahe.call_count == 1
+        assert mock_all_channel_clahe._augment_batch.call_count == 1
 
     @classmethod
     def _test_single_image_3d_rgb_to_x(cls, to_colorspace, channel_idx):
@@ -1316,14 +1317,16 @@ class TestCLAHE(unittest.TestCase):
                                               _from_colorspace):
                 return image + 1
 
-            def side_effect_all_channel_clahe(imgs_call, _random_state,
+            def side_effect_all_channel_clahe(batch_call, _random_state,
                                               _parents, _hooks):
-                return [imgs_call[0] + 2]
+                batch_call = batch_call.deepcopy()
+                batch_call.images = [batch_call.images[0] + 2]
+                return batch_call
 
             mock_cs.side_effect = side_effect_change_colorspace
 
-            mock_all_channel_clahe = mock.Mock()
-            mock_all_channel_clahe._augment_images.side_effect = \
+            mock_all_channel_clahe = ArgCopyingMagicMock()
+            mock_all_channel_clahe._augment_batch.side_effect = \
                 side_effect_all_channel_clahe
 
             clahe = iaa.CLAHE(
@@ -1341,10 +1344,8 @@ class TestCLAHE(unittest.TestCase):
             expected3 = np.copy(expected2) + 1
             assert np.array_equal(img3d_aug, expected3)
 
-            mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-
             assert mock_cs.call_count == 2
-            assert mock_all_channel_clahe.call_count == 1
+            assert mock_all_channel_clahe._augment_batch.call_count == 1
 
             # indices: call 0, args, arg 0
             assert np.array_equal(mock_cs.call_args_list[0][0][0], img3d)
@@ -1391,14 +1392,16 @@ class TestCLAHE(unittest.TestCase):
                                           _from_colorspace):
             return image + 1
 
-        def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
+        def side_effect_all_channel_clahe(batch_call, _random_state, _parents,
                                           _hooks):
-            return [imgs_call[0] + 2]
+            batch_call = batch_call.deepcopy()
+            batch_call.images = [batch_call.images[0] + 2]
+            return batch_call
 
         mock_cs.side_effect = side_effect_change_colorspace
 
-        mock_all_channel_clahe = mock.Mock()
-        mock_all_channel_clahe._augment_images.side_effect = \
+        mock_all_channel_clahe = ArgCopyingMagicMock()
+        mock_all_channel_clahe._augment_batch.side_effect = \
             side_effect_all_channel_clahe
 
         clahe = iaa.CLAHE(
@@ -1417,10 +1420,8 @@ class TestCLAHE(unittest.TestCase):
         expected4 = np.dstack((expected3, img4d[..., 3:4]))
         assert np.array_equal(img4d_aug, expected4)
 
-        mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-
         assert mock_cs.call_count == 2
-        assert mock_all_channel_clahe.call_count == 1
+        assert mock_all_channel_clahe._augment_batch.call_count == 1
 
         # indices: call 0, args, arg 0
         assert np.array_equal(mock_cs.call_args_list[0][0][0], img4d[..., 0:3])
@@ -1453,14 +1454,16 @@ class TestCLAHE(unittest.TestCase):
                                           _from_colorspace):
             return image + 1
 
-        def side_effect_all_channel_clahe(imgs_call, _random_state, _parents,
+        def side_effect_all_channel_clahe(batch_call, _random_state, _parents,
                                           _hooks):
-            return [imgs_call[0] + 2]
+            batch_call = batch_call.deepcopy()
+            batch_call.images = [batch_call.images[0] + 2]
+            return batch_call
 
         mock_cs.side_effect = side_effect_change_colorspace
 
-        mock_all_channel_clahe = mock.Mock()
-        mock_all_channel_clahe._augment_images.side_effect = \
+        mock_all_channel_clahe = ArgCopyingMagicMock()
+        mock_all_channel_clahe._augment_batch.side_effect = \
             side_effect_all_channel_clahe
 
         clahe = iaa.CLAHE(
@@ -1485,14 +1488,15 @@ class TestCLAHE(unittest.TestCase):
 
         assert np.array_equal(img5d_aug, img5d + 2)
 
-        mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-
         assert mock_cs.call_count == 0
-        assert mock_all_channel_clahe.call_count == 1
+        assert mock_all_channel_clahe._augment_batch.call_count == 1
 
         # indices: call 0, args, arg 0, image 0 in list of images
         assert np.array_equal(
-            mock_all_channel_clahe.call_args_list[0][0][0][0],
+            mock_all_channel_clahe
+            ._augment_batch
+            .call_args_list[0][0][0]
+            .images[0],
             img5d
         )
 
@@ -1520,14 +1524,16 @@ class TestCLAHE(unittest.TestCase):
                                               _from_colorspace):
                 return image + 1
 
-            def side_effect_all_channel_clahe(imgs_call, _random_state,
+            def side_effect_all_channel_clahe(batch_call, _random_state,
                                               _parents, _hooks):
-                return [img + 2 for img in imgs_call]
+                batch_call = batch_call.deepcopy()
+                batch_call.images = [image + 2 for image in batch_call.images]
+                return batch_call
 
             mock_cs.side_effect = side_effect_change_colorspace
 
-            mock_all_channel_clahe = mock.Mock()
-            mock_all_channel_clahe._augment_images.side_effect = \
+            mock_all_channel_clahe = ArgCopyingMagicMock()
+            mock_all_channel_clahe._augment_batch.side_effect = \
                 side_effect_all_channel_clahe
 
             clahe = iaa.CLAHE(
@@ -1541,24 +1547,34 @@ class TestCLAHE(unittest.TestCase):
             imgs_aug = clahe.augment_images(imgs)
             assert isinstance(imgs_aug, list)
 
-            mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-
             assert mock_cs.call_count == (n_3d_imgs*2 if with_3d_images else 0)
-            assert mock_all_channel_clahe.call_count == 1
+            assert (
+                mock_all_channel_clahe
+                ._augment_batch
+                .call_count == 1)
 
             # indices: call 0, args, arg 0
-            assert isinstance(mock_all_channel_clahe.call_args_list[0][0][0],
-                              list)
+            assert isinstance(
+                mock_all_channel_clahe
+                ._augment_batch
+                .call_args_list[0][0][0],
+                iabatches.BatchInAugmentation)
 
             assert (
-                len(mock_all_channel_clahe.call_args_list[0][0][0])
+                len(mock_all_channel_clahe
+                    ._augment_batch
+                    .call_args_list[0][0][0]
+                    .images)
                 == 5 if with_3d_images else 2)
 
             # indices: call 0, args, arg 0, image i in list of images
             for i in sm.xrange(0, 2):
                 expected = imgs[i][..., np.newaxis]
                 assert np.array_equal(
-                    mock_all_channel_clahe.call_args_list[0][0][0][i],
+                    mock_all_channel_clahe
+                    ._augment_batch
+                    .call_args_list[0][0][0]
+                    .images[i],
                     expected
                 )
 
@@ -1618,14 +1634,16 @@ class TestCLAHE(unittest.TestCase):
                                               _from_colorspace):
                 return image + 1
 
-            def side_effect_all_channel_clahe(imgs_call, _random_state,
+            def side_effect_all_channel_clahe(batch_call, _random_state,
                                               _parents, _hooks):
-                return [img + 2 for img in imgs_call]
+                batch_call = batch_call.deepcopy()
+                batch_call.images = [image + 2 for image in batch_call.images]
+                return batch_call
 
             mock_cs.side_effect = side_effect_change_colorspace
 
-            mock_all_channel_clahe = mock.Mock()
-            mock_all_channel_clahe._augment_images.side_effect = \
+            mock_all_channel_clahe = ArgCopyingMagicMock()
+            mock_all_channel_clahe._augment_batch.side_effect = \
                 side_effect_all_channel_clahe
 
             clahe = iaa.CLAHE(
@@ -1639,19 +1657,28 @@ class TestCLAHE(unittest.TestCase):
             imgs_aug = clahe.augment_images(imgs)
             assert ia.is_np_array(imgs_aug)
 
-            mock_all_channel_clahe = mock_all_channel_clahe._augment_images
-
             assert mock_cs.call_count == (2*nb_images
                                           if with_color_conversion
                                           else 0)
-            assert mock_all_channel_clahe.call_count == 1
+            assert (
+                mock_all_channel_clahe
+                ._augment_batch
+                .call_count
+                == 1)
 
             # indices: call 0, args, arg 0
-            assert isinstance(mock_all_channel_clahe.call_args_list[0][0][0],
-                              list)
+            assert isinstance(
+                mock_all_channel_clahe
+                ._augment_batch
+                .call_args_list[0][0][0],
+                iabatches.BatchInAugmentation)
 
             assert (
-                len(mock_all_channel_clahe.call_args_list[0][0][0])
+                len(
+                    mock_all_channel_clahe
+                    ._augment_batch
+                    .call_args_list[0][0][0]
+                    .images)
                 == nb_images)
 
             # indices: call 0, args, arg 0, image i in list of images
@@ -1663,7 +1690,10 @@ class TestCLAHE(unittest.TestCase):
                     # cant have 4 channels and no color conversion for RGB2Lab
 
                     assert np.array_equal(
-                        mock_all_channel_clahe.call_args_list[0][0][0][i],
+                        mock_all_channel_clahe
+                        ._augment_batch
+                        .call_args_list[0][0][0]
+                        .images[i],
                         expected
                     )
             else:

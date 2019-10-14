@@ -239,19 +239,27 @@ class TestWithHueAndSaturation(unittest.TestCase):
         assert aug.from_colorspace == "RGB"
 
     def test_augment_images(self):
-        def do_return_images(images, parents, hooks):
-            assert images[0].dtype.name == "int16"
-            return images
+        class _DummyAugmenter(meta.Augmenter):
+            def __init__(self):
+                super(_DummyAugmenter, self).__init__()
+                self.call_count = 0
 
-        aug_mock = mock.MagicMock(spec=meta.Augmenter)
-        aug_mock.augment_images.side_effect = do_return_images
-        aug = iaa.WithHueAndSaturation(aug_mock)
+            def _augment_batch(self, batch, random_state, parents, hooks):
+                assert batch.images[0].dtype.name == "int16"
+                self.call_count += 1
+                return batch
+
+            def get_parameters(self):
+                return []
+
+        aug_dummy = _DummyAugmenter()
+        aug = iaa.WithHueAndSaturation(aug_dummy)
 
         image = np.zeros((4, 4, 3), dtype=np.uint8)
         image_aug = aug.augment_images([image])[0]
         assert image_aug.dtype.name == "uint8"
         assert np.array_equal(image_aug, image)
-        assert aug_mock.augment_images.call_count == 1
+        assert aug_dummy.call_count == 1
 
     def test_augment_images__hue(self):
         def augment_images(images, random_state, parents, hooks):
@@ -328,35 +336,51 @@ class TestWithHueAndSaturation(unittest.TestCase):
     def test_augment_heatmaps(self):
         from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
-        def do_return_augmentables(heatmaps, parents, hooks):
-            return heatmaps
+        class _DummyAugmenter(meta.Augmenter):
+            def __init__(self):
+                super(_DummyAugmenter, self).__init__()
+                self.call_count = 0
 
-        aug_mock = mock.MagicMock(spec=meta.Augmenter)
-        aug_mock.augment_heatmaps.side_effect = do_return_augmentables
+            def _augment_batch(self, batch, random_state, parents, hooks):
+                self.call_count += 1
+                return batch
+
+            def get_parameters(self):
+                return []
+
+        aug_dummy = _DummyAugmenter()
         hm = np.ones((8, 12, 1), dtype=np.float32)
         hmoi = HeatmapsOnImage(hm, shape=(16, 24, 3))
 
-        aug = iaa.WithHueAndSaturation(aug_mock)
+        aug = iaa.WithHueAndSaturation(aug_dummy)
         hmoi_aug = aug.augment_heatmaps(hmoi)
         assert hmoi_aug.shape == (16, 24, 3)
         assert hmoi_aug.arr_0to1.shape == (8, 12, 1)
 
-        assert aug_mock.augment_heatmaps.call_count == 1
+        assert aug_dummy.call_count == 1
 
     def test_augment_keypoints(self):
-        from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
+        from imgaug.augmentables.kps import KeypointsOnImage
 
-        def do_return_augmentables(keypoints_on_images, parents, hooks):
-            return keypoints_on_images
+        class _DummyAugmenter(meta.Augmenter):
+            def __init__(self):
+                super(_DummyAugmenter, self).__init__()
+                self.call_count = 0
 
-        aug_mock = mock.MagicMock(spec=meta.Augmenter)
-        aug_mock.augment_keypoints.side_effect = do_return_augmentables
+            def _augment_batch(self, batch, random_state, parents, hooks):
+                self.call_count += 1
+                return batch
+
+            def get_parameters(self):
+                return []
+
+        aug_dummy = _DummyAugmenter()
         kpsoi = KeypointsOnImage.from_xy_array(np.float32([
             [0, 0],
             [5, 1]
         ]), shape=(16, 24, 3))
 
-        aug = iaa.WithHueAndSaturation(aug_mock)
+        aug = iaa.WithHueAndSaturation(aug_dummy)
         kpsoi_aug = aug.augment_keypoints(kpsoi)
         assert kpsoi_aug.shape == (16, 24, 3)
         assert kpsoi.keypoints[0].x == 0
@@ -364,7 +388,7 @@ class TestWithHueAndSaturation(unittest.TestCase):
         assert kpsoi.keypoints[1].x == 5
         assert kpsoi.keypoints[1].y == 1
 
-        assert aug_mock.augment_keypoints.call_count == 1
+        assert aug_dummy.call_count == 1
 
     def test__to_deterministic(self):
         aug = iaa.WithHueAndSaturation([iaa.Noop()], from_colorspace="BGR")

@@ -1121,7 +1121,11 @@ class Add(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
@@ -1159,9 +1163,9 @@ class Add(meta.Augmenter):
                 # the if/else here catches the case of the channel axis being 0
                 value = value_samples_i[0] if value_samples_i.size > 0 else []
 
-            images[i] = add_scalar(image, value)
+            batch.images[i] = add_scalar(image, value)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.value, self.per_channel]
@@ -1251,7 +1255,11 @@ class AddElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         rss = random_state.duplicate(1+nb_images)
         per_channel_samples = self.per_channel.draw_samples(
@@ -1265,9 +1273,9 @@ class AddElementwise(meta.Augmenter):
                             nb_channels if per_channel_samples_i > 0.5 else 1)
             values = self.value.draw_samples(sample_shape, random_state=rs)
 
-            images[i] = add_elementwise(image, values)
+            batch.images[i] = add_elementwise(image, values)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.value, self.per_channel]
@@ -1676,7 +1684,11 @@ class Multiply(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         nb_channels_max = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
@@ -1713,9 +1725,9 @@ class Multiply(meta.Augmenter):
             else:
                 # the if/else here catches the case of the channel axis being 0
                 mul = mul_samples_i[0] if mul_samples_i.size > 0 else []
-            images[i] = multiply_scalar(image, mul)
+            batch.images[i] = multiply_scalar(image, mul)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.mul, self.per_channel]
@@ -1804,7 +1816,11 @@ class MultiplyElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         rss = random_state.duplicate(1+nb_images)
         per_channel_samples = self.per_channel.draw_samples(
@@ -1829,9 +1845,9 @@ class MultiplyElementwise(meta.Augmenter):
             if mul.dtype.kind != "b" and is_mul_binomial:
                 mul = mul.astype(bool, copy=False)
 
-            images[i] = multiply_elementwise(image, mul)
+            batch.images[i] = multiply_elementwise(image, mul)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.mul, self.per_channel]
@@ -2234,7 +2250,11 @@ class ReplaceElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         rss = random_state.duplicate(1+2*nb_images)
         per_channel_samples = self.per_channel.draw_samples(
@@ -2269,10 +2289,10 @@ class ReplaceElementwise(meta.Augmenter):
                 replacement_samples = self.replacement.draw_samples(
                     (int(np.sum(mask_samples)),), random_state=rs_replacement)
 
-            images[i] = replace_elementwise_(image, mask_samples,
-                                             replacement_samples)
+            batch.images[i] = replace_elementwise_(image, mask_samples,
+                                                   replacement_samples)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.mask, self.replacement, self.per_channel]
@@ -3068,7 +3088,11 @@ class Invert(meta.Augmenter):
         self.min_value = min_value
         self.max_value = max_value
 
-    def _augment_images(self, images, random_state, parents, hooks):
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         nb_channels = meta.estimate_max_number_of_channels(images)
         rss = random_state.duplicate(2)
@@ -3092,7 +3116,7 @@ class Invert(meta.Augmenter):
                     image[:, :, :] = invert(image, self.min_value,
                                             self.max_value)
 
-        return images
+        return batch
 
     def get_parameters(self):
         return [self.p, self.per_channel, self.min_value, self.max_value]
@@ -3239,16 +3263,19 @@ class JpegCompression(meta.Augmenter):
             compression, "compression",
             value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        result = images
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        images = batch.images
         nb_images = len(images)
         samples = self.compression.draw_samples((nb_images,),
                                                 random_state=random_state)
 
         for i, (image, sample) in enumerate(zip(images, samples)):
-            result[i] = compress_jpeg(image, int(sample))
+            batch.images[i] = compress_jpeg(image, int(sample))
 
-        return result
+        return batch
 
     def get_parameters(self):
         return [self.compression]

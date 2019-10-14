@@ -1,13 +1,43 @@
 from __future__ import print_function, division, absolute_import
 
 import copy
+import collections
 
 import numpy as np
 
 from .. import imgaug as ia
 from . import normalization as nlib
+from . import utils as utils
 
 DEFAULT = "DEFAULT"
+
+_AUGMENTABLE_NAMES = [
+    "images", "heatmaps", "segmentation_maps", "keypoints",
+    "bounding_boxes", "polygons", "line_strings"]
+
+_AugmentableColumn = collections.namedtuple(
+    "_AugmentableColumn",
+    ["name", "value", "attr_name"])
+
+
+def _get_column_names(batch, postfix):
+    return [column.name
+            for column
+            in _get_columns(batch, postfix)]
+
+
+def _get_columns(batch, postfix):
+    result = []
+    for name in _AUGMENTABLE_NAMES:
+        attr_name = name + postfix
+        value = getattr(batch, name + postfix)
+        # Every data item is either an array or a list. If there are no
+        # items in the array/list, there are also no shapes to change
+        # as shape-changes are imagewise. Hence, we can afford to check
+        # len() here.
+        if value is not None and len(value) > 0:
+            result.append(_AugmentableColumn(name, value, attr_name))
+    return result
 
 
 # TODO also support (H,W,C) for heatmaps of len(images) == 1
@@ -99,9 +129,11 @@ class UnnormalizedBatch(object):
         not be returned in the original order, making this information useful.
 
     """
+
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
                  keypoints=None, bounding_boxes=None, polygons=None,
                  line_strings=None, data=None):
+        """Construct a new :class:`UnnormalizedBatch` instance."""
         self.images_unaug = images
         self.images_aug = None
         self.heatmaps_unaug = heatmaps
@@ -117,6 +149,21 @@ class UnnormalizedBatch(object):
         self.line_strings_unaug = line_strings
         self.line_strings_aug = None
         self.data = data
+
+    def get_column_names(self):
+        """Get the names of types of augmentables that contain data.
+
+        This method is intended for situations where one wants to know which
+        data is contained in the batch that has to be augmented, visualized
+        or something similar.
+
+        Returns
+        -------
+        list of str
+            Names of types of augmentables. E.g. ``["images", "polygons"]``.
+
+        """
+        return _get_column_names(self, "_unaug")
 
     def to_normalized_batch(self):
         """Convert this unnormalized batch to an instance of Batch.
@@ -256,9 +303,11 @@ class Batch(object):
         not be returned in the original order, making this information useful.
 
     """
+
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
                  keypoints=None, bounding_boxes=None, polygons=None,
                  line_strings=None, data=None):
+        """Construct a new :class:`Batch` instance."""
         self.images_unaug = images
         self.images_aug = None
         self.heatmaps_unaug = heatmaps
@@ -300,22 +349,85 @@ class Batch(object):
     def bounding_boxes(self):
         return self.bounding_boxes_unaug
 
-    @classmethod
-    def _deepcopy_obj(cls, obj):
-        if obj is None:
-            return None
-        elif ia.is_single_number(obj) or ia.is_string(obj):
-            return obj
-        elif isinstance(obj, list):
-            return [cls._deepcopy_obj(el) for el in obj]
-        elif isinstance(obj, tuple):
-            return tuple([cls._deepcopy_obj(el) for el in obj])
-        elif ia.is_np_array(obj):
-            return np.copy(obj)
-        elif hasattr(obj, "deepcopy"):
-            return obj.deepcopy()
-        else:
-            return copy.deepcopy(obj)
+    def get_column_names(self):
+        """Get the names of types of augmentables that contain data.
+
+        This method is intended for situations where one wants to know which
+        data is contained in the batch that has to be augmented, visualized
+        or something similar.
+
+        Returns
+        -------
+        list of str
+            Names of types of augmentables. E.g. ``["images", "polygons"]``.
+
+        """
+        return _get_column_names(self, "_unaug")
+
+    def to_normalized_batch(self):
+        """Return this batch.
+
+        This method does nothing and only exists to simplify interfaces
+        that accept both :class:`UnnormalizedBatch` and :class:`Batch`.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.Batch
+            This batch (not copied).
+
+        """
+        return self
+
+    def to_batch_in_augmentation(self):
+        """Convert this batch to a :class:`BatchInAugmentation` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The converted batch.
+
+        """
+        def _copy(var):
+            # TODO first check here if _aug is set and if it is then use that?
+            if var is not None:
+                return utils.copy_augmentables(var)
+            return var
+
+        return BatchInAugmentation(
+            images=_copy(self.images_unaug),
+            heatmaps=_copy(self.heatmaps_unaug),
+            segmentation_maps=_copy(self.segmentation_maps_unaug),
+            keypoints=_copy(self.keypoints_unaug),
+            bounding_boxes=_copy(self.bounding_boxes_unaug),
+            polygons=_copy(self.polygons_unaug),
+            line_strings=_copy(self.line_strings_unaug)
+        )
+
+    def fill_from_batch_in_augmentation_(self, batch_in_augmentation):
+        """Set the columns in this batch to the column values of another batch.
+
+        This method works in-place.
+
+        Parameters
+        ----------
+        batch_in_augmentation : BatchInAugmentation
+            Batch of which to use the column values.
+            The values are *not* copied. Only their references are used.
+
+        Returns
+        -------
+        Batch
+            The updated batch. (Modified in-place.)
+
+        """
+        self.images_aug = batch_in_augmentation.images
+        self.heatmaps_aug = batch_in_augmentation.heatmaps
+        self.segmentation_maps_aug = batch_in_augmentation.segmentation_maps
+        self.keypoints_aug = batch_in_augmentation.keypoints
+        self.bounding_boxes_aug = batch_in_augmentation.bounding_boxes
+        self.polygons_aug = batch_in_augmentation.polygons
+        self.line_strings_aug = batch_in_augmentation.line_strings
+        return self
 
     def deepcopy(self,
                  images_unaug=DEFAULT,
@@ -332,8 +444,88 @@ class Batch(object):
                  polygons_aug=DEFAULT,
                  line_strings_unaug=DEFAULT,
                  line_strings_aug=DEFAULT):
+        """Copy this batch and all of its column values.
+
+        Parameters
+        ----------
+        images_unaug : imgaug.augmentables.batches.DEFAULT or None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        images_aug : imgaug.augmentables.batches.DEFAULT or None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        heatmaps_unaug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.heatmaps.HeatmapsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        heatmaps_aug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.heatmaps.HeatmapsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        segmentation_maps_unaug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.segmaps.SegmentationMapsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        segmentation_maps_aug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.segmaps.SegmentationMapsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        keypoints_unaug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.kps.KeypointOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        keypoints_aug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.kps.KeypointOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        bounding_boxes_unaug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        bounding_boxes_aug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        polygons_unaug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.polys.PolygonsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        polygons_aug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.polys.PolygonsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        line_strings_unaug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.lines.LineStringsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        line_strings_aug : imgaug.augmentables.batches.DEFAULT or None or list of imgaug.augmentables.lines.LineStringsOnImage
+            Copies the current attribute value without changes if set to
+            ``imgaug.augmentables.batches.DEFAULT``.
+            Otherwise same as in :func:`Batch.__init__`.
+
+        Returns
+        -------
+        Batch
+            Deep copy of the batch, optionally with new attributes.
+
+        """
         def _copy_optional(self_attr, arg):
-            return self._deepcopy_obj(arg if arg is not DEFAULT else self_attr)
+            return utils.deepcopy_fast(arg if arg is not DEFAULT else self_attr)
 
         batch = Batch(
             images=_copy_optional(self.images_unaug, images_unaug),
@@ -346,7 +538,7 @@ class Batch(object):
             polygons=_copy_optional(self.polygons_unaug, polygons_unaug),
             line_strings=_copy_optional(self.line_strings_unaug,
                                         line_strings_unaug),
-            data=copy.deepcopy(self.data)
+            data=utils.deepcopy_fast(self.data)
         )
         batch.images_aug = _copy_optional(self.images_aug, images_aug)
         batch.heatmaps_aug = _copy_optional(self.heatmaps_aug, heatmaps_aug)
@@ -360,3 +552,451 @@ class Batch(object):
                                                 line_strings_aug)
 
         return batch
+
+
+class _BatchInAugmentationPropagationContext(object):
+    def __init__(self, batch, augmenter, hooks, parents):
+        self.batch = batch
+        self.augmenter = augmenter
+        self.hooks = hooks
+        self.parents = parents
+        self.noned_info = None
+
+    def __enter__(self):
+        if self.hooks is not None:
+            self.noned_info = self.batch.apply_propagation_hooks_(
+                self.augmenter, self.hooks, self.parents)
+        return self.batch
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.noned_info is not None:
+            self.batch = \
+                self.batch.invert_apply_propagation_hooks_(self.noned_info)
+
+
+class BatchInAugmentation(object):
+    """
+    Class encapsulating a batch during the augmentation process.
+
+    Data within the batch is already verified and normalized, similar to
+    :class:`Batch`. Data within the batch may be changed in-place. No initial
+    copy is needed.
+
+    Parameters
+    ----------
+    images : None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
+        The images to augment.
+
+    heatmaps : None or list of imgaug.augmentables.heatmaps.HeatmapsOnImage
+        The heatmaps to augment.
+
+    segmentation_maps : None or list of imgaug.augmentables.segmaps.SegmentationMapsOnImage
+        The segmentation maps to augment.
+
+    keypoints : None or list of imgaug.augmentables.kps.KeypointOnImage
+        The keypoints to augment.
+
+    bounding_boxes : None or list of imgaug.augmentables.bbs.BoundingBoxesOnImage
+        The bounding boxes to augment.
+
+    polygons : None or list of imgaug.augmentables.polys.PolygonsOnImage
+        The polygons to augment.
+
+    line_strings : None or list of imgaug.augmentables.lines.LineStringsOnImage
+        The line strings to augment.
+
+    """
+
+    def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
+                 keypoints=None, bounding_boxes=None, polygons=None,
+                 line_strings=None, data=None):
+        """Create a new :class:`BatchInAugmentation` instance."""
+        self.images = images
+        self.heatmaps = heatmaps
+        self.segmentation_maps = segmentation_maps
+        self.keypoints = keypoints
+        self.bounding_boxes = bounding_boxes
+        self.polygons = polygons
+        self.line_strings = line_strings
+        self.data = data
+
+    @property
+    def empty(self):
+        """Estimate whether this batch is empty, i.e. contains no data.
+
+        Returns
+        -------
+        bool
+            ``True`` if the batch contains no data to augment.
+            ``False`` otherwise.
+
+        """
+        return self.nb_rows == 0
+
+    @property
+    def nb_rows(self):
+        """Get the number of rows (i.e. examples) in this batch.
+
+        Note that this method assumes that all columns have the same number
+        of rows.
+
+        Returns
+        -------
+        int
+            Number of rows or ``0`` if there is no data in the batch.
+
+        """
+        for augm_name in _AUGMENTABLE_NAMES:
+            value = getattr(self, augm_name)
+            if value is not None:
+                return len(value)
+        return 0
+
+    @property
+    def columns(self):
+        """Get the columns of data to augment.
+
+        Each column represents one datatype and its corresponding data,
+        e.g. images or polygons.
+
+        Returns
+        -------
+        list of _AugmentableColumn
+            The columns to augment within this batch.
+
+        """
+        return _get_columns(self, "")
+
+    def get_column_names(self):
+        """Get the names of types of augmentables that contain data.
+
+        This method is intended for situations where one wants to know which
+        data is contained in the batch that has to be augmented, visualized
+        or something similar.
+
+        Returns
+        -------
+        list of str
+            Names of types of augmentables. E.g. ``["images", "polygons"]``.
+
+        """
+        return _get_column_names(self, "")
+
+    def get_rowwise_shapes(self):
+        """Get the shape of each row within this batch.
+
+        Each row denotes the data of different types (e.g. image array,
+        polygons) corresponding to a single example in the batch.
+
+        This method assumes that all ``.shape`` attributes contain the same
+        shape and that it is identical to the image's shape.
+        It also assumes that there are no columns containing only ``None`` s.
+
+        Returns
+        -------
+        list of tuple of int
+            The shapes of each row.
+
+        """
+        nb_rows = self.nb_rows
+        columns = self.columns
+        shapes = [None] * nb_rows
+        found = np.zeros((nb_rows,), dtype=bool)
+        for column in columns:
+            if column.name == "images" and ia.is_np_array(column.value):
+                shapes = [column.value.shape[1:]] * nb_rows
+            else:
+                for i, item in enumerate(column.value):
+                    if item is not None:
+                        shapes[i] = item.shape
+                        found[i] = True
+            if np.all(found):
+                return shapes
+        return shapes
+
+    def subselect_rows_by_indices(self, indices):
+        """Reduce this batch to a subset of rows based on their row indices.
+
+        Parameters
+        ----------
+        indices : iterable of int
+            Row indices to select.
+
+        Returns
+        -------
+        BatchInAugmentation
+            Batch containing only a subselection of rows.
+
+        """
+        kwargs = {"data": self.data}
+        for augm_name in _AUGMENTABLE_NAMES:
+            rows = getattr(self, augm_name)
+            if rows is not None:
+                if augm_name == "images" and ia.is_np_array(rows):
+                    rows = rows[indices]
+                else:
+                    rows = [rows[index] for index in indices]
+
+                if len(rows) == 0:
+                    rows = None
+            kwargs[augm_name] = rows
+
+        return BatchInAugmentation(**kwargs)
+
+    def invert_subselect_rows_by_indices_(self, indices, batch_subselected):
+        """Reverse the subselection of rows in-place.
+
+        This is the inverse of
+        :func:`BatchInAugmentation.subselect_rows_by_indices`.
+
+        This method has to be executed on the batch *before* subselection.
+
+        Parameters
+        ----------
+        indices : iterable of int
+            Row indices that were selected. (This is the input to
+
+        batch_subselected : BatchInAugmentation
+            The batch after
+            :func:`BatchInAugmentation.subselect_rows_by_indices` was called.
+
+        Returns
+        -------
+        BatchInAugmentation
+            The updated batch. (Modified in-place.)
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from imgaug.augmentables.batches import BatchInAugmentation
+        >>> images = np.zeros((2, 10, 20, 3), dtype=np.uint8)
+        >>> batch = BatchInAugmentation(images=images)
+        >>> batch_sub = batch.subselect_rows_by_indices([0])
+        >>> batch_sub.images += 1
+        >>> batch = batch.invert_subselect_rows_by_indices_([0], batch_sub)
+
+        """
+        for augm_name in _AUGMENTABLE_NAMES:
+            column = getattr(self, augm_name)
+            if column is not None:
+                column_sub = getattr(batch_subselected, augm_name)
+                if column_sub is None:
+                    # list of indices was empty, resulting in the columns
+                    # in the subselected batch being empty and replaced
+                    # by Nones. We can just re-use the columns before
+                    # subselection.
+                    pass
+                elif augm_name == "images" and ia.is_np_array(column):
+                    # An array does not have to stay an array after
+                    # augmentation. The shapes and/or dtypes of rows may
+                    # change, turning the array into a list.
+                    if ia.is_np_array(column_sub):
+                        shapes = {column.shape[1:], column_sub.shape[1:]}
+                        dtypes = {column.dtype.name, column_sub.dtype.name}
+                    else:
+                        shapes = set(
+                            [column.shape[1:]]
+                            + [image.shape for image in column_sub])
+                        dtypes = set(
+                            [column.dtype.name]
+                            + [image.dtype.name for image in column_sub])
+
+                    if len(shapes) == 1 and len(dtypes) == 1:
+                        column[indices] = column_sub
+                    else:
+                        self.images = list(column)
+                        for ith_index, index in enumerate(indices):
+                            self.images[index] = column_sub[ith_index]
+                else:
+                    for ith_index, index in enumerate(indices):
+                        column[index] = column_sub[ith_index]
+
+        return self
+
+    def propagation_hooks_ctx(self, augmenter, hooks, parents):
+        """Start a context in which propagation hooks are applied.
+
+        Parameters
+        ----------
+        augmenter : imgaug.augmenters.meta.Augmenter
+            Augmenter to provide to the propagation hook function.
+
+        hooks : imgaug.imgaug.HooksImages or imgaug.imgaug.HooksKeypoints
+            The hooks that might contain a propagation hook function.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            The list of parents to provide to the propagation hook function.
+
+        Returns
+        -------
+        _BatchInAugmentationPropagationContext
+            The progagation hook context.
+
+        """
+        return _BatchInAugmentationPropagationContext(
+            self, augmenter=augmenter, hooks=hooks, parents=parents)
+
+    def apply_propagation_hooks_(self, augmenter, hooks, parents):
+        """Set columns in this batch to ``None`` based on a propagation hook.
+
+        This method works in-place.
+
+        Parameters
+        ----------
+        augmenter : imgaug.augmenters.meta.Augmenter
+            Augmenter to provide to the propagation hook function.
+
+        hooks : imgaug.imgaug.HooksImages or imgaug.imgaug.HooksKeypoints
+            The hooks that might contain a propagation hook function.
+
+        parents : list of imgaug.augmenters.meta.Augmenter
+            The list of parents to provide to the propagation hook function.
+
+        Returns
+        -------
+        list of tuple of str
+            Information about which columns were set to ``None``.
+            Each tuple contains
+            ``(column attribute name, column value before setting it to None)``.
+            This information is required when calling
+            :func:`BatchInAugmentation.invert_apply_propagation_hooks_`.
+
+        """
+        if hooks is None:
+            return None
+
+        noned_info = []
+        for column in self.columns:
+            is_prop = hooks.is_propagating(
+                column.value, augmenter=augmenter, parents=parents,
+                default=True)
+            if not is_prop:
+                setattr(self, column.attr_name, None)
+                noned_info.append((column.attr_name, column.value))
+        return noned_info
+
+    def invert_apply_propagation_hooks_(self, noned_info):
+        """Set columns from ``None`` back to their original values.
+
+        This is the inverse of
+        :func:`BatchInAugmentation.apply_propagation_hooks_`.
+
+        This method works in-place.
+
+        Parameters
+        ----------
+        noned_info : list of tuple of str
+            Information about which columns were set to ``None`` and their
+            original values. This is the output of
+            :func:`BatchInAugmentation.apply_propagation_hooks_`.
+
+        Returns
+        -------
+        BatchInAugmentation
+            The updated batch. (Modified in-place.)
+
+        """
+        for attr_name, value in noned_info:
+            setattr(self, attr_name, value)
+        return self
+
+    def to_batch_in_augmentation(self):
+        """Convert this batch to a :class:`BatchInAugmentation` instance.
+
+        This method simply returns the batch itself. It exists for consistency
+        with the other batch classes.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.BatchInAugmentation
+            The batch itself. (Not copied.)
+
+        """
+        return self
+
+    def fill_from_batch_in_augmentation_(self, batch_in_augmentation):
+        """Set the columns in this batch to the column values of another batch.
+
+        This method works in-place.
+
+        Parameters
+        ----------
+        batch_in_augmentation : BatchInAugmentation
+            Batch of which to use the column values.
+            The values are *not* copied. Only their references are used.
+
+        Returns
+        -------
+        BatchInAugmentation
+            The updated batch. (Modified in-place.)
+
+        """
+        if batch_in_augmentation is self:
+            return self
+
+        self.images = batch_in_augmentation.images
+        self.heatmaps = batch_in_augmentation.heatmaps
+        self.segmentation_maps = batch_in_augmentation.segmentation_maps
+        self.keypoints = batch_in_augmentation.keypoints
+        self.bounding_boxes = batch_in_augmentation.bounding_boxes
+        self.polygons = batch_in_augmentation.polygons
+        self.line_strings = batch_in_augmentation.line_strings
+
+        return self
+
+    def to_batch(self, batch_before_aug):
+        """Convert this batch into a :class:`Batch` instance.
+
+        Parameters
+        ----------
+        batch_before_aug : imgaug.augmentables.batches.Batch
+            The batch before augmentation. It is required to set the input
+            data of the :class:`Batch` instance, e.g. ``images_unaug``
+            or ``data``.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.Batch
+            Batch, with original unaugmented inputs from `batch_before_aug`
+            and augmented outputs from this :class:`BatchInAugmentation`
+            instance.
+
+        """
+        batch = Batch(
+            images=batch_before_aug.images_unaug,
+            heatmaps=batch_before_aug.heatmaps_unaug,
+            segmentation_maps=batch_before_aug.segmentation_maps_unaug,
+            keypoints=batch_before_aug.keypoints_unaug,
+            bounding_boxes=batch_before_aug.bounding_boxes_unaug,
+            polygons=batch_before_aug.polygons_unaug,
+            line_strings=batch_before_aug.line_strings_unaug,
+            data=batch_before_aug.data
+        )
+        batch.images_aug = self.images
+        batch.heatmaps_aug = self.heatmaps
+        batch.segmentation_maps_aug = self.segmentation_maps
+        batch.keypoints_aug = self.keypoints
+        batch.bounding_boxes_aug = self.bounding_boxes
+        batch.polygons_aug = self.polygons
+        batch.line_strings_aug = self.line_strings
+        return batch
+
+    def deepcopy(self):
+        """Copy this batch and all of its column values.
+
+        Returns
+        -------
+        BatchInAugmentation
+            Deep copy of this batch.
+
+        """
+        batch = BatchInAugmentation(data=utils.deepcopy_fast(self.data))
+
+        for augm_name in _AUGMENTABLE_NAMES:
+            value = getattr(self, augm_name)
+            if value is not None:
+                setattr(batch, augm_name, utils.copy_augmentables(value))
+
+        return batch
+
+

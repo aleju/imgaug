@@ -348,23 +348,25 @@ class Alpha(meta.Augmenter):
 
         self.epsilon = 1e-2
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        outputs_first, outputs_second = self._generate_branch_outputs(
-            images, "augment_images", hooks, parents)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        batch_first, batch_second = self._generate_branch_outputs(
+            batch, hooks, parents)
 
-        nb_images = len(images)
-        nb_channels = meta.estimate_max_number_of_channels(images)
+        columns = batch.columns
+        shapes = batch.get_rowwise_shapes()
+        nb_images = len(shapes)
+        nb_channels_max = max([shape[2] if len(shape) > 2 else 1
+                               for shape in shapes])
         rngs = random_state.duplicate(2)
         per_channel = self.per_channel.draw_samples(nb_images,
                                                     random_state=rngs[0])
-        alphas = self.factor.draw_samples((nb_images, nb_channels),
+        alphas = self.factor.draw_samples((nb_images, nb_channels_max),
                                           random_state=rngs[1])
-        result = images
-        gen = enumerate(zip(outputs_first, outputs_second))
-        for i, (image_first, image_second) in gen:
+
+        for i, shape in enumerate(shapes):
             if per_channel[i] > 0.5:
-                nb_channels_i = image_first.shape[2]
-                alphas_i = alphas[i, 0:nb_channels_i]
+                nb_channels = shape[2] if len(shape) > 2 else 1
+                alphas_i = alphas[i, 0:nb_channels]
             else:
                 # We catch here the case of alphas[i] being empty, which can
                 # happen if all images have 0 channels.
@@ -372,129 +374,57 @@ class Alpha(meta.Augmenter):
                 # contains zero values anyways.
                 alphas_i = alphas[i, 0] if alphas[i].size > 0 else 0
 
-            result[i] = blend_alpha(image_first, image_second, alphas_i,
-                                    eps=self.epsilon)
-        return result
+            # compute alpha for non-image data -- average() also works with
+            # scalars
+            alphas_i_avg = np.average(alphas_i)
+            use_first_branch = alphas_i_avg >= 0.5
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        # This currently uses either branch A's results or branch B's results.
-        # TODO Make this flexible to allow gradual blending of heatmaps here
-        #      as used for images. Heatmaps are probably the only augmentable
-        #      where this makes sense.
-        return self._augment_nonimages(
-            heatmaps, random_state, parents, hooks,
-            "augment_heatmaps")
+            # blend images
+            if batch.images is not None:
+                batch.images[i] = blend_alpha(batch_first.images[i],
+                                              batch_second.images[i],
+                                              alphas_i, eps=self.epsilon)
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents, hooks):
-        return self._augment_nonimages(
-            segmaps, random_state, parents, hooks,
-            "augment_segmentation_maps")
+            # blend non-images
+            # TODO Use gradual blending for heatmaps here (as for images)?
+            #      Heatmaps are probably the only augmentable where this makes
+            #      sense.
+            for column in columns:
+                if column.name != "images":
+                    batch_use = (batch_first if use_first_branch
+                                 else batch_second)
+                    column.value[i] = getattr(batch_use, column.attr_name)[i]
 
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        return self._augment_nonimages(
-            keypoints_on_images, random_state, parents, hooks,
-            "augment_keypoints")
+        return batch
 
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        return self._augment_nonimages(
-            polygons_on_images, random_state, parents, hooks,
-            "augment_polygons")
+    def _generate_branch_outputs(self, batch, hooks, parents):
+        parents_extended = parents + [self]
 
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        return self._augment_nonimages(
-            line_strings_on_images, random_state, parents, hooks,
-            "augment_line_strings")
+        # Note here that the propagation hook removes columns in the batch
+        # and re-adds them afterwards. So the batch should not be copied
+        # after the `with` statement.
+        outputs_first = batch
+        if self.first is not None:
+            outputs_first = outputs_first.deepcopy()
+            with outputs_first.propagation_hooks_ctx(self, hooks, parents):
+                if self.first is not None:
+                    outputs_first = self.first.augment_batch(
+                        outputs_first,
+                        parents=parents_extended,
+                        hooks=hooks
+                    )
 
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        return self._augment_nonimages(
-            bounding_boxes_on_images, random_state, parents, hooks,
-            "augment_bounding_boxes")
-
-    def _augment_nonimages(self, augmentables, random_state, parents, hooks,
-                           augfunc_name):
-        outputs_first, outputs_second = self._generate_branch_outputs(
-            augmentables, augfunc_name, hooks, parents)
-
-        nb_images = len(augmentables)
-        if nb_images == 0:
-            return augmentables
-
-        nb_channels = meta.estimate_max_number_of_channels(augmentables)
-        rngs = random_state.duplicate(2)
-        per_channel = self.per_channel.draw_samples(nb_images,
-                                                    random_state=rngs[0])
-        alphas = self.factor.draw_samples((nb_images, nb_channels),
-                                          random_state=rngs[1])
-
-        result = augmentables
-        gen = enumerate(zip(outputs_first, outputs_second))
-        for i, (outputs_first_i, outputs_second_i) in gen:
-            # nonimage augmentation also works channel-wise -- even though
-            # e.g. keypoints do not have channels -- in order to keep the
-            # random samples properly synchronized with the image augmentation
-            if per_channel[i] > 0.5:
-                nb_channels_i = (
-                    augmentables[i].shape[2]
-                    if len(augmentables[i].shape) >= 3
-                    else 1)
-                alphas_i = alphas[i, 0:nb_channels_i]
-                # the condition is required here if all images have a channel
-                # axis of size 0
-                alpha = np.average(alphas_i) if alphas_i.size > 0 else 1.0
-            else:
-                # the condition is required here if all images have a channel
-                # axis of size 0
-                alpha = alphas[i, 0] if alphas.size > 0 else 1.0
-            assert 0 <= alpha <= 1.0, (
-                "Expected 'alpha' to be in the interval [0.0, 1.0]. "
-                "Got %.4f." % (alpha,))
-
-            # We decide here for one branch output or another.
-            # For coordinate-based augmentables there is really no good other
-            # way here as you can't just choose "a bit" of one coordinate
-            # (averaging almost never makes sense). For heatmaps we could
-            # do some blending, but choose here to not do that to better
-            # align with segmentation maps.
-            # So if the alpha is >= 0.5 (branch A is more visible than
-            # branch B), we pick the results of branch A and only A,
-            # otherwise the result of branch B.
-            if alpha >= 0.5:
-                result[i] = outputs_first_i
-            else:
-                result[i] = outputs_second_i
-
-        return result
-
-    def _generate_branch_outputs(self, augmentables, augfunc_name, hooks,
-                                 parents):
-        outputs_first = augmentables
-        outputs_second = augmentables
-
-        if self._is_propagating(augmentables, hooks, parents):
-            if self.first is not None:
-                outputs_first = getattr(self.first, augfunc_name)(
-                    augm_utils.copy_augmentables(augmentables),
-                    parents=parents + [self],
-                    hooks=hooks
-                )
-
-            if self.second is not None:
-                outputs_second = getattr(self.second, augfunc_name)(
-                    augm_utils.copy_augmentables(augmentables),
-                    parents=parents + [self],
+        outputs_second = batch
+        if self.second is not None:
+            outputs_second = outputs_second.deepcopy()
+            with outputs_second.propagation_hooks_ctx(self, hooks, parents):
+                outputs_second = self.second.augment_batch(
+                    outputs_second,
+                    parents=parents_extended,
                     hooks=hooks
                 )
 
         return outputs_first, outputs_second
-
-    def _is_propagating(self, augmentables, hooks, parents):
-        return (hooks is None
-                or hooks.is_propagating(augmentables, augmenter=self,
-                                        parents=parents, default=True))
 
     def _to_deterministic(self):
         aug = self.copy()
@@ -682,31 +612,78 @@ class AlphaElementwise(Alpha):
         )
 
         # this controls how keypoints and polygons are augmented
-        # keypoint mode currently also affects line strings
-        self._keypoints_mode = self._MODE_POINTWISE
-        self._polygons_mode = self._MODE_EITHER_OR
-        self._line_strings_mode = self._MODE_EITHER_OR
-        self._bounding_box_mode = self._MODE_EITHER_OR
+        # Non-keypoints currently uses an either-or approach.
+        # Using pointwise augmentation is problematic for polygons and line
+        # strings, because the order of the points may have changed (e.g.
+        # from clockwise to counter-clockwise). For polygons, it is also
+        # overall more likely that some child-augmenter added/deleted points
+        # and we would need a polygon recoverer.
+        # Overall it seems to be the better approach to use all polygons
+        # from one branch or the other, which guarantuees their validity.
+        # TODO decide the either-or not based on the whole average mask
+        #      value but on the average mask value within the polygon's area?
+        self._coord_modes = {
+            "keypoints": self._MODE_POINTWISE,
+            "polygons": self._MODE_EITHER_OR,
+            "line_strings": self._MODE_EITHER_OR,
+            "bounding_boxes": self._MODE_EITHER_OR
+        }
 
-    def _augment_images(self, images, random_state, parents, hooks):
-        outputs_first, outputs_second = self._generate_branch_outputs(
-            images, "augment_images", hooks, parents)
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        batch_first, batch_second = self._generate_branch_outputs(
+            batch, hooks, parents)
 
-        nb_images = len(images)
+        shapes = batch.get_rowwise_shapes()
+        nb_images = len(shapes)
         rngs = random_state.duplicate(nb_images+1)
         per_channel = self.per_channel.draw_samples(nb_images,
                                                     random_state=rngs[-1])
 
-        result = images
-        gen = enumerate(zip(images, outputs_first, outputs_second))
-        for i, (image, image_first, image_second) in gen:
-            h, w, nb_channels = image.shape[0:3]
+        for i, shape in enumerate(shapes):
+            h, w, nb_channels = (
+                shape[0], shape[1], shape[2] if len(shape) > 2 else 1
+            )
             mask = self._sample_mask(h, w, nb_channels, per_channel[i], rngs[i])
 
-            result[i] = blend_alpha(image_first, image_second, mask,
-                                    eps=self.epsilon)
+            # blend images
+            if batch.images is not None:
+                batch.images[i] = blend_alpha(batch_first.images[i],
+                                              batch_second.images[i],
+                                              mask, eps=self.epsilon)
 
-        return result
+            if batch.heatmaps is not None:
+                arr = batch.heatmaps[i].arr_0to1
+                arr_height, arr_width = arr.shape[0:2]
+                mask_binarized = self._binarize_mask(mask,
+                                                     arr_height, arr_width)
+                batch.heatmaps[i].arr_0to1 = blend_alpha(
+                    batch_first.heatmaps[i].arr_0to1,
+                    batch_second.heatmaps[i].arr_0to1,
+                    mask_binarized, eps=self.epsilon)
+
+            if batch.segmentation_maps is not None:
+                arr = batch.segmentation_maps[i].arr
+                arr_height, arr_width = arr.shape[0:2]
+                mask_binarized = self._binarize_mask(mask,
+                                                     arr_height, arr_width)
+                batch.segmentation_maps[i].arr = blend_alpha(
+                    batch_first.segmentation_maps[i].arr,
+                    batch_second.segmentation_maps[i].arr,
+                    mask_binarized, eps=self.epsilon)
+
+            for augm_attr_name in ["keypoints", "bounding_boxes", "polygons",
+                                   "line_strings"]:
+                augm_value = getattr(batch, augm_attr_name)
+                if augm_value is not None:
+                    augm_value[i] = self._blend_coordinates(
+                        augm_value[i],
+                        getattr(batch_first, augm_attr_name)[i],
+                        getattr(batch_second, augm_attr_name)[i],
+                        mask,
+                        self._coord_modes[augm_attr_name]
+                    )
+
+        return batch
 
     def _sample_mask(self, height, width, nb_channels, per_channel, rng):
         if per_channel > 0.5:
@@ -732,202 +709,77 @@ class AlphaElementwise(Alpha):
 
         return mask
 
-    def _augment_heatmaps(self, heatmaps, random_state, parents, hooks):
-        return self._augment_hms_and_segmaps(
-            heatmaps, random_state, parents, hooks,
-            "augment_heatmaps", "arr_0to1")
+    @classmethod
+    def _binarize_mask(cls, mask, arr_height, arr_width):
+        # Average over channels, resize to heatmap/segmap array size
+        # (+clip for cubic interpolation). We can use none-NN interpolation
+        # for segmaps here as this is just the mask and not the segmap
+        # array.
+        mask_3d = np.atleast_3d(mask)
+        mask_avg = (
+            np.average(mask_3d, axis=2) if mask_3d.shape[2] > 0 else 1.0)
+        mask_rs = ia.imresize_single_image(mask_avg, (arr_height, arr_width))
+        mask_arr = iadt.clip_(mask_rs, 0, 1.0)
+        mask_arr_binarized = (mask_arr >= 0.5)
+        return mask_arr_binarized
 
-    def _augment_segmentation_maps(self, segmaps, random_state, parents,
-                                   hooks):
-        return self._augment_hms_and_segmaps(
-            segmaps, random_state, parents, hooks,
-            "augment_segmentation_maps", "arr")
+    @classmethod
+    def _blend_coordinates(cls, cbaoi, cbaoi_first, cbaoi_second, mask_image,
+                           mode):
+        coords = augm_utils.convert_cbaois_to_kpsois(cbaoi)
+        coords_first = augm_utils.convert_cbaois_to_kpsois(cbaoi_first)
+        coords_second = augm_utils.convert_cbaois_to_kpsois(cbaoi_second)
 
-    def _augment_hms_and_segmaps(self, augmentables, random_state, parents,
-                                 hooks, augfunc_name, arr_attr_name):
-        outputs_first, outputs_second = self._generate_branch_outputs(
-            augmentables, augfunc_name, hooks, parents)
+        coords = coords.to_xy_array()
+        coords_first = coords_first.to_xy_array()
+        coords_second = coords_second.to_xy_array()
 
-        result = augmentables
-        nb_images = len(augmentables)
-        rngs = random_state.duplicate(nb_images+1)
-        per_channel = self.per_channel.draw_samples(nb_images,
-                                                    random_state=rngs[-1])
+        h_img, w_img = mask_image.shape[0:2]
 
-        gen = enumerate(zip(augmentables, outputs_first, outputs_second))
-        for i, (augmentable_i, outputs_first_i, outputs_second_i) in gen:
-            arr_i = getattr(augmentable_i, arr_attr_name)
-            arr_first_i = getattr(outputs_first_i, arr_attr_name)
-            arr_second_i = getattr(outputs_second_i, arr_attr_name)
+        if mode == cls._MODE_POINTWISE:
+            # Augment pointwise, i.e. check for each point and its
+            # xy-location the average mask value and pick based on that
+            # either the point from the first or second branch.
+            assert len(coords_first) == len(coords_second), (
+                "Got different numbers of coordinates before/after "
+                "augmentation in AlphaElementwise. The number of "
+                "coordinates is currently not allowed to change for this "
+                "augmenter. Input contained %d coordinates, first branch "
+                "%d, second branch %d." % (
+                    len(coords), len(coords_first), len(coords_second)))
 
-            h_img, w_img = augmentable_i.shape[0:2]
-            h_arr, w_arr = arr_i.shape[0:2]
-            nb_channels_img = (
-                augmentable_i.shape[2] if len(augmentable_i.shape) >= 3 else 1)
-
-            per_channel_i = per_channel[i]
-
-            mask_image = self._sample_mask(h_img, w_img, nb_channels_img,
-                                           per_channel_i, rngs[i])
-
-            # Average over channels, resize to heatmap/segmap array size
-            # (+clip for cubic interpolation). We can use none-NN interpolation
-            # for segmaps here as this is just the mask and not the segmap
-            # array.
-            mask_3d = np.atleast_3d(mask_image)
-            mask_avg = (
-                np.average(mask_3d, axis=2) if mask_3d.shape[2] > 0 else 1.0)
-            mask_arr = iadt.clip_(
-                ia.imresize_single_image(mask_avg, (h_arr, w_arr)),
-                0, 1.0)
-
-            mask_arr_binarized = (mask_arr >= 0.5)
-            arr_i_aug = blend_alpha(
-                arr_first_i, arr_second_i, mask_arr_binarized,
-                eps=self.epsilon)
-
-            setattr(result[i], arr_attr_name, arr_i_aug)
-
-        return result
-
-    def _augment_keypoints(self, keypoints_on_images, random_state, parents,
-                           hooks):
-        def _get_coords_func(augmentable):
-            return [(kp.x, kp.y) for kp in augmentable.keypoints]
-
-        def _assign_coords_func(augmentable, coords):
-            kps = [ia.Keypoint(x=x, y=y) for x, y in coords]
-            return augmentable.deepcopy(keypoints=kps)
-
-        return self._augment_coordinate_based(
-            keypoints_on_images, random_state, parents, hooks,
-            "augment_keypoints", _get_coords_func, _assign_coords_func)
-
-    def _augment_polygons(self, polygons_on_images, random_state, parents,
-                          hooks):
-        # This currently uses an either-or approach.
-        # Using pointwise augmentation is problematic here, because the order
-        # of the points may have changed (e.g. from clockwise to
-        # counter-clockwise). For polygons, it is also overall more likely
-        # that some child-augmenter added/deleted points and we would need a
-        # polygon recoverer.
-        # Overall it seems to be the better approach to use all polygons
-        # from one branch or the other, which guarantuees their validity.
-        # TODO decide the either-or not based on the whole average mask
-        #      value but on the average mask value within the polygon's area?
-        mode = self._polygons_mode
-        with _switch_keypoint_mode_temporarily(self, mode):
-            return self._augment_polygons_as_keypoints(
-                polygons_on_images, random_state, parents, hooks)
-
-    def _augment_line_strings(self, line_strings_on_images, random_state,
-                              parents, hooks):
-        # see notes under polygons
-        mode = self._line_strings_mode
-        with _switch_keypoint_mode_temporarily(self, mode):
-            return self._augment_line_strings_as_keypoints(
-                line_strings_on_images, random_state, parents, hooks)
-
-    def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
-                                parents, hooks):
-        # see notes under polygons
-        mode = self._bounding_box_mode
-        with _switch_keypoint_mode_temporarily(self, mode):
-            return self._augment_bounding_boxes_as_keypoints(
-                bounding_boxes_on_images, random_state, parents, hooks)
-
-    def _augment_coordinate_based(self, inputs, random_state, parents, hooks,
-                                  augfunc_name, get_coords_func,
-                                  assign_coords_func):
-        assert self._keypoints_mode in self._MODES, (
-            "Expected _keypoint_mode to be one of: %s. Got: %s." % (
-                self._MODES, self._keypoint_mode))
-
-        outputs_first, outputs_second = self._generate_branch_outputs(
-            inputs, augfunc_name, hooks, parents)
-
-        result = inputs
-        nb_images = len(inputs)
-        rngs = random_state.duplicate(nb_images+1)
-        per_channel = self.per_channel.draw_samples(nb_images,
-                                                    random_state=rngs[-1])
-
-        gen = enumerate(zip(inputs, outputs_first, outputs_second))
-        for i, (augmentable_i, outputs_first_i, outputs_second_i) in gen:
-            coords = get_coords_func(augmentable_i)
-            coords_first = get_coords_func(outputs_first_i)
-            coords_second = get_coords_func(outputs_second_i)
-
-            h_img, w_img = augmentable_i.shape[0:2]
-            nb_channels_img = (
-                augmentable_i.shape[2] if len(augmentable_i.shape) >= 3 else 1)
-
-            per_channel_i = per_channel[i]
-
-            mask_image = self._sample_mask(h_img, w_img, nb_channels_img,
-                                           per_channel_i, rngs[i])
-
-            if self._keypoints_mode == self._MODE_POINTWISE:
-                # Augment pointwise, i.e. check for each point and its
-                # xy-location the average mask value and pick based on that
-                # either the point from the first or second branch.
-                assert len(coords_first) == len(coords_second), (
-                    "Got different numbers of coordinates before/after "
-                    "augmentation in AlphaElementwise. The number of "
-                    "coordinates is currently not allowed to change for this "
-                    "augmenter. Input contained %d coordinates, first branch "
-                    "%d, second branch %d." % (
-                        len(coords), len(coords_first), len(coords_second)))
-
-                coords_aug = []
-                subgen = zip(coords, coords_first, coords_second)
-                for coord, coord_first, coord_second in subgen:
-                    x_int = int(np.round(coord[0]))
-                    y_int = int(np.round(coord[1]))
-                    if 0 <= y_int < h_img and 0 <= x_int < w_img:
-                        alphas_i = mask_image[y_int, x_int, :]
-                        alpha = (
-                            np.average(alphas_i) if alphas_i.size > 0 else 1.0)
-                        if alpha > 0.5:
-                            coords_aug.append(coord_first)
-                        else:
-                            coords_aug.append(coord_second)
+            coords_aug = []
+            subgen = zip(coords, coords_first, coords_second)
+            for coord, coord_first, coord_second in subgen:
+                x_int = int(np.round(coord[0]))
+                y_int = int(np.round(coord[1]))
+                if 0 <= y_int < h_img and 0 <= x_int < w_img:
+                    alphas_i = mask_image[y_int, x_int, :]
+                    alpha = (
+                        np.average(alphas_i) if alphas_i.size > 0 else 1.0)
+                    if alpha > 0.5:
+                        coords_aug.append(coord_first)
                     else:
-                        coords_aug.append((x_int, y_int))
-            else:
-                # Augment with an either-or approach over all points, i.e.
-                # based on the average of the whole mask, either all points
-                # from the first or all points from the second branch are
-                # used.
-                # Note that we ensured above that _keypoint_mode must be
-                # _MODE_EITHER_OR if it wasn't _MODE_POINTWISE.
-                mask_image_avg = (
-                    np.average(mask_image) if mask_image.size > 0 else 1.0)
-                if mask_image_avg > 0.5:
-                    coords_aug = coords_first
+                        coords_aug.append(coord_second)
                 else:
-                    coords_aug = coords_second
+                    coords_aug.append((x_int, y_int))
+        else:
+            # Augment with an either-or approach over all points, i.e.
+            # based on the average of the whole mask, either all points
+            # from the first or all points from the second branch are
+            # used.
+            # Note that we ensured above that _keypoint_mode must be
+            # _MODE_EITHER_OR if it wasn't _MODE_POINTWISE.
+            mask_image_avg = (
+                np.average(mask_image) if mask_image.size > 0 else 1.0)
+            if mask_image_avg > 0.5:
+                coords_aug = coords_first
+            else:
+                coords_aug = coords_second
 
-            result[i] = assign_coords_func(result[i], coords_aug)
-
-        return result
-
-
-# Helper for AlphaElementwise to temporarily change the augmentation mode
-# of keypoints.
-class _switch_keypoint_mode_temporarily(object):
-    def __init__(self, augmenter, mode):
-        self.augmenter = augmenter
-        self.mode = mode
-        self.mode_orig = None
-
-    def __enter__(self):
-        # pylint:disable=protected-access
-        self.mode_orig = self.augmenter._keypoints_mode
-        self.augmenter._keypoints_mode = self.mode
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.augmenter._keypoints_mode = self.mode_orig
+        kpsoi_aug = ia.KeypointsOnImage.from_xy_array(
+            coords_aug, shape=cbaoi.shape)
+        return augm_utils.invert_convert_cbaois_to_kpsois_(cbaoi, kpsoi_aug)
 
 
 class SimplexNoiseAlpha(AlphaElementwise):

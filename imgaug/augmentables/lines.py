@@ -1822,6 +1822,126 @@ class LineStringsOnImage(object):
                    for ls in self.line_strings]
         return LineStringsOnImage(lss_new, shape=self.shape)
 
+    def to_xy_array(self):
+        """Convert all line string coordinates to one array of shape ``(N,2)``.
+
+        Returns
+        -------
+        (N, 2) ndarray
+            Array containing all xy-coordinates of all line strings within this
+            instance.
+
+        """
+        if self.empty:
+            return np.zeros((0, 2), dtype=np.float32)
+        return np.concatenate([ls.coords for ls in self.line_strings])
+
+    def fill_from_xy_array_(self, xy):
+        """Modify the corner coordinates of all line strings in-place.
+
+        .. note ::
+
+            This currently expects that `xy` contains exactly as many
+            coordinates as the line strings within this instance have corner
+            points. Otherwise, an ``AssertionError`` will be raised.
+
+        Parameters
+        ----------
+        xy : (N, 2) ndarray or iterable of iterable of number
+            XY-Coordinates of ``N`` corner points. ``N`` must match the
+            number of corner points in all line strings within this instance.
+
+        Returns
+        -------
+        LineStringsOnImage
+            This instance itself, with updated coordinates.
+            Note that the instance was modified in-place.
+
+        """
+        xy = np.array(xy, dtype=np.float32)
+
+        # note that np.array([]) is (0,), not (0, 2)
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+            "Expected input array to have shape (N,2), "
+            "got shape %s." % (xy.shape,))
+
+        counter = 0
+        for ls in self.line_strings:
+            nb_points = len(ls.coords)
+            assert counter + nb_points <= len(xy), (
+                "Received fewer points than there are corner points in "
+                "all line strings. Got %d points, expected %d." % (
+                    len(xy),
+                    sum([len(ls_.coords) for ls_ in self.line_strings])))
+
+            ls.coords[:, ...] = xy[counter:counter+nb_points]
+            counter += nb_points
+
+        assert counter == len(xy), (
+            "Expected to get exactly as many xy-coordinates as there are "
+            "points in all line strings polygons within this instance. "
+            "Got %d points, could only assign %d points." % (
+                len(xy), counter,))
+
+        return self
+
+    def to_keypoints_on_image(self):
+        """Convert the line strings to one ``KeypointsOnImage`` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            A keypoints instance containing ``N`` coordinates for a total
+            of ``N`` points in the ``coords`` attributes of all line strings.
+            Order matches the order in ``line_strings`` and ``coords``
+            attributes.
+
+        """
+        from . import KeypointsOnImage
+        if self.empty:
+            return KeypointsOnImage([], shape=self.shape)
+        coords = np.concatenate(
+            [ls.coords for ls in self.line_strings],
+            axis=0)
+        return KeypointsOnImage.from_xy_array(coords,
+                                              shape=self.shape)
+
+    def invert_to_keypoints_on_image_(self, kpsoi):
+        """Invert the output of ``to_keypoints_on_image()`` in-place.
+
+        This function writes in-place into this ``LineStringsOnImage``
+        instance.
+
+        Parameters
+        ----------
+        kpsoi : imgaug.augmentables.kps.KeypointsOnImages
+            Keypoints to convert back to line strings, i.e. the outputs
+            of ``to_keypoints_on_image()``.
+
+        Returns
+        -------
+        LineStringsOnImage
+            Line strings container with updated coordinates.
+            Note that the instance is also updated in-place.
+
+        """
+        lss = self.line_strings
+        coordss = [ls.coords for ls in lss]
+        nb_points_exp = sum([len(coords) for coords in coordss])
+        assert len(kpsoi.keypoints) == nb_points_exp, (
+            "Expected %d coordinates, got %d." % (
+                nb_points_exp, len(kpsoi.keypoints)))
+
+        xy_arr = kpsoi.to_xy_array()
+
+        counter = 0
+        for ls in lss:
+            coords = ls.coords
+            coords[:, :] = xy_arr[counter:counter+len(coords), :]
+            counter += len(coords)
+        self.shape = kpsoi.shape
+        return self
+
     def copy(self, line_strings=None, shape=None):
         """Create a shallow copy of this object.
 

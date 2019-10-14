@@ -1,4 +1,5 @@
 from __future__ import print_function, absolute_import, division
+import copy as copylib
 import numpy as np
 import six.moves as sm
 import imgaug as ia
@@ -16,6 +17,23 @@ def copy_augmentables(augmentables):
         else:
             result.append(augmentable.deepcopy())
     return result
+
+
+def deepcopy_fast(obj):
+    if obj is None:
+        return None
+    elif ia.is_single_number(obj) or ia.is_string(obj):
+        return obj
+    elif isinstance(obj, list):
+        return [deepcopy_fast(el) for el in obj]
+    elif isinstance(obj, tuple):
+        return tuple([deepcopy_fast(el) for el in obj])
+    elif ia.is_np_array(obj):
+        return np.copy(obj)
+    elif hasattr(obj, "deepcopy"):
+        return obj.deepcopy()
+    else:
+        return copylib.deepcopy(obj)
 
 
 # TODO integrate into keypoints
@@ -215,3 +233,63 @@ def interpolate_points_by_max_distance(points, max_distance, closed=True):
     if not closed:
         points_interp.append(points[-1])
     return points_interp
+
+
+def convert_cbaois_to_kpsois(cbaois):
+    """Convert coordinate-based augmentables to KeypointsOnImage instances.
+
+    Parameters
+    ----------
+    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
+        Coordinate-based augmentables to convert, e.g. bounding boxes.
+
+    Returns
+    -------
+    list of imgaug.augmentables.kps.KeypointsOnImage or imgaug.augmentables.kps.KeypointsOnImage
+        ``KeypointsOnImage`` instances containing the coordinates of input
+        `cbaois`.
+
+    """
+    if not isinstance(cbaois, list):
+        return cbaois.to_keypoints_on_image()
+
+    kpsois = []
+    for cbaoi in cbaois:
+        kpsois.append(cbaoi.to_keypoints_on_image())
+    return kpsois
+
+
+def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
+    """Invert the output of :func:`convert_to_cbaois_to_kpsois` in-place.
+
+    This function writes in-place into `cbaois`.
+
+    Parameters
+    ----------
+    cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
+        Original coordinate-based augmentables before they were converted,
+        i.e. the same inputs as provided to :func:`convert_to_kpsois`.
+
+    kpsois : list of imgaug.augmentables.kps.KeypointsOnImages or imgaug.augmentables.kps.KeypointsOnImages
+        Keypoints to convert back to the types of `cbaois`, i.e. the outputs
+        of :func:`convert_cbaois_to_kpsois`.
+
+    Returns
+    -------
+    list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
+        Parameter `cbaois`, with updated coordinates and shapes derived from
+        `kpsois`. `cbaois` is modified in-place.
+
+    """
+    if not isinstance(cbaois, list):
+        assert not isinstance(kpsois, list), (
+            "Expected non-list for `kpsois` when `cbaois` is non-list. "
+            "Got type %s." % (type(kpsois.__name__)),)
+        return cbaois.invert_to_keypoints_on_image_(kpsois)
+
+    result = []
+    for cbaoi, kpsoi in zip(cbaois, kpsois):
+        cbaoi_recovered = cbaoi.invert_to_keypoints_on_image_(kpsoi)
+        result.append(cbaoi_recovered)
+
+    return result

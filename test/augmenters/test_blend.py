@@ -774,9 +774,9 @@ class TestAlpha(unittest.TestCase):
             "augment_line_strings",
             ia.LineStringsOnImage([], shape=(1, 2, 3)))
 
-    def test_bounding_boxes_hooks_limit_propagation(self):
+    def test_line_strings_hooks_limit_propagation(self):
         return self._test_cba_hooks_limit_propagation(
-            "augment_bounding_boxes", self.bbsoi)
+            "augment_line_strings", self.lsoi)
 
     def test_bounding_boxes_factor_is_1(self):
         self._test_cba_factor_is_1("augment_bounding_boxes", self.bbsoi)
