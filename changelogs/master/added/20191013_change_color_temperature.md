@@ -1,4 +1,4 @@
-# New Augmenter ChangeColorTemperature
+# New Augmenter ChangeColorTemperature #454
 
 * Added augmenter `imgaug.augmenters.color.ChangeColorTemperature`.
 * Added function `imgaug.augmenters.color.change_color_temperatures_()`.
