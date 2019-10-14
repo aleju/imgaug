@@ -1223,6 +1223,88 @@ class WithBrightnessChannels(meta.Augmenter):
         )
 
 
+class MultiplyAndAddToBrightness(WithBrightnessChannels):
+    """Multiply and add to the brightness channels of input images.
+
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Multiply`.
+
+    add : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Add`.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    from_colorspace : str, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    random_order : bool, optional
+        Whether to apply the add and multiply operations in random
+        order (``True``). If ``False``, this will always first multiply and
+        then add.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, mul=(0.7, 1.3), add=(-30, 30),
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV],
+                 from_colorspace="RGB",
+                 random_order=True,
+                 name=None, deterministic=False, random_state=None):
+        mul = (
+            meta.Noop()
+            if ia.is_single_number(mul) and np.isclose(mul, 1.0)
+            else arithmetic.Multiply(mul))
+        add = meta.Noop() if add == 0 else arithmetic.Add(add)
+
+        super(MultiplyAndAddToBrightness, self).__init__(
+            children=meta.Sequential(
+                [mul, add],
+                random_order=random_order
+            ),
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+    def __str__(self):
+        return (
+            "MultiplyAndAddToBrightness("
+            "mul=%s, "
+            "add=%s, "
+            "to_colorspace=%s, "
+            "from_colorspace=%s, "
+            "random_order=%s, "
+            "name=%s, "
+            "deterministic=%s)" % (
+                str(self.children[0]),
+                str(self.children[1]),
+                self.to_colorspace,
+                self.from_colorspace,
+                self.children.random_order,
+                self.name,
+                self.deterministic)
+        )
+
+
 # TODO Merge this into WithColorspace? A bit problematic due to int16
 #      conversion that would make WithColorspace less flexible.
 # TODO add option to choose overflow behaviour for hue and saturation channels,

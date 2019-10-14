@@ -570,6 +570,105 @@ class TestWithBrightnessChannels(unittest.TestCase):
         assert aug_str == expected
 
 
+class TestMultiplyAndAddToBrightness(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___defaults(self):
+        aug = iaa.MultiplyAndAddToBrightness()
+        assert aug.children.random_order is True
+        assert isinstance(aug.children[0], iaa.Multiply)
+        assert isinstance(aug.children[1], iaa.Add)
+        assert iaa.CSPACE_HSV in aug.to_colorspace.a
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___add_is_zero(self):
+        aug = iaa.MultiplyAndAddToBrightness(add=0)
+        assert aug.children.random_order is True
+        assert isinstance(aug.children[0], iaa.Multiply)
+        assert isinstance(aug.children[1], iaa.Noop)
+        assert iaa.CSPACE_HSV in aug.to_colorspace.a
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___mul_is_1(self):
+        aug = iaa.MultiplyAndAddToBrightness(mul=1.0)
+        assert aug.children.random_order is True
+        assert isinstance(aug.children[0], iaa.Noop)
+        assert isinstance(aug.children[1], iaa.Add)
+        assert iaa.CSPACE_HSV in aug.to_colorspace.a
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test_add_to_example_image(self):
+        aug = iaa.MultiplyAndAddToBrightness(mul=1.0, add=10,
+                                             to_colorspace=iaa.CSPACE_HSV,
+                                             random_order=False)
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+
+        image_aug = aug(image=image)
+
+        expected = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
+        expected[:, :, 2] += 10
+        expected = cv2.cvtColor(expected.astype(np.uint8), cv2.COLOR_HSV2RGB)
+        assert np.array_equal(image_aug, expected)
+
+    def test_multiply_example_image(self):
+        aug = iaa.MultiplyAndAddToBrightness(mul=1.2, add=0,
+                                             to_colorspace=iaa.CSPACE_HSV,
+                                             random_order=False)
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+
+        image_aug = aug(image=image)
+
+        expected = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
+        expected[:, :, 2] *= 1.2
+        expected = cv2.cvtColor(expected.astype(np.uint8), cv2.COLOR_HSV2RGB)
+        assert np.array_equal(image_aug, expected)
+
+    def test_multiply_and_add_example_image(self):
+        aug = iaa.MultiplyAndAddToBrightness(mul=1.2, add=10,
+                                             to_colorspace=iaa.CSPACE_HSV,
+                                             random_order=False)
+        image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
+
+        image_aug = aug(image=image)
+
+        expected = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
+        expected[:, :, 2] *= 1.2
+        expected[:, :, 2] += 10
+        expected = cv2.cvtColor(expected.astype(np.uint8), cv2.COLOR_HSV2RGB)
+        assert np.array_equal(image_aug, expected)
+
+    def test___str__(self):
+        params = [
+            (1.01, 1, iaa.Multiply(1.01), iaa.Add(1)),
+            (1.00, 1, iaa.Noop(), iaa.Add(1)),
+            (1.01, 0, iaa.Multiply(1.01), iaa.Noop()),
+            (1.00, 0, iaa.Noop(), iaa.Noop()),
+        ]
+
+        for mul, add, exp_mul, exp_add in params:
+            with self.subTest(mul=mul, add=add):
+                aug = iaa.MultiplyAndAddToBrightness(
+                    mul=mul,
+                    add=add,
+                    from_colorspace=iaa.CSPACE_RGB,
+                    to_colorspace=iaa.CSPACE_HSV,
+                    name="foo")
+
+                aug_str = aug.__str__()
+
+                expected = (
+                    "MultiplyAndAddToBrightness("
+                    "mul=%s, "
+                    "add=%s, "
+                    "to_colorspace=Deterministic(HSV), "
+                    "from_colorspace=RGB, "
+                    "random_order=True, "
+                    "name=foo, "
+                    "deterministic=False)" % (str(exp_mul), str(exp_add),))
+                assert aug_str == expected
+
+
 # TODO add tests for prop hooks
 class TestWithHueAndSaturation(unittest.TestCase):
     def setUp(self):
