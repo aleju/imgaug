@@ -686,18 +686,6 @@ class Augmenter(object):
 
         return batch
 
-    def _is_activated_with_hooks(self, augmentables, parents, hooks):
-        is_activated = (
-            (hooks is None and self.activated)
-            or (
-                hooks is not None
-                and hooks.is_activated(
-                    augmentables, augmenter=self, parents=parents,
-                    default=self.activated)
-            )
-        )
-        return is_activated
-
     def augment_image(self, image, hooks=None):
         """Augment a single image.
 
