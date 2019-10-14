@@ -1208,10 +1208,17 @@ class WithBrightnessChannels(meta.Augmenter):
 
     def __str__(self):
         return (
-            "WithBrightness(to_colorspace=%s, from_colorspace=%s, "
-            "name=%s, children=[%s], deterministic=%s)" % (
-                self.to_colorspace, self.from_colorspace, self.name,
-                self.children, self.deterministic)
+            "WithBrightnessChannels("
+            "to_colorspace=%s, "
+            "from_colorspace=%s, "
+            "name=%s, "
+            "children=%s, "
+            "deterministic=%s)" % (
+                self.to_colorspace,
+                self.from_colorspace,
+                self.name,
+                self.children,
+                self.deterministic)
         )
 
 

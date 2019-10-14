@@ -553,6 +553,26 @@ class TestWithBrightnessChannels(unittest.TestCase):
         assert params[0].value == iaa.CSPACE_HSV
         assert params[1] == iaa.CSPACE_RGB
 
+    def test___str__(self):
+        child = iaa.Noop()
+        aug = iaa.WithBrightnessChannels(
+            child,
+            from_colorspace=iaa.CSPACE_RGB,
+            to_colorspace=iaa.CSPACE_HSV,
+            name="foo")
+
+        aug_str = aug.__str__()
+
+        expected_child = iaa.Sequential([child], name="foo-then")
+        expected = (
+            "WithBrightnessChannels("
+            "to_colorspace=Deterministic(HSV), "
+            "from_colorspace=RGB, "
+            "name=foo, "
+            "children=%s, "
+            "deterministic=False)" % (str(expected_child),))
+        assert aug_str == expected
+
 
 # TODO add tests for prop hooks
 class TestWithHueAndSaturation(unittest.TestCase):
