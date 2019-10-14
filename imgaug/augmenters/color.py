@@ -1112,14 +1112,16 @@ class WithBrightnessChannels(meta.Augmenter):
 
     """
 
+    # Usually one would think that CSPACE_CIE (=XYZ) would also work, as
+    # wikipedia says that Y denotes luminance, but this resulted in strong
+    # color changes (tried also the other channels).
     _CSPACE_TO_CHANNEL_ID = {
         CSPACE_YCrCb: 0,
         CSPACE_HSV: 2,
         CSPACE_HLS: 1,
         CSPACE_Lab: 0,
         CSPACE_Luv: 0,
-        CSPACE_YUV: 0,
-        CSPACE_CIE: 1  # Y in XYZ
+        CSPACE_YUV: 0
     }
 
     _VALID_COLORSPACES = set(_CSPACE_TO_CHANNEL_ID.keys())
@@ -1131,8 +1133,7 @@ class WithBrightnessChannels(meta.Augmenter):
                      CSPACE_HLS,
                      CSPACE_Lab,
                      CSPACE_Luv,
-                     CSPACE_YUV,
-                     CSPACE_CIE],
+                     CSPACE_YUV],
                  from_colorspace="RGB",
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value

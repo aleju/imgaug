@@ -424,13 +424,10 @@ class TestWithBrightnessChannels(unittest.TestCase):
                 else:
                     image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2LUV)
                 return image_cvt[:, :, 0:0+1]
-            elif cspace == iaa.CSPACE_YUV:
+            else:
+                assert cspace == iaa.CSPACE_YUV
                 image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
                 return image_cvt[:, :, 0:0+1]
-            else:
-                assert cspace == iaa.CSPACE_CIE
-                image_cvt = cv2.cvtColor(image, cv2.COLOR_RGB2XYZ)
-                return image_cvt[:, :, 1:1+1]
 
         # Max differences between input image and image after augmentation
         # when no child augmenter is used (for the given example image below).
@@ -443,8 +440,7 @@ class TestWithBrightnessChannels(unittest.TestCase):
             iaa.CSPACE_HLS: 0,
             iaa.CSPACE_Lab: 2,
             iaa.CSPACE_Luv: 4,
-            iaa.CSPACE_YUV: 1,
-            iaa.CSPACE_CIE: 2
+            iaa.CSPACE_YUV: 1
         }
 
         image = np.arange(6*6*3).astype(np.uint8).reshape((6, 6, 3))
