@@ -2850,10 +2850,10 @@ class PerspectiveTransform(meta.Augmenter):
         # cv2 perspectiveTransform doesn't accept numpy arrays as cval
         cval_samples_cv2 = cval_samples.tolist()
 
-        for i in sm.xrange(nb_images):
-            h, w = shapes[i][0:2]
+        for shape, rng in zip(shapes, rngs[2:]):
+            h, w = shape[0:2]
 
-            points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
+            points = self.jitter.draw_samples((4, 2), random_state=rng)
             points = np.mod(np.abs(points), 1)
 
             # modify jitter to the four corner point coordinates
