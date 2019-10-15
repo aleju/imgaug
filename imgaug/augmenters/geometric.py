@@ -2495,6 +2495,14 @@ class PerspectiveTransform(meta.Augmenter):
               that parameter per image, i.e. it must return only the above
               mentioned strings.
 
+    fit_output : bool, optional
+        If ``True``, the image plane size and position will be adjusted
+        to still capture the whole image after perspective transformation.
+        Otherwise, parts of the transformed image may be outside of the image
+        plane.
+        This setting should not be set to ``True`` when using large `scale`
+        values as it could lead to very large images.
+
     polygon_recoverer : 'auto' or None or imgaug.augmentables.polygons._ConcavePolygonRecoverer, optional
         The class to use to repair invalid polygons.
         If ``"auto"``, a new instance of
