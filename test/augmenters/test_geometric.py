@@ -5718,7 +5718,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
     def test_mode_replicate_copies_values(self):
         aug = iaa.PerspectiveTransform(
-            scale=0.001, mode='replicate', cval=0, random_state=31)
+            scale=0.001, mode="replicate", cval=0, random_state=31)
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
 
         img_aug = aug.augment_image(img)
@@ -5727,9 +5727,9 @@ class TestPerspectiveTransform(unittest.TestCase):
 
     def test_mode_constant_uses_cval(self):
         aug255 = iaa.PerspectiveTransform(
-            scale=0.001, mode='constant', cval=255, random_state=31)
+            scale=0.001, mode="constant", cval=255, random_state=31)
         aug0 = iaa.PerspectiveTransform(
-            scale=0.001, mode='constant', cval=0, random_state=31)
+            scale=0.001, mode="constant", cval=0, random_state=31)
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
 
         img_aug255 = aug255.augment_image(img)
@@ -5797,7 +5797,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
         assert params[1] is False
         assert params[2].value == 0
-        assert params[3].value == 'constant'
+        assert params[3].value == "constant"
         assert params[4] is False
 
     # --------
