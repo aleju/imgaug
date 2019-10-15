@@ -18,8 +18,10 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import skimage.morphology
+import cv2
 
 import imgaug as ia
+from imgaug import random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
@@ -5698,6 +5700,22 @@ class TestPerspectiveTransform(unittest.TestCase):
     # ------------
     # mode
     # ------------
+    def test_draw_samples_with_mode_being_int(self):
+        aug = iaa.PerspectiveTransform(scale=0.001, mode=cv2.BORDER_REPLICATE)
+
+        samples = aug._draw_samples([(10, 10, 3)], iarandom.RNG(0))
+
+        assert samples.modes.shape == (1,)
+        assert samples.modes[0] == cv2.BORDER_REPLICATE
+
+    def test_draw_samples_with_mode_being_string(self):
+        aug = iaa.PerspectiveTransform(scale=0.001, mode="replicate")
+
+        samples = aug._draw_samples([(10, 10, 3)], iarandom.RNG(0))
+
+        assert samples.modes.shape == (1,)
+        assert samples.modes[0] == cv2.BORDER_REPLICATE
+
     def test_mode_replicate_copies_values(self):
         aug = iaa.PerspectiveTransform(
             scale=0.001, mode='replicate', cval=0, random_state=31)

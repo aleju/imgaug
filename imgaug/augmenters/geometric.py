@@ -2533,6 +2533,13 @@ class PerspectiveTransform(meta.Augmenter):
 
     """
 
+    _BORDER_MODE_TO_INT = {
+        "replicate": cv2.BORDER_REPLICATE,
+        "constant": cv2.BORDER_CONSTANT,
+        cv2.BORDER_REPLICATE: cv2.BORDER_REPLICATE,
+        cv2.BORDER_CONSTANT: cv2.BORDER_CONSTANT
+    }
+
     def __init__(self, scale=0, cval=0, mode='constant', keep_size=True,
                  polygon_recoverer="auto", fit_output=False,
                  name=None, deterministic=False, random_state=None):
@@ -2827,12 +2834,6 @@ class PerspectiveTransform(meta.Augmenter):
         return result
 
     def _draw_samples(self, shapes, random_state):
-        # TODO change these to class attributes
-        mode_str_to_int = {
-            "replicate": cv2.BORDER_REPLICATE,
-            "constant": cv2.BORDER_CONSTANT
-        }
-
         matrices = []
         max_heights = []
         max_widths = []
@@ -2848,8 +2849,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i in sm.xrange(nb_images):
             mode = mode_samples[i]
-            mode_samples[i] = (
-                mode if ia.is_single_integer(mode) else mode_str_to_int[mode])
+            mode_samples[i] = self._BORDER_MODE_TO_INT[mode]
 
             cval_samples_cv2.append([int(cval_i) for cval_i in cval_samples[i]])
 
