@@ -2924,7 +2924,7 @@ class PerspectiveTransform(meta.Augmenter):
                 [max_width - 1, 0],
                 [max_width - 1, max_height - 1],
                 [0, max_height - 1]
-            ], dtype="float32")
+            ], dtype=np.float32)
 
             # compute the perspective transform matrix and then apply it
             m = cv2.getPerspectiveTransform(points_i, dst)
@@ -2965,19 +2965,20 @@ class PerspectiveTransform(meta.Augmenter):
         # return the ordered coordinates
         return pts_ordered
 
-    def _expand_transform(self, M, shape):
-        imgHeight, imgWidth = shape
+    @classmethod
+    def _expand_transform(cls, M, shape):
+        height, width = shape
         rect = np.array([
             [0, 0],
-            [imgWidth - 1, 0],
-            [imgWidth - 1, imgHeight - 1],
-            [0, imgHeight - 1]], dtype='float32')
+            [width - 1, 0],
+            [width - 1, height - 1],
+            [0, height - 1]], dtype=np.float32)
         dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
         dst -= dst.min(axis=0, keepdims=True)
         dst = np.around(dst, decimals=0)
         M_expanded = cv2.getPerspectiveTransform(rect, dst)
-        maxWidth, maxHeight = dst.max(axis=0) + 1
-        return M_expanded, maxWidth, maxHeight
+        max_width, max_height = dst.max(axis=0) + 1
+        return M_expanded, max_width, max_height
 
     def get_parameters(self):
         return [self.jitter, self.keep_size, self.cval, self.mode]
