@@ -5798,6 +5798,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert params[1] is False
         assert params[2].value == 0
         assert params[3].value == 'constant'
+        assert params[4] is False
 
     # --------
     # other dtypes

@@ -2981,7 +2981,8 @@ class PerspectiveTransform(meta.Augmenter):
         return M_expanded, max_width, max_height
 
     def get_parameters(self):
-        return [self.jitter, self.keep_size, self.cval, self.mode]
+        return [self.jitter, self.keep_size, self.cval, self.mode,
+                self.fit_output]
 
 
 class _ElasticTransformationSamplingResult(object):
