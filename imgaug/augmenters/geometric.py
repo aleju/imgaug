@@ -2847,11 +2847,10 @@ class PerspectiveTransform(meta.Augmenter):
             for mode, mapped_mode in self._BORDER_MODE_STR_TO_INT.items():
                 mode_samples[mode_samples == mode] = mapped_mode
 
-        cval_samples_cv2 = []
+        # cv2 perspectiveTransform doesn't accept numpy arrays as cval
+        cval_samples_cv2 = cval_samples.tolist()
 
         for i in sm.xrange(nb_images):
-            cval_samples_cv2.append([int(cval_i) for cval_i in cval_samples[i]])
-
             h, w = shapes[i][0:2]
 
             points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
