@@ -2556,7 +2556,6 @@ class PerspectiveTransform(meta.Augmenter):
         #      needed/sensible?
         self.min_width = 2
         self.min_height = 2
-        self.shift_step_size = 0.5
 
         self.cval = _handle_cval_arg(cval)
         self.mode = self._handle_mode_arg(mode)
@@ -2881,36 +2880,39 @@ class PerspectiveTransform(meta.Augmenter):
             points_i = self._order_points(points_i)
             (tl, tr, br, bl) = points_i
 
-            # TODO remove these loops
             # compute the width of the new image, which will be the
             # maximum distance between bottom-right and bottom-left
             # x-coordiates or the top-right and top-left x-coordinates
             min_width = None
+            max_width = None
             while min_width is None or min_width < self.min_width:
-                width_a = np.sqrt(((br[0]-bl[0])**2) + ((br[1]-bl[1])**2))
-                width_b = np.sqrt(((tr[0]-tl[0])**2) + ((tr[1]-tl[1])**2))
-                max_width = max(int(width_a), int(width_b))
-                min_width = min(int(width_a), int(width_b))
+                width_top = np.sqrt(((tr[0]-tl[0])**2) + ((tr[1]-tl[1])**2))
+                width_bottom = np.sqrt(((br[0]-bl[0])**2) + ((br[1]-bl[1])**2))
+                max_width = int(max(width_top, width_bottom))
+                min_width = int(min(width_top, width_bottom))
                 if min_width < self.min_width:
-                    tl[0] -= self.shift_step_size
-                    tr[0] += self.shift_step_size
-                    bl[0] -= self.shift_step_size
-                    br[0] += self.shift_step_size
+                    step_size = (self.min_width - min_width)/2
+                    tl[0] -= step_size
+                    tr[0] += step_size
+                    bl[0] -= step_size
+                    br[0] += step_size
 
             # compute the height of the new image, which will be the
             # maximum distance between the top-right and bottom-right
             # y-coordinates or the top-left and bottom-left y-coordinates
             min_height = None
+            max_height = None
             while min_height is None or min_height < self.min_height:
-                height_a = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]-br[1])**2))
-                height_b = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]-bl[1])**2))
-                max_height = max(int(height_a), int(height_b))
-                min_height = min(int(height_a), int(height_b))
+                height_right = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]-br[1])**2))
+                height_left = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]-bl[1])**2))
+                max_height = int(max(height_right, height_left))
+                min_height = int(min(height_right, height_left))
                 if min_height < self.min_height:
-                    tl[1] -= self.shift_step_size
-                    tr[1] -= self.shift_step_size
-                    bl[1] += self.shift_step_size
-                    br[1] += self.shift_step_size
+                    step_size = (self.min_height - min_height)/2
+                    tl[1] -= step_size
+                    tr[1] -= step_size
+                    bl[1] += step_size
+                    br[1] += step_size
 
             # now that we have the dimensions of the new image, construct
             # the set of destination points to obtain a "birds eye view",
