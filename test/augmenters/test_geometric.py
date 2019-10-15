@@ -5739,6 +5739,148 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert not (img_aug0 == 255).all()
 
     # ---------
+    # fit_output
+    # ---------
+    def test_fit_output_with_fixed_jitter(self):
+        aug = iaa.PerspectiveTransform(scale=0.2, fit_output=True,
+                                       keep_size=False)
+        aug.jitter = iap.Deterministic(0.2)
+
+        image = np.zeros((40, 40, 3), dtype=np.uint8)
+        image[0:3, 0:3, 0] = 255
+        image[0:3, 40-3:, 1] = 255
+        image[40-3:, 40-3:, 2] = 255
+
+        image_aug = aug(image=image)
+
+        h, w = image_aug.shape[0:2]
+        y0 = np.argmax(image_aug[:, 0, 0])
+        x0 = np.argmax(image_aug[0, :, 0])
+        y1 = np.argmax(image_aug[:, w-1, 1])
+        x1 = np.argmax(image_aug[0, :, 1])
+        y2 = np.argmax(image_aug[:, w-1, 2])
+        x2 = np.argmax(image_aug[h-1, :, 2])
+
+        # different shape
+        assert image_aug.shape != image.shape
+
+        # corners roughly still at top-left, top-right, bottom-right
+        assert 0 <= y0 <= 3
+        assert 0 <= x0 <= 3
+        assert 0 <= y1 <= 3
+        assert image_aug.shape[1]-3 <= x1 <= image_aug.shape[1]
+        assert image_aug.shape[1]-3 <= y2 <= image_aug.shape[1]
+        assert image_aug.shape[1]-3 <= x2 <= image_aug.shape[1]
+
+        # no corner pixels now in the center
+        assert np.max(image_aug[8:h-8, 8:w-8, :]) == 0
+
+    def test_fit_output_with_random_jitter(self):
+        aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
+                                       keep_size=False)
+
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[0:5, 0:5, 0] = 255
+        image[0:5, 50-5:, 1] = 255
+        image[50-5:, 50-5:, 2] = 255
+        image[50-5:, 0:5, 3] = 255
+
+        for _ in sm.xrange(10):
+            image_aug = aug(image=image)
+
+            h, w = image_aug.shape[0:2]
+            y0, x0 = np.unravel_index(np.argmax(image_aug[..., 0]), (h, w))
+            y1, x1 = np.unravel_index(np.argmax(image_aug[..., 1]), (h, w))
+            y2, x2 = np.unravel_index(np.argmax(image_aug[..., 2]), (h, w))
+            y3, x3 = np.unravel_index(np.argmax(image_aug[..., 3]), (h, w))
+
+            y_min = min([y0, y1, y2, y3])
+            y_max = max([y0, y1, y2, y3])
+            x_min = min([x0, x1, x2, x3])
+            x_max = max([x0, x1, x2, x3])
+            assert 0 <= y_min <= 5
+            assert 0 <= x_min <= 5
+            assert h-5 <= y_max <= h-1
+            assert w-5 <= x_max <= w-1
+
+    def test_fit_output_with_random_jitter__segmentation_maps(self):
+        aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
+                                       keep_size=False)
+
+        arr = np.zeros((50, 50, 4), dtype=np.uint8)
+        arr[0:5, 0:5, 0] = 1
+        arr[0:5, 50-5:, 1] = 1
+        arr[50-5:, 50-5:, 2] = 1
+        arr[50-5:, 0:5, 3] = 1
+        segmap = ia.SegmentationMapsOnImage(arr, shape=(50, 50, 3))
+
+        image = np.zeros((49, 49, 3), dtype=np.uint8)
+        image = ia.pad(image, top=1, right=1, bottom=1, left=1, cval=128)
+
+        for _ in sm.xrange(10):
+            segmap_aug, image_aug = aug(segmentation_maps=segmap, image=image)
+
+            import imageio
+            for i in sm.xrange(4):
+                imageio.imwrite("tmp"+str(i)+".jpg", segmap_aug.draw_on_image(image_aug)[i])
+
+            h, w = segmap_aug.arr.shape[0:2]
+            y0, x0 = np.unravel_index(np.argmax(segmap_aug.arr[..., 0]), (h, w))
+            y1, x1 = np.unravel_index(np.argmax(segmap_aug.arr[..., 1]), (h, w))
+            y2, x2 = np.unravel_index(np.argmax(segmap_aug.arr[..., 2]), (h, w))
+            y3, x3 = np.unravel_index(np.argmax(segmap_aug.arr[..., 3]), (h, w))
+
+            y_min = min([y0, y1, y2, y3])
+            y_max = max([y0, y1, y2, y3])
+            x_min = min([x0, x1, x2, x3])
+            x_max = max([x0, x1, x2, x3])
+            # We add +2 and -2 here because the tests fail otherwise.
+            # The difference might come from nearest neighbour interpolation
+            # for segmaps as opposed to other interpolations for images.
+            # When plotting, the results seem to fit well.
+            # Note here also that the location of argmax() for each 5x5
+            # block might not be the topmost/rightmost/bottommost/leftmost
+            # location.
+            assert 0 <= y_min <= 5+2
+            assert 0 <= x_min <= 5+2
+            assert h-5-2 <= y_max <= h-1
+            assert w-5-2 <= x_max <= w-1
+
+    def test_fit_output_with_fixed_jitter__keypoints(self):
+        aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
+                                       keep_size=False)
+
+        kpsoi = ia.KeypointsOnImage.from_xy_array([
+            (0, 0),
+            (50, 0),
+            (50, 50),
+            (0, 50)
+        ], shape=(50, 50, 3))
+
+        for _ in sm.xrange(10):
+            kpsoi_aug = aug(keypoints=kpsoi)
+
+            h, w = kpsoi_aug.shape[0:2]
+            y0, x0 = kpsoi_aug.keypoints[0].y, kpsoi_aug.keypoints[0].x
+            y1, x1 = kpsoi_aug.keypoints[1].y, kpsoi_aug.keypoints[1].x
+            y2, x2 = kpsoi_aug.keypoints[2].y, kpsoi_aug.keypoints[2].x
+            y3, x3 = kpsoi_aug.keypoints[3].y, kpsoi_aug.keypoints[3].x
+
+            y_min = min([y0, y1, y2, y3])
+            y_max = max([y0, y1, y2, y3])
+            x_min = min([x0, x1, x2, x3])
+            x_max = max([x0, x1, x2, x3])
+            assert 0 <= y_min <= 5
+            assert 0 <= x_min <= 5
+            # the keypoints can be placed anywhere between 0.0 and height/width
+            # due to being subpixel accurate (hence no H-1 or W-1 here).
+            # Additionally, we add +1 here, because the shape might be rounded
+            # down due to an round(H) or round(W), while the keypoints are not
+            # affected by that.
+            assert h-5 <= y_max <= h+1
+            assert w-5 <= x_max <= w+1
+
+    # ---------
     # unusual channel numbers
     # ---------
     def test_unusual_channel_numbers(self):
