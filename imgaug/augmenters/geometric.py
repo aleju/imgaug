@@ -2498,6 +2498,7 @@ class PerspectiveTransform(meta.Augmenter):
     fit_output : bool, optional
         If ``True``, the image plane size and position will be adjusted
         to still capture the whole image after perspective transformation.
+        (Followed by image resizing if `keep_size` is set to ``True``.)
         Otherwise, parts of the transformed image may be outside of the image
         plane.
         This setting should not be set to ``True`` when using large `scale`
