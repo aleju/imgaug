@@ -2539,7 +2539,7 @@ class PerspectiveTransform(meta.Augmenter):
     }
 
     def __init__(self, scale=0, cval=0, mode="constant", keep_size=True,
-                 polygon_recoverer="auto", fit_output=False,
+                 fit_output=False, polygon_recoverer="auto",
                  name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -2548,7 +2548,6 @@ class PerspectiveTransform(meta.Augmenter):
             scale, "scale", value_range=(0, None), tuple_to_uniform=True,
             list_to_choice=True)
         self.jitter = iap.Normal(loc=0, scale=self.scale)
-        self.keep_size = keep_size
 
         # setting these to 1x1 caused problems for large scales and polygon
         # augmentation
@@ -2559,12 +2558,12 @@ class PerspectiveTransform(meta.Augmenter):
 
         self.cval = _handle_cval_arg(cval)
         self.mode = self._handle_mode_arg(mode)
+        self.keep_size = keep_size
+        self.fit_output = fit_output
 
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
-
-        self.fit_output = fit_output
 
         # Special order, mode and cval parameters for heatmaps and
         # segmentation maps. These may either be None or a fixed value.
