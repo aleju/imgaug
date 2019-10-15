@@ -2836,46 +2836,50 @@ class PerspectiveTransform(meta.Augmenter):
         max_heights = []
         max_widths = []
         nb_images = len(shapes)
-        rngs = random_state.duplicate(2+nb_images)
+        rngs = random_state.duplicate(3)
 
         cval_samples = self.cval.draw_samples((nb_images, 3),
                                               random_state=rngs[0])
         mode_samples = self.mode.draw_samples((nb_images,),
                                               random_state=rngs[1])
-
-        if mode_samples.dtype.kind not in ["i", "u"]:
-            for mode, mapped_mode in self._BORDER_MODE_STR_TO_INT.items():
-                mode_samples[mode_samples == mode] = mapped_mode
+        jitter = self.jitter.draw_samples((nb_images, 4, 2),
+                                          random_state=rngs[2])
 
         # cv2 perspectiveTransform doesn't accept numpy arrays as cval
         cval_samples_cv2 = cval_samples.tolist()
 
-        for shape, rng in zip(shapes, rngs[2:]):
+        # if border modes are represented by strings, convert them to cv2
+        # border mode integers
+        if mode_samples.dtype.kind not in ["i", "u"]:
+            for mode, mapped_mode in self._BORDER_MODE_STR_TO_INT.items():
+                mode_samples[mode_samples == mode] = mapped_mode
+
+        # modify jitter to the four corner point coordinates
+        # some x/y values have to be modified from `jitter` to `1-jtter`
+        # for that
+        points = np.mod(np.abs(jitter), 1)
+
+        # top left -- no changes needed, just use jitter
+        # top right
+        points[:, 2, 0] = 1.0 - points[:, 2, 0]  # w = 1.0 - jitter
+        # bottom right
+        points[:, 1, 0] = 1.0 - points[:, 1, 0]  # w = 1.0 - jitter
+        points[:, 1, 1] = 1.0 - points[:, 1, 1]  # h = 1.0 - jitter
+        # bottom left
+        points[:, 0, 1] = 1.0 - points[:, 0, 1]  # h = 1.0 - jitter
+
+        for shape, points_i in zip(shapes, points):
             h, w = shape[0:2]
 
-            points = self.jitter.draw_samples((4, 2), random_state=rng)
-            points = np.mod(np.abs(points), 1)
+            points_i[:, 0] *= w
+            points_i[:, 1] *= h
 
-            # modify jitter to the four corner point coordinates
-            # some x/y values have to be modified from `jitter` to `1-jtter`
-            # for that
-
-            # top left -- no changes needed, just use jitter
-            # top right
-            points[2, 0] = 1.0 - points[2, 0]  # h = 1.0 - jitter
-            # bottom right
-            points[1, 0] = 1.0 - points[1, 0]  # w = 1.0 - jitter
-            points[1, 1] = 1.0 - points[1, 1]  # h = 1.0 - jitter
-            # bottom left
-            points[0, 1] = 1.0 - points[0, 1]  # h = 1.0 - jitter
-
-            points[:, 0] = points[:, 0] * w
-            points[:, 1] = points[:, 1] * h
-
-            # obtain a consistent order of the points and unpack them
-            # individually
-            points = self._order_points(points)
-            (tl, tr, br, bl) = points
+            # Obtain a consistent order of the points and unpack them
+            # individually.
+            # Warning: don't just do (tl, tr, br, bl) = _order_points(...)
+            # here, because the reordered points_i is used further below.
+            points_i = self._order_points(points_i)
+            (tl, tr, br, bl) = points_i
 
             # TODO remove these loops
             # compute the width of the new image, which will be the
@@ -2921,7 +2925,7 @@ class PerspectiveTransform(meta.Augmenter):
             ], dtype="float32")
 
             # compute the perspective transform matrix and then apply it
-            m = cv2.getPerspectiveTransform(points, dst)
+            m = cv2.getPerspectiveTransform(points_i, dst)
 
             if self.fit_output:
                 m, max_width, max_height = self._expand_transform(m, (h, w))
