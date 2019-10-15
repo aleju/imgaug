@@ -2932,7 +2932,7 @@ class PerspectiveTransform(meta.Augmenter):
             max_heights.append(max_height)
             max_widths.append(max_width)
 
-        mode_samples = mode_samples.astype(int)
+        mode_samples = mode_samples.astype(np.int32)
         return _PerspectiveTransformSamplingResult(
             matrices, max_heights, max_widths, cval_samples_cv2,
             mode_samples)
