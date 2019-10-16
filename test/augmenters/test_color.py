@@ -220,6 +220,136 @@ class Test_change_colorspace_(unittest.TestCase):
         return image_out
 
 
+class Test_change_color_temperatures_(unittest.TestCase):
+    def test_single_image(self):
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+
+        multipliers = [
+            (1000, [255, 56, 0]),
+            (1100, [255, 71, 0]),
+            (1200, [255, 83, 0]),
+            (1300, [255, 93, 0]),
+            (4300, [255, 215, 177]),
+            (4400, [255, 217, 182]),
+            (4500, [255, 219, 186]),
+            (4600, [255, 221, 190]),
+            (11100, [196, 214, 255]),
+            (11200, [195, 214, 255]),
+            (11300, [195, 214, 255]),
+            (11400, [194, 213, 255]),
+            (17200, [173, 200, 255]),
+            (17300, [173, 200, 255]),
+            (17400, [173, 200, 255]),
+            (21900, [166, 195, 255]),
+            (31300, [158, 190, 255]),
+            (39700, [155, 188, 255]),
+            (39800, [155, 188, 255]),
+            (39900, [155, 188, 255]),
+            (40000, [155, 188, 255])
+        ]
+
+        for kelvin, multiplier in multipliers:
+            with self.subTest(kelvin=kelvin):
+                image_temp = iaa.change_color_temperatures_(
+                    [np.copy(image)],
+                    kelvins=kelvin)[0]
+
+                expected = np.uint8(multiplier).reshape((1, 1, 3))
+                assert np.array_equal(image_temp, expected)
+
+    def test_several_images_as_list(self):
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+        
+        images_temp = iaa.change_color_temperatures_(
+            [np.copy(image), np.copy(image), np.copy(image)],
+            [11100, 11200, 11300]
+        )
+
+        expected = np.array([
+            [196, 214, 255],
+            [195, 214, 255],
+            [195, 214, 255]
+        ], dtype=np.uint8).reshape((3, 1, 1, 3))
+        assert isinstance(images_temp, list)
+        assert np.array_equal(images_temp[0], expected[0])
+        assert np.array_equal(images_temp[1], expected[1])
+        assert np.array_equal(images_temp[2], expected[2])
+
+    def test_several_images_as_array(self):
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+
+        images_temp = iaa.change_color_temperatures_(
+            np.uint8([np.copy(image), np.copy(image), np.copy(image)]),
+            np.float32([11100, 11200, 11300])
+        )
+
+        expected = np.array([
+            [196, 214, 255],
+            [195, 214, 255],
+            [195, 214, 255]
+        ], dtype=np.uint8).reshape((3, 1, 1, 3))
+        assert ia.is_np_array(images_temp)
+        assert np.array_equal(images_temp, expected)
+
+    def test_interpolation_of_kelvins(self):
+        # at 1000: [255, 56, 0]
+        # at 1100: [255, 71, 0]
+        at1050 = [255, 56 + (71-56)/2, 0]
+
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+
+        image_temp = iaa.change_color_temperatures_(
+            [np.copy(image)],
+            kelvins=1050)[0]
+
+        expected = np.uint8(at1050).reshape((1, 1, 3))
+        diff = np.abs(image_temp.astype(np.int32) - expected.astype(np.int32))
+        assert np.all(diff <= 1)
+
+    def test_from_colorspace(self):
+        image_bgr = np.uint8([100, 255, 0]).reshape((1, 1, 3))
+
+        image_temp = iaa.change_color_temperatures_(
+            [np.copy(image_bgr)],
+            kelvins=1000,
+            from_colorspaces=iaa.CSPACE_BGR
+        )[0]
+
+        multiplier_rgb = np.float32(
+            [255/255.0, 56/255.0, 0/255.0]
+        ).reshape((1, 1, 3))
+        expected = (
+            image_bgr[:, :, ::-1].astype(np.float32)
+            * multiplier_rgb
+        ).astype(np.uint8)[:, :, ::-1]
+        diff = np.abs(image_temp.astype(np.int32) - expected.astype(np.int32))
+        assert np.all(diff <= 1)
+
+
+class Test_change_color_temperature_(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.change_color_temperatures_")
+    def test_calls_batch_function(self, mock_ccts):
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+        mock_ccts.return_value = ["example"]
+
+        image_temp = iaa.change_color_temperature(
+            image, 1000, from_colorspace="foo")
+
+        assert image_temp == "example"
+        assert np.array_equal(mock_ccts.call_args_list[0][0][0],
+                              image[np.newaxis, ...])
+        assert mock_ccts.call_args_list[0][0][1] == [1000]
+        assert mock_ccts.call_args_list[0][1]["from_colorspaces"] == ["foo"]
+
+    def test_single_image(self):
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+
+        image_temp = iaa.change_color_temperature(np.copy(image), 1000)
+
+        expected = np.uint8([255, 56, 0]).reshape((1, 1, 3))
+        assert np.array_equal(image_temp, expected)
+
+
 class TestWithHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -1195,6 +1325,77 @@ class TestGrayscale(unittest.TestCase):
             density = nb_samples / nb_iterations
             assert np.isclose(density, density_expected,
                               rtol=0, atol=density_tolerance)
+
+
+class TestChangeColorTemperature(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___defaults(self):
+        aug = iaa.ChangeColorTemperature()
+        assert isinstance(aug.kelvin, iap.Uniform)
+        assert aug.kelvin.a.value == 1000
+        assert aug.kelvin.b.value == 11000
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___kelvin_is_deterministic(self):
+        aug = iaa.ChangeColorTemperature(1000)
+        assert aug.kelvin.value == 1000
+
+    def test___init___kelvin_is_tuple(self):
+        aug = iaa.ChangeColorTemperature((2000, 3000))
+        assert isinstance(aug.kelvin, iap.Uniform)
+        assert aug.kelvin.a.value == 2000
+        assert aug.kelvin.b.value == 3000
+
+    def test___init___kelvin_is_list(self):
+        aug = iaa.ChangeColorTemperature([1000, 2000, 3000])
+        assert isinstance(aug.kelvin, iap.Choice)
+        assert aug.kelvin.a == [1000, 2000, 3000]
+
+    def test___init___kelvin_is_stochastic_param(self):
+        param = iap.Deterministic(5000)
+        aug = iaa.ChangeColorTemperature(param)
+        assert aug.kelvin is param
+
+    @mock.patch("imgaug.augmenters.color.change_color_temperatures_")
+    def test_mocked(self, mock_ccts):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        aug = iaa.ChangeColorTemperature((1000, 40000),
+                                         from_colorspace=iaa.CSPACE_HLS)
+
+        def _side_effect(images, kelvins, from_colorspaces):
+            return images
+
+        mock_ccts.side_effect = _side_effect
+
+        _image_aug = aug(images=[image, image])
+
+        assert mock_ccts.call_count == 1
+        assert np.array_equal(mock_ccts.call_args_list[0][0][0],
+                              [image, image])
+        assert not np.isclose(
+            mock_ccts.call_args_list[0][0][1][0],  # kelvin img 1
+            mock_ccts.call_args_list[0][0][1][1],  # kelvin img 2
+        )
+        assert (mock_ccts.call_args_list[0][1]["from_colorspaces"]
+                == iaa.CSPACE_HLS)
+
+    def test_single_image(self):
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+        aug = iaa.ChangeColorTemperature(1000)
+
+        image_aug = aug(image=image)
+
+        expected = np.uint8([255, 56, 0]).reshape((1, 1, 3))
+        assert np.array_equal(image_aug, expected)
+
+    def test_get_parameters(self):
+        aug = iaa.ChangeColorTemperature(1111,
+                                         from_colorspace=iaa.CSPACE_HLS)
+        params = aug.get_parameters()
+        assert params[0].value == 1111
+        assert params[1] == iaa.CSPACE_HLS
 
 
 # Note that TestUniformColorQuantization inherits from this class,
