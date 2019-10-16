@@ -2864,16 +2864,18 @@ class PerspectiveTransform(meta.Augmenter):
         # modify jitter to the four corner point coordinates
         # some x/y values have to be modified from `jitter` to `1-jtter`
         # for that
+        # TODO remove the abs() here. it currently only allows to "zoom-in",
+        #      not to "zoom-out"
         points = np.mod(np.abs(jitter), 1)
 
         # top left -- no changes needed, just use jitter
         # top right
-        points[:, 2, 0] = 1.0 - points[:, 2, 0]  # w = 1.0 - jitter
-        # bottom right
         points[:, 1, 0] = 1.0 - points[:, 1, 0]  # w = 1.0 - jitter
-        points[:, 1, 1] = 1.0 - points[:, 1, 1]  # h = 1.0 - jitter
+        # bottom right
+        points[:, 2, 0] = 1.0 - points[:, 2, 0]  # w = 1.0 - jitter
+        points[:, 2, 1] = 1.0 - points[:, 2, 1]  # h = 1.0 - jitter
         # bottom left
-        points[:, 0, 1] = 1.0 - points[:, 0, 1]  # h = 1.0 - jitter
+        points[:, 3, 1] = 1.0 - points[:, 3, 1]  # h = 1.0 - jitter
 
         for shape, points_i in zip(shapes, points):
             h, w = shape[0:2]
@@ -2982,8 +2984,13 @@ class PerspectiveTransform(meta.Augmenter):
             [width - 1, height - 1],
             [0, height - 1]], dtype=np.float32)
         dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
+
+        # get min x, y over transformed 4 points
+        # then modify target points by subtracting these minima
+        # => shift to (0, 0)
         dst -= dst.min(axis=0, keepdims=True)
         dst = np.around(dst, decimals=0)
+
         M_expanded = cv2.getPerspectiveTransform(rect, dst)
         max_width, max_height = dst.max(axis=0) + 1
         return M_expanded, max_width, max_height
