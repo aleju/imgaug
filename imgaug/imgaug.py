@@ -1971,6 +1971,68 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
     return top, right, bottom, left
 
 
+# TODO move this to augmenters.size
+def compute_croppings_to_reach_multiples_of(arr, height_multiple,
+                                            width_multiple):
+    """Compute croppings to reach multiples of given heights/widths.
+
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required cropping amounts are distributed per
+    image axis.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
+        Image-like array or shape tuple for which to compute crop amounts.
+
+    height_multiple : None or int
+        The desired multiple of the height. The computed croppings will
+        reflect a crop operation that decreases the y axis size until it is
+        a multiple of this value.
+
+    width_multiple : None or int
+        The desired multiple of the width. The computed croppings amount will
+        reflect a crop operation that decreases the x axis size until it is
+        a multiple of this value.
+
+    Returns
+    -------
+    tuple of int
+        Required cropping amounts to reach multiples of the provided values,
+        given as a ``tuple`` of the form ``(top, right, bottom, left)``.
+
+    """
+    def _compute_axis_value(axis_size, multiple):
+        if multiple is None:
+            return 0, 0
+        if axis_size == 0:
+            to_crop = 0
+        elif axis_size % multiple == 0:
+            to_crop = 0
+        else:
+            to_crop = axis_size % multiple
+        return int(np.floor(to_crop/2)), int(np.ceil(to_crop/2))
+
+    _assert_two_or_three_dims(arr)
+
+    if height_multiple is not None:
+        assert height_multiple > 0, (
+            "Can only pad to multiples of 1 or larger, got %d." % (
+                height_multiple,))
+    if width_multiple is not None:
+        assert width_multiple > 0, (
+            "Can only pad to multiples of 1 or larger, got %d." % (
+                height_multiple,))
+
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    height, width = shape[0:2]
+
+    top, bottom = _compute_axis_value(height, height_multiple)
+    left, right = _compute_axis_value(width, width_multiple)
+
+    return top, right, bottom, left
+
+
 def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
                         cval=0, return_pad_amounts=False):
     """Pad an image array until its side lengths are multiples of given values.
