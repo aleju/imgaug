@@ -2338,6 +2338,91 @@ class CenterCropToFixedSize(CropToFixedSize):
             name=name, deterministic=deterministic, random_state=random_state)
 
 
+class CropToMultiplesOf(CropToFixedSize):
+    """Crop images down until their height/width is a multiple of a value.
+
+    .. note ::
+
+        For a given axis size ``A`` and multiple ``M``, if ``A`` is in the
+        interval ``[0 .. M]``, the axis will not be changed.
+        As a result, this augmenter can still produce axis sizes that are
+        not multiples of the given values.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    width_multiple : int
+        Multiple for the width. Images will be cropped down until their
+        width is a multiple of this value.
+
+    height_multiple : int
+        Multiple for the height. Images will be cropped down until their
+        height is a multiple of this value.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`CropToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
+    >>> aug = iaa.CropToMultiplesOf(width_multiple=6, height_multiple=10)
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``10x12`` (multiples of ``10`` and ``6``).
+
+    """
+
+    def __init__(self, width_multiple, height_multiple, position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(CropToMultiplesOf, self).__init__(
+            width=10000, height=10000, position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.width_multiple = width_multiple
+        self.height_multiple = height_multiple
+
+    def _draw_samples(self, batch, random_state):
+        _sizes, offset_xs, offset_ys = super(
+            CropToMultiplesOf, self
+        )._draw_samples(batch, random_state)
+
+        shapes = batch.get_rowwise_shapes()
+        sizes = []
+        for shape in shapes:
+            height, width = shape[0:2]
+            croppings = ia.compute_croppings_to_reach_multiples_of(
+                shape,
+                height_multiple=self.height_multiple,
+                width_multiple=self.width_multiple)
+
+            # TODO change that
+            # note that these are not in the same order as shape tuples
+            # in CropToFixedSize
+            new_size = (
+                width - croppings[1] - croppings[3],
+                height - croppings[0] - croppings[2]
+            )
+            sizes.append(new_size)
+
+        return sizes, offset_xs, offset_ys
+
+    def get_parameters(self):
+        return [self.width_multiple, self.height_multiple, self.position]
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 
