@@ -1873,7 +1873,7 @@ class PadToFixedSize(meta.Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(PadToFixedSize, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
-        self.size = width, height
+        self.size = (width, height)
 
         # Position of where to pad. The further to the top left this is, the
         # larger the share of pixels that will be added to the top and left
@@ -2157,7 +2157,7 @@ class CropToFixedSize(meta.Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(CropToFixedSize, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
-        self.size = width, height
+        self.size = (width, height)
 
         # Position of where to crop. The further to the top left this is,
         # the larger the share of pixels that will be cropped from the top
@@ -2169,7 +2169,11 @@ class CropToFixedSize(meta.Augmenter):
         self.position = _handle_position_parameter(position)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        samples = self._draw_samples(batch.nb_rows, random_state)
+        # Providing the whole batch to _draw_samples() would not be necessary
+        # for this augmenter. The number of rows would be sufficient. This
+        # formulation however enables derived augmenters to use rowwise shapes
+        # without having to compute them here for this augmenter.
+        samples = self._draw_samples(batch, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -2197,9 +2201,9 @@ class CropToFixedSize(meta.Augmenter):
 
     def _augment_images_by_samples(self, images, samples):
         result = []
-        w, h = self.size
-        offset_xs, offset_ys = samples
-        for i, image in enumerate(images):
+        sizes, offset_xs, offset_ys = samples
+        for i, (image, size) in enumerate(zip(images, sizes)):
+            w, h = size
             height_image, width_image = image.shape[0:2]
 
             croppings = self._calculate_crop_amounts(
@@ -2214,9 +2218,9 @@ class CropToFixedSize(meta.Augmenter):
 
     def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
-        w, h = self.size
-        offset_xs, offset_ys = samples
-        for i, kpsoi in enumerate(kpsois):
+        sizes, offset_xs, offset_ys = samples
+        for i, (kpsoi, size) in enumerate(zip(kpsois, sizes)):
+            w, h = size
             height_image, width_image = kpsoi.shape[0:2]
 
             croppings_img = self._calculate_crop_amounts(
@@ -2230,9 +2234,9 @@ class CropToFixedSize(meta.Augmenter):
         return result
 
     def _augment_maps_by_samples(self, augmentables, samples):
-        w, h = self.size
-        offset_xs, offset_ys = samples
-        for i, augmentable in enumerate(augmentables):
+        sizes, offset_xs, offset_ys = samples
+        for i, (augmentable, size) in enumerate(zip(augmentables, sizes)):
+            w, h = size
             height_image, width_image = augmentable.shape[0:2]
 
             croppings_img = self._calculate_crop_amounts(
@@ -2262,7 +2266,8 @@ class CropToFixedSize(meta.Augmenter):
 
         return crop_top, crop_right, crop_bottom, crop_left
 
-    def _draw_samples(self, nb_images, random_state):
+    def _draw_samples(self, batch, random_state):
+        nb_images = batch.nb_rows
         rngs = random_state.duplicate(2)
 
         if isinstance(self.position, tuple):
@@ -2279,7 +2284,9 @@ class CropToFixedSize(meta.Augmenter):
         offset_xs = 1.0 - offset_xs
         offset_ys = 1.0 - offset_ys
 
-        return offset_xs, offset_ys
+        # We return here the sizes even though they are static as it allows
+        # derived augmenters to define image-specific heights/widths.
+        return [self.size] * nb_images, offset_xs, offset_ys
 
     def get_parameters(self):
         return [self.position]
