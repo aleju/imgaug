@@ -2323,6 +2323,7 @@ class CenterCropToFixedSize(CropToFixedSize):
 
     Examples
     --------
+    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange(7*7*3).astype(np.uint8).reshape((7, 7, 3))
     >>> crop = iaa.CenterCropToFixedSize(width=3, height=3)(image=image)
