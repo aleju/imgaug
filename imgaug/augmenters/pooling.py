@@ -65,6 +65,8 @@ class _AbstractPoolingBase(meta.Augmenter):
             allow_floats=False)
         self.keep_size = keep_size
 
+        self._resize_hm_and_sm_arrays = True
+
     @abstractmethod
     def _pool_image(self, image, kernel_size_h, kernel_size_w):
         """Apply pooling method with given kernel height/width to an image."""
@@ -116,27 +118,38 @@ class _AbstractPoolingBase(meta.Augmenter):
         return images
 
     def _augment_heatmaps_by_samples(self, heatmaps, samples):
-        return self._augment_hms_and_segmaps_by_samples(heatmaps, samples)
+        return self._augment_hms_and_segmaps_by_samples(heatmaps, samples,
+                                                        "arr_0to1")
 
     def _augment_segmentation_maps_by_samples(self, segmaps, samples):
-        return self._augment_hms_and_segmaps_by_samples(segmaps, samples)
+        return self._augment_hms_and_segmaps_by_samples(segmaps, samples,
+                                                        "arr")
 
-    def _augment_hms_and_segmaps_by_samples(self, augmentables, samples):
+    def _augment_hms_and_segmaps_by_samples(self, augmentables, samples,
+                                            arr_attr_name):
         if self.keep_size:
             return augmentables
 
         kernel_sizes_h, kernel_sizes_w = samples
 
-        gen = zip(augmentables, kernel_sizes_h, kernel_sizes_w)
-        for augmentable, ksize_h, ksize_w in gen:
+        gen = enumerate(zip(augmentables, kernel_sizes_h, kernel_sizes_w))
+        for i, (augmentable, ksize_h, ksize_w) in gen:
             if ksize_h >= 2 or ksize_w >= 2:
-                # we only update the shape of the underlying image here,
-                # because the library can handle heatmaps/segmaps that are
-                # larger/smaller than the corresponding image
+                # We could also keep the size of the HM/SM array unchanged
+                # here as the library can handle HMs/SMs that are larger
+                # than the image. This might be inintuitive however and
+                # could lead to unnecessary performance degredation.
+                if self._resize_hm_and_sm_arrays:
+                    new_shape_arr = _compute_shape_after_pooling(
+                        getattr(augmentable, arr_attr_name).shape,
+                        ksize_h, ksize_w)
+                    augmentable = augmentable.resize(new_shape_arr[0:2])
+
                 new_shape = _compute_shape_after_pooling(
                     augmentable.shape, ksize_h, ksize_w)
-
                 augmentable.shape = new_shape
+
+                augmentables[i] = augmentable
 
         return augmentables
 
