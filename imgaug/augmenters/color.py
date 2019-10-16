@@ -1274,6 +1274,7 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
                  from_colorspace="RGB",
                  random_order=True,
                  name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
         mul = (
             meta.Noop()
             if ia.is_single_number(mul) and np.isclose(mul, 1.0)
@@ -1354,6 +1355,7 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
                      CSPACE_YUV],
                  from_colorspace="RGB",
                  name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
         super(MultiplyBrightness, self).__init__(
             mul=mul,
             add=0,
@@ -1408,6 +1410,7 @@ class AddToBrightness(MultiplyAndAddToBrightness):
                      CSPACE_YUV],
                  from_colorspace="RGB",
                  name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
         super(AddToBrightness, self).__init__(
             mul=1.0,
             add=add,
