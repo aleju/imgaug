@@ -1927,27 +1927,7 @@ class Dropout(MultiplyElementwise):
     """
     def __init__(self, p=0, per_channel=False,
                  name=None, deterministic=False, random_state=None):
-        # TODO add list as an option
-        if ia.is_single_number(p):
-            p2 = iap.Binomial(1 - p)
-        elif ia.is_iterable(p):
-            assert len(p) == 2, (
-                "Expected 'p' given as an iterable to contain exactly 2 values, "
-                "got %d." % (len(p),))
-            assert p[0] < p[1], (
-                "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
-                "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
-            assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
-                "Expected 'p' given as iterable to only contain values in the "
-                "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
-
-            p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
-        elif isinstance(p, iap.StochasticParameter):
-            p2 = p
-        else:
-            raise Exception(
-                "Expected p to be float or int or StochasticParameter, got %s." % (
-                    type(p),))
+        p2 = _handle_dropout_probability_param(p, "p")
 
         super(Dropout, self).__init__(
             p2,
@@ -1955,6 +1935,33 @@ class Dropout(MultiplyElementwise):
             name=name,
             deterministic=deterministic,
             random_state=random_state)
+
+
+# TODO add list as an option
+def _handle_dropout_probability_param(p, name):
+    if ia.is_single_number(p):
+        p2 = iap.Binomial(1 - p)
+    elif isinstance(p, tuple):
+        assert len(p) == 2, (
+            "Expected `%s` to be given as a tuple containing exactly 2 values, "
+            "got %d values." % (name, len(p),))
+        assert p[0] < p[1], (
+            "Expected `%s` to be given as a tuple containing exactly 2 values "
+            "(a, b) with a < b. Got %.4f and %.4f." % (name, p[0], p[1]))
+        assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
+            "Expected `%s` given as tuple to only contain values in the "
+            "interval [0.0, 1.0], got %.4f and %.4f." % (name, p[0], p[1]))
+
+        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+    elif isinstance(p, iap.StochasticParameter):
+        p2 = p
+    else:
+        raise Exception(
+            "Expected `%s` to be float or int or tuple (<number>, <number>) "
+            "or StochasticParameter, got type '%s'." % (
+                name, type(p).__name__,))
+
+    return p2
 
 
 # TODO add similar cutout augmenter
@@ -2103,25 +2110,7 @@ class CoarseDropout(MultiplyElementwise):
     def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
                  min_size=4,
                  name=None, deterministic=False, random_state=None):
-        if ia.is_single_number(p):
-            p2 = iap.Binomial(1 - p)
-        elif ia.is_iterable(p):
-            assert len(p) == 2, (
-                "Expected 'p' given as an iterable to contain exactly 2 values, "
-                "got %d." % (len(p),))
-            assert p[0] < p[1], (
-                "Expected 'p' given as iterable to contain exactly 2 values (a, b) "
-                "with a < b. Got %.4f and %.4f." % (p[0], p[1]))
-            assert 0 <= p[0] <= 1.0 and 0 <= p[1] <= 1.0, (
-                "Expected 'p' given as iterable to only contain values in the "
-                "interval [0.0, 1.0], got %.4f and %.4f." % (p[0], p[1]))
-
-            p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
-        elif isinstance(p, iap.StochasticParameter):
-            p2 = p
-        else:
-            raise Exception("Expected p to be float or int or StochasticParameter, "
-                            "got %s." % (type(p),))
+        p2 = _handle_dropout_probability_param(p, "p")
 
         if size_px is not None:
             p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px,
@@ -2138,6 +2127,127 @@ class CoarseDropout(MultiplyElementwise):
             name=name,
             deterministic=deterministic,
             random_state=random_state)
+
+
+class Dropout2d(meta.Augmenter):
+    """Drop random channels from images.
+
+    Dropped channels will be filled with zeros.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
+
+    Parameters
+    ----------
+    p : float or tuple of float or imgaug.parameters.StochasticParameter, optional
+        The probability of any channel to be dropped (i.e. set to zero).
+
+            * If a ``float``, then that value will be used for all channels.
+              A value of ``1.0`` would mean, that all channels will be dropped.
+              A value of ``0.0`` would lead to no channels being dropped.
+            * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
+              the interval ``[a, b)`` per batch and be used as the dropout
+              probability.
+            * If a ``StochasticParameter``, then this parameter will be used to
+              determine per pixel whether it should be *kept* (sampled value
+              of ``>=0.5``) or shouldn't be kept (sampled value of ``<0.5``).
+              If you instead want to provide the probability as a stochastic
+              parameter, you can usually do ``imgaug.parameters.Binomial(1-p)``
+              to convert parameter `p` to a 0/1 representation.
+
+    nb_keep_channels : int
+        Minimum number of channels to keep unaltered in all images.
+        E.g. a value of ``1`` means that at least one channel in every image
+        will not be dropped, even if ``p=1.0``. Set to ``0`` to allow dropping
+        all channels.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Dropout2d(p=0.5)
+
+    Create a dropout augmenter that drops on average half of all image
+    channels. Dropped channels will be filled with zeros. At least one
+    channel is kept unaltered in each image (default setting).
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Dropout2d(p=0.5, nb_keep_channels=0)
+
+    Create a dropout augmenter that drops on average half of all image
+    channels *and* may drop *all* channels in an image (i.e. images may
+    contain nothing but zeros).
+
+    """
+
+    def __init__(self, p, nb_keep_channels=1, name=None, deterministic=False,
+                 random_state=None):
+        super(Dropout2d, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.p = _handle_dropout_probability_param(p, "p")
+        self.nb_keep_channels = max(nb_keep_channels, 0)
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is not None:
+            nb_channels = sum([image.shape[2] for image in batch.images
+                               if image.shape[2] > self.nb_keep_channels])
+
+            # nb_channels can be zero if all images have zero-sized channel
+            # axis or generally if all channel axis sizes
+            # are <= nb_keep_channels. In these cases we want to step early
+            # as otherwise we get zero-sized sampling arrays, which might mess
+            # up things.
+            if nb_channels == 0:
+                return batch
+
+            p_samples = self.p.draw_samples((nb_channels,),
+                                            random_state=random_state)
+            keep_mask = (p_samples >= 0.5)
+
+            channel_idx = 0
+            for image in batch.images:
+                nb_channels = image.shape[2]
+                if nb_channels <= self.nb_keep_channels:
+                    continue
+
+                keep_mask_img = keep_mask[channel_idx:channel_idx+nb_channels]
+
+                nb_dropped = len(keep_mask_img) - np.sum(keep_mask_img)
+                if nb_dropped > (nb_channels - self.nb_keep_channels):
+                    channel_ids_dropped = np.nonzero(~keep_mask_img)[0]
+                    channel_ids_dropped = random_state.permutation(
+                        channel_ids_dropped)[:-self.nb_keep_channels]
+                    image[..., channel_ids_dropped] = 0
+                elif nb_dropped > 0:
+                    image *= keep_mask_img[np.newaxis, np.newaxis, :]
+
+                channel_idx += nb_channels
+
+        return batch
+
+    def get_parameters(self):
+        return [self.p, self.nb_keep_channels]
 
 
 class ReplaceElementwise(meta.Augmenter):
