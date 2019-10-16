@@ -5789,19 +5789,19 @@ class TestPerspectiveTransform(unittest.TestCase):
             image_aug = aug(image=image)
 
             h, w = image_aug.shape[0:2]
-            y0, x0 = np.unravel_index(np.argmax(image_aug[..., 0]), (h, w))
-            y1, x1 = np.unravel_index(np.argmax(image_aug[..., 1]), (h, w))
-            y2, x2 = np.unravel_index(np.argmax(image_aug[..., 2]), (h, w))
-            y3, x3 = np.unravel_index(np.argmax(image_aug[..., 3]), (h, w))
+            arr_nochan = np.max(image_aug, axis=2)
+            y_idx = np.where(np.max(arr_nochan, axis=1))[0]
+            x_idx = np.where(np.max(arr_nochan, axis=0))[0]
+            y_min = np.min(y_idx)
+            y_max = np.max(y_idx)
+            x_min = np.min(x_idx)
+            x_max = np.max(x_idx)
 
-            y_min = min([y0, y1, y2, y3])
-            y_max = max([y0, y1, y2, y3])
-            x_min = min([x0, x1, x2, x3])
-            x_max = max([x0, x1, x2, x3])
-            assert 0 <= y_min <= 5
-            assert 0 <= x_min <= 5
-            assert h-5 <= y_max <= h-1
-            assert w-5 <= x_max <= w-1
+            tol = 0
+            assert 0 <= y_min <= 5+tol
+            assert 0 <= x_min <= 5+tol
+            assert h-5-tol <= y_max <= h-1
+            assert w-5-tol <= x_max <= w-1
 
     def test_fit_output_with_random_jitter__segmentation_maps(self):
         aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
@@ -5820,31 +5820,20 @@ class TestPerspectiveTransform(unittest.TestCase):
         for _ in sm.xrange(10):
             segmap_aug, image_aug = aug(segmentation_maps=segmap, image=image)
 
-            import imageio
-            for i in sm.xrange(4):
-                imageio.imwrite("tmp"+str(i)+".jpg", segmap_aug.draw_on_image(image_aug)[i])
-
             h, w = segmap_aug.arr.shape[0:2]
-            y0, x0 = np.unravel_index(np.argmax(segmap_aug.arr[..., 0]), (h, w))
-            y1, x1 = np.unravel_index(np.argmax(segmap_aug.arr[..., 1]), (h, w))
-            y2, x2 = np.unravel_index(np.argmax(segmap_aug.arr[..., 2]), (h, w))
-            y3, x3 = np.unravel_index(np.argmax(segmap_aug.arr[..., 3]), (h, w))
+            arr_nochan = np.max(segmap_aug.arr, axis=2)
+            y_idx = np.where(np.max(arr_nochan, axis=1))[0]
+            x_idx = np.where(np.max(arr_nochan, axis=0))[0]
+            y_min = np.min(y_idx)
+            y_max = np.max(y_idx)
+            x_min = np.min(x_idx)
+            x_max = np.max(x_idx)
 
-            y_min = min([y0, y1, y2, y3])
-            y_max = max([y0, y1, y2, y3])
-            x_min = min([x0, x1, x2, x3])
-            x_max = max([x0, x1, x2, x3])
-            # We add +2 and -2 here because the tests fail otherwise.
-            # The difference might come from nearest neighbour interpolation
-            # for segmaps as opposed to other interpolations for images.
-            # When plotting, the results seem to fit well.
-            # Note here also that the location of argmax() for each 5x5
-            # block might not be the topmost/rightmost/bottommost/leftmost
-            # location.
-            assert 0 <= y_min <= 5+2
-            assert 0 <= x_min <= 5+2
-            assert h-5-2 <= y_max <= h-1
-            assert w-5-2 <= x_max <= w-1
+            tol = 0
+            assert 0 <= y_min <= 5+tol
+            assert 0 <= x_min <= 5+tol
+            assert h-5-tol <= y_max <= h-1
+            assert w-5-tol <= x_max <= w-1
 
     def test_fit_output_with_fixed_jitter__keypoints(self):
         aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
@@ -5870,15 +5859,11 @@ class TestPerspectiveTransform(unittest.TestCase):
             y_max = max([y0, y1, y2, y3])
             x_min = min([x0, x1, x2, x3])
             x_max = max([x0, x1, x2, x3])
-            assert 0 <= y_min <= 5
-            assert 0 <= x_min <= 5
-            # the keypoints can be placed anywhere between 0.0 and height/width
-            # due to being subpixel accurate (hence no H-1 or W-1 here).
-            # Additionally, we add +1 here, because the shape might be rounded
-            # down due to an round(H) or round(W), while the keypoints are not
-            # affected by that.
-            assert h-5 <= y_max <= h+1
-            assert w-5 <= x_max <= w+1
+            tol = 0.5
+            assert 0-tol <= y_min <= tol
+            assert 0-tol <= x_min <= tol
+            assert h-tol <= y_max <= h+tol
+            assert w-tol <= x_max <= w+tol
 
     # ---------
     # unusual channel numbers
