@@ -1558,10 +1558,12 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     return result
 
 
-def _assert_two_or_three_dims(image):
-    assert image.ndim in [2, 3], (
+def _assert_two_or_three_dims(shape):
+    if hasattr(shape, "shape"):
+        shape = shape.shape
+    assert len(shape) in [2, 3], (
         "Expected image with two or three dimensions, but got %d dimensions "
-        "and shape %s." % (image.ndim, image.shape))
+        "and shape %s." % (len(shape), shape))
 
 
 def imresize_single_image(image, sizes, interpolation=None):
@@ -1796,8 +1798,8 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
 
     Parameters
     ----------
-    arr : (H,W) ndarray or (H,W,C) ndarray
-        Image-like array for which to compute pad amounts.
+    arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
+        Image-like array or shape tuple for which to compute pad amounts.
 
     aspect_ratio : float
         Target aspect ratio, given as width/height. E.g. ``2.0`` denotes the
@@ -1817,7 +1819,8 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
         "Expected to get an array with height >0, got shape %s." % (
             arr.shape,))
 
-    height, width = arr.shape[0:2]
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    height, width = shape[0:2]
     aspect_ratio_current = width / height
 
     pad_top = 0
@@ -1905,6 +1908,7 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
     return arr_padded
 
 
+# TODO move this to augmenters.size
 # TODO allow shape as input instead of array
 def compute_paddings_to_reach_multiples_of(arr, height_multiple,
                                            width_multiple):
@@ -1916,8 +1920,8 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
 
     Parameters
     ----------
-    arr : (H,W) ndarray or (H,W,C) ndarray
-        Image-like array for which to compute pad amounts.
+    arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
+        Image-like array or shape tuple for which to compute pad amounts.
 
     height_multiple : None or int
         The desired multiple of the height. The computed padding amount will
@@ -1958,12 +1962,13 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
             "Can only pad to multiples of 1 or larger, got %d." % (
                 height_multiple,))
 
-    height, width = arr.shape[0:2]
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    height, width = shape[0:2]
 
-    pad_top, pad_bottom = _compute_axis_value(height, height_multiple)
-    pad_left, pad_right = _compute_axis_value(width, width_multiple)
+    top, bottom = _compute_axis_value(height, height_multiple)
+    left, right = _compute_axis_value(width, width_multiple)
 
-    return pad_top, pad_right, pad_bottom, pad_left
+    return top, right, bottom, left
 
 
 def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
