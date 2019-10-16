@@ -2285,6 +2285,52 @@ class CropToFixedSize(meta.Augmenter):
         return [self.position]
 
 
+class CenterCropToFixedSize(CropToFixedSize):
+    """Take a crop from the center of each image.
+
+    This is an alias for :class:`CropToFixedSize` with ``position="center"`.
+
+    .. note ::
+
+        If images already have a width and/or height below the provided
+        width and/or height then this augmenter will do nothing for the
+        respective axis. Hence, resulting images can be smaller than the
+        provided axis sizes.
+
+    Parameters
+    ----------
+    width : int
+        Maximum width of the crop.
+
+    height : int
+        Maximum height of the crop.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange(7*7*3).astype(np.uint8).reshape((7, 7, 3))
+    >>> crop = iaa.CenterCropToFixedSize(width=3, height=3)(image=image)
+
+    Take a ``3x3`` sized crop from the center of an ``7x7`` sized image.
+
+    """
+
+    def __init__(self, width, height,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterCropToFixedSize, self).__init__(
+            width=width, height=height, position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 

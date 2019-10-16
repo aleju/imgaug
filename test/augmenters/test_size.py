@@ -4530,6 +4530,19 @@ class TestCropToFixedSize(unittest.TestCase):
                                            np.float128(value)))
 
 
+class TestCenterCropToFixedSize(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_on_single_image(self):
+        image = np.arange(11*11*2).astype(np.uint8).reshape((11, 11, 2))
+        aug = iaa.CenterCropToFixedSize(width=3, height=3)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[5-1:5+2, 5-1:5+2, :])
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()
