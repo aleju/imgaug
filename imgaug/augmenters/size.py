@@ -2304,6 +2304,10 @@ class CenterCropToFixedSize(CropToFixedSize):
         respective axis. Hence, resulting images can be smaller than the
         provided axis sizes.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
     Parameters
     ----------
     width : int
