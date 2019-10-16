@@ -5971,7 +5971,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         image = ia.pad(image, top=1, right=1, bottom=1, left=1, cval=128)
 
         for _ in sm.xrange(10):
-            segmap_aug, image_aug = aug(segmentation_maps=segmap, image=image)
+            image_aug, segmap_aug = aug(image=image, segmentation_maps=segmap)
 
             h, w = segmap_aug.arr.shape[0:2]
             arr_nochan = np.max(segmap_aug.arr, axis=2)
