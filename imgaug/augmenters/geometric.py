@@ -2957,7 +2957,7 @@ class PerspectiveTransform(meta.Augmenter):
         # such that the first entry in the list is the top-left,
         # the second entry is the top-right, the third is the
         # bottom-right, and the fourth is the bottom-left
-        pts_ordered = np.zeros((4, 2), dtype="float32")
+        pts_ordered = np.zeros((4, 2), dtype=np.float32)
 
         # the top-left point will have the smallest sum, whereas
         # the bottom-right point will have the largest sum
