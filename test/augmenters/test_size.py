@@ -5541,6 +5541,19 @@ class TestCropToAspectRatio(unittest.TestCase):
                     assert image_aug.shape == image.shape
 
 
+class TestCenterCropToAspectRatio(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_on_5x4_image__with_change__wider(self):
+        image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
+        aug = iaa.CenterCropToAspectRatio(2.0)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[1:3, 0:4, :])
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()

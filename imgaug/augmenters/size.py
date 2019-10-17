@@ -3088,6 +3088,53 @@ class CropToAspectRatio(CropToFixedSize):
         return [self.aspect_ratio, self.position]
 
 
+class CenterCropToAspectRatio(CropToAspectRatio):
+    """Crop images equally on all sides until they reach an aspect ratio.
+
+    This is the same as :class`CropToAspectRatio`, but uses
+    ``position="center"`` by default, which spreads the crop amounts equally
+    over all image sides, while :class`CropToAspectRatio` by default spreads
+    them randomly.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    aspect_ratio : number
+        See :func:`CropToAspectRatio.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
+    >>> aug = iaa.CenterCropToAspectRatio(1.0)
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``12x12``.
+    This operation will remove ``1`` row from the top and ``2`` rows from the
+    bottom.
+
+    """
+
+    def __init__(self, aspect_ratio,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterCropToAspectRatio, self).__init__(
+            aspect_ratio=aspect_ratio, position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 
