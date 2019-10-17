@@ -3009,6 +3009,88 @@ class CenterPadToExponentsOf(CropToFixedSize):
         self.height_base = height_base
 
 
+class CropToAspectRatio(CropToFixedSize):
+    """Crop images until their width/height matches an aspect ratio.
+
+    This augmenter removes either rows or columns until the image reaches
+    the desired aspect ratio given in ``width / height``. The cropping
+    operation is stopped once the desired aspect ratio is reached or the image
+    side to crop reaches a size of ``1``. If any side of the image starts
+    with a size of ``0``, the image will not be changed.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    aspect_ratio : number
+        The desired aspect ratio, given as ``width/height``. E.g. a ratio
+        of ``2.0`` denotes an image that is twice as wide as it is high.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`CropToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
+    >>> aug = iaa.CropToAspectRatio(2.0)
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``6x12``.
+
+    """
+
+    def __init__(self, aspect_ratio, position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(CropToAspectRatio, self).__init__(
+            width=None, height=None, position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.aspect_ratio = aspect_ratio
+
+    def _draw_samples(self, batch, random_state):
+        _sizes, offset_xs, offset_ys = super(
+            CropToAspectRatio, self
+        )._draw_samples(batch, random_state)
+
+        shapes = batch.get_rowwise_shapes()
+        sizes = []
+        for shape in shapes:
+            height, width = shape[0:2]
+
+            if height == 0 or width == 0:
+                croppings = (0, 0, 0, 0)
+            else:
+                croppings = ia.compute_croppings_for_aspect_ratio(
+                    shape,
+                    aspect_ratio=self.aspect_ratio)
+
+            # TODO change that
+            # note that these are not in the same order as shape tuples
+            # in CropToFixedSize
+            new_size = (
+                width - croppings[1] - croppings[3],
+                height - croppings[0] - croppings[2]
+            )
+            sizes.append(new_size)
+
+        return sizes, offset_xs, offset_ys
+
+    def get_parameters(self):
+        return [self.aspect_ratio, self.position]
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 

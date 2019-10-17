@@ -5411,6 +5411,136 @@ class TestCenterPadToExponentsOf(unittest.TestCase):
         assert np.array_equal(observed, expected)
 
 
+class TestCropToAspectRatio(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.CropToAspectRatio(2.0, position="center")
+        assert np.isclose(aug.aspect_ratio, 2.0)
+        assert np.isclose(aug.position[0].value, 0.5)
+        assert np.isclose(aug.position[1].value, 0.5)
+
+    def test_on_4x4_image__no_change(self):
+        image = np.arange((4*4*3)).astype(np.uint8).reshape((4, 4, 3))
+        aug = iaa.CropToAspectRatio(1.0, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image)
+
+    def test_on_4x4_image__with_change__wider(self):
+        image = np.arange((4*4*3)).astype(np.uint8).reshape((4, 4, 3))
+        aug = iaa.CropToAspectRatio(2.0, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[1:3, 0:4, :])
+
+    def test_on_4x4_image__with_change__higher(self):
+        image = np.arange((4*4*3)).astype(np.uint8).reshape((4, 4, 3))
+        aug = iaa.CropToAspectRatio(0.5, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:4, 1:3, :])
+
+    def test_on_5x4_image__with_change__wider(self):
+        image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
+        aug = iaa.CropToAspectRatio(2.0, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[1:3, 0:4, :])
+
+    def test_on_5x4_image__with_change__higher(self):
+        image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
+        aug = iaa.CropToAspectRatio(0.5, position="center")
+
+        observed = aug(image=image)
+
+        # Here it could either crop 1px or 2px from the width (leading to
+        # aspect ratios of 3/5=0.6 or 2/5=0.4. The underlying method rather
+        # crops one pixel too few than one too many, hence we only crop 1px
+        # here.
+        assert np.array_equal(observed, image[0:5, 0:3, :])
+
+    def test_unreachable_aspect_ratio__wider(self):
+        image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
+        aug = iaa.CropToAspectRatio(20.0, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[2:3, 0:4, :])
+
+    def test_unreachable_aspect_ratio__higher(self):
+        image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
+        aug = iaa.CropToAspectRatio(0.01, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[:, 1:2, :])
+
+    def test_heatmaps(self):
+        # segmaps are implemented in the same way in CropToFixesSize
+        # and already tested there, so there is no need to test them again here
+        arr = np.linspace(0, 1.0, 50*50).astype(np.float32).reshape((50, 50, 1))
+        heatmap = ia.HeatmapsOnImage(arr, shape=(100, 100, 3))
+        aug = iaa.CropToAspectRatio(2.0, position="center")
+
+        observed = aug(heatmaps=heatmap)
+
+        assert observed.shape == (50, 100, 3)
+        assert np.allclose(observed.arr_0to1,
+                           heatmap.arr_0to1[12:-13, :, :])
+
+    def test_keypoints(self):
+        kps = [ia.Keypoint(x=2, y=3)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(8, 8, 3))
+        aug = iaa.CropToAspectRatio(2.0, position="center")
+
+        observed = aug(keypoints=kpsoi)
+
+        assert observed.keypoints[0].x == 2
+        assert observed.keypoints[0].y == 1
+
+    def test_get_parameters(self):
+        aug = iaa.CropToAspectRatio(2.0, position="center")
+
+        params = aug.get_parameters()
+
+        assert np.isclose(params[0], 2.0)
+        assert np.isclose(params[1][0].value, 0.5)
+        assert np.isclose(params[1][1].value, 0.5)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            for aspect_ratio in [2.0, 1.0, 0.5]:
+                with self.subTest(shape=shape, aspect_ratio=aspect_ratio):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.CropToAspectRatio(aspect_ratio)
+
+                    image_aug = aug(image=image)
+
+                    assert image_aug.shape == image.shape
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()
