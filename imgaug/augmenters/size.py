@@ -1898,7 +1898,11 @@ class PadToFixedSize(meta.Augmenter):
         self._pad_cval_segmentation_maps = 0
 
     def _augment_batch(self, batch, random_state, parents, hooks):
-        samples = self._draw_samples(batch.nb_rows, random_state)
+        # Providing the whole batch to _draw_samples() would not be necessary
+        # for this augmenter. The number of rows would be sufficient. This
+        # formulation however enables derived augmenters to use rowwise shapes
+        # without having to compute them here for this augmenter.
+        samples = self._draw_samples(batch, random_state)
 
         if batch.images is not None:
             batch.images = self._augment_images_by_samples(batch.images,
@@ -1928,9 +1932,9 @@ class PadToFixedSize(meta.Augmenter):
 
     def _augment_images_by_samples(self, images, samples):
         result = []
-        width_min, height_min = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = samples
-        for i, image in enumerate(images):
+        sizes, pad_xs, pad_ys, pad_modes, pad_cvals = samples
+        for i, (image, size) in enumerate(zip(images, sizes)):
+            width_min, height_min = size
             height_image, width_image = image.shape[:2]
             paddings = self._calculate_paddings(height_image, width_image,
                                                 height_min, width_min,
@@ -1949,9 +1953,9 @@ class PadToFixedSize(meta.Augmenter):
 
     def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         result = []
-        width_min, height_min = self.size
-        pad_xs, pad_ys, _, _ = samples
-        for i, kpsoi in enumerate(keypoints_on_images):
+        sizes, pad_xs, pad_ys, _, _ = samples
+        for i, (kpsoi, size) in enumerate(zip(keypoints_on_images, sizes)):
+            width_min, height_min = size
             height_image, width_image = kpsoi.shape[:2]
             paddings_img = self._calculate_paddings(height_image, width_image,
                                                     height_min, width_min,
@@ -1967,10 +1971,10 @@ class PadToFixedSize(meta.Augmenter):
 
     def _augment_maps_by_samples(self, augmentables, samples, pad_mode,
                                  pad_cval):
-        width_min, height_min = self.size
-        pad_xs, pad_ys, pad_modes, pad_cvals = samples
+        sizes, pad_xs, pad_ys, pad_modes, pad_cvals = samples
 
-        for i, augmentable in enumerate(augmentables):
+        for i, (augmentable, size) in enumerate(zip(augmentables, sizes)):
+            width_min, height_min = size
             height_img, width_img = augmentable.shape[:2]
             paddings_img = self._calculate_paddings(
                 height_img, width_img, height_min, width_min,
@@ -1993,7 +1997,8 @@ class PadToFixedSize(meta.Augmenter):
 
         return augmentables
 
-    def _draw_samples(self, nb_images, random_state):
+    def _draw_samples(self, batch, random_state):
+        nb_images = batch.nb_rows
         rngs = random_state.duplicate(4)
 
         if isinstance(self.position, tuple):
@@ -2012,7 +2017,9 @@ class PadToFixedSize(meta.Augmenter):
         pad_cvals = self.pad_cval.draw_samples(nb_images,
                                                random_state=rngs[3])
 
-        return pad_xs, pad_ys, pad_modes, pad_cvals
+        # We return here the sizes even though they are static as it allows
+        # derived augmenters to define image-specific heights/widths.
+        return [self.size] * nb_images, pad_xs, pad_ys, pad_modes, pad_cvals
 
     @classmethod
     def _calculate_paddings(cls, height_image, width_image,
