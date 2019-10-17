@@ -3439,6 +3439,24 @@ class TestPadToFixedSize(unittest.TestCase):
         assert observed.shape == (6, 6, 3)
         assert np.array_equal(observed, img6x6)
 
+    def test_too_small_image_with_width_none(self):
+        aug = iaa.PadToFixedSize(height=5, width=None)
+        image = np.zeros((4, 4, 3), dtype=np.uint8)
+
+        observed = aug.augment_image(image)
+
+        assert observed.dtype.name == "uint8"
+        assert observed.shape == (5, 4, 3)
+
+    def test_too_small_image_with_height_none(self):
+        aug = iaa.PadToFixedSize(height=None, width=5)
+        image = np.zeros((4, 4, 3), dtype=np.uint8)
+
+        observed = aug.augment_image(image)
+
+        assert observed.dtype.name == "uint8"
+        assert observed.shape == (4, 5, 3)
+
     def test_image_pad_mode(self):
         # make sure that pad mode is recognized
         aug = iaa.PadToFixedSize(height=4, width=4, pad_mode="edge")
@@ -4045,6 +4063,24 @@ class TestCropToFixedSize(unittest.TestCase):
         assert observed.shape == (4, 4, 3)
         assert np.array_equal(observed, img4x4)
 
+    def test_too_large_image_with_width_none(self):
+        aug = iaa.CropToFixedSize(height=5, width=None)
+        image = np.zeros((6, 6, 3), dtype=np.uint8)
+
+        observed = aug.augment_image(image)
+
+        assert observed.dtype.name == "uint8"
+        assert observed.shape == (5, 6, 3)
+
+    def test_too_large_image_with_height_none(self):
+        aug = iaa.CropToFixedSize(height=None, width=5)
+        image = np.zeros((6, 6, 3), dtype=np.uint8)
+
+        observed = aug.augment_image(image)
+
+        assert observed.dtype.name == "uint8"
+        assert observed.shape == (6, 5, 3)
+
     def test_image_crop_at_left_top(self):
         # explicit non-center position test
         aug = iaa.CropToFixedSize(height=3, width=3, position="left-top")
@@ -4614,6 +4650,24 @@ class TestCropToMultiplesOf(unittest.TestCase):
 
         assert np.array_equal(observed, image[1:6, 1:7, :])
 
+    def test_width_multiple_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToMultiplesOf(height_multiple=2, width_multiple=None,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:2, 0:3, :])
+
+    def test_height_multiple_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToMultiplesOf(height_multiple=None, width_multiple=2,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:3, 0:2, :])
+
     def test_heatmaps(self):
         # segmaps are implemented in the same way in CropToFixesSize
         # and already tested there, so there is no need to test them again here
@@ -4775,6 +4829,26 @@ class TestPadToMultiplesOf(unittest.TestCase):
         expected = ia.pad(image, top=2, bottom=1, left=2, right=1, mode="edge")
         assert np.array_equal(observed, expected)
 
+    def test_width_multiple_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=2, width_multiple=None,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1)
+        assert np.array_equal(observed, expected)
+
+    def test_height_multiple_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=None, width_multiple=2,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, left=1)
+        assert np.array_equal(observed, expected)
+
     def test_heatmaps(self):
         # segmaps are implemented in the same way in PadToFixesSize
         # and already tested there, so there is no need to test them again here
@@ -4921,6 +4995,24 @@ class TestCropToExponentsOf(unittest.TestCase):
         observed = aug(image=image)
 
         assert np.array_equal(observed, image)
+
+    def test_width_base_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToExponentsOf(height_base=2, width_base=None,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:2, 0:3, :])
+
+    def test_height_base_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToExponentsOf(height_base=None, width_base=2,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:3, 0:2, :])
 
     def test_heatmaps(self):
         # segmaps are implemented in the same way in CropToFixesSize
@@ -5082,6 +5174,26 @@ class TestPadToExponentsOf(unittest.TestCase):
         observed = aug(image=image)
 
         expected = ia.pad(image, top=3, bottom=2, left=5, right=5, mode="edge")
+        assert np.array_equal(observed, expected)
+
+    def test_width_base_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToExponentsOf(height_base=2, width_base=None,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1)
+        assert np.array_equal(observed, expected)
+
+    def test_height_base_is_none(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToExponentsOf(height_base=None, width_base=2,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, left=1)
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):

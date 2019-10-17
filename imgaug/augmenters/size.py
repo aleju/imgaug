@@ -1770,11 +1770,13 @@ class PadToFixedSize(meta.Augmenter):
 
     Parameters
     ----------
-    width : int
+    width : int or None
         Pad images up to this minimum width.
+        If ``None``, image widths will not be altered.
 
-    height : int
+    height : int or None
         Pad images up to this minimum height.
+        If ``None``, image heights will not be altered.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
@@ -2033,11 +2035,11 @@ class PadToFixedSize(meta.Augmenter):
         #      due to the int() rounding pad_right down, which is the opposite
         #      of e.g. compute_paddings_to_reach_multiples_of().
         #      Analogous for pad_ys.
-        if width_image < width_min:
+        if width_min is not None and width_image < width_min:
             pad_right = int(pad_xs_i * (width_min - width_image))
             pad_left = width_min - width_image - pad_right
 
-        if height_image < height_min:
+        if height_min is not None and height_image < height_min:
             pad_bottom = int(pad_ys_i * (height_min - height_image))
             pad_top = height_min - height_image - pad_bottom
 
@@ -2083,11 +2085,13 @@ class CropToFixedSize(meta.Augmenter):
 
     Parameters
     ----------
-    width : int
+    width : int or None
         Crop images down to this maximum width.
+        If ``None``, image widths will not be altered.
 
-    height : int
+    height : int or None
         Crop images down to this maximum height.
+        If ``None``, image heights will not be altered.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
          Sets the center point of the cropping, which determines how the
@@ -2267,11 +2271,11 @@ class CropToFixedSize(meta.Augmenter):
         crop_bottom = 0
         crop_left = 0
 
-        if height_image > height_max:
+        if height_max is not None and height_image > height_max:
             crop_top = int(offset_y * (height_image - height_max))
             crop_bottom = height_image - height_max - crop_top
 
-        if width_image > width_max:
+        if width_max is not None and width_image > width_max:
             crop_left = int(offset_x * (width_image - width_max))
             crop_right = width_image - width_max - crop_left
 
@@ -2321,10 +2325,10 @@ class CenterCropToFixedSize(CropToFixedSize):
 
     Parameters
     ----------
-    width : int
+    width : int or None
         Maximum width of the crop.
 
-    height : int
+    height : int or None
         Maximum height of the crop.
 
     name : None or str, optional
@@ -2370,13 +2374,15 @@ class CropToMultiplesOf(CropToFixedSize):
 
     Parameters
     ----------
-    width_multiple : int
+    width_multiple : int or None
         Multiple for the width. Images will be cropped down until their
         width is a multiple of this value.
+        If ``None``, image widths will not be altered.
 
-    height_multiple : int
+    height_multiple : int or None
         Multiple for the height. Images will be cropped down until their
         height is a multiple of this value.
+        If ``None``, image heights will not be altered.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`CropToFixedSize.__init__`.
@@ -2448,13 +2454,15 @@ class PadToMultiplesOf(PadToFixedSize):
 
     Parameters
     ----------
-    width_multiple : int
+    width_multiple : int or None
         Multiple for the width. Images will be padded until their
         width is a multiple of this value.
+        If ``None``, image widths will not be altered.
 
-    height_multiple : int
+    height_multiple : int or None
         Multiple for the height. Images will be padded until their
         height is a multiple of this value.
+        If ``None``, image heights will not be altered.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
@@ -2549,15 +2557,17 @@ class CropToExponentsOf(CropToFixedSize):
 
     Parameters
     ----------
-    width_base : int
+    width_base : int or None
         Base for the width. Images will be cropped down until their
         width fullfills ``width' = width_base ^ E`` with ``E`` being any
         natural number.
+        If ``None``, image widths will not be altered.
 
-    height_base : int
+    height_base : int or None
         Base for the height. Images will be cropped down until their
         height fullfills ``height' = height_base ^ E`` with ``E`` being any
         natural number.
+        If ``None``, image heights will not be altered.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`CropToFixedSize.__init__`.
@@ -2634,15 +2644,17 @@ class PadToExponentsOf(PadToFixedSize):
 
     Parameters
     ----------
-    width_base : int
+    width_base : int or None
         Base for the width. Images will be padded down until their
         width fullfills ``width' = width_base ^ E`` with ``E`` being any
         natural number.
+        If ``None``, image widths will not be altered.
 
-    height_base : int
+    height_base : int or None
         Base for the height. Images will be padded until their
         height fullfills ``height' = height_base ^ E`` with ``E`` being any
         natural number.
+        If ``None``, image heights will not be altered.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
         See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
