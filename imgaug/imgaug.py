@@ -1778,7 +1778,7 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     return np.copy(arr)
 
 
-# TODO allow shape as input instead of array
+# TODO rename to "_to_reach_aspect_ratio"? matches other methods
 def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     """Compute pad amounts required to fulfill an aspect ratio.
 
@@ -1815,11 +1815,11 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     _assert_two_or_three_dims(arr)
     assert aspect_ratio > 0, (
         "Expected to get an aspect ratio >0, got %.4f." % (aspect_ratio,))
-    assert arr.shape[0] > 0, (
-        "Expected to get an array with height >0, got shape %s." % (
-            arr.shape,))
 
     shape = arr.shape if hasattr(arr, "shape") else arr
+    assert shape[0] > 0, (
+        "Expected to get an array with height >0, got shape %s." % (shape,))
+
     height, width = shape[0:2]
     aspect_ratio_current = width / height
 
@@ -1829,12 +1829,12 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     pad_left = 0
 
     if aspect_ratio_current < aspect_ratio:
-        # vertical image, height > width
+        # image is more vertical than desired, width needs to be increased
         diff = (aspect_ratio * height) - width
         pad_right = int(np.ceil(diff / 2))
         pad_left = int(np.floor(diff / 2))
     elif aspect_ratio_current > aspect_ratio:
-        # horizontal image, width > height
+        # image is more horizontal than desired, height needs to be increased
         diff = ((1/aspect_ratio) * width) - height
         pad_top = int(np.floor(diff / 2))
         pad_bottom = int(np.ceil(diff / 2))
