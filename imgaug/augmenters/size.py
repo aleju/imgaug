@@ -227,10 +227,20 @@ def _project_size_changes(trbl, from_shape, to_shape):
     bottom = trbl[2]
     left = trbl[3]
 
-    top = _int_r(height_to * (top/height_from))
-    right = _int_r(width_to * (right/width_from))
-    bottom = _int_r(height_to * (bottom/height_from))
-    left = _int_r(width_to * (left/width_from))
+    # Adding/subtracting 1e-4 here helps for the case where a heatmap/segmap
+    # is exactly half the size of an image and the size change on an axis is
+    # an odd value. Then the projected value would end up being <something>.5
+    # and the rounding would always round up to the next integer. If both
+    # sides then have the same change, they are both rounded up, resulting
+    # in more change than expected.
+    # E.g. image height is 8, map height is 4, change is 3 at the top and 3 at
+    # the bottom. The changes are projected to 4*(3/8) = 1.5 and both rounded
+    # up to 2.0. Hence, the maps are changed by 4 (100% of the map height,
+    # vs. 6 for images, which is 75% of the image height).
+    top = _int_r(height_to * (top/height_from) - 1e-4)
+    right = _int_r(width_to * (right/width_from) + 1e-4)
+    bottom = _int_r(height_to * (bottom/height_from) + 1e-4)
+    left = _int_r(width_to * (left/width_from) - 1e-4)
 
     return top, right, bottom, left
 

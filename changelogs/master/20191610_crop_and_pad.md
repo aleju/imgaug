@@ -27,6 +27,8 @@
   `3` columns have to be padded, it will pad `1` on the left and `2` on the
   right. Previously it was the other way round. This was changed to establish
   more consistency with the various other pad and crop methods.
+* Changed the projection of pad/crop values between images and non-images
+  to make the behaviour slightly more accurate in fringe cases.
 * Changed function `imgaug.imgaug.compute_paddings_for_aspect_ratio()`
   to also support shape tuples instead of only ndarrays.
 * Changed function `imgaug.imgaug.compute_paddings_to_reach_multiples_of()`
