@@ -2325,10 +2325,10 @@ class CenterCropToFixedSize(CropToFixedSize):
     Parameters
     ----------
     width : int or None
-        Maximum width of the crop.
+        See :func:`CropToFixedSize.__init__`.
 
     height : int or None
-        Maximum height of the crop.
+        See :func:`CropToFixedSize.__init__`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2597,7 +2597,7 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -2627,7 +2627,7 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((13*14)).astype(np.uint8).reshape((13, 14))
-    >>> aug = iaa.PadToMultiplesOf(height_multiple=10, width_multiple=6)
+    >>> aug = iaa.CenterPadToMultiplesOf(height_multiple=10, width_multiple=6)
     >>> image_padded = aug(image=image)
 
     Pad ``image`` to size ``20x12`` (multiples of ``10`` and ``6``).
@@ -2758,16 +2758,10 @@ class CenterCropToExponentsOf(CropToFixedSize):
     Parameters
     ----------
     width_base : int or None
-        Base for the width. Images will be cropped down until their
-        width fullfills ``width' = width_base ^ E`` with ``E`` being any
-        natural number.
-        If ``None``, image widths will not be altered.
+        See :func:`CropToExponentsOf.__init__`.
 
     height_base : int or None
-        Base for the height. Images will be cropped down until their
-        height fullfills ``height' = height_base ^ E`` with ``E`` being any
-        natural number.
-        If ``None``, image heights will not be altered.
+        See :func:`CropToExponentsOf.__init__`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -2783,12 +2777,12 @@ class CenterCropToExponentsOf(CropToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.CropToExponentsOf(height_base=3, width_base=2)
+    >>> aug = iaa.CenterCropToExponentsOf(height_base=3, width_base=2)
     >>> crop = aug(image=image)
 
     Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
-    This operation will remove ``2`` rows at the top, ``3`` at the bottom,
-    ``2`` columns at the left and ``2`` at the right.
+    This operation will remove ``2`` rows from the top, ``3`` from the bottom,
+    ``2`` columns from the left and ``2`` from the right.
 
     """
 
@@ -2849,7 +2843,7 @@ class PadToExponentsOf(PadToFixedSize):
     --------
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.PadToExponentsOf(height_base=5, width_base=2)
     >>> image_padded = aug(image=image)
 
