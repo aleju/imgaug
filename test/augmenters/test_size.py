@@ -5266,7 +5266,7 @@ class TestPadToExponentsOf(unittest.TestCase):
         expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
-    def test_on_7x9_image(self):
+    def test_on_7x22_image(self):
         image = np.mod(
             np.arange((7*22*3)),
             255
@@ -5279,7 +5279,7 @@ class TestPadToExponentsOf(unittest.TestCase):
         expected = ia.pad(image, top=2, bottom=3, left=5, right=5)
         assert np.array_equal(observed, expected)
 
-    def test_on_7x9_image__cval(self):
+    def test_on_7x22_image__cval(self):
         image = np.mod(
             np.arange((7*22*3)),
             255
@@ -5293,7 +5293,7 @@ class TestPadToExponentsOf(unittest.TestCase):
         expected = ia.pad(image, top=2, bottom=3, left=5, right=5, cval=100)
         assert np.array_equal(observed, expected)
 
-    def test_on_7x9_image__mode(self):
+    def test_on_7x22_image__mode(self):
         image = np.mod(
             np.arange((7*22*3)),
             255
@@ -5552,6 +5552,190 @@ class TestCenterCropToAspectRatio(unittest.TestCase):
         observed = aug(image=image)
 
         assert np.array_equal(observed, image[1:3, 0:4, :])
+
+
+class TestPadToAspectRatio(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.PadToAspectRatio(2.0, position="center")
+        assert np.isclose(aug.aspect_ratio, 2.0)
+        assert np.isclose(aug.position[0].value, 0.5)
+        assert np.isclose(aug.position[1].value, 0.5)
+
+    def test_on_3x3_image__no_change(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToAspectRatio(1.0, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image)
+
+    def test_on_3x3_image__with_change__wider(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToAspectRatio(2.0, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, left=1, right=2)
+        assert np.array_equal(observed, expected)
+
+    def test_on_3x3_image__with_change__higher(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToAspectRatio(0.5, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1, bottom=2)
+        assert np.array_equal(observed, expected)
+
+    def test_on_3x4_image(self):
+        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
+        aug = iaa.PadToAspectRatio(2.0, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, left=1, right=1)
+        assert np.array_equal(observed, expected)
+
+    def test_on_7x22_image__height_padded_even_though_ratio_is_wide(self):
+        image = np.mod(
+            np.arange((7*22*3)),
+            255
+        ).astype(np.uint8).reshape((7, 22, 3))
+        aug = iaa.PadToAspectRatio(2.0, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=2, bottom=2)
+        assert np.array_equal(observed, expected)
+
+    def test_on_10x6_image__cval(self):
+        image = np.arange((10*6*3)).astype(np.uint8).reshape((10, 6, 3))
+        aug = iaa.PadToAspectRatio(0.5, pad_cval=100, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1, bottom=1, cval=100)
+        assert np.array_equal(observed, expected)
+
+    def test_on_10x6_image__mode(self):
+        image = np.arange((10*6*3)).astype(np.uint8).reshape((10, 6, 3))
+        aug = iaa.PadToAspectRatio(0.5,
+                                   pad_mode="edge",
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1, bottom=1, mode="edge")
+        assert np.array_equal(observed, expected)
+
+    def test_heatmaps(self):
+        # segmaps are implemented in the same way in PadToFixesSize
+        # and already tested there, so there is no need to test them again here
+        arr = np.linspace(0, 1.0, 50*50).astype(np.float32).reshape((50, 50, 1))
+        heatmap = ia.HeatmapsOnImage(arr, shape=(100, 100, 3))
+        aug = iaa.PadToAspectRatio(2.0, position="center")
+
+        observed = aug(heatmaps=heatmap)
+
+        expected = heatmap.pad(top=0, bottom=0, left=25, right=25)
+        assert observed.shape == (100, 200, 3)
+        assert np.allclose(observed.arr_0to1, expected.arr_0to1)
+
+    def test_keypoints(self):
+        kps = [ia.Keypoint(x=2, y=3)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(10, 5, 3))
+        aug = iaa.PadToAspectRatio(1.0, position="center")
+
+        observed = aug(keypoints=kpsoi)
+
+        assert observed.keypoints[0].x == 2+2
+        assert observed.keypoints[0].y == 3
+
+    def test_get_parameters(self):
+        aug = iaa.PadToAspectRatio(2.0,
+                                   pad_cval=5, pad_mode="edge",
+                                   position="center")
+
+        params = aug.get_parameters()
+
+        assert np.isclose(params[0], 2.0)
+        assert params[1].value == "edge"
+        assert params[2].value == 5
+        assert np.isclose(params[3][0].value, 0.5)
+        assert np.isclose(params[3][1].value, 0.5)
+
+    def test_zero_sized_axes__wider(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PadToAspectRatio(2.0)
+
+                image_aug = aug(image=image)
+
+                height, width = shape[0:2]
+                if width == 0 and height == 0:
+                    h_exp, w_exp = (1, 2)
+                elif width == 0:
+                    h_exp, w_exp = (height, height * 2)
+                else:  # height == 0
+                    h_exp, w_exp = (1, 2)
+
+                expected_shape = tuple([h_exp, w_exp] + list(shape[2:]))
+                assert image_aug.shape == expected_shape
+
+    def test_zero_sized_axes__higher(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PadToAspectRatio(0.5)
+
+                image_aug = aug(image=image)
+
+                height, width = shape[0:2]
+                if width == 0 and height == 0:
+                    h_exp, w_exp = (2, 1)
+                elif height == 0:
+                    h_exp, w_exp = (width * 2, width)
+                else:  # width == 0
+                    h_exp, w_exp = (2, 1)
+
+                expected_shape = tuple([h_exp, w_exp] + list(shape[2:]))
+                assert image_aug.shape == expected_shape
 
 
 class TestKeepSizeByResize(unittest.TestCase):

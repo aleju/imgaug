@@ -3135,6 +3135,91 @@ class CenterCropToAspectRatio(CropToAspectRatio):
             name=name, deterministic=deterministic, random_state=random_state)
 
 
+class PadToAspectRatio(PadToFixedSize):
+    """Pad images until their width/height matches an aspect ratio.
+
+    This augmenter adds either rows or columns until the image reaches
+    the desired aspect ratio given in ``width / height``.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    aspect_ratio : number
+        The desired aspect ratio, given as ``width/height``. E.g. a ratio
+        of ``2.0`` denotes an image that is twice as wide as it is high.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`PadToFixedSize.__init__`.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
+    >>> aug = iaa.CropToAspectRatio(2.0)
+    >>> crop = aug(image=image)
+
+    Pad ``image`` to size ``14x28``.
+
+    """
+
+    def __init__(self, aspect_ratio, pad_mode="constant", pad_cval=0,
+                 position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(PadToAspectRatio, self).__init__(
+            width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
+            position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.aspect_ratio = aspect_ratio
+
+    def _draw_samples(self, batch, random_state):
+        _sizes, pad_xs, pad_ys, pad_modes, pad_cvals = super(
+            PadToAspectRatio, self
+        )._draw_samples(batch, random_state)
+
+        shapes = batch.get_rowwise_shapes()
+        sizes = []
+        for shape in shapes:
+            height, width = shape[0:2]
+
+            paddings = ia.compute_paddings_for_aspect_ratio(
+                shape,
+                aspect_ratio=self.aspect_ratio)
+
+            # TODO change that
+            # note that these are not in the same order as shape tuples
+            # in PadToFixedSize
+            new_size = (
+                width + paddings[1] + paddings[3],
+                height + paddings[0] + paddings[2]
+            )
+            sizes.append(new_size)
+
+        return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
+
+    def get_parameters(self):
+        return [self.aspect_ratio, self.pad_mode, self.pad_cval,
+                self.position]
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 
