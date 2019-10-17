@@ -1842,6 +1842,77 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     return pad_top, pad_right, pad_bottom, pad_left
 
 
+# TODO rename to "_to_reach_aspect_ratio"? matches other methods
+def compute_croppings_for_aspect_ratio(arr, aspect_ratio):
+    """Compute crop amounts required to fulfill an aspect ratio.
+
+    "Crop amounts" here denotes the number of pixels that have to be removed
+    from each side to fulfill the desired constraint.
+
+    The aspect ratio is given as ``ratio = width / height``.
+    Depending on which dimension is smaller (height or width), only the
+    corresponding sides (top/bottom or left/right) will be cropped.
+
+    The axis-wise padding amounts are always distributed equally over the
+    sides of the respective axis (i.e. left and right, top and bottom). For
+    odd pixel amounts, one pixel will be left over after the equal
+    distribution and could be added to either side of the axis. This function
+    will always add such a left over pixel to the bottom (y-axis) or
+    right (x-axis) side.
+
+    If an aspect ratio cannot be reached exactly, this function will return
+    rather one pixel too few than one pixel too many.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
+        Image-like array or shape tuple for which to compute crop amounts.
+
+    aspect_ratio : float
+        Target aspect ratio, given as width/height. E.g. ``2.0`` denotes the
+        image having twice as much width as height.
+
+    Returns
+    -------
+    tuple of int
+        Required cropping amounts to reach the target aspect ratio, given as a
+        ``tuple`` of the form ``(top, right, bottom, left)``.
+
+    """
+    _assert_two_or_three_dims(arr)
+    assert aspect_ratio > 0, (
+        "Expected to get an aspect ratio >0, got %.4f." % (aspect_ratio,))
+
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    assert shape[0] > 0, (
+        "Expected to get an array with height >0, got shape %s." % (shape,))
+
+    height, width = shape[0:2]
+    aspect_ratio_current = width / height
+
+    top = 0
+    right = 0
+    bottom = 0
+    left = 0
+
+    if aspect_ratio_current < aspect_ratio:
+        # image is more vertical than desired, height needs to be reduced
+        # c = H - W/r
+        crop_amount = height - (width / aspect_ratio)
+        crop_amount = min(crop_amount, height - 1)
+        top = int(np.floor(crop_amount / 2))
+        bottom = int(np.ceil(crop_amount / 2))
+    elif aspect_ratio_current > aspect_ratio:
+        # image is more horizontal than desired, width needs to be reduced
+        # c = W - Hr
+        crop_amount = width - height * aspect_ratio
+        crop_amount = min(crop_amount, width - 1)
+        left = int(np.floor(crop_amount / 2))
+        right = int(np.ceil(crop_amount / 2))
+
+    return top, right, bottom, left
+
+
 def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
                         return_pad_amounts=False):
     """Pad an image array on its sides so that it matches a target aspect ratio.

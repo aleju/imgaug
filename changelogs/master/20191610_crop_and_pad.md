@@ -33,6 +33,7 @@
   to also support shape tuples instead of only ndarrays.
 * Changed function `imgaug.imgaug.compute_paddings_to_reach_multiples_of()`
   to also support shape tuples instead of only ndarrays.
+* Added function `imgaug.imgaug.compute_croppings_for_aspect_ratio()`.
 * Added function `imgaug.imgaug.compute_croppings_to_reach_multiples_of()`.
 * Added function `imgaug.imgaug.compute_croppings_to_reach_exponents_of()`.
 * Added function `imgaug.imgaug.compute_paddings_to_reach_exponents_of()`.
