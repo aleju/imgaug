@@ -4677,6 +4677,174 @@ class TestCropToMultiplesOf(unittest.TestCase):
                 assert image_aug.shape == image.shape
 
 
+class TestPadToMultiplesOf(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.PadToMultiplesOf(width_multiple=1, height_multiple=2,
+                                   position="center")
+        assert aug.width_multiple == 1
+        assert aug.height_multiple == 2
+        assert np.isclose(aug.position[0].value, 0.5)
+        assert np.isclose(aug.position[1].value, 0.5)
+
+    def test_multiples_are_1(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(1, 1, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image)
+
+    def test_on_3x3_image__no_change(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(3, 3, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image)
+
+    def test_on_3x3_image__with_change(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(2, 2, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1, left=1)
+        assert np.array_equal(observed, expected)
+
+    def test_on_3x3_image__only_width_changed(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=3, width_multiple=2,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, left=1)
+        assert np.array_equal(observed, expected)
+
+    def test_on_3x3_image__only_height_changed(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=2, width_multiple=3,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1)
+        assert np.array_equal(observed, expected)
+
+    def test_on_3x4_image(self):
+        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
+        aug = iaa.PadToMultiplesOf(2, 2, position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=1)
+        assert np.array_equal(observed, expected)
+
+    def test_on_7x9_image(self):
+        image = np.arange((7*9*3)).astype(np.uint8).reshape((7, 9, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=5, width_multiple=6,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=2, bottom=1, left=2, right=1)
+        assert np.array_equal(observed, expected)
+
+    def test_on_7x9_image__cval(self):
+        image = np.arange((7*9*3)).astype(np.uint8).reshape((7, 9, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=5, width_multiple=6,
+                                   pad_cval=100,
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=2, bottom=1, left=2, right=1, cval=100)
+        assert np.array_equal(observed, expected)
+
+    def test_on_7x9_image__mode(self):
+        image = np.arange((7*9*3)).astype(np.uint8).reshape((7, 9, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=5, width_multiple=6,
+                                   pad_mode="edge",
+                                   position="center")
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, top=2, bottom=1, left=2, right=1, mode="edge")
+        assert np.array_equal(observed, expected)
+
+    def test_heatmaps(self):
+        # segmaps are implemented in the same way in PadToFixesSize
+        # and already tested there, so there is no need to test them again here
+        arr = np.linspace(0, 1.0, 51*51).astype(np.float32).reshape((51, 51, 1))
+        heatmap = ia.HeatmapsOnImage(arr, shape=(101, 101, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=100, width_multiple=100,
+                                   position="center")
+
+        observed = aug(heatmaps=heatmap)
+
+        expected = heatmap.pad(top=25, bottom=25, left=25, right=25)
+        assert observed.shape == (200, 200, 3)
+        assert np.allclose(observed.arr_0to1, expected.arr_0to1)
+
+    def test_keypoints(self):
+        kps = [ia.Keypoint(x=2, y=3)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(8, 4, 3))
+        aug = iaa.PadToMultiplesOf(height_multiple=5, width_multiple=2,
+                                   position="center")
+
+        observed = aug(keypoints=kpsoi)
+
+        assert observed.keypoints[0].x == 2
+        assert observed.keypoints[0].y == 4
+
+    def test_get_parameters(self):
+        aug = iaa.PadToMultiplesOf(width_multiple=1, height_multiple=2,
+                                   pad_cval=5, pad_mode="edge",
+                                   position="center")
+
+        params = aug.get_parameters()
+
+        assert params[0] == 1
+        assert params[1] == 2
+        assert params[2].value == "edge"
+        assert params[3].value == 5
+        assert np.isclose(params[4][0].value, 0.5)
+        assert np.isclose(params[4][1].value, 0.5)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.PadToMultiplesOf(2, 2)
+
+                image_aug = aug(image=image)
+
+                expected_height = 2
+                expected_width = 2
+                expected_shape = tuple([expected_height, expected_width]
+                                       + list(shape[2:]))
+                assert image_aug.shape == expected_shape
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()
