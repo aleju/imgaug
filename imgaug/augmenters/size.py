@@ -2029,6 +2029,10 @@ class PadToFixedSize(meta.Augmenter):
         pad_bottom = 0
         pad_left = 0
 
+        # TODO for pad_xy=0.5 this prefers padding on the left over the right
+        #      due to the int() rounding pad_right down, which is the opposite
+        #      of e.g. compute_paddings_to_reach_multiples_of().
+        #      Analogous for pad_ys.
         if width_image < width_min:
             pad_right = int(pad_xs_i * (width_min - width_image))
             pad_left = width_min - width_image - pad_right
