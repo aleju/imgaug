@@ -2577,7 +2577,7 @@ class CropToExponentsOf(CropToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
-    >>> aug = iaa.CropToExponentOf(height_base=3, width_base=2)
+    >>> aug = iaa.CropToExponentsOf(height_base=3, width_base=2)
     >>> crop = aug(image=image)
 
     Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
