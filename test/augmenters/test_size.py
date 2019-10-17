@@ -4911,14 +4911,16 @@ class TestCropToExponentsOf(unittest.TestCase):
 
         assert np.array_equal(observed, image[0:16, 8:17, :])
 
-    def test_crop_to_exponent_zero(self):
-        # B > axis_size, leads to crop until new axis size is B^0=1
+    def test_does_not_crop_towards_exponent_of_zero(self):
+        # Test for: axis_size < B,
+        # this should not lead to crops that result in exponent of B^0=1,
+        # i.e. the respective axes should simply not be changed.
         image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
         aug = iaa.CropToExponentsOf(10, 10, position="center")
 
         observed = aug(image=image)
 
-        assert np.array_equal(observed, image[1:2, 1:2, :])
+        assert np.array_equal(observed, image)
 
     def test_heatmaps(self):
         # segmaps are implemented in the same way in CropToFixesSize

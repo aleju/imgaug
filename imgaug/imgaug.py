@@ -2034,8 +2034,8 @@ def compute_croppings_to_reach_multiples_of(arr, height_multiple,
 
 
 # TODO move this to augmenters.size
-def compute_croppings_to_reach_exponents_of(arr, height_base,
-                                            width_base):
+def compute_croppings_to_reach_exponents_of(arr, height_base, width_base,
+                                            allow_zero_exponent=False):
     """Compute croppings to reach exponents of given base values.
 
     For given axis size ``S``, cropped size ``S'`` (``S' <= S``) and base ``B``
@@ -2048,11 +2048,10 @@ def compute_croppings_to_reach_exponents_of(arr, height_base,
 
     .. note ::
 
-        For axes where ``0 < S < B``, this function returns croppings based
-        on ``E=0``, i.e. ``S'`` (axis size after applying the computed
-        croppings) will be ``1``.
+        For axes where ``S == 0``, this function alwayws returns zeros as
+        croppings.
 
-        For axes where ``S == 0``, this function returns zeros as croppings.
+        For axes where ``1 <= S < B`` see parameter `allow_zero_exponent`.
 
     Parameters
     ----------
@@ -2064,6 +2063,11 @@ def compute_croppings_to_reach_exponents_of(arr, height_base,
 
     width_base : None or int
         The desired base of the width.
+
+    allow_zero_exponent : bool
+        Whether ``E=0`` in ``S'=B^E`` is a valid value. If ``True``, axes
+        with size ``1 <= S < B`` will be cropped to size ``B^0=1``.
+        If ``False``, axes with sizes ``S < B`` will not be changed.
 
     Returns
     -------
@@ -2079,7 +2083,7 @@ def compute_croppings_to_reach_exponents_of(arr, height_base,
             to_crop = 0
         elif axis_size < base:
             # crop down to B^0 = 1
-            to_crop = axis_size - 1
+            to_crop = axis_size - 1 if allow_zero_exponent else 0
         else:
             # log_{base}(axis_size) in numpy
             exponent = np.log(axis_size) / np.log(base)

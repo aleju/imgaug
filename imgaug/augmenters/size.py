@@ -2534,13 +2534,12 @@ class CropToExponentsOf(CropToFixedSize):
     This augmenter removes pixels from an axis with size ``S`` leading to the
     new size ``S'`` until ``S' = B^E`` is fullfilled, where ``B`` is a
     provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
-    interval ``[0 .. inf)``.
+    interval ``[1 .. inf)``.
 
     .. note ::
 
-        This augmenter does nothing for axes with size ``0``.
-        It may also crop down until ``B^0``, i.e. until an axis reaches
-        size ``1``. If you have images with ``S < B^1``, it is recommended
+        This augmenter does nothing for axes with size less than ``B^1 = B``.
+        If you have images with ``S < B^1``, it is recommended
         to combine this augmenter with a padding augmenter that pads each
         axis up to ``B``.
 
