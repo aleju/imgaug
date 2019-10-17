@@ -2552,6 +2552,7 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     ``1`` column from the left and ``1`` from the right.
 
     """
+
     def __init__(self, width_multiple, height_multiple,
                  name=None, deterministic=False, random_state=None):
         super(CenterCropToMultiplesOf, self).__init__(
@@ -2807,7 +2808,7 @@ class CropToExponentsOf(CropToFixedSize):
         return [self.width_base, self.height_base, self.position]
 
 
-class CenterCropToExponentsOf(CropToFixedSize):
+class CenterCropToExponentsOf(CropToExponentsOf):
     """Crop images equally on all sides until H/W is an exponent of a base.
 
     This is the same as :class`CropToExponentsOf`, but uses
@@ -2853,10 +2854,8 @@ class CenterCropToExponentsOf(CropToFixedSize):
     def __init__(self, width_base, height_base,
                  name=None, deterministic=False, random_state=None):
         super(CenterCropToExponentsOf, self).__init__(
-            width=None, height=None, position="center",
+            width_base=width_base, height_base=height_base, position="center",
             name=name, deterministic=deterministic, random_state=random_state)
-        self.width_base = width_base
-        self.height_base = height_base
 
 
 class PadToExponentsOf(PadToFixedSize):
@@ -2957,7 +2956,7 @@ class PadToExponentsOf(PadToFixedSize):
                 self.position]
 
 
-class CenterPadToExponentsOf(CropToFixedSize):
+class CenterPadToExponentsOf(PadToExponentsOf):
     """Pad images equally on all sides until H/W is an exponent of a base.
 
     This is the same as :class`PadToExponentsOf`, but uses
@@ -3003,10 +3002,8 @@ class CenterPadToExponentsOf(CropToFixedSize):
     def __init__(self, width_base, height_base,
                  name=None, deterministic=False, random_state=None):
         super(CenterPadToExponentsOf, self).__init__(
-            width=None, height=None, position="center",
+            width_base=width_base, height_base=height_base, position="center",
             name=name, deterministic=deterministic, random_state=random_state)
-        self.width_base = width_base
-        self.height_base = height_base
 
 
 class CropToAspectRatio(CropToFixedSize):

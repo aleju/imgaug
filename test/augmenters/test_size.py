@@ -4827,12 +4827,12 @@ class TestCenterCropToMultiplesOf(unittest.TestCase):
         reseed()
 
     def test_on_3x4_image(self):
-        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
-        aug = iaa.CropToMultiplesOf(2, 2)
+        image = np.arange((5*6*3)).astype(np.uint8).reshape((5, 6, 3))
+        aug = iaa.CenterCropToMultiplesOf(height_multiple=2, width_multiple=2)
 
         observed = aug(image=image)
 
-        assert np.array_equal(observed, image[0:2, 0:4, :])
+        assert np.array_equal(observed, image[0:4, 0:6, :])
 
 
 class TestPadToMultiplesOf(unittest.TestCase):
@@ -5029,7 +5029,7 @@ class TestCenterPadToMultiplesOf(unittest.TestCase):
 
     def test_on_3x4_image(self):
         image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
-        aug = iaa.PadToMultiplesOf(2, 2)
+        aug = iaa.CenterPadToMultiplesOf(2, 2)
 
         observed = aug(image=image)
 
@@ -5200,12 +5200,12 @@ class TestCenterCropToExponentsOf(unittest.TestCase):
         reseed()
 
     def test_on_3x3_image__with_change(self):
-        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(2, 2)
+        image = np.arange((5*11*3)).astype(np.uint8).reshape((5, 11, 3))
+        aug = iaa.CenterCropToExponentsOf(height_base=2, width_base=3)
 
         observed = aug(image=image)
 
-        assert np.array_equal(observed, image[0:2, 0:2, :])
+        assert np.array_equal(observed, image[0:4, 1:10, :])
 
 
 class TestPadToExponentsOf(unittest.TestCase):
@@ -5402,12 +5402,12 @@ class TestCenterPadToExponentsOf(unittest.TestCase):
         reseed()
 
     def test_on_3x3_image__with_change(self):
-        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(2, 2)
+        image = np.arange((3*5*3)).astype(np.uint8).reshape((3, 5, 3))
+        aug = iaa.CenterPadToExponentsOf(height_base=2, width_base=2)
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1, right=1)
+        expected = ia.pad(image, bottom=1, right=2, left=1)
         assert np.array_equal(observed, expected)
 
 
