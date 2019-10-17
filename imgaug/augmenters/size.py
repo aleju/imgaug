@@ -2534,7 +2534,7 @@ class PadToMultiplesOf(PadToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
-    >>> aug = iaa.PadToMultiplesOf(width_multiple=6, height_multiple=10)
+    >>> aug = iaa.PadToMultiplesOf(height_multiple=10, width_multiple=6)
     >>> image_padded = aug(image=image)
 
     Pad ``image`` to size ``20x12`` (multiples of ``10`` and ``6``).
@@ -2581,6 +2581,64 @@ class PadToMultiplesOf(PadToFixedSize):
         return [self.width_multiple, self.height_multiple,
                 self.pad_mode, self.pad_cval,
                 self.position]
+
+
+class CenterPadToMultiplesOf(PadToMultiplesOf):
+    """Pad images equally on all sides until H/W are multiples of given values.
+
+    This is the same as :class`PadToMultiplesOf`, but uses
+    ``position="center"`` by default, which spreads the pad amounts equally
+    over all image sides, while :class`PadToMultiplesOf` by default spreads
+    them randomly.
+
+    Parameters
+    ----------
+    width_multiple : int or None
+        See :func:`PadToMultiplesOf.__init__`.
+
+    height_multiple : int or None
+        See :func:`PadToMultiplesOf.__init__`.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToMultiplesOf.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToMultiplesOf.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((13*14)).astype(np.uint8).reshape((13, 14))
+    >>> aug = iaa.PadToMultiplesOf(height_multiple=10, width_multiple=6)
+    >>> image_padded = aug(image=image)
+
+    Pad ``image`` to size ``20x12`` (multiples of ``10`` and ``6``).
+    The operation will pad ``4`` rows to the bottom, ``3`` to the top,
+    ``1`` column to the left and ``1`` to the right.
+
+    """
+
+    def __init__(self, width_multiple, height_multiple,
+                 pad_mode="constant", pad_cval=0,
+                 position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(CenterPadToMultiplesOf, self).__init__(
+            width_multiple=width_multiple,
+            height_multiple=height_multiple,
+            pad_mode=pad_mode,
+            pad_cval=pad_cval,
+            position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
 
 
 class CropToExponentsOf(CropToFixedSize):

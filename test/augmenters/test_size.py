@@ -5009,6 +5009,20 @@ class TestPadToMultiplesOf(unittest.TestCase):
                 assert image_aug.shape == expected_shape
 
 
+class TestCenterPadToMultiplesOf(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_on_3x4_image(self):
+        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
+        aug = iaa.PadToMultiplesOf(2, 2)
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, bottom=1)
+        assert np.array_equal(observed, expected)
+
+
 class TestCropToExponentsOf(unittest.TestCase):
     def setUp(self):
         reseed()

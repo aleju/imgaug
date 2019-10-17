@@ -5,6 +5,7 @@
 * Added augmenter `CropToMultiplesOf`.
 * Added augmenter `CenterCropToMultiplesOf`.
 * Added augmenter `PadToMultiplesOf`.
+* Added augmenter `CenterPadToMultiplesOf`.
 * Added augmenter `CropToExponentsOf`.
 * Added augmenter `PadToExponentsOf`.
 * Extended augmenter `CropToFixedSize` to support `height` and/or `width`
