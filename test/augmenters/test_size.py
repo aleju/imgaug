@@ -3546,7 +3546,18 @@ class TestPadToFixedSize(unittest.TestCase):
 
         observed = aug.augment_keypoints(kpsoi)
 
-        expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(4, 4))
+        # padding happens at right/bottom, so KP doesn't move
+        expected = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_keypoints_pad_at_center__2px(self):
+        aug = iaa.PadToFixedSize(
+            height=5, width=5, pad_mode="edge", position="center")
+        kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=1)], shape=(3, 3))
+
+        observed = aug.augment_keypoints(kpsoi)
+
+        expected = ia.KeypointsOnImage([ia.Keypoint(x=2, y=2)], shape=(5, 5))
         assert_cbaois_equal(observed, expected)
 
     def test_keypoints_pad_at_left_top(self):
@@ -3603,9 +3614,25 @@ class TestPadToFixedSize(unittest.TestCase):
 
         observed = aug.augment_polygons(psoi)
 
+        # padding happens at right/bottom, so poly doesn't move
         expected = ia.PolygonsOnImage([
-            ia.Polygon([(1+0, 1+0), (1+3, 1+0), (1+3, 1+3)])
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
         ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_polygons_pad_at_center__2px(self):
+        aug = iaa.PadToFixedSize(
+            height=5, width=5, pad_mode="edge", position="center")
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_polygons(psoi)
+
+        # padding happens at right/bottom, so poly doesn't move
+        expected = ia.PolygonsOnImage([
+            ia.Polygon([(0+1, 0+1), (3+1, 0+1), (3+1, 3+1)])
+        ], shape=(5, 5))
         assert_cbaois_equal(observed, expected)
 
     def test_polygons_pad_at_left_top(self):
@@ -3670,9 +3697,24 @@ class TestPadToFixedSize(unittest.TestCase):
 
         observed = aug.augment_line_strings(cbaoi)
 
+        # padding happens at right/bottom, so LS doesn't move
         expected = ia.LineStringsOnImage([
-            ia.LineString([(1+0, 1+0), (1+3, 1+0), (1+3, 1+3)])
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
         ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_line_strings_pad_at_center__2px(self):
+        aug = iaa.PadToFixedSize(
+            height=5, width=5, pad_mode="edge", position="center")
+        cbaoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (3, 0), (3, 3)])
+        ], shape=(3, 3))
+
+        observed = aug.augment_line_strings(cbaoi)
+
+        expected = ia.LineStringsOnImage([
+            ia.LineString([(0+1, 0+1), (3+1, 0+1), (3+1, 3+1)])
+        ], shape=(5, 5))
         assert_cbaois_equal(observed, expected)
 
     def test_line_strings_pad_at_left_top(self):
@@ -3737,9 +3779,25 @@ class TestPadToFixedSize(unittest.TestCase):
 
         observed = aug.augment_bounding_boxes(bbsoi)
 
+        # aug adds a columns at the right and row at the bottom,
+        # i.e. BB is not affected
         expected = ia.BoundingBoxesOnImage([
-            ia.BoundingBox(x1=1+0, y1=1+1, x2=1+2, y2=1+3),
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
         ], shape=(4, 4))
+        assert_cbaois_equal(observed, expected)
+
+    def test_bounding_boxes_pad_at_center__2px(self):
+        aug = iaa.PadToFixedSize(
+            height=5, width=5, pad_mode="edge", position="center")
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0, y1=1, x2=2, y2=3),
+        ], shape=(3, 3))
+
+        observed = aug.augment_bounding_boxes(bbsoi)
+
+        expected = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=0+1, y1=1+1, x2=2+1, y2=3+1),
+        ], shape=(5, 5))
         assert_cbaois_equal(observed, expected)
 
     def test_bounding_boxes_pad_at_left_top(self):
@@ -3753,7 +3811,7 @@ class TestPadToFixedSize(unittest.TestCase):
         observed = aug.augment_bounding_boxes(bbsoi)
 
         expected = ia.BoundingBoxesOnImage([
-            ia.BoundingBox(x1=1+0, y1=1+1, x2=1+2, y2=1+3),
+            ia.BoundingBox(x1=0+1, y1=1+1, x2=2+1, y2=3+1),
         ], shape=(4, 4))
         assert_cbaois_equal(observed, expected)
 
@@ -4797,7 +4855,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, left=1)
+        expected = ia.pad(image, bottom=1, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_width_changed(self):
@@ -4807,7 +4865,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1)
+        expected = ia.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_height_changed(self):
@@ -4817,7 +4875,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1)
+        expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x4_image(self):
@@ -4826,7 +4884,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1)
+        expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image(self):
@@ -4836,7 +4894,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=1, left=2, right=1)
+        expected = ia.pad(image, top=1, bottom=2, left=1, right=2)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image__cval(self):
@@ -4847,7 +4905,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=1, left=2, right=1, cval=100)
+        expected = ia.pad(image, top=1, bottom=2, left=1, right=2, cval=100)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image__mode(self):
@@ -4858,7 +4916,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=1, left=2, right=1, mode="edge")
+        expected = ia.pad(image, top=1, bottom=2, left=1, right=2, mode="edge")
         assert np.array_equal(observed, expected)
 
     def test_width_multiple_is_none(self):
@@ -4868,7 +4926,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1)
+        expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_height_multiple_is_none(self):
@@ -4878,7 +4936,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1)
+        expected = ia.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):
@@ -5135,7 +5193,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, left=1)
+        expected = ia.pad(image, bottom=1, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_width_changed(self):
@@ -5145,7 +5203,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1)
+        expected = ia.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_height_changed(self):
@@ -5155,7 +5213,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1)
+        expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x4_image(self):
@@ -5164,7 +5222,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1)
+        expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image(self):
@@ -5177,7 +5235,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=3, bottom=2, left=5, right=5)
+        expected = ia.pad(image, top=2, bottom=3, left=5, right=5)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image__cval(self):
@@ -5191,7 +5249,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=3, bottom=2, left=5, right=5, cval=100)
+        expected = ia.pad(image, top=2, bottom=3, left=5, right=5, cval=100)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image__mode(self):
@@ -5205,7 +5263,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=3, bottom=2, left=5, right=5, mode="edge")
+        expected = ia.pad(image, top=2, bottom=3, left=5, right=5, mode="edge")
         assert np.array_equal(observed, expected)
 
     def test_width_base_is_none(self):
@@ -5215,7 +5273,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1)
+        expected = ia.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_height_base_is_none(self):
@@ -5225,7 +5283,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1)
+        expected = ia.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):
