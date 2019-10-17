@@ -2038,7 +2038,7 @@ def compute_croppings_to_reach_exponents_of(arr, height_base,
                                             width_base):
     """Compute croppings to reach exponents of given base values.
 
-    For given axis size ``S``, cropped size ``S'`` and base ``B``
+    For given axis size ``S``, cropped size ``S'`` (``S' <= S``) and base ``B``
     this function computes croppings that fullfill ``S' = B^E``, where ``E``
     is any exponent from the discrete interval ``[0 .. inf)``.
 
@@ -2096,6 +2096,75 @@ def compute_croppings_to_reach_exponents_of(arr, height_base,
     if width_base is not None:
         assert width_base > 1, (
             "Can only crop to base larger than 1, got %d." % (width_base,))
+
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    height, width = shape[0:2]
+
+    top, bottom = _compute_axis_value(height, height_base)
+    left, right = _compute_axis_value(width, width_base)
+
+    return top, right, bottom, left
+
+
+def compute_paddings_to_reach_exponents_of(arr, height_base, width_base,
+                                           allow_zero_exponent=False):
+    """Compute paddings to reach exponents of given base values.
+
+    For given axis size ``S``, padded size ``S'`` (``S' >= S``) and base ``B``
+    this function computes paddings that fullfill ``S' = B^E``, where ``E``
+    is any exponent from the discrete interval ``[0 .. inf)``.
+
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required padding amounts are distributed per
+    image axis.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
+        Image-like array or shape tuple for which to compute pad amounts.
+
+    height_base : None or int
+        The desired base of the height.
+
+    width_base : None or int
+        The desired base of the width.
+
+    allow_zero_exponent : bool, optional
+        Whether ``E=0`` in ``S'=B^E`` is a valid value. If ``True``, axes
+        with size ``0`` or ``1`` will be padded up to size ``B^0=1`` and
+        axes with size ``1 < S <= B`` will be padded up to ``B^1=B``.
+        If ``False``, the minimum output axis size is always at least ``B``.
+
+    Returns
+    -------
+    tuple of int
+        Required padding amounts to fullfill ``S' = B^E`` given as a
+        ``tuple`` of the form ``(top, right, bottom, left)``.
+
+    """
+    def _compute_axis_value(axis_size, base):
+        if base is None:
+            return 0, 0
+        if axis_size == 0:
+            to_pad = 1 if allow_zero_exponent else base
+        elif axis_size <= base:
+            to_pad = base - axis_size
+        else:
+            # log_{base}(axis_size) in numpy
+            exponent = np.log(axis_size) / np.log(base)
+
+            to_pad = (base ** int(np.ceil(exponent))) - axis_size
+
+        return int(np.floor(to_pad/2)), int(np.ceil(to_pad/2))
+
+    _assert_two_or_three_dims(arr)
+
+    if height_base is not None:
+        assert height_base > 1, (
+            "Can only pad to base larger than 1, got %d." % (height_base,))
+    if width_base is not None:
+        assert width_base > 1, (
+            "Can only pad to base larger than 1, got %d." % (width_base,))
 
     shape = arr.shape if hasattr(arr, "shape") else arr
     height, width = shape[0:2]
