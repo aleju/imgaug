@@ -3,6 +3,7 @@
 * Added augmenter `CenterCropToFixedSize`, a wrapper
   for `CropToFixedSize(..., position="center")`.
 * Added augmenter `CropToMultiplesOf`.
+* Added augmenter `CenterCropToMultiplesOf`.
 * Added augmenter `PadToMultiplesOf`.
 * Added augmenter `CropToExponentsOf`.
 * Added augmenter `PadToExponentsOf`.

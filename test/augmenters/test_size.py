@@ -4750,6 +4750,19 @@ class TestCropToMultiplesOf(unittest.TestCase):
                 assert image_aug.shape == image.shape
 
 
+class TestCenterCropToMultiplesOf(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_on_3x4_image(self):
+        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
+        aug = iaa.CropToMultiplesOf(2, 2)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:2, 0:4, :])
+
+
 class TestPadToMultiplesOf(unittest.TestCase):
     def setUp(self):
         reseed()

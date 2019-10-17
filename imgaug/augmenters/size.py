@@ -2402,10 +2402,12 @@ class CropToMultiplesOf(CropToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
-    >>> aug = iaa.CropToMultiplesOf(width_multiple=6, height_multiple=10)
+    >>> aug = iaa.CropToMultiplesOf(height_multiple=10, width_multiple=6)
     >>> crop = aug(image=image)
 
     Crop ``image`` down to size ``10x12`` (multiples of ``10`` and ``6``).
+    The rows to be cropped will be randomly spread over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -2444,6 +2446,52 @@ class CropToMultiplesOf(CropToFixedSize):
 
     def get_parameters(self):
         return [self.width_multiple, self.height_multiple, self.position]
+
+
+class CenterCropToMultiplesOf(CropToMultiplesOf):
+    """Crop images equally on all sides until H/W are multiples of given values.
+
+    This is the same as :class`CropToMultiplesOf`, but uses
+    ``position="center"`` by default, which spreads the crop amounts equally
+    over all image sides, while :class`CropToMultiplesOf` by default spreads
+    them randomly.
+
+    Parameters
+    ----------
+    width_multiple : int or None
+        See :func:`CropToMultiplesOf.__init__`.
+
+    height_multiple : int or None
+        See :func:`CropToMultiplesOf.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 14))
+    >>> aug = iaa.CenterCropToMultiplesOf(height_multiple=10, width_multiple=6)
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``10x12`` (multiples of ``10`` and ``6``).
+    The operation will remove ``2`` rows from the bottom, ``1`` from the top,
+    ``1`` column from the left and ``1`` from the right.
+
+    """
+    def __init__(self, width_multiple, height_multiple,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterCropToMultiplesOf, self).__init__(
+            width_multiple=width_multiple,
+            height_multiple=height_multiple,
+            name=name, deterministic=deterministic, random_state=random_state)
 
 
 class PadToMultiplesOf(PadToFixedSize):
