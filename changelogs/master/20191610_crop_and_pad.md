@@ -4,6 +4,7 @@
   for `CropToFixedSize(..., position="center")`.
 * Added augmenter `CropToMultiplesOf`.
 * Added augmenter `PadToMultiplesOf`.
+* Added augmenter `CropToExponentsOf`.
 * Changed function `imgaug.imgaug.compute_paddings_for_aspect_ratio()`
   to also support shape tuples instead of ndarrays.
 * Changed function `imgaug.imgaug.compute_paddings_to_reach_multiples_of()`

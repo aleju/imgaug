@@ -2528,6 +2528,99 @@ class PadToMultiplesOf(PadToFixedSize):
                 self.position]
 
 
+class CropToExponentsOf(CropToFixedSize):
+    """Crop images until their height/width is an exponent of a base.
+
+    This augmenter removes pixels from an axis with size ``S`` leading to the
+    new size ``S'`` until ``S' = B^E`` is fullfilled, where ``B`` is a
+    provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
+    interval ``[0 .. inf)``.
+
+    .. note ::
+
+        This augmenter does nothing for axes with size ``0``.
+        It may also crop down until ``B^0``, i.e. until an axis reaches
+        size ``1``. If you have images with ``S < B^1``, it is recommended
+        to combine this augmenter with a padding augmenter that pads each
+        axis up to ``B``.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    width_base : int
+        Base for the width. Images will be cropped down until their
+        width fullfills ``width' = width_base ^ E`` with ``E`` being any
+        natural number.
+
+    height_base : int
+        Base for the height. Images will be cropped down until their
+        height fullfills ``height' = height_base ^ E`` with ``E`` being any
+        natural number.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`CropToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
+    >>> aug = iaa.CropToExponentOf(height_base=3, width_base=2)
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
+
+    """
+
+    def __init__(self, width_base, height_base, position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(CropToExponentsOf, self).__init__(
+            width=10000, height=10000, position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.width_base = width_base
+        self.height_base = height_base
+
+    def _draw_samples(self, batch, random_state):
+        _sizes, offset_xs, offset_ys = super(
+            CropToExponentsOf, self
+        )._draw_samples(batch, random_state)
+
+        shapes = batch.get_rowwise_shapes()
+        sizes = []
+        for shape in shapes:
+            height, width = shape[0:2]
+            croppings = ia.compute_croppings_to_reach_exponents_of(
+                shape,
+                height_base=self.height_base,
+                width_base=self.width_base)
+
+            # TODO change that
+            # note that these are not in the same order as shape tuples
+            # in CropToFixedSize
+            new_size = (
+                width - croppings[1] - croppings[3],
+                height - croppings[0] - croppings[2]
+            )
+            sizes.append(new_size)
+
+        return sizes, offset_xs, offset_ys
+
+    def get_parameters(self):
+        return [self.width_base, self.height_base, self.position]
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 

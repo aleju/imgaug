@@ -4845,6 +4845,144 @@ class TestPadToMultiplesOf(unittest.TestCase):
                 assert image_aug.shape == expected_shape
 
 
+class TestCropToExponentsOf(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.CropToExponentsOf(width_base=1, height_base=2,
+                                    position="center")
+        assert aug.width_base == 1
+        assert aug.height_base == 2
+        assert np.isclose(aug.position[0].value, 0.5)
+        assert np.isclose(aug.position[1].value, 0.5)
+
+    def test_on_3x3_image__no_change(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToExponentsOf(3, 3, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image)
+
+    def test_on_3x3_image__with_change(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToExponentsOf(2, 2, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:2, 0:2, :])
+
+    def test_on_3x3_image__only_width_changed(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToExponentsOf(height_base=3, width_base=2,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:3, 0:2, :])
+
+    def test_on_3x3_image__only_height_changed(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CropToExponentsOf(height_base=2, width_base=3,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:2, 0:3, :])
+
+    def test_on_3x4_image(self):
+        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
+        aug = iaa.CropToExponentsOf(2, 2, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:2, 0:4, :])
+
+    def test_on_17x26_image(self):
+        image = np.mod(
+            np.arange((17*26*3)),
+            255
+        ).astype(np.uint8).reshape((17, 26, 3))
+        aug = iaa.CropToExponentsOf(height_base=2, width_base=3,
+                                    position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[0:16, 8:17, :])
+
+    def test_crop_to_exponent_zero(self):
+        # B > axis_size, leads to crop until new axis size is B^0=1
+        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
+        aug = iaa.CropToExponentsOf(10, 10, position="center")
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, image[1:2, 1:2, :])
+
+    def test_heatmaps(self):
+        # segmaps are implemented in the same way in CropToFixesSize
+        # and already tested there, so there is no need to test them again here
+        arr = np.linspace(0, 1.0, 50*50).astype(np.float32).reshape((50, 50, 1))
+        heatmap = ia.HeatmapsOnImage(arr, shape=(99, 99, 3))
+        aug = iaa.CropToExponentsOf(height_base=50, width_base=50,
+                                    position="center")
+
+        observed = aug(heatmaps=heatmap)
+
+        assert observed.shape == (50, 50, 3)
+        assert np.allclose(observed.arr_0to1,
+                           heatmap.arr_0to1[12:-13, 12:-13, :])
+
+    def test_keypoints(self):
+        kps = [ia.Keypoint(x=2, y=3)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(8, 4, 3))
+        aug = iaa.CropToExponentsOf(height_base=5, width_base=2,
+                                    position="center")
+
+        observed = aug(keypoints=kpsoi)
+
+        assert observed.keypoints[0].x == 2
+        assert observed.keypoints[0].y == 2
+
+    def test_get_parameters(self):
+        aug = iaa.CropToExponentsOf(width_base=1, height_base=2,
+                                    position="center")
+
+        params = aug.get_parameters()
+
+        assert params[0] == 1
+        assert params[1] == 2
+        assert np.isclose(params[2][0].value, 0.5)
+        assert np.isclose(params[2][1].value, 0.5)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1),
+            (0, 2),
+            (2, 0),
+            (0, 2, 0),
+            (2, 0, 0),
+            (0, 2, 1),
+            (2, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.CropToExponentsOf(2, 2)
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()
