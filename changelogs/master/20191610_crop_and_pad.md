@@ -2,6 +2,7 @@
 
 * Added augmenter `CenterCropToFixedSize`, a wrapper
   for `CropToFixedSize(..., position="center")`.
+* Added augmenter `CenterPadToFixedSize`.
 * Added augmenter `CropToMultiplesOf`.
 * Added augmenter `CenterCropToMultiplesOf`.
 * Added augmenter `PadToMultiplesOf`.

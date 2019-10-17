@@ -4026,6 +4026,20 @@ class TestPadToFixedSize(unittest.TestCase):
                                            np.float128(value)))
 
 
+class TestCenterPadToFixedSize(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_image2d(self):
+        image = np.arange(4*4*3).astype(np.uint8).reshape((4, 4, 3))
+        aug = iaa.CenterPadToFixedSize(height=5, width=5)
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, right=1, bottom=1)
+        assert np.array_equal(observed, expected)
+
+
 class TestCropToFixedSize(unittest.TestCase):
     def setUp(self):
         reseed()

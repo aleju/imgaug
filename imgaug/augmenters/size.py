@@ -2048,6 +2048,60 @@ class PadToFixedSize(meta.Augmenter):
                 self.position]
 
 
+class CenterPadToFixedSize(PadToFixedSize):
+    """Pad images equally on all sides up to given minimum heights/widths.
+
+    This is an alias for :class:`PadToFixedSize` with ``position="center"`.
+    It spreads the pad amounts equally over all image sides, while
+    :class:`PadToFixedSize` by defaults spreads them randomly.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    width : int or None
+        See :func:`PadToFixedSize.__init__`.
+
+    height : int or None
+        See :func:`PadToFixedSize.__init__`.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`PadToFixedSize.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`PadToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange(7*7*3).astype(np.uint8).reshape((7, 7, 3))
+    >>> image_padded = iaa.CenterPadToFixedSize(height=8, width=9)(image=image)
+
+    Pad an image up to ``8x9``, adding ``0`` rows at the top, ``1`` at the
+    bottom, ``1`` at the right and ``1`` at the left.
+
+    """
+
+    def __init__(self, width, height, pad_mode="constant", pad_cval=0,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterPadToFixedSize, self).__init__(
+            width=width, height=height, pad_mode=pad_mode, pad_cval=pad_cval,
+            position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
 # TODO maybe rename this to CropToMaximumSize ?
 # TODO this is very similar to CropAndPad, maybe add a way to generate crop
 #      values imagewise via a callback in in CropAndPad?
@@ -2344,7 +2398,7 @@ class CenterCropToFixedSize(CropToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange(7*7*3).astype(np.uint8).reshape((7, 7, 3))
-    >>> crop = iaa.CenterCropToFixedSize(width=3, height=3)(image=image)
+    >>> crop = iaa.CenterCropToFixedSize(height=3, width=3)(image=image)
 
     Take a ``3x3`` sized crop from the center of an ``7x7`` sized image.
 
