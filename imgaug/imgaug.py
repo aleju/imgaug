@@ -2033,6 +2033,79 @@ def compute_croppings_to_reach_multiples_of(arr, height_multiple,
     return top, right, bottom, left
 
 
+# TODO move this to augmenters.size
+def compute_croppings_to_reach_exponents_of(arr, height_base,
+                                            width_base):
+    """Compute croppings to reach exponents of given base values.
+
+    For given axis size ``S``, cropped size ``S'`` and base ``B``
+    this function computes croppings that fullfill ``S' = B^E``, where ``E``
+    is any exponent from the discrete interval ``[0 .. inf)``.
+
+    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    explanation of how the required cropping amounts are distributed per
+    image axis.
+
+    .. note ::
+
+        For axes where ``0 < S < B``, this function returns croppings based
+        on ``E=0``, i.e. ``S'`` (axis size after applying the computed
+        croppings) will be ``1``.
+
+        For axes where ``S == 0``, this function returns zeros as croppings.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
+        Image-like array or shape tuple for which to compute crop amounts.
+
+    height_base : None or int
+        The desired base of the height.
+
+    width_base : None or int
+        The desired base of the width.
+
+    Returns
+    -------
+    tuple of int
+        Required cropping amounts to fullfill ``S' = B^E`` given as a
+        ``tuple`` of the form ``(top, right, bottom, left)``.
+
+    """
+    def _compute_axis_value(axis_size, base):
+        if base is None:
+            return 0, 0
+        if axis_size == 0:
+            to_crop = 0
+        elif axis_size < base:
+            # crop down to B^0 = 1
+            to_crop = axis_size - 1
+        else:
+            # log_{base}(axis_size) in numpy
+            exponent = np.log(axis_size) / np.log(base)
+
+            to_crop = axis_size - (base ** int(exponent))
+
+        return int(np.floor(to_crop/2)), int(np.ceil(to_crop/2))
+
+    _assert_two_or_three_dims(arr)
+
+    if height_base is not None:
+        assert height_base > 1, (
+            "Can only crop to base larger than 1, got %d." % (height_base,))
+    if width_base is not None:
+        assert width_base > 1, (
+            "Can only crop to base larger than 1, got %d." % (width_base,))
+
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    height, width = shape[0:2]
+
+    top, bottom = _compute_axis_value(height, height_base)
+    left, right = _compute_axis_value(width, width_base)
+
+    return top, right, bottom, left
+
+
 def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
                         cval=0, return_pad_amounts=False):
     """Pad an image array until its side lengths are multiples of given values.
