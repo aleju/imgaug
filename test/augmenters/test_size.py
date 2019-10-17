@@ -5738,6 +5738,20 @@ class TestPadToAspectRatio(unittest.TestCase):
                 assert image_aug.shape == expected_shape
 
 
+class TestCenterPadToAspectRatio(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_on_3x3_image(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.CenterPadToAspectRatio(2.0)
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, left=1, right=2)
+        assert np.array_equal(observed, expected)
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()

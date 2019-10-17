@@ -3220,6 +3220,59 @@ class PadToAspectRatio(PadToFixedSize):
                 self.position]
 
 
+class CenterPadToAspectRatio(PadToAspectRatio):
+    """Pad images equally on all sides until H/W matches an aspect ratio.
+
+    This is the same as :class`PadToAspectRatio`, but uses
+    ``position="center"`` by default, which spreads the pad amounts equally
+    over all image sides, while :class`PadToAspectRatio` by default spreads
+    them randomly.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    aspect_ratio : number
+        See :func:`PadToAspectRatio.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
+    >>> aug = iaa.CenterPadToAspectRatio(1.0)
+    >>> image_padded = aug(image=image)
+
+    Pad ``image`` to size ``15x12`. This operation will add ``1`` row at the
+    top and ``2`` rows at the bottom.
+
+    """
+
+    def __init__(self, aspect_ratio, pad_mode="constant", pad_cval=0,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterPadToAspectRatio, self).__init__(
+            aspect_ratio=aspect_ratio, position="center",
+            pad_mode=pad_mode, pad_cval=pad_cval,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 
