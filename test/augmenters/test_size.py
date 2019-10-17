@@ -4453,6 +4453,14 @@ class TestCropToFixedSize(unittest.TestCase):
         assert observed.shape == (32, 32, 3)
         assert np.array_equal(observed.arr, expected)
 
+    def test_get_parameters(self):
+        aug = iaa.CropToFixedSize(width=20, height=10, position="center")
+        params = aug.get_parameters()
+        assert params[0] == 20
+        assert params[1] == 10
+        assert np.isclose(params[2][0].value, 0.5)
+        assert np.isclose(params[2][1].value, 0.5)
+
     def test_zero_sized_axes(self):
         shapes = [
             (0, 0),

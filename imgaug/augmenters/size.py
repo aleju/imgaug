@@ -2304,7 +2304,7 @@ class CropToFixedSize(meta.Augmenter):
         return [self.size] * nb_images, offset_xs, offset_ys
 
     def get_parameters(self):
-        return [self.position]
+        return [self.size[0], self.size[1], self.position]
 
 
 class CenterCropToFixedSize(CropToFixedSize):
