@@ -2412,7 +2412,7 @@ class CropToMultiplesOf(CropToFixedSize):
     def __init__(self, width_multiple, height_multiple, position="uniform",
                  name=None, deterministic=False, random_state=None):
         super(CropToMultiplesOf, self).__init__(
-            width=10000, height=10000, position=position,
+            width=None, height=None, position=position,
             name=name, deterministic=deterministic, random_state=random_state)
         self.width_multiple = width_multiple
         self.height_multiple = height_multiple
@@ -2500,7 +2500,7 @@ class PadToMultiplesOf(PadToFixedSize):
                  position="uniform",
                  name=None, deterministic=False, random_state=None):
         super(PadToMultiplesOf, self).__init__(
-            width=10000, height=10000, pad_mode=pad_mode, pad_cval=pad_cval,
+            width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
             name=name, deterministic=deterministic, random_state=random_state)
         self.width_multiple = width_multiple
@@ -2597,7 +2597,7 @@ class CropToExponentsOf(CropToFixedSize):
     def __init__(self, width_base, height_base, position="uniform",
                  name=None, deterministic=False, random_state=None):
         super(CropToExponentsOf, self).__init__(
-            width=10000, height=10000, position=position,
+            width=None, height=None, position=position,
             name=name, deterministic=deterministic, random_state=random_state)
         self.width_base = width_base
         self.height_base = height_base
@@ -2692,7 +2692,7 @@ class PadToExponentsOf(PadToFixedSize):
                  position="uniform",
                  name=None, deterministic=False, random_state=None):
         super(PadToExponentsOf, self).__init__(
-            width=10000, height=10000, pad_mode=pad_mode, pad_cval=pad_cval,
+            width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
             name=name, deterministic=deterministic, random_state=random_state)
         self.width_base = width_base
