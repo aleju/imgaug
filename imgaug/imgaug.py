@@ -1960,7 +1960,7 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
     if width_multiple is not None:
         assert width_multiple > 0, (
             "Can only pad to multiples of 1 or larger, got %d." % (
-                height_multiple,))
+                width_multiple,))
 
     shape = arr.shape if hasattr(arr, "shape") else arr
     height, width = shape[0:2]
@@ -2017,12 +2017,12 @@ def compute_croppings_to_reach_multiples_of(arr, height_multiple,
 
     if height_multiple is not None:
         assert height_multiple > 0, (
-            "Can only pad to multiples of 1 or larger, got %d." % (
+            "Can only crop to multiples of 1 or larger, got %d." % (
                 height_multiple,))
     if width_multiple is not None:
         assert width_multiple > 0, (
-            "Can only pad to multiples of 1 or larger, got %d." % (
-                height_multiple,))
+            "Can only crop to multiples of 1 or larger, got %d." % (
+                width_multiple,))
 
     shape = arr.shape if hasattr(arr, "shape") else arr
     height, width = shape[0:2]

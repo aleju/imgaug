@@ -9,3 +9,5 @@
 * Changed function `imgaug.imgaug.compute_paddings_to_reach_multiples_of()`
   to also support shape tuples instead of ndarrays.
 * Added function `imgaug.imgaug.compute_croppings_to_reach_multiples_of()`.
+* Fixed a formatting error in an error message of
+  `compute_paddings_to_reach_multiples_of()`.
