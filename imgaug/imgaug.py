@@ -1816,28 +1816,33 @@ def compute_paddings_for_aspect_ratio(arr, aspect_ratio):
     assert aspect_ratio > 0, (
         "Expected to get an aspect ratio >0, got %.4f." % (aspect_ratio,))
 
-    shape = arr.shape if hasattr(arr, "shape") else arr
-    assert shape[0] > 0, (
-        "Expected to get an array with height >0, got shape %s." % (shape,))
-
-    height, width = shape[0:2]
-    aspect_ratio_current = width / height
-
     pad_top = 0
     pad_right = 0
     pad_bottom = 0
     pad_left = 0
 
+    shape = arr.shape if hasattr(arr, "shape") else arr
+    height, width = shape[0:2]
+
+    if height == 0:
+        height = 1
+        pad_bottom += 1
+    if width == 0:
+        width = 1
+        pad_right += 1
+
+    aspect_ratio_current = width / height
+
     if aspect_ratio_current < aspect_ratio:
         # image is more vertical than desired, width needs to be increased
         diff = (aspect_ratio * height) - width
-        pad_right = int(np.ceil(diff / 2))
-        pad_left = int(np.floor(diff / 2))
+        pad_right += int(np.ceil(diff / 2))
+        pad_left += int(np.floor(diff / 2))
     elif aspect_ratio_current > aspect_ratio:
         # image is more horizontal than desired, height needs to be increased
         diff = ((1/aspect_ratio) * width) - height
-        pad_top = int(np.floor(diff / 2))
-        pad_bottom = int(np.ceil(diff / 2))
+        pad_top += int(np.floor(diff / 2))
+        pad_bottom += int(np.ceil(diff / 2))
 
     return pad_top, pad_right, pad_bottom, pad_left
 
