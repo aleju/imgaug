@@ -2976,6 +2976,12 @@ class CenterPadToExponentsOf(PadToExponentsOf):
     height_base : int or None
         See :func:`PadToExponentsOf.__init__`.
 
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToExponentsOf.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToExponentsOf.__init__`.
+
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
@@ -3000,9 +3006,12 @@ class CenterPadToExponentsOf(PadToExponentsOf):
     """
 
     def __init__(self, width_base, height_base,
+                 pad_mode="constant", pad_cval=0,
                  name=None, deterministic=False, random_state=None):
         super(CenterPadToExponentsOf, self).__init__(
-            width_base=width_base, height_base=height_base, position="center",
+            width_base=width_base, height_base=height_base,
+            pad_mode=pad_mode, pad_cval=pad_cval,
+            position="center",
             name=name, deterministic=deterministic, random_state=random_state)
 
 
