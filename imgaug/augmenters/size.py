@@ -2621,6 +2621,97 @@ class CropToExponentsOf(CropToFixedSize):
         return [self.width_base, self.height_base, self.position]
 
 
+class PadToExponentsOf(PadToFixedSize):
+    """Pad images until their height/width is an exponent of a base.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    width_base : int
+        Base for the width. Images will be padded down until their
+        width fullfills ``width' = width_base ^ E`` with ``E`` being any
+        natural number.
+
+    height_base : int
+        Base for the height. Images will be padded until their
+        height fullfills ``height' = height_base ^ E`` with ``E`` being any
+        natural number.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`PadToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
+    >>> aug = iaa.PadToExponentsOf(height_base=5, width_base=2)
+    >>> image_padded = aug(image=image)
+
+    Pad ``image`` to size ``25x16`` (``5^2`` and ``2^3``).
+
+    """
+
+    def __init__(self, width_base, height_base,
+                 pad_mode="constant", pad_cval=0,
+                 position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(PadToExponentsOf, self).__init__(
+            width=10000, height=10000, pad_mode=pad_mode, pad_cval=pad_cval,
+            position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.width_base = width_base
+        self.height_base = height_base
+
+    def _draw_samples(self, batch, random_state):
+        _sizes, pad_xs, pad_ys, pad_modes, pad_cvals = super(
+            PadToExponentsOf, self
+        )._draw_samples(batch, random_state)
+
+        shapes = batch.get_rowwise_shapes()
+        sizes = []
+        for shape in shapes:
+            height, width = shape[0:2]
+            paddings = ia.compute_paddings_to_reach_exponents_of(
+                shape,
+                height_base=self.height_base,
+                width_base=self.width_base)
+
+            # TODO change that
+            # note that these are not in the same order as shape tuples
+            # in PadToFixedSize
+            new_size = (
+                width + paddings[1] + paddings[3],
+                height + paddings[0] + paddings[2]
+            )
+            sizes.append(new_size)
+
+        return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
+
+    def get_parameters(self):
+        return [self.width_base, self.height_base,
+                self.pad_mode, self.pad_cval,
+                self.position]
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 
