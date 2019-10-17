@@ -14,6 +14,9 @@
   return the `height` and `width` values.
 * [rarely breaking] Changed `PadToFixedSize.get_parameters()` to also
   return the `height` and `width` values.
+* [rarely breaking] Changed the order of parameters returned by
+  `PadToFixedSize.get_parameters()` to match the order in
+  `PadToFixedSize.__init__()`
 * Changed function `imgaug.imgaug.compute_paddings_for_aspect_ratio()`
   to also support shape tuples instead of only ndarrays.
 * Changed function `imgaug.imgaug.compute_paddings_to_reach_multiples_of()`

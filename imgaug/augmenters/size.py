@@ -2046,8 +2046,8 @@ class PadToFixedSize(meta.Augmenter):
         return pad_top, pad_right, pad_bottom, pad_left
 
     def get_parameters(self):
-        return [self.size[0], self.size[1], self.position, self.pad_mode,
-                self.pad_cval]
+        return [self.size[0], self.size[1], self.pad_mode, self.pad_cval,
+                self.position]
 
 
 # TODO maybe rename this to CropToMaximumSize ?

@@ -3856,10 +3856,10 @@ class TestPadToFixedSize(unittest.TestCase):
         params = aug.get_parameters()
         assert params[0] == 20
         assert params[1] == 10
-        assert params[3].value == "edge"
-        assert params[4].value == 10
-        assert np.isclose(params[2][0].value, 0.5)
-        assert np.isclose(params[2][1].value, 0.5)
+        assert params[2].value == "edge"
+        assert params[3].value == 10
+        assert np.isclose(params[4][0].value, 0.5)
+        assert np.isclose(params[4][1].value, 0.5)
 
     def test_zero_sized_axes(self):
         shapes = [
