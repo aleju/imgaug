@@ -2454,6 +2454,10 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     over all image sides, while :class`CropToMultiplesOf` by default spreads
     them randomly.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
     Parameters
     ----------
     width_multiple : int or None
@@ -2591,6 +2595,10 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
     over all image sides, while :class`PadToMultiplesOf` by default spreads
     them randomly.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
     Parameters
     ----------
     width_multiple : int or None
@@ -2690,7 +2698,7 @@ class CropToExponentsOf(CropToFixedSize):
     --------
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.CropToExponentsOf(height_base=3, width_base=2)
     >>> crop = aug(image=image)
 
@@ -2733,6 +2741,64 @@ class CropToExponentsOf(CropToFixedSize):
 
     def get_parameters(self):
         return [self.width_base, self.height_base, self.position]
+
+
+class CenterCropToExponentsOf(CropToFixedSize):
+    """Crop images equally on all sides until H/W is an exponent of a base.
+
+    This is the same as :class`CropToExponentsOf`, but uses
+    ``position="center"`` by default, which spreads the crop amounts equally
+    over all image sides, while :class`CropToExponentsOf` by default spreads
+    them randomly.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    width_base : int or None
+        Base for the width. Images will be cropped down until their
+        width fullfills ``width' = width_base ^ E`` with ``E`` being any
+        natural number.
+        If ``None``, image widths will not be altered.
+
+    height_base : int or None
+        Base for the height. Images will be cropped down until their
+        height fullfills ``height' = height_base ^ E`` with ``E`` being any
+        natural number.
+        If ``None``, image heights will not be altered.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
+    >>> aug = iaa.CropToExponentsOf(height_base=3, width_base=2)
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
+    This operation will remove ``2`` rows at the top, ``3`` at the bottom,
+    ``2`` columns at the left and ``2`` at the right.
+
+    """
+
+    def __init__(self, width_base, height_base,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterCropToExponentsOf, self).__init__(
+            width=None, height=None, position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.width_base = width_base
+        self.height_base = height_base
 
 
 class PadToExponentsOf(PadToFixedSize):

@@ -7,6 +7,7 @@
 * Added augmenter `PadToMultiplesOf`.
 * Added augmenter `CenterPadToMultiplesOf`.
 * Added augmenter `CropToExponentsOf`.
+* Added augmenter `CenterCropToExponentsOf`.
 * Added augmenter `PadToExponentsOf`.
 * Extended augmenter `CropToFixedSize` to support `height` and/or `width`
   parameters to be `None`, in which case the respective axis is not changed.
