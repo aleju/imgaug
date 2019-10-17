@@ -2624,6 +2624,11 @@ class CropToExponentsOf(CropToFixedSize):
 class PadToExponentsOf(PadToFixedSize):
     """Pad images until their height/width is an exponent of a base.
 
+    This augmenter adds pixels to an axis with size ``S`` leading to the
+    new size ``S'`` until ``S' = B^E`` is fullfilled, where ``B`` is a
+    provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
+    interval ``[1 .. inf)``.
+
     dtype support::
 
         See :class:`imgaug.augmenters.size.PadToFixedSize`.
