@@ -2893,6 +2893,58 @@ class PadToExponentsOf(PadToFixedSize):
                 self.position]
 
 
+class CenterPadToExponentsOf(CropToFixedSize):
+    """Pad images equally on all sides until H/W is an exponent of a base.
+
+    This is the same as :class`PadToExponentsOf`, but uses
+    ``position="center"`` by default, which spreads the pad amounts equally
+    over all image sides, while :class`PadToExponentsOf` by default spreads
+    them randomly.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    width_base : int or None
+        See :func:`PadToExponentsOf.__init__`.
+
+    height_base : int or None
+        See :func:`PadToExponentsOf.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
+    >>> aug = iaa.CenterPadToExponentsOf(height_base=5, width_base=2)
+    >>> image_padded = aug(image=image)
+
+    Pad ``image`` to size ``25x16`` (``5^2`` and ``2^3``).
+    This operation will add ``5`` rows at the top, ``6`` at the bottom,
+    ``2`` columns at the left and ``2`` at the right.
+
+    """
+
+    def __init__(self, width_base, height_base,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterPadToExponentsOf, self).__init__(
+            width=None, height=None, position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.width_base = width_base
+        self.height_base = height_base
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 

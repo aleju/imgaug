@@ -5383,6 +5383,20 @@ class TestPadToExponentsOf(unittest.TestCase):
                 assert image_aug.shape == expected_shape
 
 
+class TestCenterPadToExponentsOf(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_on_3x3_image__with_change(self):
+        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+        aug = iaa.PadToExponentsOf(2, 2)
+
+        observed = aug(image=image)
+
+        expected = ia.pad(image, bottom=1, right=1)
+        assert np.array_equal(observed, expected)
+
+
 class TestKeepSizeByResize(unittest.TestCase):
     def setUp(self):
         reseed()
