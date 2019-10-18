@@ -3282,6 +3282,198 @@ class CenterPadToAspectRatio(PadToAspectRatio):
             name=name, deterministic=deterministic, random_state=random_state)
 
 
+class CropToSquare(CropToAspectRatio):
+    """Crop images until their width and height are identical.
+
+    This is identical to :class:`CropToAspectRatio` with ``aspect_ratio=1.0``.
+
+    Images with axis sizes of ``0`` will not be altered.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`CropToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
+    >>> aug = iaa.CropToSquare()
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``12x12``.
+
+    """
+
+    def __init__(self, position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(CropToSquare, self).__init__(
+            aspect_ratio=1.0, position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
+class CenterCropToSquare(CropToSquare):
+    """Crop images equally on all sides until their height/width are identical.
+
+    In contrast to :class:`CropToSquare`, this augmenter always tries to
+    spread the columns/rows to remove equally over both sides of the respective
+    axis to be cropped. :class:`CropToAspectRatio` by default spreads the
+    croppings randomly.
+
+    This augmenter is identical to :class:`CropToSquare` with
+    ``position="center"``, and thereby the same as :class:`CropToAspectRatio`
+    with ``aspect_ratio=1.0, position="center"``.
+
+    Images with axis sizes of ``0`` will not be altered.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
+    >>> aug = iaa.CenterCropToSquare()
+    >>> crop = aug(image=image)
+
+    Crop ``image`` down to size ``12x12`` by removing ``1`` row at the top
+    and ``2`` rows at the bottom.
+
+    """
+
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(CenterCropToSquare, self).__init__(
+            position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
+class PadToSquare(PadToAspectRatio):
+    """Pad images until their height and width are identical.
+
+    This augmenter is identical to :class:`PadToAspectRatio` with
+    ``aspect_ratio=1.0``.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        See :func:`PadToFixedSize.__init__`.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
+    >>> aug = iaa.PadToSquare()
+    >>> crop = aug(image=image)
+
+    Pad ``image`` to size ``14x14``.
+
+    """
+
+    def __init__(self, pad_mode="constant", pad_cval=0, position="uniform",
+                 name=None, deterministic=False, random_state=None):
+        super(PadToSquare, self).__init__(
+            aspect_ratio=1.0, pad_mode=pad_mode, pad_cval=pad_cval,
+            position=position,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
+class CenterPadToSquare(PadToSquare):
+    """Pad images equally on all sides until their height & width are identical.
+
+    This is the same as :class`PadToSquare`, but uses
+    ``position="center"`` by default, which spreads the pad amounts equally
+    over all image sides, while :class`PadToSquare` by default spreads
+    them randomly. This augmenter is thus also identical to
+    :class:`PadToAspectRatio` with ``aspect_ratio=1.0, position="center"``.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+
+    pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
+    >>> aug = iaa.CenterPadToSquare()
+    >>> image_padded = aug(image=image)
+
+    Pad ``image`` to size ``15x12`. This operation will add ``1`` row at the
+    top and ``2`` rows at the bottom.
+
+    """
+
+    def __init__(self, pad_mode="constant", pad_cval=0,
+                 name=None, deterministic=False, random_state=None):
+        super(CenterPadToSquare, self).__init__(
+            pad_mode=pad_mode, pad_cval=pad_cval, position="center",
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
 class KeepSizeByResize(meta.Augmenter):
     """Resize images back to their input sizes after applying child augmenters.
 

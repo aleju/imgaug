@@ -15,6 +15,10 @@
 * Added augmenter `CenterCropToAspectRatio`.
 * Added augmenter `PadToAspectRatio`.
 * Added augmenter `CenterPadToAspectRatio`.
+* Added augmenter `PadToSquare`.
+* Added augmenter `CenterPadToSquare`.
+* Added augmenter `CropToSquare`.
+* Added augmenter `CenterCropToSquare`.
 * Extended augmenter `CropToFixedSize` to support `height` and/or `width`
   parameters to be `None`, in which case the respective axis is not changed.
 * Extended augmenter `PadToFixedSize` to support `height` and/or `width`
