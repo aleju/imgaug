@@ -20,7 +20,25 @@ List of augmenters:
     * Crop
     * Pad
     * PadToFixedSize
+    * CenterPadToFixedSize
     * CropToFixedSize
+    * CenterCropToFixedSize
+    * CropToMultiplesOf
+    * CenterCropToMultiplesOf
+    * PadToMultiplesOf
+    * CenterPadToMultiplesOf
+    * CropToExponentsOf
+    * CenterCropToExponentsOf
+    * PadToExponentsOf
+    * CenterPadToExponentsOf
+    * CropToAspectRatio
+    * CenterCropToAspectRatio
+    * PadToAspectRatio
+    * CenterPadToAspectRatio
+    * CropToSquare
+    * CenterCropToSquare
+    * PadToSquare
+    * CenterPadToSquare
     * KeepSizeByResize
 
 """
