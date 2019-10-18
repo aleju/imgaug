@@ -2260,9 +2260,9 @@ class TestFromLowerResolution(unittest.TestCase):
         for _ in sm.xrange(100):
             samples1 = param1.draw_samples((16, 16, 1))
             samples2 = param2.draw_samples((16, 16, 1))
-            _, num1 = skimage.morphology.label(samples1, neighbors=4,
+            _, num1 = skimage.morphology.label(samples1, connectivity=1,
                                                background=0, return_num=True)
-            _, num2 = skimage.morphology.label(samples2, neighbors=4,
+            _, num2 = skimage.morphology.label(samples2, connectivity=1,
                                                background=0, return_num=True)
             seen_components[0] += num1
             seen_components[1] += num2
@@ -2285,9 +2285,9 @@ class TestFromLowerResolution(unittest.TestCase):
         for _ in sm.xrange(400):
             samples1 = param1.draw_samples((16, 16, 1))
             samples2 = param2.draw_samples((16, 16, 1))
-            _, num1 = skimage.morphology.label(samples1, neighbors=4,
+            _, num1 = skimage.morphology.label(samples1, connectivity=1,
                                                background=0, return_num=True)
-            _, num2 = skimage.morphology.label(samples2, neighbors=4,
+            _, num2 = skimage.morphology.label(samples2, connectivity=1,
                                                background=0, return_num=True)
             seen_components[0] += num1
             seen_components[1] += num2
@@ -2312,9 +2312,9 @@ class TestFromLowerResolution(unittest.TestCase):
         for _ in sm.xrange(100):
             samples1 = param1.draw_samples((16, 16, 1))
             samples2 = param2.draw_samples((16, 16, 1))
-            _, num1 = skimage.morphology.label(samples1, neighbors=4,
+            _, num1 = skimage.morphology.label(samples1, connectivity=1,
                                                background=0, return_num=True)
-            _, num2 = skimage.morphology.label(samples2, neighbors=4,
+            _, num2 = skimage.morphology.label(samples2, connectivity=1,
                                                background=0, return_num=True)
             seen_components[0] += num1
             seen_components[1] += num2
@@ -2345,9 +2345,9 @@ class TestFromLowerResolution(unittest.TestCase):
         for _ in sm.xrange(100):
             samples1 = param1.draw_samples((16, 16, 1))
             samples2 = param2.draw_samples((16, 16, 1))
-            _, num1 = skimage.morphology.label(samples1, neighbors=4,
+            _, num1 = skimage.morphology.label(samples1, connectivity=1,
                                                background=0, return_num=True)
-            _, num2 = skimage.morphology.label(samples2, neighbors=4,
+            _, num2 = skimage.morphology.label(samples2, connectivity=1,
                                                background=0, return_num=True)
             seen_components[0] += num1
             seen_components[1] += num2
@@ -2370,9 +2370,9 @@ class TestFromLowerResolution(unittest.TestCase):
         for _ in sm.xrange(100):
             samples1 = param1.draw_samples((16, 16, 1))
             samples2 = param2.draw_samples((16, 16, 1))
-            _, num1 = skimage.morphology.label(samples1, neighbors=4,
+            _, num1 = skimage.morphology.label(samples1, connectivity=1,
                                                background=0, return_num=True)
-            _, num2 = skimage.morphology.label(samples2, neighbors=4,
+            _, num2 = skimage.morphology.label(samples2, connectivity=1,
                                                background=0, return_num=True)
             seen_components[0] += num1
             seen_components[1] += num2
@@ -2397,9 +2397,9 @@ class TestFromLowerResolution(unittest.TestCase):
         for _ in sm.xrange(100):
             samples1 = param1.draw_samples((16, 16, 1))
             samples2 = param2.draw_samples((16, 16, 1))
-            _, num1 = skimage.morphology.label(samples1, neighbors=4,
+            _, num1 = skimage.morphology.label(samples1, connectivity=1,
                                                background=0, return_num=True)
-            _, num2 = skimage.morphology.label(samples2, neighbors=4,
+            _, num2 = skimage.morphology.label(samples2, connectivity=1,
                                                background=0, return_num=True)
             seen_components[0] += num1
             seen_components[1] += num2
