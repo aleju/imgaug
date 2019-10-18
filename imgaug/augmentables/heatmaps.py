@@ -318,7 +318,8 @@ class HeatmapsOnImage(object):
             width ``W'=W+left+right``.
 
         """
-        arr_0to1_padded = ia.pad(
+        from ..augmenters import size as iasize
+        arr_0to1_padded = iasize.pad(
             self.arr_0to1,
             top=top,
             right=right,
@@ -326,6 +327,7 @@ class HeatmapsOnImage(object):
             left=left,
             mode=mode,
             cval=cval)
+        # TODO change to deepcopy()
         return HeatmapsOnImage.from_0to1(
             arr_0to1_padded,
             shape=self.shape,
@@ -374,12 +376,14 @@ class HeatmapsOnImage(object):
             ``True``.
 
         """
-        arr_0to1_padded, pad_amounts = ia.pad_to_aspect_ratio(
+        from ..augmenters import size as iasize
+        arr_0to1_padded, pad_amounts = iasize.pad_to_aspect_ratio(
             self.arr_0to1,
             aspect_ratio=aspect_ratio,
             mode=mode,
             cval=cval,
             return_pad_amounts=True)
+        # TODO change to deepcopy()
         heatmaps = HeatmapsOnImage.from_0to1(
             arr_0to1_padded,
             shape=self.shape,

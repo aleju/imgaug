@@ -1,7 +1,21 @@
 # Changes to Crop and Pad augmenters #459
 
-* Added augmenter `CenterCropToFixedSize`, a wrapper
-  for `CropToFixedSize(..., position="center")`.
+The following functions were moved. Their old names are now deprecated.
+* Moved `imgaug.imgaug.pad` to `imgaug.augmenters.size.pad`
+* Moved `imgaug.imgaug.pad_to_aspect_ratio` to
+  `imgaug.augmenters.size.pad_to_aspect_ratio`.
+* Moved `imgaug.imgaug.pad_to_multiples_of` to
+  `imgaug.augmenters.size.pad_to_multiples_of`.
+* Moved `imgaug.imgaug.compute_paddings_for_aspect_ratio` to
+  `imgaug.augmenters.size.compute_paddings_to_reach_aspect_ratio`.
+* Moved `imgaug.imgaug.compute_paddings_to_reach_multiples_of`
+  to `imgaug.augmenters.size.compute_paddings_to_reach_multiples_of`.
+* Moved `imgaug.imgaug.compute_paddings_to_reach_exponents_of`
+  to `imgaug.augmenters.size.compute_paddings_to_reach_exponents_of`.
+
+
+The following augmenters were added:
+* Added augmenter `CenterCropToFixedSize`.
 * Added augmenter `CenterPadToFixedSize`.
 * Added augmenter `CropToMultiplesOf`.
 * Added augmenter `CenterCropToMultiplesOf`.
@@ -19,6 +33,23 @@
 * Added augmenter `CenterPadToSquare`.
 * Added augmenter `CropToSquare`.
 * Added augmenter `CenterCropToSquare`.
+
+All `Center<name>` augmenters are wrappers around `<name>` with parameter
+`position="center"`.
+
+
+Added functions:
+* Added function
+  `imgaug.augmenters.size.compute_croppings_to_reach_aspect_ratio()`.
+* Added function
+  `imgaug.augmenters.size.compute_croppings_to_reach_multiples_of()`.
+* Added function
+  `imgaug.augmenters.size.compute_croppings_to_reach_exponents_of()`.
+* Added function
+  `imgaug.augmenters.size.compute_paddings_to_reach_exponents_of()`.
+
+
+Other changes:
 * Extended augmenter `CropToFixedSize` to support `height` and/or `width`
   parameters to be `None`, in which case the respective axis is not changed.
 * Extended augmenter `PadToFixedSize` to support `height` and/or `width`
@@ -38,14 +69,15 @@
 * Changed the projection of pad/crop values between images and non-images
   to make the behaviour slightly more accurate in fringe cases.
 * Improved behaviour of function
-  `imgaug.imgaug.compute_paddings_for_aspect_ratio()` for zero-sized axes.
-* Changed function `imgaug.imgaug.compute_paddings_for_aspect_ratio()`
+  `imgaug.augmenters.size.compute_paddings_for_aspect_ratio()` for zero-sized
+  axes.
+* Changed function `imgaug.augmenters.size.compute_paddings_for_aspect_ratio()`
   to also support shape tuples instead of only ndarrays.
-* Changed function `imgaug.imgaug.compute_paddings_to_reach_multiples_of()`
+* Changed function
+  `imgaug.augmenters.size.compute_paddings_to_reach_multiples_of()`
   to also support shape tuples instead of only ndarrays.
-* Added function `imgaug.imgaug.compute_croppings_for_aspect_ratio()`.
-* Added function `imgaug.imgaug.compute_croppings_to_reach_multiples_of()`.
-* Added function `imgaug.imgaug.compute_croppings_to_reach_exponents_of()`.
-* Added function `imgaug.imgaug.compute_paddings_to_reach_exponents_of()`.
+
+
+Fixes:
 * Fixed a formatting error in an error message of
   `compute_paddings_to_reach_multiples_of()`.

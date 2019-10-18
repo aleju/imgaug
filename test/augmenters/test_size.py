@@ -139,6 +139,602 @@ class Test__handle_position_parameter(unittest.TestCase):
         assert got_exception
 
 
+def test_pad():
+    # -------
+    # uint, int
+    # -------
+    for dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32, np.int64]:
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
+
+        arr = np.zeros((3, 3), dtype=dtype) + max_value
+
+        arr_pad = iaa.pad(arr)
+        assert arr_pad.shape == (3, 3)
+        # For some reason, arr_pad.dtype.type == dtype fails here for int64 but not for the other dtypes,
+        # even though int64 is the dtype of arr_pad. Also checked .name and .str for them -- all same value.
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.array_equal(arr_pad, arr)
+
+        arr_pad = iaa.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[0, :] == 0)
+
+        arr_pad = iaa.pad(arr, right=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[:, -1] == 0)
+
+        arr_pad = iaa.pad(arr, bottom=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[-1, :] == 0)
+
+        arr_pad = iaa.pad(arr, left=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[:, 0] == 0)
+
+        arr_pad = iaa.pad(arr, top=1, right=2, bottom=3, left=4)
+        assert arr_pad.shape == (3+(1+3), 3+(2+4))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[0, :] == 0)
+        assert np.all(arr_pad[:, -2:] == 0)
+        assert np.all(arr_pad[-3:, :] == 0)
+        assert np.all(arr_pad[:, :4] == 0)
+
+        arr_pad = iaa.pad(arr, top=1, cval=10)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[0, :] == 10)
+
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 127
+        arr_pad = iaa.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert np.all(arr_pad[0, :, 0] == 0)
+        assert np.all(arr_pad[0, :, 1] == 0)
+        assert np.all(arr_pad[0, :, 2] == 0)
+
+        v1 = int(center_value + 0.25 * max_value)
+        v2 = int(center_value + 0.40 * max_value)
+        arr = np.zeros((3, 3), dtype=dtype) + v1
+        arr[1, 1] = v2
+        arr_pad = iaa.pad(arr, top=1, mode="maximum")
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == v1
+        assert arr_pad[0, 1] == v2
+        assert arr_pad[0, 2] == v1
+
+        v1 = int(center_value + 0.25 * max_value)
+        arr = np.zeros((3, 3), dtype=dtype)
+        arr_pad = iaa.pad(arr, top=1, mode="constant", cval=v1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == v1
+        assert arr_pad[0, 1] == v1
+        assert arr_pad[0, 2] == v1
+        assert arr_pad[1, 0] == 0
+
+        for nb_channels in [1, 2, 3, 4, 5]:
+            v1 = int(center_value + 0.25 * max_value)
+            arr = np.zeros((3, 3, nb_channels), dtype=dtype)
+            arr_pad = iaa.pad(arr, top=1, mode="constant", cval=v1)
+            assert arr_pad.shape == (4, 3, nb_channels)
+            assert arr_pad.dtype == np.dtype(dtype)
+            assert np.all(arr_pad[0, 0, :] == v1)
+            assert np.all(arr_pad[0, 1, :] == v1)
+            assert np.all(arr_pad[0, 2, :] == v1)
+            assert np.all(arr_pad[1, 0, :] == 0)
+
+        # TODO reactivate this block when np 1.17 pad with mode=linear_ramp
+        #      uint and end_value>edge_value is fixed
+        """
+        arr = np.zeros((1, 1), dtype=dtype) + 100
+        arr_pad = iaa.pad(arr, top=4, mode="linear_ramp", cval=100)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == 100
+        assert arr_pad[1, 0] == 75
+        assert arr_pad[2, 0] == 50
+        assert arr_pad[3, 0] == 25
+        assert arr_pad[4, 0] == 0
+        
+        arr = np.zeros((1, 1), dtype=dtype) + 100
+        arr_pad = iaa.pad(arr, top=4, mode="linear_ramp", cval=0)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert arr_pad[0, 0] == 0
+        assert arr_pad[1, 0] == 25
+        assert arr_pad[2, 0] == 50
+        assert arr_pad[3, 0] == 75
+        assert arr_pad[4, 0] == 100
+        """
+
+        # test other channel numbers
+        value = int(center_value + 0.25 * max_value)
+        for nb_channels in [None, 1, 2, 3, 4, 5, 7, 11]:
+            arr = np.full((3, 3), value, dtype=dtype)
+            if nb_channels is not None:
+                arr = arr[..., np.newaxis]
+                arr = np.tile(arr, (1, 1, nb_channels))
+                for c in sm.xrange(nb_channels):
+                    arr[..., c] += c
+            arr_pad = iaa.pad(arr, top=1, mode="constant", cval=0)
+            assert arr_pad.dtype.name == np.dtype(dtype).name
+            if nb_channels is None:
+                assert arr_pad.shape == (4, 3)
+                assert np.all(arr_pad[0, :] == 0)
+                assert np.all(arr_pad[1:, :] == arr)
+            else:
+                assert arr_pad.shape == (4, 3, nb_channels)
+                assert np.all(arr_pad[0, :, :] == 0)
+                assert np.all(arr_pad[1:, :, :] == arr)
+
+    # -------
+    # float
+    # -------
+    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+        arr = np.zeros((3, 3), dtype=dtype) + 1.0
+
+        def _allclose(a, b):
+            atol = 1e-3 if dtype == np.float16 else 1e-7
+            return np.allclose(a, b, atol=atol, rtol=0)
+
+        arr_pad = iaa.pad(arr)
+        assert arr_pad.shape == (3, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad, arr)
+
+        arr_pad = iaa.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([0, 0, 0]))
+
+        arr_pad = iaa.pad(arr, right=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[:, -1], dtype([0, 0, 0]))
+
+        arr_pad = iaa.pad(arr, bottom=1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[-1, :], dtype([0, 0, 0]))
+
+        arr_pad = iaa.pad(arr, left=1)
+        assert arr_pad.shape == (3, 4)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[:, 0], dtype([0, 0, 0]))
+
+        arr_pad = iaa.pad(arr, top=1, right=2, bottom=3, left=4)
+        assert arr_pad.shape == (3+(1+3), 3+(2+4))
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(np.max(arr_pad[0, :]), 0)
+        assert _allclose(np.max(arr_pad[:, -2:]), 0)
+        assert _allclose(np.max(arr_pad[-3, :]), 0)
+        assert _allclose(np.max(arr_pad[:, :4]), 0)
+
+        arr_pad = iaa.pad(arr, top=1, cval=0.2)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([0.2, 0.2, 0.2]))
+
+        v1 = 1000 ** (np.dtype(dtype).itemsize - 1)
+        arr_pad = iaa.pad(arr, top=1, cval=v1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([v1, v1, v1]))
+
+        v1 = (-1000) ** (np.dtype(dtype).itemsize - 1)
+        arr_pad = iaa.pad(arr, top=1, cval=v1)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :], dtype([v1, v1, v1]))
+
+        arr = np.zeros((3, 3, 3), dtype=dtype) + 0.5
+        arr_pad = iaa.pad(arr, top=1)
+        assert arr_pad.shape == (4, 3, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, :, 0], dtype([0, 0, 0]))
+        assert _allclose(arr_pad[0, :, 1], dtype([0, 0, 0]))
+        assert _allclose(arr_pad[0, :, 2], dtype([0, 0, 0]))
+
+        arr = np.zeros((3, 3), dtype=dtype) + 0.5
+        arr[1, 1] = 0.75
+        arr_pad = iaa.pad(arr, top=1, mode="maximum")
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, 0], 0.5)
+        assert _allclose(arr_pad[0, 1], 0.75)
+        assert _allclose(arr_pad[0, 2], 0.50)
+
+        arr = np.zeros((3, 3), dtype=dtype)
+        arr_pad = iaa.pad(arr, top=1, mode="constant", cval=0.4)
+        assert arr_pad.shape == (4, 3)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, 0], 0.4)
+        assert _allclose(arr_pad[0, 1], 0.4)
+        assert _allclose(arr_pad[0, 2], 0.4)
+        assert _allclose(arr_pad[1, 0], 0.0)
+
+        for nb_channels in [1, 2, 3, 4, 5]:
+            arr = np.zeros((3, 3, nb_channels), dtype=dtype)
+            arr_pad = iaa.pad(arr, top=1, mode="constant", cval=0.4)
+            assert arr_pad.shape == (4, 3, nb_channels)
+            assert arr_pad.dtype == np.dtype(dtype)
+            assert _allclose(arr_pad[0, 0, :], 0.4)
+            assert _allclose(arr_pad[0, 1, :], 0.4)
+            assert _allclose(arr_pad[0, 2, :], 0.4)
+            assert _allclose(arr_pad[1, 0, :], 0.0)
+
+        arr = np.zeros((1, 1), dtype=dtype) + 0.6
+        arr_pad = iaa.pad(arr, top=4, mode="linear_ramp", cval=1.0)
+        assert arr_pad.shape == (5, 1)
+        assert arr_pad.dtype == np.dtype(dtype)
+        assert _allclose(arr_pad[0, 0], 1.0)
+        assert _allclose(arr_pad[1, 0], 0.9)
+        assert _allclose(arr_pad[2, 0], 0.8)
+        assert _allclose(arr_pad[3, 0], 0.7)
+        assert _allclose(arr_pad[4, 0], 0.6)
+
+        # test other channel numbers
+        value = 1000 ** (np.dtype(dtype).itemsize - 1)
+        for nb_channels in [None, 1, 2, 3, 4, 5, 7, 11]:
+            arr = np.full((3, 3), value, dtype=dtype)
+            if nb_channels is not None:
+                arr = arr[..., np.newaxis]
+                arr = np.tile(arr, (1, 1, nb_channels))
+                for c in sm.xrange(nb_channels):
+                    arr[..., c] += c
+            arr_pad = iaa.pad(arr, top=1, mode="constant", cval=0)
+            assert arr_pad.dtype.name == np.dtype(dtype).name
+            if nb_channels is None:
+                assert arr_pad.shape == (4, 3)
+                assert _allclose(arr_pad[0, :], 0)
+                assert _allclose(arr_pad[1:, :], arr)
+            else:
+                assert arr_pad.shape == (4, 3, nb_channels)
+                assert _allclose(arr_pad[0, :, :], 0)
+                assert _allclose(arr_pad[1:, :, :], arr)
+
+    # -------
+    # bool
+    # -------
+    dtype = bool
+    arr = np.zeros((3, 3), dtype=dtype)
+    arr_pad = iaa.pad(arr)
+    assert arr_pad.shape == (3, 3)
+    # For some reason, arr_pad.dtype.type == dtype fails here for int64 but not for the other dtypes,
+    # even though int64 is the dtype of arr_pad. Also checked .name and .str for them -- all same value.
+    assert arr_pad.dtype == np.dtype(dtype)
+    assert np.all(arr_pad == arr)
+
+    arr_pad = iaa.pad(arr, top=1)
+    assert arr_pad.shape == (4, 3)
+    assert arr_pad.dtype == np.dtype(dtype)
+    assert np.all(arr_pad[0, :] == 0)
+
+    arr_pad = iaa.pad(arr, top=1, cval=True)
+    assert arr_pad.shape == (4, 3)
+    assert arr_pad.dtype == np.dtype(dtype)
+    assert np.all(arr_pad[0, :] == 1)
+
+
+def test_compute_paddings_for_aspect_ratio():
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 0
+    assert bottom == 0
+    assert left == 0
+
+    arr = np.zeros((1, 4), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 1.0)
+    assert top == 1
+    assert right == 0
+    assert bottom == 2
+    assert left == 0
+
+    arr = np.zeros((4, 1), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 2
+    assert bottom == 0
+    assert left == 1
+
+    arr = np.zeros((2, 4), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 1.0)
+    assert top == 1
+    assert right == 0
+    assert bottom == 1
+    assert left == 0
+
+    arr = np.zeros((4, 2), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 1.0)
+    assert top == 0
+    assert right == 1
+    assert bottom == 0
+    assert left == 1
+
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 0.5)
+    assert top == 2
+    assert right == 0
+    assert bottom == 2
+    assert left == 0
+
+    arr = np.zeros((4, 4), dtype=np.uint8)
+    top, right, bottom, left = \
+        iaa.compute_paddings_to_reach_aspect_ratio(arr, 2.0)
+    assert top == 0
+    assert right == 2
+    assert bottom == 0
+    assert left == 2
+
+
+def test_pad_to_aspect_ratio():
+    for dtype in [np.uint8, np.int32, np.float32]:
+        # aspect_ratio = 1.0
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((1, 4), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((4, 1), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((2, 4), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        arr = np.zeros((4, 2), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+
+        # aspect_ratio != 1.0
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 8
+
+        arr = np.zeros((4, 4), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 0.5)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 8
+        assert arr_pad.shape[1] == 4
+
+        # 3d arr
+        arr = np.zeros((4, 2, 3), dtype=dtype)
+        arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
+        assert arr_pad.dtype.type == dtype
+        assert arr_pad.shape[0] == 4
+        assert arr_pad.shape[1] == 4
+        assert arr_pad.shape[2] == 3
+
+    # cval
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[:, 0:2]) == 0
+    assert np.max(arr_pad[:, -2:]) == 0
+    assert np.max(arr_pad[:, 2:-2]) == 128
+
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0, cval=10)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[:, 0:2]) == 10
+    assert np.max(arr_pad[:, -2:]) == 10
+    assert np.max(arr_pad[:, 2:-2]) == 128
+
+    arr = np.zeros((4, 4), dtype=np.float32) + 0.5
+    arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0, cval=0.0)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert 0 - 1e-6 <= np.max(arr_pad[:, 0:2]) <= 0 + 1e-6
+    assert 0 - 1e-6 <= np.max(arr_pad[:, -2:]) <= 0 + 1e-6
+    assert 0.5 - 1e-6 <= np.max(arr_pad[:, 2:-2]) <= 0.5 + 1e-6
+
+    arr = np.zeros((4, 4), dtype=np.float32) + 0.5
+    arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0, cval=0.1)
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert 0.1 - 1e-6 <= np.max(arr_pad[:, 0:2]) <= 0.1 + 1e-6
+    assert 0.1 - 1e-6 <= np.max(arr_pad[:, -2:]) <= 0.1 + 1e-6
+    assert 0.5 - 1e-6 <= np.max(arr_pad[:, 2:-2]) <= 0.5 + 1e-6
+
+    # mode
+    arr = np.zeros((4, 4), dtype=np.uint8) + 128
+    arr[1:3, 1:3] = 200
+    arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0, mode="maximum")
+    assert arr_pad.shape[0] == 4
+    assert arr_pad.shape[1] == 8
+    assert np.max(arr_pad[0:1, 0:2]) == 128
+    assert np.max(arr_pad[1:3, 0:2]) == 200
+    assert np.max(arr_pad[3:, 0:2]) == 128
+    assert np.max(arr_pad[0:1, -2:]) == 128
+    assert np.max(arr_pad[1:3, -2:]) == 200
+    assert np.max(arr_pad[3:, -2:]) == 128
+
+    # TODO add tests for return_pad_values=True
+
+
+class Test_compute_paddings_to_reach_multiples_of(unittest.TestCase):
+    def test_zero_height_array(self):
+        arr = np.zeros((0, 2, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, 2, 2)
+        assert paddings == (1, 0, 1, 0)
+
+    def test_zero_width_array(self):
+        arr = np.zeros((2, 0, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, 2, 2)
+        assert paddings == (0, 1, 0, 1)
+
+    def test_both_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, None, None)
+        assert paddings == (0, 0, 0, 0)
+
+    def test_height_is_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, None, 2)
+        assert paddings == (0, 1, 0, 0)
+
+    def test_width_is_none(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, 2, None)
+        assert paddings == (0, 0, 1, 0)
+
+    def test_height_is_one(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, 1, 2)
+        assert paddings == (0, 1, 0, 0)
+
+    def test_width_is_one(self):
+        arr = np.zeros((1, 1, 3), dtype=np.uint8)
+        paddings = iaa.compute_paddings_to_reach_multiples_of(arr, 2, 1)
+        assert paddings == (0, 0, 1, 0)
+
+    def test_various_widths(self):
+        nb_channels_lst = [None, 1, 3, 4]
+        amounts = [2, 3, 4, 5, 6, 7, 8, 9]
+        expecteds = [
+            (0, 1, 0, 0),
+            (0, 1, 0, 0),
+            (0, 2, 0, 1),
+            (0, 0, 0, 0),
+            (0, 1, 0, 0),
+            (0, 1, 0, 1),
+            (0, 2, 0, 1),
+            (0, 2, 0, 2)
+        ]
+
+        for amount, expected in zip(amounts, expecteds):
+            for nb_channels in nb_channels_lst:
+                with self.subTest(width_multiple=amount,
+                                  nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.zeros((3, 5), dtype=np.uint8)
+                    else:
+                        arr = np.zeros((3, 5, nb_channels), dtype=np.uint8)
+
+                    paddings = iaa.compute_paddings_to_reach_multiples_of(
+                        arr, None, amount)
+
+                    assert paddings == expected
+
+    def test_various_heights(self):
+        nb_channels_lst = [None, 1, 3, 4]
+        amounts = [2, 3, 4, 5, 6, 7, 8, 9]
+        expecteds = [
+            (0, 0, 1, 0),
+            (0, 0, 1, 0),
+            (1, 0, 2, 0),
+            (0, 0, 0, 0),
+            (0, 0, 1, 0),
+            (1, 0, 1, 0),
+            (1, 0, 2, 0),
+            (2, 0, 2, 0)
+        ]
+        for amount, expected in zip(amounts, expecteds):
+            for nb_channels in nb_channels_lst:
+                with self.subTest(height_multiple=amount,
+                                  nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.zeros((5, 3), dtype=np.uint8)
+                    else:
+                        arr = np.zeros((5, 3, nb_channels), dtype=np.uint8)
+
+                    paddings = iaa.compute_paddings_to_reach_multiples_of(
+                        arr, amount, None)
+
+                    assert paddings == expected
+
+
+class Test_pad_to_multiples_of(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.size.compute_paddings_to_reach_multiples_of")
+    @mock.patch("imgaug.augmenters.size.pad")
+    def test_mocked(self, mock_pad, mock_compute_pads):
+        mock_compute_pads.return_value = (1, 2, 3, 4)
+        mock_pad.return_value = "padded_array"
+
+        arr = np.ones((3, 5, 1), dtype=np.uint8)
+
+        arr_padded = iaa.pad_to_multiples_of(
+            arr, 10, 20, mode="foo", cval=100)
+
+        mock_compute_pads.assert_called_once_with(arr, 10, 20)
+        mock_pad.assert_called_once_with(arr, top=1, right=2, bottom=3,
+                                         left=4, mode="foo", cval=100)
+        assert arr_padded == "padded_array"
+
+    @mock.patch("imgaug.augmenters.size.compute_paddings_to_reach_multiples_of")
+    @mock.patch("imgaug.augmenters.size.pad")
+    def test_mocked_return_pad_amounts(self, mock_pad, mock_compute_pads):
+        mock_compute_pads.return_value = (1, 2, 3, 4)
+        mock_pad.return_value = "padded_array"
+
+        arr = np.ones((3, 5, 1), dtype=np.uint8)
+
+        arr_padded, paddings = iaa.pad_to_multiples_of(
+            arr, 10, 20, mode="foo", cval=100, return_pad_amounts=True)
+
+        mock_compute_pads.assert_called_once_with(arr, 10, 20)
+        mock_pad.assert_called_once_with(arr, top=1, right=2, bottom=3,
+                                         left=4, mode="foo", cval=100)
+        assert arr_padded == "padded_array"
+        assert paddings == (1, 2, 3, 4)
+
+    def test_integrationtest(self):
+        dtypes = [np.uint8, np.int32, np.float32]
+        nb_channels_lst = [None, 1, 3, 4]
+
+        for dtype in dtypes:
+            dtype = np.dtype(dtype)
+            for nb_channels in nb_channels_lst:
+                with self.subTest(dtype=dtype.name, nb_channels=nb_channels):
+                    if nb_channels is None:
+                        arr = np.ones((3, 5), dtype=dtype)
+                    else:
+                        arr = np.ones((3, 5, nb_channels), dtype=dtype)
+
+                    arr_padded = iaa.pad_to_multiples_of(arr, 7, 11, cval=2)
+
+                    if nb_channels is None:
+                        base_area = 3*5
+                        new_area = 7*11 - base_area
+                        assert arr_padded.shape == (7, 11)
+                        assert np.sum(arr_padded) == 1*base_area + 2*new_area
+                    else:
+                        base_area = 3*5*nb_channels
+                        new_area = 7*11*nb_channels - base_area
+                        assert arr_padded.shape == (7, 11, nb_channels)
+                        assert np.sum(arr_padded) == 1*base_area + 2*new_area
+
+
 class TestResize(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -4036,7 +4632,7 @@ class TestCenterPadToFixedSize(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, right=1, bottom=1)
+        expected = iaa.pad(image, right=1, bottom=1)
         assert np.array_equal(observed, expected)
 
 
@@ -4869,7 +5465,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1, right=1)
+        expected = iaa.pad(image, bottom=1, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_width_changed(self):
@@ -4879,7 +5475,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, right=1)
+        expected = iaa.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_height_changed(self):
@@ -4889,7 +5485,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x4_image(self):
@@ -4898,7 +5494,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image(self):
@@ -4908,7 +5504,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, bottom=2, left=1, right=2)
+        expected = iaa.pad(image, top=1, bottom=2, left=1, right=2)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image__cval(self):
@@ -4919,7 +5515,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, bottom=2, left=1, right=2, cval=100)
+        expected = iaa.pad(image, top=1, bottom=2, left=1, right=2, cval=100)
         assert np.array_equal(observed, expected)
 
     def test_on_7x9_image__mode(self):
@@ -4930,7 +5526,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, bottom=2, left=1, right=2, mode="edge")
+        expected = iaa.pad(image, top=1, bottom=2, left=1, right=2, mode="edge")
         assert np.array_equal(observed, expected)
 
     def test_width_multiple_is_none(self):
@@ -4940,7 +5536,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_height_multiple_is_none(self):
@@ -4950,7 +5546,7 @@ class TestPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, right=1)
+        expected = iaa.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):
@@ -5033,7 +5629,7 @@ class TestCenterPadToMultiplesOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
 
@@ -5234,7 +5830,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1, right=1)
+        expected = iaa.pad(image, bottom=1, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_width_changed(self):
@@ -5244,7 +5840,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, right=1)
+        expected = iaa.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__only_height_changed(self):
@@ -5254,7 +5850,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_3x4_image(self):
@@ -5263,7 +5859,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_on_7x22_image(self):
@@ -5276,7 +5872,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=3, left=5, right=5)
+        expected = iaa.pad(image, top=2, bottom=3, left=5, right=5)
         assert np.array_equal(observed, expected)
 
     def test_on_7x22_image__cval(self):
@@ -5290,7 +5886,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=3, left=5, right=5, cval=100)
+        expected = iaa.pad(image, top=2, bottom=3, left=5, right=5, cval=100)
         assert np.array_equal(observed, expected)
 
     def test_on_7x22_image__mode(self):
@@ -5304,7 +5900,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=3, left=5, right=5, mode="edge")
+        expected = iaa.pad(image, top=2, bottom=3, left=5, right=5, mode="edge")
         assert np.array_equal(observed, expected)
 
     def test_width_base_is_none(self):
@@ -5314,7 +5910,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1)
+        expected = iaa.pad(image, bottom=1)
         assert np.array_equal(observed, expected)
 
     def test_height_base_is_none(self):
@@ -5324,7 +5920,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, right=1)
+        expected = iaa.pad(image, right=1)
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):
@@ -5407,7 +6003,7 @@ class TestCenterPadToExponentsOf(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, bottom=1, right=2, left=1)
+        expected = iaa.pad(image, bottom=1, right=2, left=1)
         assert np.array_equal(observed, expected)
 
 
@@ -5578,7 +6174,7 @@ class TestPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1, right=2)
+        expected = iaa.pad(image, left=1, right=2)
         assert np.array_equal(observed, expected)
 
     def test_on_3x3_image__with_change__higher(self):
@@ -5587,7 +6183,7 @@ class TestPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, bottom=2)
+        expected = iaa.pad(image, top=1, bottom=2)
         assert np.array_equal(observed, expected)
 
     def test_on_3x4_image(self):
@@ -5596,7 +6192,7 @@ class TestPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1, right=1)
+        expected = iaa.pad(image, left=1, right=1)
         assert np.array_equal(observed, expected)
 
     def test_on_7x22_image__height_padded_even_though_ratio_is_wide(self):
@@ -5608,7 +6204,7 @@ class TestPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=2, bottom=2)
+        expected = iaa.pad(image, top=2, bottom=2)
         assert np.array_equal(observed, expected)
 
     def test_on_10x6_image__cval(self):
@@ -5617,7 +6213,7 @@ class TestPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, bottom=1, cval=100)
+        expected = iaa.pad(image, top=1, bottom=1, cval=100)
         assert np.array_equal(observed, expected)
 
     def test_on_10x6_image__mode(self):
@@ -5628,7 +6224,7 @@ class TestPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, top=1, bottom=1, mode="edge")
+        expected = iaa.pad(image, top=1, bottom=1, mode="edge")
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):
@@ -5748,7 +6344,7 @@ class TestCenterPadToAspectRatio(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1, right=2)
+        expected = iaa.pad(image, left=1, right=2)
         assert np.array_equal(observed, expected)
 
 
@@ -5788,7 +6384,7 @@ class TestPadToSquare(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1, right=2)
+        expected = iaa.pad(image, left=1, right=2)
         assert np.array_equal(observed, expected)
 
 
@@ -5802,7 +6398,7 @@ class TestCenterPadToSquare(unittest.TestCase):
 
         observed = aug(image=image)
 
-        expected = ia.pad(image, left=1, right=2)
+        expected = iaa.pad(image, left=1, right=2)
         assert np.array_equal(observed, expected)
 
 
