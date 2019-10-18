@@ -30,7 +30,6 @@ import re
 import functools
 
 import numpy as np
-import six.moves as sm
 import cv2
 
 from . import meta
