@@ -3183,7 +3183,7 @@ class PadToAspectRatio(PadToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.CropToAspectRatio(2.0)
+    >>> aug = iaa.PadToAspectRatio(2.0)
     >>> crop = aug(image=image)
 
     Pad ``image`` to size ``14x28``.
