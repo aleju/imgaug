@@ -3285,7 +3285,7 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     --------
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 14))
+    >>> image = np.arange((13*14)).astype(np.uint8).reshape((13, 14))
     >>> aug = iaa.CenterCropToMultiplesOf(height_multiple=10, width_multiple=6)
     >>> crop = aug(image=image)
 
