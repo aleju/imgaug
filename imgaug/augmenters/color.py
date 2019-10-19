@@ -21,6 +21,7 @@ List of augmenters:
     * MultiplyHueAndSaturation
     * MultiplyHue
     * MultiplySaturation
+    * RemoveSaturation
     * AddToHueAndSaturation
     * AddToHue
     * AddToSaturation
@@ -1548,6 +1549,78 @@ class MultiplySaturation(MultiplyHueAndSaturation):
             name=name,
             deterministic=deterministic,
             random_state=random_state)
+
+
+class RemoveSaturation(MultiplySaturation):
+    """Decrease the saturation of images by varying degrees.
+    
+    This creates images looking similar to :class:`Grayscale`.
+    
+    This augmenter is the same as ``MultiplySaturation((0.0, 1.0))``.
+    
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        *Inverse* multiplier to use for the saturation values.
+        High values denote stronger color removal. E.g. ``1.0`` will remove
+        all saturation, ``0.0`` will remove nothing.
+        Expected value range is ``[0.0, 1.0]``.
+
+            * If a number, then that value will be used for all images.
+            * If a tuple ``(a, b)``, then a value from the continuous
+              range ``[a, b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a StochasticParameter, then a value will be sampled from that
+              parameter per image.
+    
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug as ia
+    >>> import imgaug.augmenters as iaa
+    >>> image = ia.quokka()  # uint8 (H, W, 3) RGB array
+    >>> aug = iaa.RemoveSaturation()
+    >>> image_grayish = aug(image=image)
+    
+    Create and apply an augmenter that decreases saturation by varying degrees.
+
+    >>> aug = iaa.RemoveSaturation(1.0)
+
+    Create an augmenter that removes all saturation from input images.
+    This is similar to :class:`Grayscale`.
+
+    >>> aug = iaa.RemoveSaturation(from_colorspace=iaa.CSPACE_BGR)
+
+    Create an augmenter that decreases saturation of images in ``BGR``
+    colorspace by varying degrees.
+
+    """
+
+    def __init__(self, mul=(0.0, 1.0), from_colorspace=CSPACE_RGB,
+                 name=None, deterministic=False, random_state=None):
+        mul = iap.Subtract(
+            1.0,
+            iap.handle_continuous_param(mul, "mul",
+                                        value_range=(0.0, 1.0),
+                                        tuple_to_uniform=True,
+                                        list_to_choice=True),
+            elementwise=True
+        )
+        super(RemoveSaturation, self).__init__(
+            mul, from_colorspace=from_colorspace,
+            name=name, deterministic=deterministic, random_state=random_state)
 
 
 # TODO removed deterministic and random_state here as parameters, because this

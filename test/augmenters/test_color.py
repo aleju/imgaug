@@ -867,6 +867,56 @@ class TestMultiplyToSaturation(unittest.TestCase):
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
 
+class TestRemoveSaturation(unittest.TestCase):
+    @classmethod
+    def _compute_average_saturation(cls, image_rgb):
+        image_hsv = iaa.change_colorspace_(np.copy(image_rgb),
+                                           from_colorspace=iaa.CSPACE_RGB,
+                                           to_colorspace=iaa.CSPACE_HSV)
+        return np.average(image_hsv[:, :, 1])
+
+    def test___init___defaults(self):
+        aug = iaa.RemoveSaturation()
+        assert isinstance(aug.mul, iap.Subtract)
+        assert np.isclose(aug.mul.other_param.value, 1.0)
+        assert np.isclose(aug.mul.val.a.value, 0.0)
+        assert np.isclose(aug.mul.val.b.value, 1.0)
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___custom(self):
+        aug = iaa.RemoveSaturation(0.7, from_colorspace=iaa.CSPACE_HSV)
+        assert isinstance(aug.mul, iap.Subtract)
+        assert np.isclose(aug.mul.other_param.value, 1.0)
+        assert np.isclose(aug.mul.val.value, 0.7)
+        assert aug.from_colorspace == iaa.CSPACE_HSV
+
+    def test_on_images(self):
+        image = np.mod(
+            np.arange(20*20*3),
+            255
+        ).astype(np.uint8).reshape((20, 20, 3))
+
+        # add 100 to the red channel here to make the image more saturated
+        image[..., 0] = np.clip((image[..., 0].astype(np.int32) + 100), 0, 255)
+
+        image_sat = self._compute_average_saturation(image)
+        aug = iaa.RemoveSaturation((0.2, 0.6))
+
+        images_aug = aug(images=[image] * 100)
+
+        saturations = []
+        for image_aug in images_aug:
+            sat = self._compute_average_saturation(image_aug)
+            saturations.append(sat)
+
+        assert len(set(np.int32(saturations))) > 10
+        # correct here to not use 1.0-x, as these are the saturations remaining
+        # after applying (1.0-x)*sat
+        # we add 0.02 here due to integer-float rounding effects
+        assert np.all(np.float32(saturations) <= (0.8 + 0.02) * image_sat)
+        assert np.any(np.float32(saturations) <= 0.5 * image_sat)
+
+
 class TestAddToHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()
