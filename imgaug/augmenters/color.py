@@ -2481,6 +2481,15 @@ class GrayscaleColorwise(meta.Augmenter):
         The source colorspace (of the input images).
         See :func:`imgaug.augmenters.color.change_colorspace_`.
 
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
     Examples
     --------
     >>> import numpy as np
@@ -2664,6 +2673,114 @@ class GrayscaleColorwise(meta.Augmenter):
     def get_parameters(self):
         return [self.nb_bins, self.smoothness, self.alpha, self.offset,
                 self.from_colorspace]
+
+
+class RemoveSaturationColorwise(GrayscaleColorwise):
+    """Apply saturation removal to some selected color ranges in each image.
+
+    This is mostly identical to :class:`GrayscaleColorwise`. It executes the
+    same steps, except that the mask from color (hue) to alpha is not
+    used to blend the HSV image with a grayscale one, but instead is used
+    as an inverted multiplier for the saturation channel, i.e. saturation
+    values of colors with high alpha will be lowered significantly, leading
+    to these colors appearing more grayish.
+
+    Parameters
+    ----------
+    nb_bins : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Same as in :class:`GrayscaleColorwise`.
+
+    smoothness : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Same as in :class:`GrayscaleColorwise`.
+
+    alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Same as in :class:`GrayscaleColorwise`.
+
+    offset : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Same as in :class:`GrayscaleColorwise`.
+
+    from_colorspace : str, optional
+        Same as in :class:`GrayscaleColorwise`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import imgaug.augmenters as iaa
+    >>> image = np.arange(5*5*3).astype(np.uint8).reshape((5, 5, 3))
+    >>> aug = iaa.GrayscaleColorwise()
+    >>> image_aug = aug(image=image)
+
+    Create an augmenter that decreases the saturation on a per-color basis.
+    The augmenter is then applied to a ``5x5`` example image.
+
+    """
+
+    def __init__(self, nb_bins=(5, 15), smoothness=(0.1, 0.3),
+                 alpha=[0.0, 1.0], offset=(0.0, 1.0),
+                 from_colorspace=CSPACE_RGB,
+                 name=None, deterministic=False, random_state=None):
+        super(RemoveSaturationColorwise, self).__init__(
+            nb_bins=nb_bins, smoothness=smoothness,
+            alpha=alpha, offset=offset,
+            from_colorspace=from_colorspace,
+            name=name, deterministic=deterministic, random_state=random_state
+        )
+
+    # TODO might be possible to speed this up as the HSV conversion in OpenCV
+    #      depends for S only on max(R,G,B)
+    # TODO still a lot of overlap in this method and the one of
+    #      GrayscaleColorwise, make DRY
+    @classmethod
+    def _apply_grayscale_some_colors_batch_(cls, images, nb_bins, smoothness,
+                                            alphas, offset, from_colorspace,
+                                            sigma_max=20.0):
+        images_hsv = change_colorspaces_(images,
+                                         to_colorspaces=CSPACE_HSV,
+                                         from_colorspaces=from_colorspace)
+
+        nth_bin = 0
+        gen = enumerate(zip(images_hsv, nb_bins, smoothness, offset))
+        for i, (img_hsv, nb_bins_i, smoothness_i, offset_i) in gen:
+            # skip images with zero-sized axes as these cause issues
+            # in the used cv2 functions
+            if 0 in img_hsv.shape[0:2]:
+                continue
+
+            alphas_i = alphas[nth_bin:nth_bin+nb_bins_i]
+
+            alphas_i = cls._upscale_to_256_alpha_bins(alphas_i)
+            alphas_i = cls._rotate_alpha_bins_by_offset(alphas_i, offset_i)
+            alphas_i_smooth = cls._smoothen_alphas(alphas_i, smoothness_i,
+                                                   sigma_max)
+
+            mask = cls._generate_pixelwise_alpha_mask(img_hsv,
+                                                      alphas_i_smooth)
+
+            # We invert mask here so that alpha values close to 1.0 denote
+            # strong grayscaling. This matches the behaviour of the Grayscale
+            # augmenter.
+            saturation_aug = img_hsv[..., 1].astype(np.float32) * (1.0 - mask)
+
+            img_hsv[..., 1] = np.clip(
+                np.round(saturation_aug), 0, 255
+            ).astype(np.uint8)
+
+            nth_bin += nb_bins_i
+
+        images = change_colorspaces_(images_hsv,
+                                     to_colorspaces=from_colorspace,
+                                     from_colorspaces=CSPACE_HSV)
+
+        return images
 
 
 class ChangeColorTemperature(meta.Augmenter):

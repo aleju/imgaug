@@ -23,7 +23,7 @@ def main():
 
     image = imageio.imread(urls[1])
 
-    aug = iaa.GrayscaleColorwise(10, 0.1, alpha=[0.0, 1.0])
+    aug = iaa.RemoveSaturationColorwise(10, 0.1, alpha=[0.0, 1.0])
     images_aug = aug(images=[image] * (5*5))
 
     ia.imshow(ia.draw_grid(images_aug))
