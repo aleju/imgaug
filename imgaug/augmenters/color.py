@@ -17,6 +17,10 @@ List of augmenters:
 
     * InColorspace (deprecated)
     * WithColorspace
+    * WithBrightnessChannels
+    * MultiplyAndAddToBrightness
+    * MultiplyBrightness
+    * AddToBrightness
     * WithHueAndSaturation
     * MultiplyHueAndSaturation
     * MultiplyHue
