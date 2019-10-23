@@ -17,6 +17,10 @@ List of augmenters:
 
     * InColorspace (deprecated)
     * WithColorspace
+    * WithBrightnessChannels
+    * MultiplyAndAddToBrightness
+    * MultiplyBrightness
+    * AddToBrightness
     * WithHueAndSaturation
     * MultiplyHueAndSaturation
     * MultiplyHue
@@ -54,11 +58,11 @@ CSPACE_GRAY = "GRAY"
 CSPACE_YCrCb = "YCrCb"
 CSPACE_HSV = "HSV"
 CSPACE_HLS = "HLS"
-CSPACE_Lab = "Lab"
+CSPACE_Lab = "Lab"  # aka CIELAB
 # TODO add Luv to various color/contrast augmenters as random default choice?
-CSPACE_Luv = "Luv"
-CSPACE_YUV = "YUV"
-CSPACE_CIE = "CIE"  # XYZ in OpenCV
+CSPACE_Luv = "Luv"  # aka CIE 1976, aka CIELUV
+CSPACE_YUV = "YUV"  # aka CIE 1960
+CSPACE_CIE = "CIE"  # aka CIE 1931, aka XYZ in OpenCV
 CSPACE_ALL = {CSPACE_RGB, CSPACE_BGR, CSPACE_GRAY, CSPACE_YCrCb,
               CSPACE_HSV, CSPACE_HLS, CSPACE_Lab, CSPACE_Luv,
               CSPACE_YUV, CSPACE_CIE}
@@ -337,10 +341,10 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
         The images to convert from one colorspace into another.
         Either a list of ``(H,W,3)`` arrays or a single ``(N,H,W,3)`` array.
 
-    to_colorspaces : str or list of str
+    to_colorspaces : str or iterable of str
         The target colorspaces. Either a single string (all images will be
-        converted to the same colorspace) or a list of strings (one per image).
-        See the ``CSPACE`` constants, e.g.
+        converted to the same colorspace) or an iterable of strings (one per
+        image). See the ``CSPACE`` constants, e.g.
         ``imgaug.augmenters.color.CSPACE_RGB``.
 
     from_colorspaces : str or list of str, optional
@@ -377,16 +381,18 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
 
     """
     def _validate(arg, arg_name):
-        if isinstance(arg, list):
+        if ia.is_string(arg):
+            arg = [arg] * len(images)
+        else:
+            assert ia.is_iterable(arg), (
+                "Expected `%s` to be either an iterable of strings or a single "
+                "string. Got type: %s." % (arg_name, type(arg).__name__)
+            )
             assert len(arg) == len(images), (
                 "If `%s` is provided as a list it must have the same length "
                 "as `images`. Got length %d, expected %d." % (
                     arg_name, len(arg), len(images)))
-        else:
-            assert ia.is_string(arg), (
-                "Expected `%s` to be either a list of strings or a single "
-                "string. Got type %s." % (arg_name, type(arg)))
-            arg = [arg] * len(images)
+
         return arg
 
     to_colorspaces = _validate(to_colorspaces, "to_colorspaces")
@@ -955,6 +961,7 @@ def InColorspace(to_colorspace, from_colorspace="RGB", children=None,
                           deterministic, random_state)
 
 
+# TODO add tests
 class WithColorspace(meta.Augmenter):
     """
     Apply child augmenters within a specific colorspace.
@@ -976,8 +983,8 @@ class WithColorspace(meta.Augmenter):
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.change_colorspace_`.
 
-    children : None or Augmenter or list of Augmenters, optional
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to converted images.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1060,6 +1067,366 @@ class WithColorspace(meta.Augmenter):
         )
 
 
+class WithBrightnessChannels(meta.Augmenter):
+    """Augmenter to apply child augmenters to brightness-related image channels.
+
+    This augmenter first converts an image to a random colorspace containing a
+    brightness-related channel (e.g. `V` in `HSV`), then extracts that
+    channel and applies its child augmenters to this one channel. Afterwards,
+    it reintegrates the augmented channel into the full image and converts
+    back to the input colorspace.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+
+    Parameters
+    ----------
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to the brightness channels.
+        They receive images with a single channel and have to modify these.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        Colorspace in which to extract the brightness-related channels.
+        Currently, ``imgaug.augmenters.color.CSPACE_YCrCb``, ``CSPACE_HSV``,
+        ``CSPACE_HLS``, ``CSPACE_Lab``, ``CSPACE_Luv``, ``CSPACE_YUV``,
+        ``CSPACE_CIE`` are supported.
+
+            * If ``imgaug.ALL``: Will pick imagewise a random colorspace from
+              all supported colorspaces.
+            * If ``str``: Will always use this colorspace.
+            * If ``list`` or ``str``: Will pick imagewise a random colorspace
+              from this list.
+            * If :class:`imgaug.parameters.StochasticParameter`:
+              A parameter that will be queried once per batch to generate
+              all target colorspaces. Expected to return strings matching the
+              ``CSPACE_*`` constants.
+
+    from_colorspace : str, optional
+        See :func:`imgaug.augmenters.color.change_colorspace_`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    # Usually one would think that CSPACE_CIE (=XYZ) would also work, as
+    # wikipedia says that Y denotes luminance, but this resulted in strong
+    # color changes (tried also the other channels).
+    _CSPACE_TO_CHANNEL_ID = {
+        CSPACE_YCrCb: 0,
+        CSPACE_HSV: 2,
+        CSPACE_HLS: 1,
+        CSPACE_Lab: 0,
+        CSPACE_Luv: 0,
+        CSPACE_YUV: 0
+    }
+
+    _VALID_COLORSPACES = set(_CSPACE_TO_CHANNEL_ID.keys())
+
+    def __init__(self, children=None,
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV],
+                 from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        super(WithBrightnessChannels, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+
+        self.children = meta.handle_children_list(children, self.name, "then")
+        self.to_colorspace = iap.handle_categorical_string_param(
+            to_colorspace, "to_colorspace",
+            valid_values=self._VALID_COLORSPACES)
+        self.from_colorspace = from_colorspace
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            images_cvt = None
+            to_colorspaces = None
+
+            if batch.images is not None:
+                to_colorspaces = self.to_colorspace.draw_samples(
+                    (len(batch.images),), random_state)
+                images_cvt = change_colorspaces_(
+                    batch.images,
+                    from_colorspaces=self.from_colorspace,
+                    to_colorspaces=to_colorspaces,)
+                brightness_channels = self._extract_brightness_channels(
+                    images_cvt, to_colorspaces)
+
+                batch.images = brightness_channels
+
+            batch = self.children.augment_batch(
+                    batch, parents=parents + [self], hooks=hooks)
+
+            if batch.images is not None:
+                batch.images = self._invert_extract_brightness_channels(
+                    batch.images, images_cvt, to_colorspaces)
+
+                batch.images = change_colorspaces_(
+                    batch.images,
+                    from_colorspaces=to_colorspaces,
+                    to_colorspaces=self.from_colorspace)
+
+        return batch
+
+    def _extract_brightness_channels(self, images, colorspaces):
+        result = []
+        for image, colorspace in zip(images, colorspaces):
+            channel_id = self._CSPACE_TO_CHANNEL_ID[colorspace]
+            # Note that augmenters expect (H,W,C) and not (H,W), so cannot
+            # just use image[:, :, channel_id] here.
+            channel = image[:, :, channel_id:channel_id+1]
+            result.append(channel)
+        return result
+
+    def _invert_extract_brightness_channels(self, channels, images,
+                                            colorspaces):
+        for channel, image, colorspace in zip(channels, images, colorspaces):
+            channel_id = self._CSPACE_TO_CHANNEL_ID[colorspace]
+            image[:, :, channel_id:channel_id+1] = channel
+        return images
+
+    def _to_deterministic(self):
+        aug = self.copy()
+        aug.children = aug.children.to_deterministic()
+        aug.deterministic = True
+        aug.random_state = self.random_state.derive_rng_()
+        return aug
+
+    def get_parameters(self):
+        return [self.to_colorspace, self.from_colorspace]
+
+    def get_children_lists(self):
+        return [self.children]
+
+    def __str__(self):
+        return (
+            "WithBrightnessChannels("
+            "to_colorspace=%s, "
+            "from_colorspace=%s, "
+            "name=%s, "
+            "children=%s, "
+            "deterministic=%s)" % (
+                self.to_colorspace,
+                self.from_colorspace,
+                self.name,
+                self.children,
+                self.deterministic)
+        )
+
+
+class MultiplyAndAddToBrightness(WithBrightnessChannels):
+    """Multiply and add to the brightness channels of input images.
+
+    This is a wrapper around :class:`WithBrightnessChannels` and hence
+    performs internally the same projection to random colorspaces.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Multiply`.
+
+    add : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Add`.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    from_colorspace : str, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    random_order : bool, optional
+        Whether to apply the add and multiply operations in random
+        order (``True``). If ``False``, this will always first multiply and
+        then add.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, mul=(0.7, 1.3), add=(-30, 30),
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV],
+                 from_colorspace="RGB",
+                 random_order=True,
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        mul = (
+            meta.Noop()
+            if ia.is_single_number(mul) and np.isclose(mul, 1.0)
+            else arithmetic.Multiply(mul))
+        add = meta.Noop() if add == 0 else arithmetic.Add(add)
+
+        super(MultiplyAndAddToBrightness, self).__init__(
+            children=meta.Sequential(
+                [mul, add],
+                random_order=random_order
+            ),
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+    def __str__(self):
+        return (
+            "MultiplyAndAddToBrightness("
+            "mul=%s, "
+            "add=%s, "
+            "to_colorspace=%s, "
+            "from_colorspace=%s, "
+            "random_order=%s, "
+            "name=%s, "
+            "deterministic=%s)" % (
+                str(self.children[0]),
+                str(self.children[1]),
+                self.to_colorspace,
+                self.from_colorspace,
+                self.children.random_order,
+                self.name,
+                self.deterministic)
+        )
+
+
+class MultiplyBrightness(MultiplyAndAddToBrightness):
+    """Multiply the brightness channels of input images.
+
+    This is a wrapper around :class:`WithBrightnessChannels` and hence
+    performs internally the same projection to random colorspaces.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.MultiplyAndAddToBrightness`.
+
+    Parameters
+    ----------
+    mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Multiply`.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    from_colorspace : str, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, mul=(0.7, 1.3),
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV],
+                 from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        super(MultiplyBrightness, self).__init__(
+            mul=mul,
+            add=0,
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class AddToBrightness(MultiplyAndAddToBrightness):
+    """Add to the brightness channels of input images.
+
+    This is a wrapper around :class:`WithBrightnessChannels` and hence
+    performs internally the same projection to random colorspaces.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.MultiplyAndAddToBrightness`.
+
+    Parameters
+    ----------
+    add : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.airthmetic.Add`.
+
+    to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    from_colorspace : str, optional
+        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, add=(-30, 30),
+                 to_colorspace=[
+                     CSPACE_YCrCb,
+                     CSPACE_HSV,
+                     CSPACE_HLS,
+                     CSPACE_Lab,
+                     CSPACE_Luv,
+                     CSPACE_YUV],
+                 from_colorspace="RGB",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+        super(AddToBrightness, self).__init__(
+            mul=1.0,
+            add=add,
+            to_colorspace=to_colorspace,
+            from_colorspace=from_colorspace,
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
 # TODO Merge this into WithColorspace? A bit problematic due to int16
 #      conversion that would make WithColorspace less flexible.
 # TODO add option to choose overflow behaviour for hue and saturation channels,
@@ -1090,8 +1457,10 @@ class WithHueAndSaturation(meta.Augmenter):
     from_colorspace : str, optional
         See :func:`imgaug.augmenters.color.change_colorspace_`.
 
-    children : None or Augmenter or list of Augmenters, optional
-        See :func:`imgaug.augmenters.ChangeColorspace.__init__`.
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to converted images.
+        They receive ``int16`` images with two channels (hue, saturation)
+        and have to modify these.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.

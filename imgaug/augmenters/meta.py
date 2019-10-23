@@ -3577,7 +3577,7 @@ class WithChannels(Augmenter):
         If ``None``, all channels will be used. Note that this is not
         stochastic - the extracted channels are always the same ones.
 
-    children : Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
         One or more augmenters to apply to images, after the channels
         are extracted.
 
