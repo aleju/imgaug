@@ -21,6 +21,8 @@ List of augmenters:
     * MultiplyElementwise
     * Dropout
     * CoarseDropout
+    * Dropout2d
+    * TotalDropout
     * ReplaceElementwise
     * ImpulseNoise
     * SaltAndPepper
@@ -2134,6 +2136,10 @@ class Dropout2d(meta.Augmenter):
 
     Dropped channels will be filled with zeros.
 
+    .. warning ::
+
+        This augmenter currently does not affect non-image data.
+
     dtype support::
 
         * ``uint8``: yes; fully tested
@@ -2162,7 +2168,7 @@ class Dropout2d(meta.Augmenter):
               the interval ``[a, b)`` per batch and be used as the dropout
               probability.
             * If a ``StochasticParameter``, then this parameter will be used to
-              determine per pixel whether it should be *kept* (sampled value
+              determine per channel whether it should be *kept* (sampled value
               of ``>=0.5``) or shouldn't be kept (sampled value of ``<0.5``).
               If you instead want to provide the probability as a stochastic
               parameter, you can usually do ``imgaug.parameters.Binomial(1-p)``
@@ -2248,6 +2254,97 @@ class Dropout2d(meta.Augmenter):
 
     def get_parameters(self):
         return [self.p, self.nb_keep_channels]
+
+
+class TotalDropout(meta.Augmenter):
+    """Drop all channels of a defined fraction of all images.
+
+    "Drop" here means that the components will be set to ``0``.
+
+    .. warning ::
+
+        This augmenter currently does not affect non-image data.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
+
+    Parameters
+    ----------
+    p : float or tuple of float or imgaug.parameters.StochasticParameter, optional
+        The probability of an image to be filled with zeros.
+
+            * If ``float``: The value will be used for all images.
+              A value of ``1.0`` would mean that all images will be set to zero.
+              A value of ``0.0`` would lead to no images being set to zero.
+            * If ``tuple`` ``(a, b)``: A value ``p`` will be sampled from
+              the interval ``[a, b)`` per batch and be used as the dropout
+              probability.
+            * If ``StochasticParameter``: The parameter will be used to
+              determine per image whether it should be *kept* (sampled value
+              of ``>=0.5``) or shouldn't be kept (sampled value of ``<0.5``).
+              If you instead want to provide the probability as a stochastic
+              parameter, you can usually do ``imgaug.parameters.Binomial(1-p)``
+              to convert parameter `p` to a 0/1 representation.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.TotalDropout(1.0)
+
+    Create an augmenter that sets *all* components of all images to zero.
+
+    >>> aug = iaa.TotalDropout(0.5)
+
+    Create an augmenter that sets *all* components of ``50%`` of all images to
+    zero.
+
+    """
+
+    def __init__(self, p, name=None, deterministic=False, random_state=None):
+        super(TotalDropout, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.p = _handle_dropout_probability_param(p, "p")
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is not None:
+            drop_mask = self._draw_samples(batch, random_state)
+            if ia.is_np_array(batch.images):
+                batch.images[drop_mask, ...] = 0
+            else:
+                drop_ids = np.nonzero(drop_mask)[0]
+                for drop_idx in drop_ids:
+                    batch.images[drop_idx][...] = 0
+        return batch
+
+    def _draw_samples(self, batch, random_state):
+        p = self.p.draw_samples((batch.nb_rows,), random_state=random_state)
+        drop_mask = (p < 0.5)
+        return drop_mask
+
+    def get_parameters(self):
+        return [self.p]
 
 
 class ReplaceElementwise(meta.Augmenter):
