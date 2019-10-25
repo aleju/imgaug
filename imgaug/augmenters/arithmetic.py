@@ -2134,11 +2134,15 @@ class CoarseDropout(MultiplyElementwise):
 class Dropout2d(meta.Augmenter):
     """Drop random channels from images.
 
-    Dropped channels will be filled with zeros.
+    For image data, dropped channels will be filled with zeros.
 
-    .. warning ::
+    .. note ::
 
-        This augmenter currently does not affect non-image data.
+        This augmenter may also set the arrays of heatmaps and segmentation
+        maps to zero and remove all coordinate-based data (e.g. it removes
+        all bounding boxes on images that were filled with zeros).
+        It does so if and only if *all* channels of an image are dropped.
+        If ``nb_keep_channels >= 1`` then that never happens.
 
     dtype support::
 
@@ -2214,43 +2218,95 @@ class Dropout2d(meta.Augmenter):
         self.p = _handle_dropout_probability_param(p, "p")
         self.nb_keep_channels = max(nb_keep_channels, 0)
 
+        self._drop_images = True
+        self._drop_heatmaps = True
+        self._drop_segmentation_maps = True
+        self._drop_keypoints = True
+        self._drop_bounding_boxes = True
+        self._drop_polygons = True
+        self._drop_line_strings = True
+
+        self._heatmaps_cval = 0.0
+        self._segmentation_maps_cval = 0
+
     def _augment_batch(self, batch, random_state, parents, hooks):
+        imagewise_drop_channel_ids, all_dropped_ids = self._draw_samples(
+            batch, random_state)
+
         if batch.images is not None:
-            nb_channels = sum([image.shape[2] for image in batch.images
-                               if image.shape[2] > self.nb_keep_channels])
+            for image, drop_ids in zip(batch.images,
+                                       imagewise_drop_channel_ids):
+                image[:, :, drop_ids] = 0
 
-            # nb_channels can be zero if all images have zero-sized channel
-            # axis or generally if all channel axis sizes
-            # are <= nb_keep_channels. In these cases we want to step early
-            # as otherwise we get zero-sized sampling arrays, which might mess
-            # up things.
-            if nb_channels == 0:
-                return batch
+        # Skip the non-image data steps below if we won't modify non-image
+        # anyways. Minor performance improvement.
+        if len(all_dropped_ids) == 0:
+            return batch
 
-            p_samples = self.p.draw_samples((nb_channels,),
-                                            random_state=random_state)
-            keep_mask = (p_samples >= 0.5)
+        if batch.heatmaps is not None and self._drop_heatmaps:
+            cval = self._heatmaps_cval
+            for drop_idx in all_dropped_ids:
+                batch.heatmaps[drop_idx].arr_0to1[...] = cval
 
-            channel_idx = 0
-            for image in batch.images:
-                nb_channels = image.shape[2]
-                if nb_channels <= self.nb_keep_channels:
-                    continue
+        if batch.segmentation_maps is not None and self._drop_segmentation_maps:
+            cval = self._segmentation_maps_cval
+            for drop_idx in all_dropped_ids:
+                batch.segmentation_maps[drop_idx].arr[...] = cval
 
-                keep_mask_img = keep_mask[channel_idx:channel_idx+nb_channels]
-
-                nb_dropped = len(keep_mask_img) - np.sum(keep_mask_img)
-                if nb_dropped > (nb_channels - self.nb_keep_channels):
-                    channel_ids_dropped = np.nonzero(~keep_mask_img)[0]
-                    channel_ids_dropped = random_state.permutation(
-                        channel_ids_dropped)[:-self.nb_keep_channels]
-                    image[..., channel_ids_dropped] = 0
-                elif nb_dropped > 0:
-                    image *= keep_mask_img[np.newaxis, np.newaxis, :]
-
-                channel_idx += nb_channels
+        for attr_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            do_drop = getattr(self, "_drop_%s" % (attr_name,))
+            attr_value = getattr(batch, attr_name)
+            if attr_value is not None and do_drop:
+                for drop_idx in all_dropped_ids:
+                    # same as e.g.:
+                    #     batch.bounding_boxes[drop_idx].bounding_boxes = []
+                    setattr(attr_value[drop_idx], attr_name, [])
 
         return batch
+
+    def _draw_samples(self, batch, random_state):
+        # maybe noteworthy here that the channel axis can have size 0,
+        # e.g. (5, 5, 0)
+        shapes = batch.get_rowwise_shapes()
+        shapes = [shape
+                  if len(shape) >= 2
+                  else tuple(list(shape) + [1])
+                  for shape in shapes]
+        imagewise_channels = np.array([
+             shape[2] for shape in shapes
+        ], dtype=np.int32)
+
+        # channelwise drop value over all images (float <0.5 = drop channel)
+        p_samples = self.p.draw_samples((int(np.sum(imagewise_channels)),),
+                                        random_state=random_state)
+
+        # We map the flat p_samples array to an imagewise one,
+        # convert the mask to channel-ids to drop and remove channel ids if
+        # there are more to be dropped than are allowed to be dropped (see
+        # nb_keep_channels).
+        # We also track all_dropped_ids, which contains the ids of examples
+        # (not channel ids!) where all channels were dropped.
+        imagewise_channels_to_drop = []
+        all_dropped_ids = []
+        channel_idx = 0
+        for i, nb_channels in enumerate(imagewise_channels):
+            p_samples_i = p_samples[channel_idx:channel_idx+nb_channels]
+
+            drop_ids = np.nonzero(p_samples_i < 0.5)[0]
+            nb_dropable = max(nb_channels - self.nb_keep_channels, 0)
+            if len(drop_ids) > nb_dropable:
+                random_state.shuffle(drop_ids)
+                drop_ids = drop_ids[:nb_dropable]
+            imagewise_channels_to_drop.append(drop_ids)
+
+            all_dropped = (len(drop_ids) == nb_channels)
+            if all_dropped:
+                all_dropped_ids.append(i)
+
+            channel_idx += nb_channels
+
+        return imagewise_channels_to_drop, all_dropped_ids
 
     def get_parameters(self):
         return [self.p, self.nb_keep_channels]
@@ -2259,11 +2315,13 @@ class Dropout2d(meta.Augmenter):
 class TotalDropout(meta.Augmenter):
     """Drop all channels of a defined fraction of all images.
 
-    "Drop" here means that the components will be set to ``0``.
+    For image data, all components of dropped images will be filled with zeros.
 
-    .. warning ::
+    .. note ::
 
-        This augmenter currently does not affect non-image data.
+        This augmenter also sets the arrays of heatmaps and segmentation
+        maps to zero and removes all coordinate-based data (e.g. it removes
+        all bounding boxes on images that were filled with zeros).
 
     dtype support::
 
@@ -2327,21 +2385,64 @@ class TotalDropout(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.p = _handle_dropout_probability_param(p, "p")
 
+        self._drop_images = True
+        self._drop_heatmaps = True
+        self._drop_segmentation_maps = True
+        self._drop_keypoints = True
+        self._drop_bounding_boxes = True
+        self._drop_polygons = True
+        self._drop_line_strings = True
+
+        self._heatmaps_cval = 0.0
+        self._segmentation_maps_cval = 0
+
     def _augment_batch(self, batch, random_state, parents, hooks):
-        if batch.images is not None:
-            drop_mask = self._draw_samples(batch, random_state)
+        drop_mask = self._draw_samples(batch, random_state)
+        drop_ids = None
+
+        if batch.images is not None and self._drop_images:
             if ia.is_np_array(batch.images):
                 batch.images[drop_mask, ...] = 0
             else:
-                drop_ids = np.nonzero(drop_mask)[0]
+                drop_ids = self._generate_drop_ids_once(drop_mask, drop_ids)
                 for drop_idx in drop_ids:
                     batch.images[drop_idx][...] = 0
+
+        if batch.heatmaps is not None and self._drop_heatmaps:
+            drop_ids = self._generate_drop_ids_once(drop_mask, drop_ids)
+            cval = self._heatmaps_cval
+            for drop_idx in drop_ids:
+                batch.heatmaps[drop_idx].arr_0to1[...] = cval
+
+        if batch.segmentation_maps is not None and self._drop_segmentation_maps:
+            drop_ids = self._generate_drop_ids_once(drop_mask, drop_ids)
+            cval = self._segmentation_maps_cval
+            for drop_idx in drop_ids:
+                batch.segmentation_maps[drop_idx].arr[...] = cval
+
+        for attr_name in ["keypoints", "bounding_boxes", "polygons",
+                          "line_strings"]:
+            do_drop = getattr(self, "_drop_%s" % (attr_name,))
+            attr_value = getattr(batch, attr_name)
+            if attr_value is not None and do_drop:
+                drop_ids = self._generate_drop_ids_once(drop_mask, drop_ids)
+                for drop_idx in drop_ids:
+                    # same as e.g.:
+                    #     batch.bounding_boxes[drop_idx].bounding_boxes = []
+                    setattr(attr_value[drop_idx], attr_name, [])
+
         return batch
 
     def _draw_samples(self, batch, random_state):
         p = self.p.draw_samples((batch.nb_rows,), random_state=random_state)
         drop_mask = (p < 0.5)
         return drop_mask
+
+    @classmethod
+    def _generate_drop_ids_once(cls, drop_mask, drop_ids):
+        if drop_ids is None:
+            drop_ids = np.nonzero(drop_mask)[0]
+        return drop_ids
 
     def get_parameters(self):
         return [self.p]

@@ -1443,7 +1443,7 @@ class TestDropout2d(unittest.TestCase):
         assert aug.nb_keep_channels == 2
 
     def test_no_images_in_batch(self):
-        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=0)
+        aug = iaa.Dropout2d(p=0.0, nb_keep_channels=0)
         heatmaps = np.float32([
             [0.0, 1.0],
             [0.0, 1.0]
@@ -1464,6 +1464,101 @@ class TestDropout2d(unittest.TestCase):
         assert image_aug.dtype.name == image.dtype.name
         assert np.sum(image_aug) == 0
 
+    def test_p_is_1_heatmaps(self):
+        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=0)
+        arr = np.float32([
+            [0.0, 1.0],
+            [0.0, 1.0]
+        ])
+        hm = ia.HeatmapsOnImage(arr, shape=(2, 2, 3))
+
+        heatmaps_aug = aug(heatmaps=hm)
+
+        assert np.allclose(heatmaps_aug.arr_0to1, 0.0)
+
+    def test_p_is_1_segmentation_maps(self):
+        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=0)
+        arr = np.int32([
+            [0, 1],
+            [0, 1]
+        ])
+        segmaps = ia.SegmentationMapsOnImage(arr, shape=(2, 2, 3))
+
+        segmaps_aug = aug(segmentation_maps=segmaps)
+
+        assert np.allclose(segmaps_aug.arr, 0.0)
+
+    def test_p_is_1_cbaois(self):
+        cbaois = [
+            ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(2, 2, 3)),
+            ia.BoundingBoxesOnImage([ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)],
+                                    shape=(2, 2, 3)),
+            ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0), (1, 1)])],
+                               shape=(2, 2, 3)),
+            ia.LineStringsOnImage([ia.LineString([(0, 0), (1, 0)])],
+                                  shape=(2, 2, 3))
+        ]
+
+        cbaoi_names = ["keypoints", "bounding_boxes", "polygons",
+                       "line_strings"]
+
+        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=0)
+        for name, cbaoi in zip(cbaoi_names, cbaois):
+            with self.subTest(datatype=name):
+                cbaoi_aug = aug(**{name: cbaoi})
+
+                assert cbaoi_aug.shape == (2, 2, 3)
+                assert cbaoi_aug.items == []
+
+    def test_p_is_1_heatmaps__keep_one_channel(self):
+        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=1)
+        arr = np.float32([
+            [0.0, 1.0],
+            [0.0, 1.0]
+        ])
+        hm = ia.HeatmapsOnImage(arr, shape=(2, 2, 3))
+
+        heatmaps_aug = aug(heatmaps=hm)
+
+        assert np.allclose(heatmaps_aug.arr_0to1, hm.arr_0to1)
+
+    def test_p_is_1_segmentation_maps__keep_one_channel(self):
+        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=1)
+        arr = np.int32([
+            [0, 1],
+            [0, 1]
+        ])
+        segmaps = ia.SegmentationMapsOnImage(arr, shape=(2, 2, 3))
+
+        segmaps_aug = aug(segmentation_maps=segmaps)
+
+        assert np.allclose(segmaps_aug.arr, segmaps.arr)
+
+    def test_p_is_1_cbaois__keep_one_channel(self):
+        cbaois = [
+            ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(2, 2, 3)),
+            ia.BoundingBoxesOnImage([ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)],
+                                    shape=(2, 2, 3)),
+            ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0), (1, 1)])],
+                               shape=(2, 2, 3)),
+            ia.LineStringsOnImage([ia.LineString([(0, 0), (1, 0)])],
+                                  shape=(2, 2, 3))
+        ]
+
+        cbaoi_names = ["keypoints", "bounding_boxes", "polygons",
+                       "line_strings"]
+
+        aug = iaa.Dropout2d(p=1.0, nb_keep_channels=1)
+        for name, cbaoi in zip(cbaoi_names, cbaois):
+            with self.subTest(datatype=name):
+                cbaoi_aug = aug(**{name: cbaoi})
+
+                assert cbaoi_aug.shape == (2, 2, 3)
+                assert np.allclose(
+                    cbaoi_aug.items[0].coords,
+                    cbaoi.items[0].coords
+                )
+
     def test_p_is_0(self):
         image = np.full((1, 2, 3), 255, dtype=np.uint8)
         aug = iaa.Dropout2d(p=0.0, nb_keep_channels=0)
@@ -1473,6 +1568,55 @@ class TestDropout2d(unittest.TestCase):
         assert image_aug.shape == image.shape
         assert image_aug.dtype.name == image.dtype.name
         assert np.array_equal(image_aug, image)
+
+    def test_p_is_0_heatmaps(self):
+        aug = iaa.Dropout2d(p=0.0, nb_keep_channels=0)
+        arr = np.float32([
+            [0.0, 1.0],
+            [0.0, 1.0]
+        ])
+        hm = ia.HeatmapsOnImage(arr, shape=(2, 2, 3))
+
+        heatmaps_aug = aug(heatmaps=hm)
+
+        assert np.allclose(heatmaps_aug.arr_0to1, hm.arr_0to1)
+
+    def test_p_is_0_segmentation_maps(self):
+        aug = iaa.Dropout2d(p=0.0, nb_keep_channels=0)
+        arr = np.int32([
+            [0, 1],
+            [0, 1]
+        ])
+        segmaps = ia.SegmentationMapsOnImage(arr, shape=(2, 2, 3))
+
+        segmaps_aug = aug(segmentation_maps=segmaps)
+
+        assert np.allclose(segmaps_aug.arr, segmaps.arr)
+
+    def test_p_is_0_cbaois(self):
+        cbaois = [
+            ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(2, 2, 3)),
+            ia.BoundingBoxesOnImage([ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)],
+                                    shape=(2, 2, 3)),
+            ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0), (1, 1)])],
+                               shape=(2, 2, 3)),
+            ia.LineStringsOnImage([ia.LineString([(0, 0), (1, 0)])],
+                                  shape=(2, 2, 3))
+        ]
+
+        cbaoi_names = ["keypoints", "bounding_boxes", "polygons",
+                       "line_strings"]
+
+        aug = iaa.Dropout2d(p=0.0, nb_keep_channels=0)
+        for name, cbaoi in zip(cbaoi_names, cbaois):
+            with self.subTest(datatype=name):
+                cbaoi_aug = aug(**{name: cbaoi})
+
+                assert cbaoi_aug.shape == (2, 2, 3)
+                assert np.allclose(
+                    cbaoi_aug.items[0].coords,
+                    cbaoi.items[0].coords
+                )
 
     def test_p_is_075(self):
         image = np.full((1, 1, 3000), 255, dtype=np.uint8)
@@ -1637,18 +1781,6 @@ class TestTotalDropout(unittest.TestCase):
         assert isinstance(aug.p, iap.Binomial)
         assert np.isclose(aug.p.p.value, 1.0)
 
-    def test_no_images_in_batch(self):
-        aug = iaa.TotalDropout(p=1.0)
-        heatmaps = np.float32([
-            [0.0, 1.0],
-            [0.0, 1.0]
-        ])
-        heatmaps = ia.HeatmapsOnImage(heatmaps, shape=(2, 2, 3))
-
-        heatmaps_aug = aug(heatmaps=heatmaps)
-
-        assert np.allclose(heatmaps_aug.arr_0to1, heatmaps.arr_0to1)
-
     def test_p_is_1(self):
         image = np.full((1, 2, 3), 255, dtype=np.uint8)
         aug = iaa.TotalDropout(p=1.0)
@@ -1681,6 +1813,52 @@ class TestTotalDropout(unittest.TestCase):
         assert images_aug.shape == images.shape
         assert images_aug.dtype.name == images.dtype.name
         assert np.sum(images_aug) == 0
+
+    def test_p_is_1_heatmaps(self):
+        aug = iaa.TotalDropout(p=1.0)
+        arr = np.float32([
+            [0.0, 1.0],
+            [0.0, 1.0]
+        ])
+        hm = ia.HeatmapsOnImage(arr, shape=(2, 2, 3))
+
+        heatmaps_aug = aug(heatmaps=hm)
+
+        assert np.allclose(heatmaps_aug.arr_0to1, 0.0)
+
+    def test_p_is_1_segmentation_maps(self):
+        aug = iaa.TotalDropout(p=1.0)
+        arr = np.int32([
+            [0, 1],
+            [0, 1]
+        ])
+        segmaps = ia.SegmentationMapsOnImage(arr, shape=(2, 2, 3))
+
+        segmaps_aug = aug(segmentation_maps=segmaps)
+
+        assert np.allclose(segmaps_aug.arr, 0.0)
+
+    def test_p_is_1_cbaois(self):
+        cbaois = [
+            ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(2, 2, 3)),
+            ia.BoundingBoxesOnImage([ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)],
+                                    shape=(2, 2, 3)),
+            ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0), (1, 1)])],
+                               shape=(2, 2, 3)),
+            ia.LineStringsOnImage([ia.LineString([(0, 0), (1, 0)])],
+                                  shape=(2, 2, 3))
+        ]
+
+        cbaoi_names = ["keypoints", "bounding_boxes", "polygons",
+                       "line_strings"]
+
+        aug = iaa.TotalDropout(p=1.0)
+        for name, cbaoi in zip(cbaoi_names, cbaois):
+            with self.subTest(datatype=name):
+                cbaoi_aug = aug(**{name: cbaoi})
+
+                assert cbaoi_aug.shape == (2, 2, 3)
+                assert cbaoi_aug.items == []
 
     def test_p_is_0(self):
         image = np.full((1, 2, 3), 255, dtype=np.uint8)
@@ -1715,6 +1893,55 @@ class TestTotalDropout(unittest.TestCase):
             assert image_aug.shape == image_.shape
             assert image_aug.dtype.name == image_.dtype.name
             assert np.array_equal(image_aug, image_)
+
+    def test_p_is_0_heatmaps(self):
+        aug = iaa.TotalDropout(p=0.0)
+        arr = np.float32([
+            [0.0, 1.0],
+            [0.0, 1.0]
+        ])
+        hm = ia.HeatmapsOnImage(arr, shape=(2, 2, 3))
+
+        heatmaps_aug = aug(heatmaps=hm)
+
+        assert np.allclose(heatmaps_aug.arr_0to1, hm.arr_0to1)
+
+    def test_p_is_0_segmentation_maps(self):
+        aug = iaa.TotalDropout(p=0.0)
+        arr = np.int32([
+            [0, 1],
+            [0, 1]
+        ])
+        segmaps = ia.SegmentationMapsOnImage(arr, shape=(2, 2, 3))
+
+        segmaps_aug = aug(segmentation_maps=segmaps)
+
+        assert np.allclose(segmaps_aug.arr, segmaps.arr)
+
+    def test_p_is_0_cbaois(self):
+        cbaois = [
+            ia.KeypointsOnImage([ia.Keypoint(x=0, y=1)], shape=(2, 2, 3)),
+            ia.BoundingBoxesOnImage([ia.BoundingBox(x1=0, y1=1, x2=2, y2=3)],
+                                    shape=(2, 2, 3)),
+            ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0), (1, 1)])],
+                               shape=(2, 2, 3)),
+            ia.LineStringsOnImage([ia.LineString([(0, 0), (1, 0)])],
+                                  shape=(2, 2, 3))
+        ]
+
+        cbaoi_names = ["keypoints", "bounding_boxes", "polygons",
+                       "line_strings"]
+
+        aug = iaa.TotalDropout(p=0.0)
+        for name, cbaoi in zip(cbaoi_names, cbaois):
+            with self.subTest(datatype=name):
+                cbaoi_aug = aug(**{name: cbaoi})
+
+                assert cbaoi_aug.shape == (2, 2, 3)
+                assert np.allclose(
+                    cbaoi_aug.items[0].coords,
+                    cbaoi.items[0].coords
+                )
 
     def test_p_is_075_multiple_images_list(self):
         images = [np.full((1, 1, 1), 255, dtype=np.uint8)] * 3000
