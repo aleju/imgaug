@@ -18,8 +18,10 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import skimage.morphology
+import cv2
 
 import imgaug as ia
+from imgaug import random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
@@ -5686,6 +5688,159 @@ class TestPerspectiveTransform(unittest.TestCase):
                         nb_skipped += 1
             assert nb_skipped <= 2
 
+    def test_bounding_boxes_cover_extreme_points(self):
+        # Test that for BBs, the augmented BB x coord is really the minimum
+        # of the BB corner x-coords after augmentation and e.g. not just always
+        # the augmented top-left corner's coordinate.
+        h = w = 200  # height, width
+        s = 5  # block size
+        j_r = 0.1  # relative amount of jitter
+        j = int(h * j_r)  # absolute amount of jitter
+
+        # Note that PerspectiveTransform currently places four points on the
+        # image and back-projects to the image size (roughly).
+        # That's why e.g. TopWiderThanBottom has coordinates that seem like
+        # the top is thinner than the bottom (after projecting back to the
+        # image rectangle, the top becomes wider).
+        class _JitterTopWiderThanBottom(object):
+            def draw_samples(self, size, random_state):
+                return np.float32([
+                    [
+                        [j_r, 0.0],  # top-left
+                        [j_r, 0.0],  # top-right
+                        [0.0, 0.0],  # bottom-right
+                        [0.0, 0.0],  # bottom-left
+                    ]
+                ])
+
+        class _JitterTopThinnerThanBottom(object):
+            def draw_samples(self, size, random_state):
+                return np.float32([
+                    [
+                        [0.0, 0.0],  # top-left
+                        [0.0, 0.0],  # top-right
+                        [j_r, 0.0],  # bottom-right
+                        [j_r, 0.0],  # bottom-left
+                    ]
+                ])
+
+        class _JitterLeftWiderThanRight(object):
+            def draw_samples(self, size, random_state):
+                return np.float32([
+                    [
+                        [0.0, j_r],  # top-left
+                        [0.0, 0.0],  # top-right
+                        [0.0, 0.0],  # bottom-right
+                        [0.0, j_r],  # bottom-left
+                    ]
+                ])
+
+        class _JitterLeftThinnerThanRight(object):
+            def draw_samples(self, size, random_state):
+                return np.float32([
+                    [
+                        [0.0, 0.0],  # top-left
+                        [0.0, j_r],  # top-right
+                        [0.0, j_r],  # bottom-right
+                        [0.0, 0.0],  # bottom-left
+                    ]
+                ])
+
+        jitters = [
+            _JitterTopWiderThanBottom(),
+            _JitterTopThinnerThanBottom(),
+            _JitterLeftWiderThanRight(),
+            _JitterLeftThinnerThanRight(),
+        ]
+
+        # expected coordinates after applying the above jitter
+        # coordinates here are given as
+        #   (ystart, yend), (xstart, xend)
+        coords = [
+            # top wider than bottom
+            [
+                [(0+j, s+j+1), (0, s+1)],  # top left
+                [(0+j, s+j+1), (w-s, w+1)],  # top right
+                [(h-s-j, h-j+1), (w-s-j, w-j+1)],  # bottom right
+                [(h-s-j, h-j+1), (0+j, s+j+1)]  # bottom left
+            ],
+            # top thinner than bottom
+            [
+                [(0+j, s+j+1), (0+j, s+j+1)],
+                [(0+j, s+j+1), (w-s-j, w-j+1)],
+                [(h-s-j, h-j+1), (w-s, w+1)],
+                [(h-s-j, h-j+1), (0, s+1)]
+            ],
+            # left wider than right
+            [
+                [(0, s+1), (0+j, s+j+1)],
+                [(0+j, s+j+1), (w-s-j, w-j+1)],
+                [(h-s-j, h-j+1), (w-s-j, w-j+1)],
+                [(h-s, h+1), (0+j, s+j+1)]
+            ],
+            # left thinner than right
+            [
+                [(0+j, s+j+1), (0+j, s+j+1)],
+                [(0, s+1), (w-s-j, w-j+1)],
+                [(h-s, h+1), (w-s-j, w-j+1)],
+                [(h-s-j, h-j+1), (0+j, s+j+1)]
+            ],
+        ]
+
+        image = np.zeros((h-1, w-1, 4), dtype=np.uint8)
+        image = ia.pad(image, top=1, right=1, bottom=1, left=1, cval=50)
+        image[0+j:s+j+1, 0+j:s+j+1, 0] = 255
+        image[0+j:s+j+1, w-s-j:w-j+1, 1] = 255
+        image[h-s-j:h-j+1, w-s-j:w-j+1, 2] = 255
+        image[h-s-j:h-j+1, 0+j:s+j+1, 3] = 255
+
+        bb = ia.BoundingBox(x1=0.0+j,
+                            y1=0.0+j,
+                            x2=w-j,
+                            y2=h-j)
+        bbsoi = ia.BoundingBoxesOnImage([bb], shape=image.shape)
+
+        i = 0
+        for jitter, coords_i in zip(jitters, coords):
+            with self.subTest(jitter=jitter.__class__.__name__):
+                aug = iaa.PerspectiveTransform(scale=0.2, keep_size=True)
+                aug.jitter = jitter
+
+                image_aug, bbsoi_aug = aug(image=image, bounding_boxes=bbsoi)
+                assert image_aug.shape == image.shape
+
+                import imageio
+                imageio.imwrite("tmp"+str(i)+".jpg", image_aug[:, :, 0:3])
+                i += 1
+
+                (tl_y1, tl_y2), (tl_x1, tl_x2) = coords_i[0]
+                (tr_y1, tr_y2), (tr_x1, tr_x2) = coords_i[1]
+                (br_y1, br_y2), (br_x1, br_x2) = coords_i[2]
+                (bl_y1, bl_y2), (bl_x1, bl_x2) = coords_i[3]
+
+                # We have to be rather tolerant here (>100 instead of e.g.
+                # >200), because the transformation seems to be not that
+                # accurate and the blobs may be a few pixels off the expected
+                # coorindates.
+                assert np.max(image_aug[tl_y1:tl_y2, tl_x1:tl_x2, 0]) > 100
+                assert np.max(image_aug[tr_y1:tr_y2, tr_x1:tr_x2, 1]) > 100
+                assert np.max(image_aug[br_y1:br_y2, br_x1:br_x2, 2]) > 100
+                assert np.max(image_aug[bl_y1:bl_y2, bl_x1:bl_x2, 3]) > 100
+
+                # We have rather strong tolerances of 7.5 here, partially
+                # because the blobs are wide and the true coordinates are in
+                # the center of the blobs; partially, because of above
+                # mentioned inaccuracy of PerspectiveTransform.
+                bb_aug = bbsoi_aug.bounding_boxes[0]
+                exp_x1 = min([tl_x1, tr_x1, br_x1, bl_x1])
+                exp_x2 = max([tl_x2, tr_x2, br_x2, bl_x2])
+                exp_y1 = min([tl_y1, tr_y1, br_y1, bl_y1])
+                exp_y2 = max([tl_y2, tr_y2, br_y2, bl_y2])
+                assert np.isclose(bb_aug.x1, exp_x1, atol=7.5)
+                assert np.isclose(bb_aug.y1, exp_y1, atol=7.5)
+                assert np.isclose(bb_aug.x2, exp_x2, atol=7.5)
+                assert np.isclose(bb_aug.y2, exp_y2, atol=7.5)
+
     def test_empty_bounding_boxes(self):
         # test empty bounding boxes
         bbsoi = ia.BoundingBoxesOnImage([], shape=(20, 10, 3))
@@ -5698,9 +5853,25 @@ class TestPerspectiveTransform(unittest.TestCase):
     # ------------
     # mode
     # ------------
+    def test_draw_samples_with_mode_being_int(self):
+        aug = iaa.PerspectiveTransform(scale=0.001, mode=cv2.BORDER_REPLICATE)
+
+        samples = aug._draw_samples([(10, 10, 3)], iarandom.RNG(0))
+
+        assert samples.modes.shape == (1,)
+        assert samples.modes[0] == cv2.BORDER_REPLICATE
+
+    def test_draw_samples_with_mode_being_string(self):
+        aug = iaa.PerspectiveTransform(scale=0.001, mode="replicate")
+
+        samples = aug._draw_samples([(10, 10, 3)], iarandom.RNG(0))
+
+        assert samples.modes.shape == (1,)
+        assert samples.modes[0] == cv2.BORDER_REPLICATE
+
     def test_mode_replicate_copies_values(self):
         aug = iaa.PerspectiveTransform(
-            scale=0.001, mode='replicate', cval=0, random_state=31)
+            scale=0.001, mode="replicate", cval=0, random_state=31)
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
 
         img_aug = aug.augment_image(img)
@@ -5709,9 +5880,9 @@ class TestPerspectiveTransform(unittest.TestCase):
 
     def test_mode_constant_uses_cval(self):
         aug255 = iaa.PerspectiveTransform(
-            scale=0.001, mode='constant', cval=255, random_state=31)
+            scale=0.001, mode="constant", cval=255, random_state=31)
         aug0 = iaa.PerspectiveTransform(
-            scale=0.001, mode='constant', cval=0, random_state=31)
+            scale=0.001, mode="constant", cval=0, random_state=31)
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
 
         img_aug255 = aug255.augment_image(img)
@@ -5719,6 +5890,133 @@ class TestPerspectiveTransform(unittest.TestCase):
 
         assert (img_aug255 == 255).all()
         assert not (img_aug0 == 255).all()
+
+    # ---------
+    # fit_output
+    # ---------
+    def test_fit_output_with_fixed_jitter(self):
+        aug = iaa.PerspectiveTransform(scale=0.2, fit_output=True,
+                                       keep_size=False)
+        aug.jitter = iap.Deterministic(0.2)
+
+        image = np.zeros((40, 40, 3), dtype=np.uint8)
+        image[0:3, 0:3, 0] = 255
+        image[0:3, 40-3:, 1] = 255
+        image[40-3:, 40-3:, 2] = 255
+
+        image_aug = aug(image=image)
+
+        h, w = image_aug.shape[0:2]
+        y0 = np.argmax(image_aug[:, 0, 0])
+        x0 = np.argmax(image_aug[0, :, 0])
+        y1 = np.argmax(image_aug[:, w-1, 1])
+        x1 = np.argmax(image_aug[0, :, 1])
+        y2 = np.argmax(image_aug[:, w-1, 2])
+        x2 = np.argmax(image_aug[h-1, :, 2])
+
+        # different shape
+        assert image_aug.shape != image.shape
+
+        # corners roughly still at top-left, top-right, bottom-right
+        assert 0 <= y0 <= 3
+        assert 0 <= x0 <= 3
+        assert 0 <= y1 <= 3
+        assert image_aug.shape[1]-3 <= x1 <= image_aug.shape[1]
+        assert image_aug.shape[1]-3 <= y2 <= image_aug.shape[1]
+        assert image_aug.shape[1]-3 <= x2 <= image_aug.shape[1]
+
+        # no corner pixels now in the center
+        assert np.max(image_aug[8:h-8, 8:w-8, :]) == 0
+
+    def test_fit_output_with_random_jitter(self):
+        aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
+                                       keep_size=False)
+
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[0:5, 0:5, 0] = 255
+        image[0:5, 50-5:, 1] = 255
+        image[50-5:, 50-5:, 2] = 255
+        image[50-5:, 0:5, 3] = 255
+
+        for _ in sm.xrange(10):
+            image_aug = aug(image=image)
+
+            h, w = image_aug.shape[0:2]
+            arr_nochan = np.max(image_aug, axis=2)
+            y_idx = np.where(np.max(arr_nochan, axis=1))[0]
+            x_idx = np.where(np.max(arr_nochan, axis=0))[0]
+            y_min = np.min(y_idx)
+            y_max = np.max(y_idx)
+            x_min = np.min(x_idx)
+            x_max = np.max(x_idx)
+
+            tol = 0
+            assert 0 <= y_min <= 5+tol
+            assert 0 <= x_min <= 5+tol
+            assert h-5-tol <= y_max <= h-1
+            assert w-5-tol <= x_max <= w-1
+
+    def test_fit_output_with_random_jitter__segmentation_maps(self):
+        aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
+                                       keep_size=False)
+
+        arr = np.zeros((50, 50, 4), dtype=np.uint8)
+        arr[0:5, 0:5, 0] = 1
+        arr[0:5, 50-5:, 1] = 1
+        arr[50-5:, 50-5:, 2] = 1
+        arr[50-5:, 0:5, 3] = 1
+        segmap = ia.SegmentationMapsOnImage(arr, shape=(50, 50, 3))
+
+        image = np.zeros((49, 49, 3), dtype=np.uint8)
+        image = ia.pad(image, top=1, right=1, bottom=1, left=1, cval=128)
+
+        for _ in sm.xrange(10):
+            image_aug, segmap_aug = aug(image=image, segmentation_maps=segmap)
+
+            h, w = segmap_aug.arr.shape[0:2]
+            arr_nochan = np.max(segmap_aug.arr, axis=2)
+            y_idx = np.where(np.max(arr_nochan, axis=1))[0]
+            x_idx = np.where(np.max(arr_nochan, axis=0))[0]
+            y_min = np.min(y_idx)
+            y_max = np.max(y_idx)
+            x_min = np.min(x_idx)
+            x_max = np.max(x_idx)
+
+            tol = 0
+            assert 0 <= y_min <= 5+tol
+            assert 0 <= x_min <= 5+tol
+            assert h-5-tol <= y_max <= h-1
+            assert w-5-tol <= x_max <= w-1
+
+    def test_fit_output_with_fixed_jitter__keypoints(self):
+        aug = iaa.PerspectiveTransform(scale=0.1, fit_output=True,
+                                       keep_size=False)
+
+        kpsoi = ia.KeypointsOnImage.from_xy_array([
+            (0, 0),
+            (50, 0),
+            (50, 50),
+            (0, 50)
+        ], shape=(50, 50, 3))
+
+        for _ in sm.xrange(10):
+            kpsoi_aug = aug(keypoints=kpsoi)
+
+            h, w = kpsoi_aug.shape[0:2]
+            y0, x0 = kpsoi_aug.keypoints[0].y, kpsoi_aug.keypoints[0].x
+            y1, x1 = kpsoi_aug.keypoints[1].y, kpsoi_aug.keypoints[1].x
+            y2, x2 = kpsoi_aug.keypoints[2].y, kpsoi_aug.keypoints[2].x
+            y3, x3 = kpsoi_aug.keypoints[3].y, kpsoi_aug.keypoints[3].x
+
+            y_min = min([y0, y1, y2, y3])
+            y_max = max([y0, y1, y2, y3])
+            x_min = min([x0, x1, x2, x3])
+            x_max = max([x0, x1, x2, x3])
+            tol = 0.5
+            assert 0-tol <= y_min <= tol
+            assert 0-tol <= x_min <= tol
+            assert h-tol <= y_max <= h+tol
+            assert w-tol <= x_max <= w+tol
 
     # ---------
     # unusual channel numbers
@@ -5779,7 +6077,8 @@ class TestPerspectiveTransform(unittest.TestCase):
         assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
         assert params[1] is False
         assert params[2].value == 0
-        assert params[3].value == 'constant'
+        assert params[3].value == "constant"
+        assert params[4] is False
 
     # --------
     # other dtypes

@@ -2496,6 +2496,15 @@ class PerspectiveTransform(meta.Augmenter):
               that parameter per image, i.e. it must return only the above
               mentioned strings.
 
+    fit_output : bool, optional
+        If ``True``, the image plane size and position will be adjusted
+        to still capture the whole image after perspective transformation.
+        (Followed by image resizing if `keep_size` is set to ``True``.)
+        Otherwise, parts of the transformed image may be outside of the image
+        plane.
+        This setting should not be set to ``True`` when using large `scale`
+        values as it could lead to very large images.
+
     polygon_recoverer : 'auto' or None or imgaug.augmentables.polygons._ConcavePolygonRecoverer, optional
         The class to use to repair invalid polygons.
         If ``"auto"``, a new instance of
@@ -2534,8 +2543,13 @@ class PerspectiveTransform(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=0, cval=0, mode='constant', keep_size=True,
-                 polygon_recoverer="auto", fit_output=False,
+    _BORDER_MODE_STR_TO_INT = {
+        "replicate": cv2.BORDER_REPLICATE,
+        "constant": cv2.BORDER_CONSTANT
+    }
+
+    def __init__(self, scale=0, cval=0, mode="constant", keep_size=True,
+                 fit_output=False, polygon_recoverer="auto",
                  name=None, deterministic=False, random_state=None):
         super(PerspectiveTransform, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -2544,7 +2558,6 @@ class PerspectiveTransform(meta.Augmenter):
             scale, "scale", value_range=(0, None), tuple_to_uniform=True,
             list_to_choice=True)
         self.jitter = iap.Normal(loc=0, scale=self.scale)
-        self.keep_size = keep_size
 
         # setting these to 1x1 caused problems for large scales and polygon
         # augmentation
@@ -2552,16 +2565,15 @@ class PerspectiveTransform(meta.Augmenter):
         #      needed/sensible?
         self.min_width = 2
         self.min_height = 2
-        self.shift_step_size = 0.5
 
         self.cval = _handle_cval_arg(cval)
         self.mode = self._handle_mode_arg(mode)
+        self.keep_size = keep_size
+        self.fit_output = fit_output
 
         self.polygon_recoverer = polygon_recoverer
         if polygon_recoverer == "auto":
             self.polygon_recoverer = _ConcavePolygonRecoverer()
-
-        self.fit_output = fit_output
 
         # Special order, mode and cval parameters for heatmaps and
         # segmentation maps. These may either be None or a fixed value.
@@ -2828,88 +2840,90 @@ class PerspectiveTransform(meta.Augmenter):
         return result
 
     def _draw_samples(self, shapes, random_state):
-        # TODO change these to class attributes
-        mode_str_to_int = {
-            "replicate": cv2.BORDER_REPLICATE,
-            "constant": cv2.BORDER_CONSTANT
-        }
-
         matrices = []
         max_heights = []
         max_widths = []
         nb_images = len(shapes)
-        rngs = random_state.duplicate(2+nb_images)
+        rngs = random_state.duplicate(3)
 
         cval_samples = self.cval.draw_samples((nb_images, 3),
                                               random_state=rngs[0])
         mode_samples = self.mode.draw_samples((nb_images,),
                                               random_state=rngs[1])
+        jitter = self.jitter.draw_samples((nb_images, 4, 2),
+                                          random_state=rngs[2])
 
-        cval_samples_cv2 = []
+        # cv2 perspectiveTransform doesn't accept numpy arrays as cval
+        cval_samples_cv2 = cval_samples.tolist()
 
-        for i in sm.xrange(nb_images):
-            mode = mode_samples[i]
-            mode_samples[i] = (
-                mode if ia.is_single_integer(mode) else mode_str_to_int[mode])
+        # if border modes are represented by strings, convert them to cv2
+        # border mode integers
+        if mode_samples.dtype.kind not in ["i", "u"]:
+            for mode, mapped_mode in self._BORDER_MODE_STR_TO_INT.items():
+                mode_samples[mode_samples == mode] = mapped_mode
 
-            cval_samples_cv2.append([int(cval_i) for cval_i in cval_samples[i]])
+        # modify jitter to the four corner point coordinates
+        # some x/y values have to be modified from `jitter` to `1-jtter`
+        # for that
+        # TODO remove the abs() here. it currently only allows to "zoom-in",
+        #      not to "zoom-out"
+        points = np.mod(np.abs(jitter), 1)
 
-            h, w = shapes[i][0:2]
+        # top left -- no changes needed, just use jitter
+        # top right
+        points[:, 1, 0] = 1.0 - points[:, 1, 0]  # w = 1.0 - jitter
+        # bottom right
+        points[:, 2, 0] = 1.0 - points[:, 2, 0]  # w = 1.0 - jitter
+        points[:, 2, 1] = 1.0 - points[:, 2, 1]  # h = 1.0 - jitter
+        # bottom left
+        points[:, 3, 1] = 1.0 - points[:, 3, 1]  # h = 1.0 - jitter
 
-            points = self.jitter.draw_samples((4, 2), random_state=rngs[2+i])
-            points = np.mod(np.abs(points), 1)
+        for shape, points_i in zip(shapes, points):
+            h, w = shape[0:2]
 
-            # modify jitter to the four corner point coordinates
-            # some x/y values have to be modified from `jitter` to `1-jtter`
-            # for that
+            points_i[:, 0] *= w
+            points_i[:, 1] *= h
 
-            # top left -- no changes needed, just use jitter
-            # top right
-            points[2, 0] = 1.0 - points[2, 0]  # h = 1.0 - jitter
-            # bottom right
-            points[1, 0] = 1.0 - points[1, 0]  # w = 1.0 - jitter
-            points[1, 1] = 1.0 - points[1, 1]  # h = 1.0 - jitter
-            # bottom left
-            points[0, 1] = 1.0 - points[0, 1]  # h = 1.0 - jitter
+            # Obtain a consistent order of the points and unpack them
+            # individually.
+            # Warning: don't just do (tl, tr, br, bl) = _order_points(...)
+            # here, because the reordered points_i is used further below.
+            points_i = self._order_points(points_i)
+            (tl, tr, br, bl) = points_i
 
-            points[:, 0] = points[:, 0] * w
-            points[:, 1] = points[:, 1] * h
-
-            # obtain a consistent order of the points and unpack them
-            # individually
-            points = self._order_points(points)
-            (tl, tr, br, bl) = points
-
-            # TODO remove these loops
             # compute the width of the new image, which will be the
             # maximum distance between bottom-right and bottom-left
             # x-coordiates or the top-right and top-left x-coordinates
             min_width = None
+            max_width = None
             while min_width is None or min_width < self.min_width:
-                width_a = np.sqrt(((br[0]-bl[0])**2) + ((br[1]-bl[1])**2))
-                width_b = np.sqrt(((tr[0]-tl[0])**2) + ((tr[1]-tl[1])**2))
-                max_width = max(int(width_a), int(width_b))
-                min_width = min(int(width_a), int(width_b))
+                width_top = np.sqrt(((tr[0]-tl[0])**2) + ((tr[1]-tl[1])**2))
+                width_bottom = np.sqrt(((br[0]-bl[0])**2) + ((br[1]-bl[1])**2))
+                max_width = int(max(width_top, width_bottom))
+                min_width = int(min(width_top, width_bottom))
                 if min_width < self.min_width:
-                    tl[0] -= self.shift_step_size
-                    tr[0] += self.shift_step_size
-                    bl[0] -= self.shift_step_size
-                    br[0] += self.shift_step_size
+                    step_size = (self.min_width - min_width)/2
+                    tl[0] -= step_size
+                    tr[0] += step_size
+                    bl[0] -= step_size
+                    br[0] += step_size
 
             # compute the height of the new image, which will be the
             # maximum distance between the top-right and bottom-right
             # y-coordinates or the top-left and bottom-left y-coordinates
             min_height = None
+            max_height = None
             while min_height is None or min_height < self.min_height:
-                height_a = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]-br[1])**2))
-                height_b = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]-bl[1])**2))
-                max_height = max(int(height_a), int(height_b))
-                min_height = min(int(height_a), int(height_b))
+                height_right = np.sqrt(((tr[0]-br[0])**2) + ((tr[1]-br[1])**2))
+                height_left = np.sqrt(((tl[0]-bl[0])**2) + ((tl[1]-bl[1])**2))
+                max_height = int(max(height_right, height_left))
+                min_height = int(min(height_right, height_left))
                 if min_height < self.min_height:
-                    tl[1] -= self.shift_step_size
-                    tr[1] -= self.shift_step_size
-                    bl[1] += self.shift_step_size
-                    br[1] += self.shift_step_size
+                    step_size = (self.min_height - min_height)/2
+                    tl[1] -= step_size
+                    tr[1] -= step_size
+                    bl[1] += step_size
+                    br[1] += step_size
 
             # now that we have the dimensions of the new image, construct
             # the set of destination points to obtain a "birds eye view",
@@ -2921,10 +2935,10 @@ class PerspectiveTransform(meta.Augmenter):
                 [max_width - 1, 0],
                 [max_width - 1, max_height - 1],
                 [0, max_height - 1]
-            ], dtype="float32")
+            ], dtype=np.float32)
 
             # compute the perspective transform matrix and then apply it
-            m = cv2.getPerspectiveTransform(points, dst)
+            m = cv2.getPerspectiveTransform(points_i, dst)
 
             if self.fit_output:
                 m, max_width, max_height = self._expand_transform(m, (h, w))
@@ -2933,7 +2947,7 @@ class PerspectiveTransform(meta.Augmenter):
             max_heights.append(max_height)
             max_widths.append(max_width)
 
-        mode_samples = mode_samples.astype(int)
+        mode_samples = mode_samples.astype(np.int32)
         return _PerspectiveTransformSamplingResult(
             matrices, max_heights, max_widths, cval_samples_cv2,
             mode_samples)
@@ -2944,7 +2958,7 @@ class PerspectiveTransform(meta.Augmenter):
         # such that the first entry in the list is the top-left,
         # the second entry is the top-right, the third is the
         # bottom-right, and the fourth is the bottom-left
-        pts_ordered = np.zeros((4, 2), dtype="float32")
+        pts_ordered = np.zeros((4, 2), dtype=np.float32)
 
         # the top-left point will have the smallest sum, whereas
         # the bottom-right point will have the largest sum
@@ -2962,22 +2976,29 @@ class PerspectiveTransform(meta.Augmenter):
         # return the ordered coordinates
         return pts_ordered
 
-    def _expand_transform(self, M, shape):
-        imgHeight, imgWidth = shape
+    @classmethod
+    def _expand_transform(cls, M, shape):
+        height, width = shape
         rect = np.array([
             [0, 0],
-            [imgWidth - 1, 0],
-            [imgWidth - 1, imgHeight - 1],
-            [0, imgHeight - 1]], dtype='float32')
+            [width - 1, 0],
+            [width - 1, height - 1],
+            [0, height - 1]], dtype=np.float32)
         dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
+
+        # get min x, y over transformed 4 points
+        # then modify target points by subtracting these minima
+        # => shift to (0, 0)
         dst -= dst.min(axis=0, keepdims=True)
         dst = np.around(dst, decimals=0)
+
         M_expanded = cv2.getPerspectiveTransform(rect, dst)
-        maxWidth, maxHeight = dst.max(axis=0) + 1
-        return M_expanded, maxWidth, maxHeight
+        max_width, max_height = dst.max(axis=0) + 1
+        return M_expanded, max_width, max_height
 
     def get_parameters(self):
-        return [self.jitter, self.keep_size, self.cval, self.mode]
+        return [self.jitter, self.keep_size, self.cval, self.mode,
+                self.fit_output]
 
 
 class _ElasticTransformationSamplingResult(object):
