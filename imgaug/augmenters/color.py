@@ -3412,7 +3412,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
             name=name, deterministic=deterministic, random_state=random_state)
 
     def _quantize(self, image, counts):
-        return quantize_uniform_to_n_bits(image, counts)
+        return quantize_uniform_to_n_bits_(image, counts)
 
 
 class Posterize(UniformColorQuantizationToNBits):
