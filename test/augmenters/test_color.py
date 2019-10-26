@@ -13,6 +13,7 @@ try:
 except ImportError:
     import mock
 import copy as copylib
+import warnings
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -2213,7 +2214,7 @@ class UniformColorQuantization(TestKMeansColorQuantization):
 
     @property
     def quantization_func_name(self):
-        return "imgaug.augmenters.color.quantize_colors_uniform"
+        return "imgaug.augmenters.color.quantize_uniform"
 
     def test___init___defaults(self):
         aug = self.augmenter()
@@ -2341,6 +2342,32 @@ class UniformColorQuantization(TestKMeansColorQuantization):
 
 
 class Test_quantize_colors_uniform(unittest.TestCase):
+    def test_warns_deprecated(self):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+
+            _ = iaa.quantize_colors_uniform(arr, 2)
+
+            assert len(caught_warnings) == 1
+            assert (
+                "deprecated"
+                in str(caught_warnings[-1].message).lower()
+            )
+
+    @mock.patch("imgaug.augmenters.color.quantize_uniform")
+    def test_calls_quantize_uniform(self, mock_qu):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        mock_qu.return_value = "foo"
+
+        with warnings.catch_warnings(record=True):
+            result = iaa.quantize_colors_uniform(arr, 7)
+
+        mock_qu.assert_called_once_with(arr=arr, nb_bins=7)
+        assert result == "foo"
+
+
+class Test_quantize_uniform(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -2359,7 +2386,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_colors_uniform(image, 2)
+        observed = iaa.quantize_uniform(image, 2)
 
         assert np.array_equal(observed, expected)
 
@@ -2392,7 +2419,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_colors_uniform(image, 4)
+        observed = iaa.quantize_uniform(image, 4)
 
         assert np.array_equal(observed, expected)
 
@@ -2422,7 +2449,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
 
         got_exception = False
         try:
-            _ = iaa.quantize_colors_uniform(image, 1)
+            _ = iaa.quantize_uniform(image, 1)
         except AssertionError as exc:
             assert "[2..256]" in str(exc)
             got_exception = True
@@ -2443,7 +2470,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_uniform(image, 2)
+                image_aug = iaa.quantize_uniform(image, 2)
 
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
@@ -2460,7 +2487,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_uniform(image, 2)
+                image_aug = iaa.quantize_uniform(image, 2)
 
                 assert np.any(image_aug > 0)
                 assert image_aug.dtype.name == "uint8"

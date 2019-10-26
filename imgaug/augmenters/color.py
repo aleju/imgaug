@@ -3238,15 +3238,23 @@ class UniformColorQuantization(_AbstractColorQuantization):
             name=name, deterministic=deterministic, random_state=random_state)
 
     def _quantize(self, image, n_colors):
-        return quantize_colors_uniform(image, n_colors)
+        return quantize_uniform(image, n_colors)
 
 
+@ia.deprecated("imgaug.augmenters.colors.quantize_uniform")
 def quantize_colors_uniform(image, n_colors):
-    """Quantize colors into N bins with regular distance.
+    """Outdated name for :func:`quantize_uniform`."""
+    return quantize_uniform(arr=image, nb_bins=n_colors)
 
-    For ``uint8`` images the equation is ``floor(v/q)*q + q/2`` with
+
+def quantize_uniform(arr, nb_bins):
+    """Quantize an array into N equally-sized bins.
+
+    This can be used to quantize/posterize an image into N colors.
+
+    For ``uint8`` arrays the equation is ``floor(v/q)*q + q/2`` with
     ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
-    the target number of colors after quantization.
+    the target number of bins (i.e. colors) after quantization.
 
     dtype support::
 
@@ -3266,24 +3274,25 @@ def quantize_colors_uniform(image, n_colors):
 
     Parameters
     ----------
-    image : ndarray
-        Image in which to quantize colors. Expected to be of shape ``(H,W)``
+    arr : ndarray
+        Array to quantize, usually an image. Expected to be of shape ``(H,W)``
         or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
 
-    n_colors : int
-        Maximum number of output colors.
+    nb_bins : int
+        Number of equally-sized bins to quantize into. This corresponds to
+        the maximum number of colors in an output image.
 
     Returns
     -------
     ndarray
-        Image with quantized colors.
+        Array with quantized components.
 
     Examples
     --------
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_colors_uniform(image, 6)
+    >>> image_quantized = iaa.quantize_uniform(image, 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
@@ -3291,19 +3300,19 @@ def quantize_colors_uniform(image, n_colors):
     that the six remaining colors do have to appear in the input image.
 
     """
-    assert image.dtype.name == "uint8", "Expected uint8 image, got %s." % (
-        image.dtype.name,)
-    assert 2 <= n_colors <= 256, (
-        "Expected n_colors to be in the discrete interval [2..256]. "
-        "Got a value of %d instead." % (n_colors,))
+    assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
+        arr.dtype.name,)
+    assert 2 <= nb_bins <= 256, (
+        "Expected nb_bins to be in the discrete interval [2..256]. "
+        "Got a value of %d instead." % (nb_bins,))
 
-    n_colors = np.clip(n_colors, 2, 256)
+    nb_bins = np.clip(nb_bins, 2, 256)
 
-    if n_colors == 256:
-        return np.copy(image)
+    if nb_bins == 256:
+        return np.copy(arr)
 
-    q = 256 / n_colors
-    image_aug = np.floor(image.astype(np.float32) / q) * q + q/2
+    q = 256 / nb_bins
+    arr_quant_f32 = np.floor(arr.astype(np.float32) / q) * q + q/2
 
-    image_aug_uint8 = np.clip(np.round(image_aug), 0, 255).astype(np.uint8)
-    return image_aug_uint8
+    arr_quant_u8 = np.clip(np.round(arr_quant_f32), 0, 255).astype(np.uint8)
+    return arr_quant_u8

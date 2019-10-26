@@ -8,12 +8,12 @@ def main():
     image = ia.quokka_square((256, 256))
     ia.imshow(
         ia.draw_grid([
-            iaa.quantize_colors_uniform(image, 2),
-            iaa.quantize_colors_uniform(image, 4),
-            iaa.quantize_colors_uniform(image, 8),
-            iaa.quantize_colors_uniform(image, 16),
-            iaa.quantize_colors_uniform(image, 32),
-            iaa.quantize_colors_uniform(image, 64)
+            iaa.quantize_uniform(image, 2),
+            iaa.quantize_uniform(image, 4),
+            iaa.quantize_uniform(image, 8),
+            iaa.quantize_uniform(image, 16),
+            iaa.quantize_uniform(image, 32),
+            iaa.quantize_uniform(image, 64)
         ], cols=6)
     )
 
