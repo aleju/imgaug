@@ -20,6 +20,8 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import cv2
+import PIL.Image
+import PIL.ImageOps
 
 import imgaug as ia
 import imgaug.random as iarandom
@@ -2565,3 +2567,33 @@ class Test_quantize_uniform(unittest.TestCase):
                 assert np.any(image_aug > 0)
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+
+# not much testing necessary here as the function is a wrapper around
+# quantize_uniform()
+class Test_quantize_uniform_to_n_bits(unittest.TestCase):
+    def test_by_comparison_with_pil(self):
+        image = np.arange(64*64*3).reshape((64, 64, 3))
+        image = np.mod(image, 255).astype(np.uint8)
+        for nb_bits in [1, 2, 3, 4, 5, 6, 7, 8]:
+            image_iaa = iaa.quantize_uniform_to_n_bits(image, nb_bits)
+            image_pil = np.asarray(
+                PIL.ImageOps.posterize(
+                    PIL.Image.fromarray(image),
+                    nb_bits
+                )
+            )
+
+            assert np.array_equal(image_iaa, image_pil)
+
+    @mock.patch("imgaug.augmenters.color.quantize_uniform")
+    def test_mocked(self, mock_qu):
+        mock_qu.return_value = "foo"
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        nb_bits = 3
+
+        result = iaa.quantize_uniform_to_n_bits(image, nb_bits)
+
+        mock_qu.assert_called_once_with(image, 2**nb_bits,
+                                        to_bin_centers=False)
+        assert result == "foo"

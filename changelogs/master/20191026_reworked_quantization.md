@@ -10,3 +10,4 @@
   around 64x64) to 100x (large images around 1024x1024).
 * Added argument `to_bin_centers=True` to `quantize_uniform()`, controling
   whether each bin `(a, b)` should be quantized to `a + (b-a)/2` or `a`.
+* Added function `imgaug.augmenters.color.quantize_uniform_to_n_bits()`.
