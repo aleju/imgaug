@@ -3415,6 +3415,11 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
         return quantize_uniform_to_n_bits(image, counts)
 
 
+class Posterize(UniformColorQuantizationToNBits):
+    """Alias for :class:`UniformColorQuantizationToNBits`."""
+    pass
+
+
 @ia.deprecated("imgaug.augmenters.colors.quantize_uniform")
 def quantize_colors_uniform(image, n_colors):
     """Outdated name for :func:`quantize_uniform`."""

@@ -2456,6 +2456,12 @@ class TestUniformColorQuantizationToNBits(unittest.TestCase):
         assert np.array_equal(observed, expected)
 
 
+class TestPosterize(TestUniformColorQuantizationToNBits):
+    @property
+    def augmenter(self):
+        return iaa.Posterize
+
+
 class Test_quantize_colors_uniform(unittest.TestCase):
     def test_warns_deprecated(self):
         arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))

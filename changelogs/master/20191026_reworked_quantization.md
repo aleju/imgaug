@@ -15,3 +15,4 @@
   `quantize_uniform_to_n_bits()` that produces the same outputs as
   `PIL.ImageOps.posterize()`.
 * Added augmenter `UniformColorQuantizationToNBits`.
+* Added augmenter `Posterize` (alias of `UniformColorQuantizationToNBits`).
