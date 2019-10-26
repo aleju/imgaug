@@ -3576,9 +3576,9 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
     """Reduce each component in an array to a maximum number of bits.
 
     This operation sets the ``8-B`` highest frequency (rightmost) bits to zero.
-    For ``B`` bits this operation modifies each component's intensity value
-    ``v`` to ``v' = v & (2**(8-B) - 1)``, e.g. for ``B=3`` this results in
-    ``v' = c & ~(2**(3-1) - 1) = c & ~3 = c & ~0000 0011 = c & 1111 1100``.
+    For ``B`` bits this is equivalent to changing each component's intensity
+    value ``v`` to ``v' = v & (2**(8-B) - 1)``, e.g. for ``B=3`` this results
+    in ``v' = c & ~(2**(3-1) - 1) = c & ~3 = c & ~0000 0011 = c & 1111 1100``.
 
     This is identical to :func:`quantize_uniform` with ``nb_bins=2**nb_bits``
     and ``to_bin_centers=False``.
