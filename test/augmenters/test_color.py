@@ -2468,6 +2468,33 @@ class Test_quantize_uniform(unittest.TestCase):
     def test_images_with_3_channels_4_colors(self):
         self._test_images_with_n_channels_4_colors(3)
 
+    def test_to_bin_centers_is_false(self):
+        nb_channels = 3
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+            [127, 128, 220, 220]
+        ])
+
+        q = 256/4
+        c1 = 0
+        c2 = 64
+        c3 = 128
+        c4 = 192
+
+        expected = np.uint8([
+            [c1, c1, c4, c4],
+            [c1, c1, c4, c4],
+            [c2, c3, c4, c4]
+        ])
+
+        image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+        expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
+
+        observed = iaa.quantize_uniform(image, 4, to_bin_centers=False)
+
+        assert np.array_equal(observed, expected)
+
     def test_failure_if_n_colors_less_than_2(self):
         image = np.uint8([
             [0, 0, 255, 255],

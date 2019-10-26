@@ -3266,7 +3266,7 @@ def quantize_colors_uniform(image, n_colors):
     return quantize_uniform(arr=image, nb_bins=n_colors)
 
 
-def quantize_uniform(arr, nb_bins):
+def quantize_uniform(arr, nb_bins, to_bin_centers=True):
     """Quantize an array into N equally-sized bins.
 
     This can be used to quantize/posterize an image into N colors.
@@ -3302,6 +3302,10 @@ def quantize_uniform(arr, nb_bins):
         Number of equally-sized bins to quantize into. This corresponds to
         the maximum number of colors in an output image.
 
+    to_bin_centers : bool
+        Whether to quantize each bin ``(a, b)`` to ``a + (b-a)/2`` (center
+        of bin, ``True``) or to ``a`` (lower boundary, ``False``).
+
     Returns
     -------
     ndarray
@@ -3321,16 +3325,19 @@ def quantize_uniform(arr, nb_bins):
     the value range is reduced.
 
     """
+    if nb_bins == 256 or 0 in arr.shape:
+        return np.copy(arr)
+
     assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
         arr.dtype.name,)
     assert 2 <= nb_bins <= 256, (
         "Expected nb_bins to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_bins,))
 
-    if nb_bins == 256 or 0 in arr.shape:
-        return np.copy(arr)
-
-    table = (_QuantizeUniformLUTTableSingleton
+    table_class = (_QuantizeUniformCenterizedLUTTableSingleton
+                   if to_bin_centers
+                   else _QuantizeUniformNotCenterizedLUTTableSingleton)
+    table = (table_class
              .get_instance()
              .get_for_nb_bins(nb_bins))
     arr_q = cv2.LUT(arr, table)
@@ -3339,7 +3346,7 @@ def quantize_uniform(arr, nb_bins):
     return arr_q
 
 
-class _QuantizeUniformLUTTableSingleton(object):
+class _QuantizeUniformCenterizedLUTTableSingleton(object):
     _INSTANCE = None
 
     @classmethod
@@ -3353,19 +3360,38 @@ class _QuantizeUniformLUTTableSingleton(object):
 
         """
         if cls._INSTANCE is None:
-            cls._INSTANCE = _QuantizeUniformLUTTable()
+            cls._INSTANCE = _QuantizeUniformLUTTable(centerize=True)
+        return cls._INSTANCE
+
+
+class _QuantizeUniformNotCenterizedLUTTableSingleton(object):
+    """Table for :func:`quantize_uniform` with ``to_bin_centers=False``."""
+    _INSTANCE = None
+
+    @classmethod
+    def get_instance(cls):
+        """Get singleton instance of :class:`_QuantizeUniformLUTTable`.
+
+        Returns
+        -------
+        _QuantizeUniformLUTTable
+            The global instance of :class:`_QuantizeUniformLUTTable`.
+
+        """
+        if cls._INSTANCE is None:
+            cls._INSTANCE = _QuantizeUniformLUTTable(centerize=False)
         return cls._INSTANCE
 
 
 class _QuantizeUniformLUTTable(object):
-    def __init__(self):
-        self.table = self._generate_quantize_uniform_table()
+    def __init__(self, centerize):
+        self.table = self._generate_quantize_uniform_table(centerize)
 
     def get_for_nb_bins(self, nb_bins):
         return self.table[nb_bins, :]
 
     @classmethod
-    def _generate_quantize_uniform_table(cls):
+    def _generate_quantize_uniform_table(cls, centerize):
         # For simplicity, we generate here the tables for nb_bins=0 (results
         # in all zeros) and nb_bins=256 too, even though these should usually
         # not be requested.
@@ -3377,7 +3403,9 @@ class _QuantizeUniformLUTTable(object):
         # making the difference negligible.
         for nb_bins in np.arange(1, 255).astype(np.uint8):
             q = 256 / nb_bins
-            table_q_f32 = np.floor(table / q) * q + q/2
+            table_q_f32 = np.floor(table / q) * q
+            if centerize:
+                table_q_f32 = table_q_f32 + q/2
             table_all_nb_bins[nb_bins] = table_q_f32
         table_all_nb_bins = np.clip(
             np.round(table_all_nb_bins), 0, 255).astype(np.uint8)
