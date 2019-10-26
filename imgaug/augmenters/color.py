@@ -2999,12 +2999,22 @@ class KMeansColorQuantization(_AbstractColorQuantization):
             name=name, deterministic=deterministic, random_state=random_state)
 
     def _quantize(self, image, n_colors):
-        return quantize_colors_kmeans(image, n_colors)
+        return quantize_kmeans(image, n_colors)
 
 
+@ia.deprecated("imgaug.augmenters.colors.quantize_kmeans")
 def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
-    """
-    Apply k-Means color quantization to an image.
+    """Outdated name of :func:`quantize_kmeans`."""
+    return quantize_kmeans(arr=image, nb_clusters=n_colors,
+                           nb_max_iter=n_max_iter, eps=eps)
+
+
+def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
+    """Quantize an array into N bins using k-means clustering.
+
+    If the input is an image, this method returns in an image with a maximum
+    of ``N`` colors. Similar colors are grouped to their mean. The k-means
+    clustering happens across channels and not channelwise.
 
     Code similar to https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_ml/
     py_kmeans/py_kmeans_opencv/py_kmeans_opencv.html
@@ -3027,18 +3037,20 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
 
     Parameters
     ----------
-    image : ndarray
-        Image in which to quantize colors. Expected to be of shape ``(H,W)``
-        or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+    arr : ndarray
+        Array to quantize. Expected to be of shape ``(H,W)`` or ``(H,W,C)``
+        with ``C`` usually being ``1`` or ``3``.
 
-    n_colors : int
-        Maximum number of output colors.
+    nb_clusters : int
+        Number of clusters to quantize into, i.e. ``k`` in k-means clustering.
+        This corresponds to the maximum number of colors in an output image.
 
-    n_max_iter : int, optional
-        Maximum number of iterations in k-Means.
+    nb_max_iter : int, optional
+        Maximum number of iterations that the k-means clustering algorithm
+        is run.
 
     eps : float, optional
-        Minimum change of all clusters per k-Means iteration. If all clusters
+        Minimum change of all clusters per k-means iteration. If all clusters
         change by less than this amount in an iteration, the clustering is
         stopped.
 
@@ -3052,7 +3064,7 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_colors_kmeans(image, 6)
+    >>> image_quantized = iaa.quantize_kmeans(image, 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
@@ -3060,25 +3072,25 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     that the six remaining colors do have to appear in the input image.
 
     """
-    assert image.ndim in [2, 3], (
-        "Expected two- or three-dimensional image shape, "
-        "got shape %s." % (image.shape,))
-    assert image.dtype.name == "uint8", "Expected uint8 image, got %s." % (
-        image.dtype.name,)
-    assert 2 <= n_colors <= 256, (
-        "Expected n_colors to be in the discrete interval [2..256]. "
-        "Got a value of %d instead." % (n_colors,))
+    assert arr.ndim in [2, 3], (
+        "Expected two- or three-dimensional array shape, "
+        "got shape %s." % (arr.shape,))
+    assert arr.dtype.name == "uint8", "Expected uint8 array, got %s." % (
+        arr.dtype.name,)
+    assert 2 <= nb_clusters <= 256, (
+        "Expected nb_clusters to be in the discrete interval [2..256]. "
+        "Got a value of %d instead." % (nb_clusters,))
 
     # without this check, kmeans throws an exception
-    n_pixels = np.prod(image.shape[0:2])
-    if n_colors >= n_pixels:
-        return np.copy(image)
+    n_pixels = np.prod(arr.shape[0:2])
+    if nb_clusters >= n_pixels:
+        return np.copy(arr)
 
-    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
-    colors = image.reshape((-1, nb_channels)).astype(np.float32)
+    nb_channels = 1 if arr.ndim == 2 else arr.shape[-1]
+    pixel_vectors = arr.reshape((-1, nb_channels)).astype(np.float32)
 
     criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS,
-                n_max_iter, eps)
+                nb_max_iter, eps)
     attempts = 1
 
     # We want our quantization function to be deterministic (so that the
@@ -3092,16 +3104,17 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     # TODO this is quite hacky
     cv2.setRNGSeed(1)
     _compactness, labels, centers = cv2.kmeans(
-        colors, n_colors, None, criteria, attempts, cv2.KMEANS_RANDOM_CENTERS)
+        pixel_vectors, nb_clusters, None, criteria, attempts,
+        cv2.KMEANS_RANDOM_CENTERS)
     # TODO replace by sample_seed function
     # cv2 seems to be able to handle SEED_MAX_VALUE (tested) but not floats
     cv2.setRNGSeed(iarandom.get_global_rng().generate_seed_())
 
     # Convert back to uint8 (or whatever the image dtype was) and to input
     # image shape
-    centers_uint8 = np.array(centers, dtype=image.dtype)
+    centers_uint8 = np.array(centers, dtype=arr.dtype)
     quantized_flat = centers_uint8[labels.flatten()]
-    return quantized_flat.reshape(image.shape)
+    return quantized_flat.reshape(arr.shape)
 
 
 class UniformColorQuantization(_AbstractColorQuantization):

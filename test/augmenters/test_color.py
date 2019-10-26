@@ -1805,7 +1805,7 @@ class TestKMeansColorQuantization(unittest.TestCase):
 
     @property
     def quantization_func_name(self):
-        return "imgaug.augmenters.color.quantize_colors_kmeans"
+        return "imgaug.augmenters.color.quantize_kmeans"
 
     def test___init___defaults(self):
         aug = self.augmenter()
@@ -2095,6 +2095,33 @@ class TestKMeansColorQuantization(unittest.TestCase):
 
 
 class Test_quantize_colors_kmeans(unittest.TestCase):
+    def test_warns_deprecated(self):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+
+            _ = iaa.quantize_colors_kmeans(arr, 2)
+
+            assert len(caught_warnings) == 1
+            assert (
+                "deprecated"
+                in str(caught_warnings[-1].message).lower()
+            )
+
+    @mock.patch("imgaug.augmenters.color.quantize_kmeans")
+    def test_calls_quantize_uniform(self, mock_qu):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        mock_qu.return_value = "foo"
+
+        with warnings.catch_warnings(record=True):
+            result = iaa.quantize_colors_kmeans(arr, 7)
+
+        mock_qu.assert_called_once_with(arr=arr, nb_clusters=7,
+                                        nb_max_iter=10, eps=1.0)
+        assert result == "foo"
+
+
+class Test_quantize_kmeans(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -2113,7 +2140,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_colors_kmeans(image, 2)
+        observed = iaa.quantize_kmeans(image, 2)
 
         assert np.array_equal(observed, expected)
 
@@ -2133,7 +2160,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
         ])
         expected = np.copy(image)
 
-        observed = iaa.quantize_colors_kmeans(image, 100)
+        observed = iaa.quantize_kmeans(image, 100)
 
         assert np.array_equal(observed, expected)
 
@@ -2145,7 +2172,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
 
         got_exception = False
         try:
-            _ = iaa.quantize_colors_kmeans(image, 1)
+            _ = iaa.quantize_kmeans(image, 1)
         except AssertionError as exc:
             assert "[2..256]" in str(exc)
             got_exception = True
@@ -2159,7 +2186,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
         # same quantization
         images_quantized = []
         for _ in sm.xrange(20):
-            images_quantized.append(iaa.quantize_colors_kmeans(image, 20))
+            images_quantized.append(iaa.quantize_kmeans(image, 20))
 
         for image_quantized in images_quantized[1:]:
             assert np.array_equal(image_quantized, images_quantized[0])
@@ -2179,7 +2206,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_kmeans(image, 2)
+                image_aug = iaa.quantize_kmeans(image, 2)
 
                 assert np.all(image_aug == 0)
                 assert image_aug.dtype.name == "uint8"
@@ -2197,7 +2224,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_kmeans(image, 2)
+                image_aug = iaa.quantize_kmeans(image, 2)
 
                 assert np.all(image_aug == 0)
                 assert image_aug.dtype.name == "uint8"
