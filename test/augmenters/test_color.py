@@ -2243,7 +2243,7 @@ class TestUniformColorQuantization(TestKMeansColorQuantization):
 
     @property
     def quantization_func_name(self):
-        return "imgaug.augmenters.color.quantize_uniform"
+        return "imgaug.augmenters.color.quantize_uniform_"
 
     def test___init___defaults(self):
         aug = self.augmenter()

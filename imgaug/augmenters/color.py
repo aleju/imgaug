@@ -3158,14 +3158,14 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_uniform`
+                :func:`imgaug.augmenters.color.quantize_uniform_`
             )
 
         if (image size > max_size)::
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_uniform`,
+                :func:`imgaug.augmenters.color.quantize_uniform_`,
                 :func:`imgaug.imgaug.imresize_single_image`
             )
 
@@ -3272,7 +3272,7 @@ class UniformColorQuantization(_AbstractColorQuantization):
         return self.counts
 
     def _quantize(self, image, counts):
-        return quantize_uniform(image, counts)
+        return quantize_uniform_(image, counts)
 
 
 class UniformColorQuantizationToNBits(_AbstractColorQuantization):
