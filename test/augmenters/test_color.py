@@ -2370,6 +2370,92 @@ class TestUniformColorQuantization(TestKMeansColorQuantization):
             == "foo")
 
 
+# Not that many tests here as it is basically identical to e.g.
+# UniformColorQuantization
+class TestUniformColorQuantizationToNBits(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def augmenter(self):
+        return iaa.UniformColorQuantizationToNBits
+
+    @property
+    def quantization_func_name(self):
+        return "imgaug.augmenters.color.quantize_uniform_to_n_bits"
+
+    def test___init___defaults(self):
+        aug = self.augmenter()
+        assert isinstance(aug.counts, iap.DiscreteUniform)
+        assert aug.counts.a.value == 1
+        assert aug.counts.b.value == 8
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+        assert aug.to_colorspace is None
+        assert aug.max_size is None
+        assert aug.interpolation == "linear"
+
+    def test___init___custom_parameters(self):
+        aug = self.augmenter(
+            nb_bits=(5, 8),
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
+            max_size=128,
+            interpolation="cubic"
+        )
+        assert isinstance(aug.counts, iap.DiscreteUniform)
+        assert aug.counts.a.value == 5
+        assert aug.counts.b.value == 8
+        assert aug.from_colorspace == iaa.CSPACE_BGR
+        assert isinstance(aug.to_colorspace, list)
+        assert aug.to_colorspace == [iaa.CSPACE_HSV,
+                                     iaa.CSPACE_Lab]
+        assert aug.max_size == 128
+        assert aug.interpolation == "cubic"
+
+    def test_images_with_1_channel_integrationtest(self):
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+        ])
+        expected = np.uint8([
+            [0, 0, 128, 128],
+            [0, 0, 128, 128],
+        ])
+
+        aug = self.augmenter(
+            nb_bits=1,
+            from_colorspace="RGB",
+            to_colorspace="RGB",
+            max_size=None)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, expected)
+
+    def test_images_with_3_channels_integrationtest(self):
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+        ])
+        expected = np.uint8([
+            [0, 0, 128, 128],
+            [0, 0, 128, 128],
+        ])
+
+        image = np.tile(image[..., np.newaxis], (1, 1, 3))
+        expected = np.tile(expected[..., np.newaxis], (1, 1, 3))
+
+        aug = self.augmenter(
+            nb_bits=1,
+            from_colorspace="RGB",
+            to_colorspace="RGB",
+            max_size=None)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, expected)
+
+
 class Test_quantize_colors_uniform(unittest.TestCase):
     def test_warns_deprecated(self):
         arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))

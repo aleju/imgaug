@@ -2737,7 +2737,9 @@ class ChangeColorTemperature(meta.Augmenter):
 @six.add_metaclass(ABCMeta)
 class _AbstractColorQuantization(meta.Augmenter):
     def __init__(self,
-                 n_colors=(2, 16), from_colorspace=CSPACE_RGB,
+                 counts=(2, 16),  # number of bits or colors
+                 counts_value_range=(2, None),
+                 from_colorspace=CSPACE_RGB,
                  to_colorspace=[CSPACE_RGB, CSPACE_Lab],
                  max_size=128,
                  interpolation="linear",
@@ -2746,8 +2748,9 @@ class _AbstractColorQuantization(meta.Augmenter):
         super(_AbstractColorQuantization, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        self.n_colors = iap.handle_discrete_param(
-            n_colors, "n_colors", value_range=(2, None),
+        self.counts_value_range = counts_value_range
+        self.counts = iap.handle_discrete_param(
+            counts, "counts", value_range=counts_value_range,
             tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
         self.from_colorspace = from_colorspace
         self.to_colorspace = to_colorspace
@@ -2755,15 +2758,17 @@ class _AbstractColorQuantization(meta.Augmenter):
         self.interpolation = interpolation
 
     def _draw_samples(self, n_augmentables, random_state):
-        n_colors = self.n_colors.draw_samples((n_augmentables,), random_state)
+        counts = self.counts.draw_samples((n_augmentables,), random_state)
+        counts = np.round(counts).astype(np.int32)
 
-        # Quantizing down to less than 2 colors does not make any sense.
-        # Note that we canget <2 here despite the value range constraint
-        # in __init__ if a StochasticParameter was provided, e.g.
+        # Note that we can get values outside of the value range for counts
+        # here if a StochasticParameter was provided, e.g.
         # Deterministic(1) is currently not verified.
-        n_colors = np.clip(n_colors, 2, None)
+        counts = np.clip(counts,
+                         self.counts_value_range[0],
+                         self.counts_value_range[1])
 
-        return n_colors
+        return counts
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         if batch.images is None:
@@ -2771,14 +2776,14 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         images = batch.images
         rss = random_state.duplicate(1 + len(images))
-        n_colors = self._draw_samples(len(images), rss[-1])
+        counts = self._draw_samples(len(images), rss[-1])
 
         for i, image in enumerate(images):
-            batch.images[i] = self._augment_single_image(image, n_colors[i],
+            batch.images[i] = self._augment_single_image(image, counts[i],
                                                          rss[i])
         return batch
 
-    def _augment_single_image(self, image, n_colors, random_state):
+    def _augment_single_image(self, image, counts, random_state):
         assert image.shape[-1] in [1, 3, 4], (
             "Expected image with 1, 3 or 4 channels, "
             "got %d (shape: %s)." % (image.shape[-1], image.shape))
@@ -2789,7 +2794,7 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         if image.shape[-1] == 1:
             # 2D image
-            image_aug = self._quantize(image, n_colors)
+            image_aug = self._quantize(image, counts)
         else:
             # 3D image with 3 or 4 channels
             alpha_channel = None
@@ -2818,7 +2823,7 @@ class _AbstractColorQuantization(meta.Augmenter):
                     deterministic=True)
 
             image_tf = cs.augment_image(image)
-            image_tf_aug = self._quantize(image_tf, n_colors)
+            image_tf_aug = self._quantize(image_tf, counts)
             image_aug = cs_inv.augment_image(image_tf_aug)
 
             if alpha_channel is not None:
@@ -2833,11 +2838,11 @@ class _AbstractColorQuantization(meta.Augmenter):
         return image_aug
 
     @abstractmethod
-    def _quantize(self, image, n_colors):
+    def _quantize(self, image, count):
         """Apply the augmenter-specific quantization function to an image."""
 
     def get_parameters(self):
-        return [self.n_colors,
+        return [self.counts,
                 self.from_colorspace,
                 self.to_colorspace,
                 self.max_size,
@@ -2991,15 +2996,20 @@ class KMeansColorQuantization(_AbstractColorQuantization):
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
         super(KMeansColorQuantization, self).__init__(
-            n_colors=n_colors,
+            counts=n_colors,
             from_colorspace=from_colorspace,
             to_colorspace=to_colorspace,
             max_size=max_size,
             interpolation=interpolation,
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _quantize(self, image, n_colors):
-        return quantize_kmeans(image, n_colors)
+    @property
+    def n_colors(self):
+        """Alias for property ``counts``."""
+        return self.counts
+
+    def _quantize(self, image, counts):
+        return quantize_kmeans(image, counts)
 
 
 @ia.deprecated("imgaug.augmenters.colors.quantize_kmeans")
@@ -3249,15 +3259,160 @@ class UniformColorQuantization(_AbstractColorQuantization):
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
         super(UniformColorQuantization, self).__init__(
-            n_colors=n_colors,
+            counts=n_colors,
             from_colorspace=from_colorspace,
             to_colorspace=to_colorspace,
             max_size=max_size,
             interpolation=interpolation,
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _quantize(self, image, n_colors):
-        return quantize_uniform(image, n_colors)
+    @property
+    def n_colors(self):
+        """Alias for property ``counts``."""
+        return self.counts
+
+    def _quantize(self, image, counts):
+        return quantize_uniform(image, counts)
+
+
+class UniformColorQuantizationToNBits(_AbstractColorQuantization):
+    """Quantize images by setting ``8-B`` bits of each component to zero.
+
+    This augmenter sets the ``8-B`` highest frequency (rightmost) bits of
+    each array component to zero. For ``B`` bits this is equivalent to
+    changing each component's intensity value ``v`` to
+    ``v' = v & (2**(8-B) - 1)``, e.g. for ``B=3`` this results in
+    ``v' = c & ~(2**(3-1) - 1) = c & ~3 = c & ~0000 0011 = c & 1111 1100``.
+
+    This augmenter behaves for ``B`` similarly to
+    ``UniformColorQuantization(2**B)``, but quantizes each bin with interval
+    ``(a, b)`` to ``a`` instead of ``a + (b-a)/2``.
+
+    This augmenter is comparable to :func:`PIL.ImageOps.posterize`.
+
+    .. note::
+
+        This augmenter expects input images to be either grayscale
+        or to have 3 or 4 channels and use colorspace `from_colorspace`. If
+        images have 4 channels, it is assumed that the 4th channel is an alpha
+        channel and it will not be quantized.
+
+    dtype support::
+
+        if (image size <= max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_uniform`
+            )
+
+        if (image size > max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_uniform`,
+                :func:`imgaug.imgaug.imresize_single_image`
+            )
+
+    Parameters
+    ----------
+    nb_bits : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of bits to keep in each image's array component.
+
+            * If a number, exactly that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a value will be sampled per
+              image from that parameter.
+
+    to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
+        The colorspace in which to perform the quantization.
+        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
+        This will be ignored for grayscale input images.
+
+            * If ``None`` the colorspace of input images will not be changed.
+            * If a string, it must be among the allowed colorspaces.
+            * If a list, it is expected to be a list of strings, each one
+              being an allowed colorspace. A random element from the list
+              will be chosen per image.
+            * If a StochasticParameter, it is expected to return string. A new
+              sample will be drawn per image.
+
+    from_colorspace : str, optional
+        The colorspace of the input images.
+        See `to_colorspace`. Only a single string is allowed.
+
+    max_size : None or int, optional
+        Maximum image size at which to perform the augmentation.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before running the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the augmentation. The final output image has
+        the same size as the input image. Use ``None`` to apply no downscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.UniformColorQuantizationToNBits()
+
+    Create an augmenter to apply uniform color quantization to images using a
+    random amount of bits to remove, sampled uniformly from the discrete
+    interval ``[1..8]``.
+
+    >>> aug = iaa.UniformColorQuantizationToNBits(nb_bits=(4, 8))
+
+    Create an augmenter that quantizes images by removing ``8-B`` rightmost
+    bits from each component, where ``B`` is uniformly sampled from the
+    discrete interval ``[4..8]``.
+
+    >>> aug = iaa.UniformColorQuantizationToNBits(
+    >>>     from_colorspace=iaa.CSPACE_BGR,
+    >>>     to_colorspace=[iaa.CSPACE_RGB, iaa.CSPACE_HSV])
+
+    Create an augmenter that uniformly quantizes images in either ``RGB``
+    or ``HSV`` colorspace (randomly picked per image). The input colorspace
+    of all images has to be ``BGR``.
+
+    """
+
+    def __init__(self,
+                 nb_bits=(1, 8),
+                 from_colorspace=CSPACE_RGB,
+                 to_colorspace=None,
+                 max_size=None,
+                 interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+
+        # wrt value range: for discrete params, (1, 8) results in
+        # DiscreteUniform with interval [1, 8]
+        super(UniformColorQuantizationToNBits, self).__init__(
+            counts=nb_bits,
+            counts_value_range=(1, 8),
+            from_colorspace=from_colorspace,
+            to_colorspace=to_colorspace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _quantize(self, image, counts):
+        return quantize_uniform_to_n_bits(image, counts)
 
 
 @ia.deprecated("imgaug.augmenters.colors.quantize_uniform")
