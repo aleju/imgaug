@@ -1812,28 +1812,28 @@ class TestKMeansColorQuantization(unittest.TestCase):
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
-        assert aug.from_colorspace == iaa.ChangeColorspace.RGB
+        assert aug.from_colorspace == iaa.CSPACE_RGB
         assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.RGB,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace == [iaa.CSPACE_RGB,
+                                     iaa.CSPACE_Lab]
         assert aug.max_size == 128
         assert aug.interpolation == "linear"
 
     def test___init___custom_parameters(self):
         aug = self.augmenter(
             n_colors=(5, 8),
-            from_colorspace=iaa.ChangeColorspace.BGR,
-            to_colorspace=[iaa.ChangeColorspace.HSV, iaa.ChangeColorspace.Lab],
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
             max_size=None,
             interpolation="cubic"
         )
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 5
         assert aug.n_colors.b.value == 8
-        assert aug.from_colorspace == iaa.ChangeColorspace.BGR
+        assert aug.from_colorspace == iaa.CSPACE_BGR
         assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.HSV,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace == [iaa.CSPACE_HSV,
+                                     iaa.CSPACE_Lab]
         assert aug.max_size is None
         assert aug.interpolation == "cubic"
 
@@ -2077,8 +2077,8 @@ class TestKMeansColorQuantization(unittest.TestCase):
     def test_get_parameters(self):
         aug = self.augmenter(
             n_colors=(5, 8),
-            from_colorspace=iaa.ChangeColorspace.BGR,
-            to_colorspace=[iaa.ChangeColorspace.HSV, iaa.ChangeColorspace.Lab],
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
             max_size=None,
             interpolation="cubic"
         )
@@ -2086,10 +2086,10 @@ class TestKMeansColorQuantization(unittest.TestCase):
         assert isinstance(params[0], iap.DiscreteUniform)
         assert params[0].a.value == 5
         assert params[0].b.value == 8
-        assert params[1] == iaa.ChangeColorspace.BGR
+        assert params[1] == iaa.CSPACE_BGR
         assert isinstance(params[2], list)
-        assert params[2] == [iaa.ChangeColorspace.HSV,
-                             iaa.ChangeColorspace.Lab]
+        assert params[2] == [iaa.CSPACE_HSV,
+                             iaa.CSPACE_Lab]
         assert params[3] is None
         assert params[4] == "cubic"
 
@@ -2248,7 +2248,7 @@ class UniformColorQuantization(TestKMeansColorQuantization):
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
-        assert aug.from_colorspace == iaa.ChangeColorspace.RGB
+        assert aug.from_colorspace == iaa.CSPACE_RGB
         assert aug.to_colorspace is None
         assert aug.max_size is None
         assert aug.interpolation == "linear"
@@ -2256,18 +2256,18 @@ class UniformColorQuantization(TestKMeansColorQuantization):
     def test___init___custom_parameters(self):
         aug = self.augmenter(
             n_colors=(5, 8),
-            from_colorspace=iaa.ChangeColorspace.BGR,
-            to_colorspace=[iaa.ChangeColorspace.HSV, iaa.ChangeColorspace.Lab],
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
             max_size=128,
             interpolation="cubic"
         )
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 5
         assert aug.n_colors.b.value == 8
-        assert aug.from_colorspace == iaa.ChangeColorspace.BGR
+        assert aug.from_colorspace == iaa.CSPACE_BGR
         assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.HSV,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace == [iaa.CSPACE_HSV,
+                                     iaa.CSPACE_Lab]
         assert aug.max_size == 128
         assert aug.interpolation == "cubic"
 
