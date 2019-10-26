@@ -3273,7 +3273,8 @@ def quantize_uniform(arr, nb_bins):
 
     For ``uint8`` arrays the equation is ``floor(v/q)*q + q/2`` with
     ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
-    the target number of bins (i.e. colors) after quantization.
+    the target number of bins (roughly matches number of colors) after
+    quantization.
 
     dtype support::
 
@@ -3315,8 +3316,9 @@ def quantize_uniform(arr, nb_bins):
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
-    These colors are then quantized so that only ``6`` are remaining. Note
-    that the six remaining colors do have to appear in the input image.
+    Each component is then quantized into one of ``6`` bins that regularly
+    split up the value range of ``[0..255]``, i.e. the resolution w.r.t. to
+    the value range is reduced.
 
     """
     assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
@@ -3325,11 +3327,58 @@ def quantize_uniform(arr, nb_bins):
         "Expected nb_bins to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_bins,))
 
-    if nb_bins == 256:
+    if nb_bins == 256 or 0 in arr.shape:
         return np.copy(arr)
 
-    q = 256 / nb_bins
-    arr_quant_f32 = np.floor(arr.astype(np.float32) / q) * q + q/2
+    table = (_QuantizeUniformLUTTableSingleton
+             .get_instance()
+             .get_for_nb_bins(nb_bins))
+    arr_q = cv2.LUT(arr, table)
+    if arr.ndim == 3 and arr_q.ndim == 2:
+        return arr_q[..., np.newaxis]
+    return arr_q
 
-    arr_quant_u8 = np.clip(np.round(arr_quant_f32), 0, 255).astype(np.uint8)
-    return arr_quant_u8
+
+class _QuantizeUniformLUTTableSingleton(object):
+    _INSTANCE = None
+
+    @classmethod
+    def get_instance(cls):
+        """Get singleton instance of :class:`_QuantizeUniformLUTTable`.
+
+        Returns
+        -------
+        _QuantizeUniformLUTTable
+            The global instance of :class:`_QuantizeUniformLUTTable`.
+
+        """
+        if cls._INSTANCE is None:
+            cls._INSTANCE = _QuantizeUniformLUTTable()
+        return cls._INSTANCE
+
+
+class _QuantizeUniformLUTTable(object):
+    def __init__(self):
+        self.table = self._generate_quantize_uniform_table()
+
+    def get_for_nb_bins(self, nb_bins):
+        return self.table[nb_bins, :]
+
+    @classmethod
+    def _generate_quantize_uniform_table(cls):
+        # For simplicity, we generate here the tables for nb_bins=0 (results
+        # in all zeros) and nb_bins=256 too, even though these should usually
+        # not be requested.
+        table = np.arange(0, 256).astype(np.float32)
+        table_all_nb_bins = np.zeros((256, 256), dtype=np.float32)
+
+        # This loop could be done a little bit faster by vectorizing it.
+        # It is expected to be run exactly once per run of a whole script,
+        # making the difference negligible.
+        for nb_bins in np.arange(1, 255).astype(np.uint8):
+            q = 256 / nb_bins
+            table_q_f32 = np.floor(table / q) * q + q/2
+            table_all_nb_bins[nb_bins] = table_q_f32
+        table_all_nb_bins = np.clip(
+            np.round(table_all_nb_bins), 0, 255).astype(np.uint8)
+        return table_all_nb_bins

@@ -2482,6 +2482,25 @@ class Test_quantize_uniform(unittest.TestCase):
             got_exception = True
         assert got_exception
 
+    def test_noncontiguous(self):
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+        ])
+        expected = np.uint8([
+            [64, 64, 192, 192],
+            [64, 64, 192, 192],
+        ])
+
+        image_v = np.fliplr(np.copy(image))
+        assert image_v.flags["C_CONTIGUOUS"] is False
+
+        observed = iaa.quantize_uniform(image, 2)
+
+        assert observed.shape == (2, 4)
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
     def test_zero_sized_axes(self):
         shapes = [
             (0, 0),
