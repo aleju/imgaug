@@ -3429,6 +3429,37 @@ def quantize_colors_uniform(image, n_colors):
 def quantize_uniform(arr, nb_bins, to_bin_centers=True):
     """Quantize an array into N equally-sized bins.
 
+    See :func:`quantize_uniform_` for details.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.quantize_uniform_`.
+
+    Parameters
+    ----------
+    arr : ndarray
+        See :func:`quantize_uniform_`.
+
+    nb_bins : int
+        See :func:`quantize_uniform_`.
+
+    to_bin_centers : bool
+        See :func:`quantize_uniform_`.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components.
+
+    """
+    return quantize_uniform_(np.copy(arr),
+                             nb_bins=nb_bins,
+                             to_bin_centers=to_bin_centers)
+
+
+def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
+    """Quantize an array into N equally-sized bins in-place.
+
     This can be used to quantize/posterize an image into N colors.
 
     For ``uint8`` arrays the equation is ``floor(v/q)*q + q/2`` with
@@ -3457,6 +3488,7 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
     arr : ndarray
         Array to quantize, usually an image. Expected to be of shape ``(H,W)``
         or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+        This array *may* be changed in-place.
 
     nb_bins : int
         Number of equally-sized bins to quantize into. This corresponds to
@@ -3469,14 +3501,15 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
     Returns
     -------
     ndarray
-        Array with quantized components.
+        Array with quantized components. This can be the input array with
+        components changed in-place.
 
     Examples
     --------
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_uniform(image, 6)
+    >>> image_quantized = iaa.quantize_uniform_(np.copy(image), 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
@@ -3486,7 +3519,7 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
 
     """
     if nb_bins == 256 or 0 in arr.shape:
-        return np.copy(arr)
+        return arr
 
     assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
         arr.dtype.name,)
@@ -3500,10 +3533,8 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
     table = (table_class
              .get_instance()
              .get_for_nb_bins(nb_bins))
-    arr_q = cv2.LUT(arr, table)
-    if arr.ndim == 3 and arr_q.ndim == 2:
-        return arr_q[..., np.newaxis]
-    return arr_q
+    arr = cv2.LUT(arr, table, dst=arr)
+    return arr
 
 
 class _QuantizeUniformCenterizedLUTTableSingleton(object):

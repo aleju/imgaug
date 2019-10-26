@@ -5,7 +5,6 @@ import timeit
 
 
 def main():
-    print("--------")
     for size in [64, 128, 256, 512, 1024]:
         for nb_bits in [1, 2, 3, 4, 5, 6, 7, 8]:
             time_iaa = timeit.timeit(

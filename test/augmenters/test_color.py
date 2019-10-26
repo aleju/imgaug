@@ -2489,6 +2489,22 @@ class Test_quantize_colors_uniform(unittest.TestCase):
 
 
 class Test_quantize_uniform(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_")
+    def test_calls_inplace_function(self, mock_qu):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        mock_qu.return_value = "foo"
+
+        result = iaa.quantize_uniform(image, 3)
+
+        # image provided to in-place func must be copy with same content
+        assert mock_qu.call_args_list[0][0][0] is not image
+        assert np.array_equal(mock_qu.call_args_list[0][0][0], image)
+
+        assert mock_qu.call_args_list[0][1]["nb_bins"] == 3
+        assert result == "foo"
+
+
+class Test_quantize_uniform_(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -2507,7 +2523,7 @@ class Test_quantize_uniform(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_uniform(image, 2)
+        observed = iaa.quantize_uniform_(np.copy(image), 2)
 
         assert np.array_equal(observed, expected)
 
@@ -2540,7 +2556,7 @@ class Test_quantize_uniform(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_uniform(image, 4)
+        observed = iaa.quantize_uniform_(np.copy(image), 4)
 
         assert np.array_equal(observed, expected)
 
@@ -2570,7 +2586,6 @@ class Test_quantize_uniform(unittest.TestCase):
             [127, 128, 220, 220]
         ])
 
-        q = 256/4
         c1 = 0
         c2 = 64
         c3 = 128
@@ -2585,7 +2600,9 @@ class Test_quantize_uniform(unittest.TestCase):
         image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
         expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_uniform(image, 4, to_bin_centers=False)
+        observed = iaa.quantize_uniform_(np.copy(image),
+                                         4,
+                                         to_bin_centers=False)
 
         assert np.array_equal(observed, expected)
 
@@ -2597,7 +2614,7 @@ class Test_quantize_uniform(unittest.TestCase):
 
         got_exception = False
         try:
-            _ = iaa.quantize_uniform(image, 1)
+            _ = iaa.quantize_uniform_(np.copy(image), 1)
         except AssertionError as exc:
             assert "[2..256]" in str(exc)
             got_exception = True
@@ -2616,7 +2633,7 @@ class Test_quantize_uniform(unittest.TestCase):
         image_v = np.fliplr(np.copy(image))
         assert image_v.flags["C_CONTIGUOUS"] is False
 
-        observed = iaa.quantize_uniform(image, 2)
+        observed = iaa.quantize_uniform_(np.copy(image), 2)
 
         assert observed.shape == (2, 4)
         assert observed.dtype.name == "uint8"
@@ -2637,7 +2654,7 @@ class Test_quantize_uniform(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_uniform(image, 2)
+                image_aug = iaa.quantize_uniform_(np.copy(image), 2)
 
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
@@ -2654,7 +2671,7 @@ class Test_quantize_uniform(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_uniform(image, 2)
+                image_aug = iaa.quantize_uniform_(np.copy(image), 2)
 
                 assert np.any(image_aug > 0)
                 assert image_aug.dtype.name == "uint8"
