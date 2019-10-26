@@ -18,3 +18,4 @@
   `PIL.ImageOps.posterize()`.
 * Added augmenter `UniformColorQuantizationToNBits`.
 * Added augmenter `Posterize` (alias of `UniformColorQuantizationToNBits`).
+* Fixed `quantize_uniform()` producing wrong outputs for non-contiguous arrays.

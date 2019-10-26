@@ -2626,14 +2626,14 @@ class Test_quantize_uniform_(unittest.TestCase):
             [0, 1, 255, 255],
         ])
         expected = np.uint8([
-            [64, 64, 192, 192],
-            [64, 64, 192, 192],
+            [192, 192, 64, 64],
+            [192, 192, 64, 64],
         ])
 
         image_v = np.fliplr(np.copy(image))
         assert image_v.flags["C_CONTIGUOUS"] is False
 
-        observed = iaa.quantize_uniform_(np.copy(image), 2)
+        observed = iaa.quantize_uniform_(image_v, 2)
 
         assert observed.shape == (2, 4)
         assert observed.dtype.name == "uint8"

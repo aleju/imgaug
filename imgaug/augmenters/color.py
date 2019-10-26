@@ -3527,6 +3527,9 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
         "Expected nb_bins to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_bins,))
 
+    if arr.flags["C_CONTIGUOUS"] is False:
+        arr = np.ascontiguousarray(arr)
+
     table_class = (_QuantizeUniformCenterizedLUTTableSingleton
                    if to_bin_centers
                    else _QuantizeUniformNotCenterizedLUTTableSingleton)
