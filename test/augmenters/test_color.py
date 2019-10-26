@@ -2233,7 +2233,7 @@ class Test_quantize_kmeans(unittest.TestCase):
                 assert image_aug.shape == shape
 
 
-class UniformColorQuantization(TestKMeansColorQuantization):
+class TestUniformColorQuantization(TestKMeansColorQuantization):
     def setUp(self):
         reseed()
 
