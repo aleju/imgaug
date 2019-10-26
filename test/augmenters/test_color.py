@@ -2597,3 +2597,16 @@ class Test_quantize_uniform_to_n_bits(unittest.TestCase):
         mock_qu.assert_called_once_with(image, 2**nb_bits,
                                         to_bin_centers=False)
         assert result == "foo"
+
+
+class Test_posterize(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_to_n_bits")
+    def test_mocked(self, mock_qu):
+        mock_qu.return_value = "foo"
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        nb_bits = 3
+
+        result = iaa.posterize(image, nb_bits)
+
+        mock_qu.assert_called_once_with(image, nb_bits)
+        assert result == "foo"

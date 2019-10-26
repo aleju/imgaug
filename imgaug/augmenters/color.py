@@ -3461,3 +3461,26 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
         return np.copy(arr)
 
     return quantize_uniform(arr, 2**nb_bits, to_bin_centers=False)
+
+
+def posterize(arr, nb_bits):
+    """Alias for :func:`quantize_uniform_to_n_bits`.
+
+    This function is an alias for :func:`quantize_uniform_to_n_bits` and was
+    added for users familiar with the same function in PIL.
+
+    Parameters
+    ----------
+    arr : ndarray
+        See :func:`quantize_uniform_to_n_bits`.
+
+    nb_bits : int
+        See :func:`quantize_uniform_to_n_bits`.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components.
+
+    """
+    return quantize_uniform_to_n_bits(arr, nb_bits)
