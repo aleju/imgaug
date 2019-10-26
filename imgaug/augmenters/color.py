@@ -3319,8 +3319,6 @@ def quantize_uniform(arr, nb_bins):
         "Expected nb_bins to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_bins,))
 
-    nb_bins = np.clip(nb_bins, 2, 256)
-
     if nb_bins == 256:
         return np.copy(arr)
 
