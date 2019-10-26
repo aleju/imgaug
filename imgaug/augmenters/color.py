@@ -3019,6 +3019,12 @@ def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
     Code similar to https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_ml/
     py_kmeans/py_kmeans_opencv/py_kmeans_opencv.html
 
+    .. warning ::
+
+        This function currently changes the RNG state of both OpenCV's
+        internal RNG and imgaug's global RNG. This is necessary in order
+        to ensure that the k-means clustering happens deterministically.
+
     dtype support::
 
         * ``uint8``: yes; fully tested
