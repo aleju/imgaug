@@ -3501,7 +3501,7 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
     Returns
     -------
     ndarray
-        Array with quantized components. This can be the input array with
+        Array with quantized components. This *may* be the input array with
         components changed in-place.
 
     Examples
@@ -3609,6 +3609,32 @@ class _QuantizeUniformLUTTable(object):
 def quantize_uniform_to_n_bits(arr, nb_bits):
     """Reduce each component in an array to a maximum number of bits.
 
+    See :func:`quantize_uniform_to_n_bits` for details.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.quantize_uniform_to_n_bits_`.
+
+    Parameters
+    ----------
+    arr : ndarray
+        See :func:`quantize_uniform_to_n_bits`.
+
+    nb_bits : int
+        See :func:`quantize_uniform_to_n_bits`.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components.
+
+    """
+    return quantize_uniform_to_n_bits_(np.copy(arr), nb_bits=nb_bits)
+
+
+def quantize_uniform_to_n_bits_(arr, nb_bits):
+    """Reduce each component in an array to a maximum number of bits in-place.
+
     This operation sets the ``8-B`` highest frequency (rightmost) bits to zero.
     For ``B`` bits this is equivalent to changing each component's intensity
     value ``v`` to ``v' = v & (2**(8-B) - 1)``, e.g. for ``B=3`` this results
@@ -3620,11 +3646,16 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
     This function produces the same outputs as :func:`PIL.ImageOps.posterize`,
     but is significantly faster.
 
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.quantize_uniform_`.
+
     Parameters
     ----------
     arr : ndarray
         Array to quantize, usually an image. Expected to be of shape ``(H,W)``
         or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+        This array *may* be changed in-place.
 
     nb_bits : int
         Number of bits to keep in each array component.
@@ -3632,14 +3663,15 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
     Returns
     -------
     ndarray
-        Array with quantized components.
+        Array with quantized components. This *may* be the input array with
+        components changed in-place.
 
     Examples
     --------
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_uniform_to_n_bits(image, 6)
+    >>> image_quantized = iaa.quantize_uniform_to_n_bits_(np.copy(image), 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
@@ -3650,11 +3682,7 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
     assert 1 <= nb_bits <= 8, (
         "Expected nb_bits to be in the discrete interval [1..8]. "
         "Got a value of %d instead." % (nb_bits,))
-
-    if nb_bits == 8:
-        return np.copy(arr)
-
-    return quantize_uniform(arr, 2**nb_bits, to_bin_centers=False)
+    return quantize_uniform_(arr, nb_bins=2**nb_bits, to_bin_centers=False)
 
 
 def posterize(arr, nb_bits):

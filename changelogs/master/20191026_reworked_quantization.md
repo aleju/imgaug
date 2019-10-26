@@ -16,6 +16,7 @@
 * Added function `imgaug.augmenters.color.quantize_uniform_()`, the in-place
   version of `quantize_uniform()`.
 * Added function `imgaug.augmenters.color.quantize_uniform_to_n_bits()`.
+* Added function `imgaug.augmenters.color.quantize_uniform_to_n_bits_()`.
 * Added function `imgaug.augmenters.color.posterize()`, an alias of
   `quantize_uniform_to_n_bits()` that produces the same outputs as
   `PIL.ImageOps.posterize()`.

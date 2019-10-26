@@ -2678,14 +2678,31 @@ class Test_quantize_uniform_(unittest.TestCase):
                 assert image_aug.shape == shape
 
 
+class Test_quantize_uniform_to_n_bits(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_to_n_bits_")
+    def test_calls_inplace_function(self, mock_qu):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        mock_qu.return_value = "foo"
+
+        result = iaa.quantize_uniform_to_n_bits(image, 3)
+
+        # image provided to in-place func must be copy with same content
+        assert mock_qu.call_args_list[0][0][0] is not image
+        assert np.array_equal(mock_qu.call_args_list[0][0][0], image)
+
+        assert mock_qu.call_args_list[0][1]["nb_bits"] == 3
+        assert result == "foo"
+
+
 # not much testing necessary here as the function is a wrapper around
 # quantize_uniform()
-class Test_quantize_uniform_to_n_bits(unittest.TestCase):
+class Test_quantize_uniform_to_n_bits_(unittest.TestCase):
     def test_by_comparison_with_pil(self):
         image = np.arange(64*64*3).reshape((64, 64, 3))
         image = np.mod(image, 255).astype(np.uint8)
         for nb_bits in [1, 2, 3, 4, 5, 6, 7, 8]:
-            image_iaa = iaa.quantize_uniform_to_n_bits(image, nb_bits)
+            image_iaa = iaa.quantize_uniform_to_n_bits_(np.copy(image),
+                                                        nb_bits)
             image_pil = np.asarray(
                 PIL.ImageOps.posterize(
                     PIL.Image.fromarray(image),
@@ -2695,16 +2712,20 @@ class Test_quantize_uniform_to_n_bits(unittest.TestCase):
 
             assert np.array_equal(image_iaa, image_pil)
 
-    @mock.patch("imgaug.augmenters.color.quantize_uniform")
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_")
     def test_mocked(self, mock_qu):
         mock_qu.return_value = "foo"
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         nb_bits = 3
 
-        result = iaa.quantize_uniform_to_n_bits(image, nb_bits)
+        result = iaa.quantize_uniform_to_n_bits_(np.copy(image), nb_bits)
 
-        mock_qu.assert_called_once_with(image, 2**nb_bits,
-                                        to_bin_centers=False)
+        # image provided to in-place func must be copy with same content
+        assert mock_qu.call_args_list[0][0][0] is not image
+        assert np.array_equal(mock_qu.call_args_list[0][0][0], image)
+
+        assert mock_qu.call_args_list[0][1]["nb_bins"] == 2**nb_bits
+        assert mock_qu.call_args_list[0][1]["to_bin_centers"] is False
         assert result == "foo"
 
 
