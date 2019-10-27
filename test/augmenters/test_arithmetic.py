@@ -3096,6 +3096,26 @@ class TestCoarsePepper(unittest.TestCase):
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
+class Test_invert_(unittest.TestCase):
+    def test_arr_is_noncontiguous_uint8(self):
+        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+        max_vr_flipped = np.fliplr(np.copy(zeros + 255))
+
+        observed = iaa.invert_(max_vr_flipped)
+        expected = zeros
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_arr_is_view_uint8(self):
+        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+        max_vr_view = np.copy(zeros + 255)[:, :, [0, 2]]
+
+        observed = iaa.invert_(max_vr_view)
+        expected = zeros[:, :, [0, 2]]
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+
 class TestInvert(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -3182,15 +3202,6 @@ class TestInvert(unittest.TestCase):
         img = np.zeros((1, 1, 100), dtype=np.uint8) + 255
         observed = aug.augment_image(img)
         assert len(np.unique(observed)) == 2
-
-    def test_arr_is_noncontiguous_uint8(self):
-        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
-        max_vr_flipped = np.fliplr(np.copy(zeros + 255))
-
-        observed = iaa.Invert(p=1.0).augment_image(max_vr_flipped)
-        expected = zeros
-        assert observed.dtype.name == "uint8"
-        assert np.array_equal(observed, expected)
 
     # TODO split into two tests
     def test_p_is_stochastic_parameter_per_channel_is_probability(self):

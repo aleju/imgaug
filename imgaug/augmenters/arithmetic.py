@@ -747,6 +747,33 @@ def invert(image, min_value=None, max_value=None):
 
     dtype support::
 
+        See :func:`imgaug.augmenters.arithmetic.invert_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        See :func:`invert_`.
+
+    min_value : None or number, optional
+        See :func:`invert_`.
+
+    max_value : None or number, optional
+        See :func:`invert_`.
+
+    Returns
+    -------
+    ndarray
+        Inverted image.
+
+    """
+    return invert_(np.copy(image), min_value=min_value, max_value=max_value)
+
+
+def invert_(image, min_value=None, max_value=None):
+    """Invert an array in-place.
+
+    dtype support::
+
         if (min_value=None and max_value=None)::
 
             * ``uint8``: yes; fully tested
@@ -790,6 +817,7 @@ def invert(image, min_value=None, max_value=None):
     ----------
     image : ndarray
         Image array of shape ``(H,W,[C])``.
+        The array *might* be modified in-place.
 
     min_value : None or number, optional
         Minimum of the value range of input images, e.g. ``0`` for ``uint8``
@@ -804,7 +832,8 @@ def invert(image, min_value=None, max_value=None):
     Returns
     -------
     ndarray
-        Inverted image.
+        Inverted image. This *can* be the same array as input in `image`,
+        modified in-place.
 
     """
     # when no custom min/max are chosen, all bool, uint, int and float dtypes
@@ -851,7 +880,7 @@ def invert(image, min_value=None, max_value=None):
 
     dtype_kind_to_invert_func = {
         "b": _invert_bool,
-        "u": _invert_uint,
+        "u": _invert_uint_,
         "i": _invert_int,
         "f": _invert_float
     }
@@ -867,19 +896,19 @@ def _invert_bool(arr, min_value, max_value):
     return ~arr
 
 
-def _invert_uint(arr, min_value, max_value):
+def _invert_uint_(arr, min_value, max_value):
     if arr.dtype.name == "uint8":
         if 0 in arr.shape:
             return np.copy(arr)
 
+        if arr.flags["OWNDATA"] is False:
+            arr = np.copy(arr)
         if arr.flags["C_CONTIGUOUS"] is False:
             arr = np.ascontiguousarray(arr)
 
         table = _generate_table_for_invert_uint8(min_value, max_value)
-        arr_inv = cv2.LUT(arr, table)
-        if arr_inv.ndim == 2 and arr.ndim == 3:
-            arr_inv = arr_inv[:, :, np.newaxis]
-        return arr_inv
+        arr = cv2.LUT(arr, table, dst=arr)
+        return arr
     else:
         if min_value == 0 and max_value == np.iinfo(arr.dtype).max:
             return max_value - arr
@@ -3129,16 +3158,16 @@ class Invert(meta.Augmenter):
         for image, per_channel_samples_i, p_samples_i in gen:
             if per_channel_samples_i > 0.5:
                 mask = p_samples_i > 0.5
-                image[..., mask] = invert(image[..., mask],
-                                          self.min_value, self.max_value)
+                image[..., mask] = invert_(image[..., mask],
+                                           self.min_value, self.max_value)
             else:
                 # p_samples_i.size == 0 is the case when the channel axis
                 # has value 0 and hence p_samples_i[0] fails. By still
                 # calling invert() in these cases instead of changing nothing
                 # we allow the unittests for Invert to also test invert().
                 if p_samples_i.size == 0 or p_samples_i[0] > 0.5:
-                    image[:, :, :] = invert(image, self.min_value,
-                                            self.max_value)
+                    image[:, :, :] = invert_(image, self.min_value,
+                                             self.max_value)
 
         return batch
 
