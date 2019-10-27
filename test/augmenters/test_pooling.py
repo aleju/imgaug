@@ -170,6 +170,26 @@ class _TestPoolingAugmentersBase(object):
     def test_augment_heatmaps__kernel_size_is_one(self):
         self._test_augment_heatmaps__kernel_size_is_noop(1)
 
+    def _test_augment_segmaps__kernel_size_is_noop(self, kernel_size):
+        from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+        arr = np.int32([
+            [0, 1, 2],
+            [1, 2, 3]
+        ])
+        segmaps = SegmentationMapsOnImage(arr, shape=(6, 6, 3))
+        aug = self.augmenter(kernel_size)
+
+        segmaps_aug = aug.augment_segmentation_maps(segmaps)
+
+        assert segmaps_aug.shape == (6, 6, 3)
+        assert np.allclose(segmaps_aug.arr, arr[..., np.newaxis])
+
+    def test_augment_segmaps__kernel_size_is_zero(self):
+        self._test_augment_segmaps__kernel_size_is_noop(0)
+
+    def test_augment_segmaps__kernel_size_is_one(self):
+        self._test_augment_segmaps__kernel_size_is_noop(1)
+
     def _test_augment_cbaoi__kernel_size_is_two__keep_size(
             self, cbaoi, augf_name):
         aug = self.augmenter(2, keep_size=True)
@@ -278,11 +298,40 @@ class _TestPoolingAugmentersBase(object):
 
         heatmaps_aug = aug.augment_heatmaps(heatmaps)
 
-        # heatmap aug is only supposed to update the image shape as the library
-        # can handle heatmaps of different size than the image, so heatmap
-        # array stays the same
+        expected = heatmaps.resize((1, 2))
         assert heatmaps_aug.shape == (3, 3, 3)
-        assert np.allclose(heatmaps_aug.arr_0to1, arr[..., np.newaxis])
+        assert heatmaps_aug.arr_0to1.shape == (1, 2, 1)
+        assert np.allclose(heatmaps_aug.arr_0to1, expected.arr_0to1)
+
+    def test_augment_segmaps__kernel_size_is_two__keep_size(self):
+        from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+        arr = np.int32([
+            [0, 1, 2],
+            [1, 2, 3]
+        ])
+        segmaps = SegmentationMapsOnImage(arr, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=True)
+
+        segmaps_aug = aug.augment_segmentation_maps(segmaps)
+
+        assert segmaps_aug.shape == (6, 6, 3)
+        assert np.allclose(segmaps_aug.arr, arr[..., np.newaxis])
+
+    def test_augment_segmaps__kernel_size_is_two__no_keep_size(self):
+        from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+        arr = np.int32([
+            [0, 1, 2],
+            [1, 2, 3]
+        ])
+        segmaps = SegmentationMapsOnImage(arr, shape=(6, 6, 3))
+        aug = self.augmenter(2, keep_size=False)
+
+        segmaps_aug = aug.augment_segmentation_maps(segmaps)
+
+        expected = segmaps.resize((1, 2))
+        assert segmaps_aug.shape == (3, 3, 3)
+        assert segmaps_aug.arr.shape == (1, 2, 1)
+        assert np.allclose(segmaps_aug.arr, expected.arr)
 
     def _test_augment_keypoints__kernel_size_differs(self, shape,
                                                      shape_exp):
