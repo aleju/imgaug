@@ -393,7 +393,7 @@ def apply_jigsaw(arr, destinations):
     Returns
     -------
     ndarray
-        Modified image with cells moved according to `destioations`.
+        Modified image with cells moved according to `destinations`.
 
     """
     nb_rows, nb_cols = destinations.shape[0:2]
@@ -439,6 +439,66 @@ def apply_jigsaw(arr, destinations):
             result[dest_y1:dest_y2, dest_x1:dest_x2] = source
 
             i += 1
+
+    return result
+
+
+def apply_jigsaw_to_coords(coords, destinations, image_shape):
+    """Move coordinates on an image similar to a jigsaw puzzle.
+
+    This is the same as :func:`apply_jigsaw`, but moves coordinates within
+    the cells.
+
+    Parameters
+    ----------
+    coords : ndarray
+        ``(N, 2)`` array denoting xy-coordinates.
+
+    destinations : ndarray
+        See :func:`apply_jigsaw`.
+
+    image_shape : tuple of int
+        ``(height, width, ...)`` shape of the image on which the
+        coordinates are placed. Only height and width are required.
+
+    Returns
+    -------
+    ndarray
+        Moved coordinates.
+
+    """
+    nb_rows, nb_cols = destinations.shape[0:2]
+
+    height, width = image_shape[0:2]
+    cell_height = height // nb_rows
+    cell_width = width // nb_cols
+
+    dest_rows, dest_cols = np.unravel_index(
+        destinations.flatten(), (nb_rows, nb_cols))
+
+    result = np.copy(coords)
+
+    # TODO vectorize this loop
+    for i, (x, y) in enumerate(coords):
+        ooi_x = (x < 0 or x >= width)
+        ooi_y = (y < 0 or y >= height)
+        if ooi_x or ooi_y:
+            continue
+
+        source_row = int(y // cell_height)
+        source_col = int(x // cell_width)
+        source_cell_idx = (source_row * nb_cols) + source_col
+        dest_row = dest_rows[source_cell_idx]
+        dest_col = dest_cols[source_cell_idx]
+
+        source_y1 = source_row * cell_height
+        source_x1 = source_col * cell_width
+
+        dest_y1 = dest_row * cell_height
+        dest_x1 = dest_col * cell_width
+
+        result[i, 0] = dest_x1 + (x - source_x1)
+        result[i, 1] = dest_y1 + (y - source_y1)
 
     return result
 

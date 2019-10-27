@@ -9198,6 +9198,69 @@ class Test_apply_jigsaw(unittest.TestCase):
         self._test_two_cells_moved__n_channels(3)
 
 
+class Test_apply_jigsaw_to_coords(unittest.TestCase):
+    def test_no_movement(self):
+        arr = np.float32([
+            (0.0, 0.0),
+            (5.0, 5.0),
+            (25.0, 50.5),
+            (10.01, 21.0)
+        ])
+        destinations = np.arange(10*10).reshape((10, 10))
+
+        observed = iaa.apply_jigsaw_to_coords(arr, destinations, (50, 100))
+
+        assert np.allclose(observed, arr)
+
+    def test_with_movement(self):
+        arr = np.float32([
+            (0.0, 0.0),  # in cell (0,0) = idx 0
+            (5.0, 5.0),  # in cell (0,0) = idx 0
+            (25.0, 50.5),  # in cell (5,2) = idx 52
+            (10.01, 21.0)  # in cell (2,1) = idx 12
+        ])
+        destinations = np.arange(10*10).reshape((10, 10))
+        destinations[0, 0] = 1
+        destinations[0, 1] = 0
+        destinations[5, 2] = 7
+        destinations[0, 7] = 52
+
+        observed = iaa.apply_jigsaw_to_coords(arr, destinations, (100, 100))
+
+        expected = np.float32([
+            (10.0, 0.0),
+            (15.0, 5.0),
+            (75.0, 0.5),
+            (10.01, 21.0)
+        ])
+        assert np.allclose(observed, expected)
+
+    def test_with_movement_non_square_image(self):
+        arr = np.float32([
+            (0.5, 0.6),  # in cell (0,0) = idx 0
+            (180.7, 90.8),  # in cell (9,9) = idx 99
+        ])
+        destinations = np.arange(10*10).reshape((10, 10))
+        destinations[0, 0] = 99
+        destinations[9, 9] = 0
+
+        observed = iaa.apply_jigsaw_to_coords(arr, destinations, (100, 200))
+
+        expected = np.float32([
+            (180+0.5, 90+0.6),
+            (0+0.7, 0+0.8)
+        ])
+        assert np.allclose(observed, expected)
+
+    def test_empty_coords(self):
+        arr = np.zeros((0, 2), dtype=np.float32)
+        destinations = np.arange(10*10).reshape((10, 10))
+
+        observed = iaa.apply_jigsaw_to_coords(arr, destinations, (100, 100))
+
+        assert np.allclose(observed, arr)
+
+
 class Test_generate_jigsaw_destinations(unittest.TestCase):
     def test_max_steps_0(self):
         rng = iarandom.RNG(0)
