@@ -3896,6 +3896,27 @@ class TestInvert(unittest.TestCase):
                 assert np.allclose(image_max_aug, image_min)
 
 
+class TestSolarize(unittest.TestCase):
+    def test_p_is_one(self):
+        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+
+        observed = iaa.Solarize(p=1.0).augment_image(zeros)
+
+        expected = zeros
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_p_is_one_some_values_above_threshold(self):
+        arr = np.array([0, 99, 111, 200]).astype(np.uint8).reshape((2, 2, 1))
+
+        observed = iaa.Solarize(p=1.0, threshold=(100, 110))(image=arr)
+
+        expected = np.array([0, 99, 255-111, 255-200])\
+            .astype(np.uint8).reshape((2, 2, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+
 class TestContrastNormalization(unittest.TestCase):
     @unittest.skipIf(sys.version_info[0] <= 2,
                      "Warning is not generated in 2.7 on travis, but locally "

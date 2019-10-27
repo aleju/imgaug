@@ -3355,6 +3355,59 @@ class _InvertSamples(object):
         self.invert_above_threshold = invert_above_threshold
 
 
+class Solarize(Invert):
+    """Invert all values above a threshold in images.
+
+    This is the same as :class:`Invert`, but sets a default threshold around
+    ``128`` (+/- 64, decided per image) and default `invert_above_threshold`
+    to ``True`` (i.e. only values above the threshold will be inverted).
+
+    See :class:`Invert` for more details.
+
+    dtype support::
+
+        See :class:`Invert`.
+
+    Parameters
+    ----------
+    p : float or imgaug.parameters.StochasticParameter, optional
+        See :class:`Invert`.
+
+    per_channel : bool or float or imgaug.parameters.StochasticParameter, optional
+        See :class:`Invert`.
+
+    min_value : None or number, optional
+        See :class:`Invert`.
+
+    max_value : None or number, optional
+        See :class:`Invert`.
+
+    threshold : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`Invert`.
+
+    invert_above_threshold : bool or float or imgaug.parameters.StochasticParameter, optional
+        See :class:`Invert`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+    def __init__(self, p, per_channel=False, min_value=None, max_value=None,
+                 threshold=(128-64, 128+64), invert_above_threshold=True,
+                 name=None, deterministic=False, random_state=None):
+        super(Solarize, self).__init__(
+            p=p, per_channel=per_channel,
+            min_value=min_value, max_value=max_value,
+            threshold=threshold, invert_above_threshold=invert_above_threshold,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+
 # TODO remove from examples
 @ia.deprecated("imgaug.contrast.LinearContrast")
 def ContrastNormalization(alpha=1.0, per_channel=False,

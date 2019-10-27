@@ -12,3 +12,4 @@
   `solarize_()`.
 * Added function `imgaug.augmenters.arithmetic.solarize_()`, a wrapper around
   `invert_()`.
+* Added augmenter `imgaug.augmenters.Solarize`, a wrapper around `Invert`.
