@@ -799,12 +799,12 @@ def invert_(image, min_value=None, max_value=None):
             * ``int8``: yes; tested
             * ``int16``: yes; tested
             * ``int32``: yes; tested
-            * ``int64``: no (1)
+            * ``int64``: no (2)
             * ``float16``: yes; tested
             * ``float32``: yes; tested
-            * ``float64``: no (1)
-            * ``float128``: no (2)
-            * ``bool``: no (3)
+            * ``float64``: no (2)
+            * ``float128``: no (3)
+            * ``bool``: no (4)
 
             - (1) Not allowed due to numpy's clip converting from ``uint64`` to
                   ``float64``.
