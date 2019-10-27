@@ -2097,30 +2097,26 @@ class TestKMeansColorQuantization(unittest.TestCase):
 
 
 class Test_quantize_colors_kmeans(unittest.TestCase):
-    def test_warns_deprecated(self):
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_warns_deprecated(self, mock_warn):
         arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
-        with warnings.catch_warnings(record=True) as caught_warnings:
-            warnings.simplefilter("always")
 
-            _ = iaa.quantize_colors_kmeans(arr, 2)
+        _ = iaa.quantize_colors_kmeans(arr, 2)
 
-            assert len(caught_warnings) == 1
-            assert (
-                "deprecated"
-                in str(caught_warnings[-1].message).lower()
-            )
+        assert mock_warn.call_count == 1
 
     @mock.patch("imgaug.augmenters.color.quantize_kmeans")
-    def test_calls_quantize_uniform(self, mock_qu):
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_calls_quantize_kmeans(self, mock_warn, mock_qu):
         arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
         mock_qu.return_value = "foo"
 
-        with warnings.catch_warnings(record=True):
-            result = iaa.quantize_colors_kmeans(arr, 7)
+        result = iaa.quantize_colors_kmeans(arr, 7)
 
         mock_qu.assert_called_once_with(arr=arr, nb_clusters=7,
                                         nb_max_iter=10, eps=1.0)
         assert result == "foo"
+        assert mock_warn.call_count == 1
 
 
 class Test_quantize_kmeans(unittest.TestCase):
@@ -2463,29 +2459,25 @@ class TestPosterize(TestUniformColorQuantizationToNBits):
 
 
 class Test_quantize_colors_uniform(unittest.TestCase):
-    def test_warns_deprecated(self):
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_warns_deprecated(self, mock_warn):
         arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
-        with warnings.catch_warnings(record=True) as caught_warnings:
-            warnings.simplefilter("always")
 
-            _ = iaa.quantize_colors_uniform(arr, 2)
+        _ = iaa.quantize_colors_uniform(arr, 2)
 
-            assert len(caught_warnings) == 1
-            assert (
-                "deprecated"
-                in str(caught_warnings[-1].message).lower()
-            )
+        assert mock_warn.call_count == 1
 
     @mock.patch("imgaug.augmenters.color.quantize_uniform")
-    def test_calls_quantize_uniform(self, mock_qu):
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_calls_quantize_uniform(self, mock_warn, mock_qu):
         arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
         mock_qu.return_value = "foo"
 
-        with warnings.catch_warnings(record=True):
-            result = iaa.quantize_colors_uniform(arr, 7)
+        result = iaa.quantize_colors_uniform(arr, 7)
 
         mock_qu.assert_called_once_with(arr=arr, nb_bins=7)
         assert result == "foo"
+        assert mock_warn.call_count == 1
 
 
 class Test_quantize_uniform(unittest.TestCase):
