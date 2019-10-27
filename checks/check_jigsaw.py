@@ -5,6 +5,12 @@ import timeit
 
 
 def main():
+    image = ia.quokka_square((200, 200))
+    aug = iaa.Jigsaw(10, 10)
+
+    images_aug = aug(images=[image] * 16)
+    ia.imshow(ia.draw_grid(images_aug))
+
     gen_time = timeit.timeit(
         "iaa.generate_jigsaw_destinations(10, 10, 2, rng)",
         number=128,
@@ -15,7 +21,7 @@ def main():
         )
     )
     print("Time to generate 128x dest:", gen_time)
-    image = ia.quokka_square((200, 200))
+
     destinations = iaa.generate_jigsaw_destinations(10, 10, 1, random_state=1)
     image_jig = iaa.apply_jigsaw(image, destinations)
     ia.imshow(image_jig)

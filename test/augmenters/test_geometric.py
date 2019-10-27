@@ -29,6 +29,7 @@ from imgaug.testutils import (
     array_equal_lists, keypoints_equal, reseed, assert_cbaois_equal)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+import imgaug.augmenters.geometric as geometriclib
 
 
 def _assert_same_min_max(observed, actual):
@@ -9318,3 +9319,376 @@ class Test_generate_jigsaw_destinations(unittest.TestCase):
         assert np.min(dist) <= 0.01
         assert np.any(dist >= 0.99)
         assert np.max(dist) <= 1.01
+
+
+class TestJigsaw(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___defaults(self):
+        aug = iaa.Jigsaw(nb_rows=1, nb_cols=2)
+        assert aug.nb_rows.value == 1
+        assert aug.nb_cols.value == 2
+        assert aug.max_steps.value == 2
+        assert aug.allow_pad is True
+
+    def test___init___custom(self):
+        aug = iaa.Jigsaw(nb_rows=1, nb_cols=2, max_steps=3, allow_pad=False)
+        assert aug.nb_rows.value == 1
+        assert aug.nb_cols.value == 2
+        assert aug.max_steps.value == 3
+        assert aug.allow_pad is False
+
+    def test__draw_samples(self):
+        aug = iaa.Jigsaw(nb_rows=(1, 5), nb_cols=(1, 6), max_steps=(1, 3))
+        batch = mock.Mock()
+        batch.nb_rows = 100
+
+        samples = aug._draw_samples(batch, iarandom.RNG(0))
+
+        assert len(np.unique(samples.nb_rows)) > 1
+        assert len(np.unique(samples.nb_cols)) > 1
+        assert len(np.unique(samples.max_steps)) > 1
+        assert np.all(samples.nb_rows >= 1)
+        assert np.all(samples.nb_rows <= 5)
+        assert np.all(samples.nb_cols >= 1)
+        assert np.all(samples.nb_cols <= 6)
+        assert np.all(samples.max_steps >= 1)
+        assert np.all(samples.max_steps <= 3)
+
+        all_same = True
+        first = samples.destinations[0]
+        for dest in samples.destinations:
+            this_same = (dest.shape == first.shape
+                         and np.array_equal(dest, first))
+            all_same = all_same and this_same
+        assert not all_same
+
+    def test_images_without_shifts(self):
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=0)
+        image = np.mod(np.arange(20*20*3), 255).astype(np.uint8)
+        image = image.reshape((20, 20, 3))
+
+        image_aug = aug(image=image)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (20, 20, 3)
+        assert np.array_equal(image_aug, image)
+
+    def test_heatmaps_without_shifts(self):
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=0)
+        arr = np.linspace(0, 1.0, 20*20*1).astype(np.float32)
+        arr = arr.reshape((20, 20, 1))
+        heatmap = ia.HeatmapsOnImage(arr, shape=(20, 20, 3))
+
+        heatmap_aug = aug(heatmaps=heatmap)
+
+        assert heatmap_aug.shape == (20, 20, 3)
+        assert np.allclose(heatmap_aug.arr_0to1, heatmap.arr_0to1)
+
+    def test_segmaps_without_shifts(self):
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=0)
+        arr = np.zeros((20, 20, 1), dtype=np.int32)
+        arr[0:10, :] = 1
+        arr[10:20, 10:20] = 2
+        arr = arr.reshape((20, 20, 1))
+        segmap = ia.SegmentationMapsOnImage(arr, shape=(20, 20, 3))
+
+        segmap_aug = aug(segmentation_maps=segmap)
+
+        assert segmap_aug.shape == (20, 20, 3)
+        assert np.array_equal(segmap_aug.arr, segmap.arr)
+
+    def test_keypoints_without_shifts(self):
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=0)
+        kpsoi = ia.KeypointsOnImage.from_xy_array([
+            (0, 0),
+            (5.5, 3.5),
+            (12.1, 23.5)
+        ], shape=(20, 20, 3))
+
+        kpsoi_aug = aug(keypoints=kpsoi)
+
+        assert kpsoi_aug.shape == (20, 20, 3)
+        assert np.allclose(kpsoi_aug.to_xy_array(), kpsoi.to_xy_array())
+
+    def test_images_with_shifts(self):
+        # these rows/cols/max_steps parameters are mostly ignored due to the
+        # mocked _draw_samples method below
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=1)
+        image = np.mod(np.arange(19*19*3), 255).astype(np.uint8)
+        image = image.reshape((19, 19, 3))
+        destinations = np.array([
+            [3, 1],
+            [2, 0]
+        ], dtype=np.int32)
+
+        old_func = aug._draw_samples
+
+        def _mocked_draw_samples(batch, random_state):
+            samples = old_func(batch, random_state)
+            return geometriclib._JigsawSamples(
+                nb_rows=samples.nb_rows,
+                nb_cols=samples.nb_cols,
+                max_steps=samples.max_steps,
+                destinations=[destinations])
+
+        aug._draw_samples = _mocked_draw_samples
+
+        image_aug = aug(image=image)
+
+        expected = iaa.pad(image, bottom=1, right=1, cval=0)
+        expected = iaa.apply_jigsaw(expected, destinations)
+        assert np.array_equal(image_aug, expected)
+
+    def test_heatmaps_with_shifts(self):
+        # these rows/cols/max_steps parameters are mostly ignored due to the
+        # mocked _draw_samples method below
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=1)
+        arr = np.linspace(0, 1.0, 18*18*1).astype(np.float32)
+        arr = arr.reshape((18, 18, 1))
+        heatmap = ia.HeatmapsOnImage(arr, shape=(19, 19, 3))
+        destinations = np.array([
+            [3, 1],
+            [2, 0]
+        ], dtype=np.int32)
+
+        old_func = aug._draw_samples
+
+        def _mocked_draw_samples(batch, random_state):
+            samples = old_func(batch, random_state)
+            return geometriclib._JigsawSamples(
+                nb_rows=samples.nb_rows,
+                nb_cols=samples.nb_cols,
+                max_steps=samples.max_steps,
+                destinations=[destinations])
+
+        aug._draw_samples = _mocked_draw_samples
+
+        heatmap_aug = aug(heatmaps=heatmap)
+
+        expected = ia.imresize_single_image(arr, (19, 19),
+                                            interpolation="cubic")
+        expected = np.clip(expected, 0, 1.0)
+        expected = iaa.pad(expected, bottom=1, right=1, cval=0.0)
+        expected = iaa.apply_jigsaw(expected, destinations)
+        expected = ia.imresize_single_image(expected, (18, 18),
+                                            interpolation="cubic")
+        expected = np.clip(expected, 0, 1.0)
+        assert np.allclose(heatmap_aug.arr_0to1, expected)
+
+    def test_segmaps_with_shifts(self):
+        # these rows/cols/max_steps parameters are mostly ignored due to the
+        # mocked _draw_samples method below
+        aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=1)
+        arr = np.zeros((18, 18, 1), dtype=np.int32)
+        arr[0:10, :] = 1
+        arr[10:18, 10:18] = 2
+        arr = arr.reshape((18, 18, 1))
+        segmap = ia.SegmentationMapsOnImage(arr, shape=(19, 19, 3))
+        destinations = np.array([
+            [3, 1],
+            [2, 0]
+        ], dtype=np.int32)
+
+        old_func = aug._draw_samples
+
+        def _mocked_draw_samples(batch, random_state):
+            samples = old_func(batch, random_state)
+            return geometriclib._JigsawSamples(
+                nb_rows=samples.nb_rows,
+                nb_cols=samples.nb_cols,
+                max_steps=samples.max_steps,
+                destinations=[destinations])
+
+        aug._draw_samples = _mocked_draw_samples
+
+        segmap_aug = aug(segmentation_maps=segmap)
+
+        expected = ia.imresize_single_image(arr, (19, 19),
+                                            interpolation="nearest")
+        expected = iaa.pad(expected, bottom=1, right=1, cval=0)
+        expected = iaa.apply_jigsaw(expected, destinations)
+        expected = ia.imresize_single_image(expected, (18, 18),
+                                            interpolation="nearest")
+        assert np.array_equal(segmap_aug.arr, expected)
+
+    def test_keypoints_with_shifts(self):
+        # these rows/cols/max_steps parameters are mostly ignored due to the
+        # mocked _draw_samples method below
+        aug = iaa.Jigsaw(nb_rows=5, nb_cols=5, max_steps=1)
+        kpsoi = ia.KeypointsOnImage.from_xy_array([
+            (0, 0),
+            (5.5, 3.5),
+            (4.0, 12.5),
+            (11.1, 11.2),
+            (12.1, 23.5)
+        ], shape=(18, 18, 3))
+        destinations = np.array([
+            [3, 1],
+            [2, 0]
+        ], dtype=np.int32)
+
+        old_func = aug._draw_samples
+
+        def _mocked_draw_samples(batch, random_state):
+            samples = old_func(batch, random_state)
+            return geometriclib._JigsawSamples(
+                nb_rows=samples.nb_rows,
+                nb_cols=samples.nb_cols,
+                max_steps=samples.max_steps,
+                destinations=[destinations])
+
+        aug._draw_samples = _mocked_draw_samples
+
+        kpsoi_aug = aug(keypoints=kpsoi)
+
+        expected = kpsoi.deepcopy()
+        expected.shape = (20, 20, 3)
+        # (0.0, 0.0) to cell at bottom-right, 1px pad at top and left
+        expected.keypoints[0].x = 10.0 + (0.0 - 0.0) + 1.0
+        expected.keypoints[0].y = 10.0 + (0.0 - 0.0) + 1.0
+        # (5.5, 3.5) to cell at bottom-right, 1px pad at top and left
+        expected.keypoints[1].x = 10.0 + (5.5 - 0.0) + 1.0
+        expected.keypoints[1].y = 10.0 + (3.5 - 0.0) + 1.0
+        # (4.0, 12.5) not moved to other cell, but 1px pad at top and left
+        expected.keypoints[2].x = 4.0 + 1.0
+        expected.keypoints[2].y = 12.5 + 1.0
+        # (11.0, 11.0) to cell at top-left, 1px pad at top and left
+        expected.keypoints[3].x = 0.0 + (11.1 - 10.0) + 1.0
+        expected.keypoints[3].y = 0.0 + (11.2 - 10.0) + 1.0
+        # (12.1, 23.5) not moved to other cell, but 1px pad at top and left
+        expected.keypoints[4].x = 12.1 + 1.0
+        expected.keypoints[4].y = 23.5 + 1.0
+        expected.shape = (20, 20, 3)
+        assert kpsoi_aug.shape == (20, 20, 3)
+        assert np.allclose(kpsoi_aug.to_xy_array(), expected.to_xy_array())
+
+    def test_images_and_heatmaps_aligned(self):
+        nb_changed = 0
+        rs = iarandom.RNG(0)
+        for _ in np.arange(10):
+            aug = iaa.Jigsaw(nb_rows=(2, 5), nb_cols=(2, 5), max_steps=(0, 3))
+            image_small = rs.integers(0, 10, size=(10, 15)).astype(np.float32)
+            image_small = image_small / 10.0
+            image = ia.imresize_single_image(image_small, (20, 30),
+                                             interpolation="cubic")
+            image = np.clip(image, 0, 1.0)
+            hm = ia.HeatmapsOnImage(image_small, shape=(20, 30))
+
+            images_aug, hms_aug = aug(images=[image, image, image],
+                                      heatmaps=[hm, hm, hm])
+
+            for image_aug, hm_aug in zip(images_aug, hms_aug):
+                # TODO added squeeze here because get_arr() falsely returns
+                #      (H,W,1) for 2D inputs
+                arr = np.squeeze(hm_aug.get_arr())
+                image_aug_rs = ia.imresize_single_image(
+                    image_aug.astype(np.float32),
+                    arr.shape[0:2],
+                    interpolation="cubic")
+                image_aug_rs = np.clip(image_aug_rs, 0, 1.0)
+                overlap = np.average(np.isclose(image_aug_rs, arr))
+
+                assert overlap > 0.99
+                if not np.array_equal(arr, hm.get_arr()):
+                    nb_changed += 1
+        assert nb_changed > 5
+
+    def test_images_and_segmaps_aligned(self):
+        nb_changed = 0
+        rs = iarandom.RNG(0)
+        for _ in np.arange(10):
+            aug = iaa.Jigsaw(nb_rows=(2, 5), nb_cols=(2, 5), max_steps=(0, 3))
+            image_small = rs.integers(0, 10, size=(10, 15))
+            image = ia.imresize_single_image(image_small, (20, 30),
+                                             interpolation="nearest")
+            image = image.astype(np.uint8)
+            segm = ia.SegmentationMapsOnImage(image_small, shape=(20, 30))
+
+            images_aug, sms_aug = aug(images=[image, image, image],
+                                      segmentation_maps=[segm, segm, segm])
+
+            for image_aug, sm_aug in zip(images_aug, sms_aug):
+                arr = sm_aug.get_arr()
+                image_aug_rs = ia.imresize_single_image(
+                    image_aug, arr.shape[0:2], interpolation="nearest")
+                overlap = np.average(image_aug_rs == arr)
+
+                assert overlap > 0.99
+                if not np.array_equal(arr, segm.arr):
+                    nb_changed += 1
+        assert nb_changed > 5
+
+    def test_images_and_keypoints_aligned(self):
+        rs = iarandom.RNG(0)
+        for _ in np.arange(10):
+            aug = iaa.Jigsaw(nb_rows=(2, 5), nb_cols=(2, 5), max_steps=(0, 3))
+            y = rs.integers(0, 20, size=(1,), endpoint=False)
+            x = rs.integers(0, 30, size=(1,), endpoint=False)
+            kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=x, y=y)], shape=(20, 30))
+            image = np.zeros((20, 30), dtype=np.uint8)
+            image[y, x] = 255
+
+            images_aug, kpsois_aug = aug(images=[image, image, image],
+                                         keypoints=[kpsoi, kpsoi, kpsoi])
+
+            for image_aug, kpsoi_aug in zip(images_aug, kpsois_aug):
+                x_aug = kpsoi_aug.keypoints[0].x
+                y_aug = kpsoi_aug.keypoints[0].y
+                idx = np.argmax(image_aug)
+                y_aug_img, x_aug_img = np.unravel_index(idx,
+                                                        image_aug.shape)
+                dist = np.sqrt((x_aug - x_aug_img)**2 + (y_aug - y_aug_img)**2)
+                assert dist < 1.5
+
+    def test_no_error_for_1x1_grids(self):
+        aug = iaa.Jigsaw(nb_rows=1, nb_cols=1, max_steps=2)
+        image = np.mod(np.arange(19*19*3), 255).astype(np.uint8)
+        image = image.reshape((19, 19, 3))
+        kpsoi = ia.KeypointsOnImage.from_xy_array([
+            (0, 0),
+            (5.5, 3.5),
+            (4.0, 12.5),
+            (11.1, 11.2),
+            (12.1, 23.5)
+        ], shape=(19, 19, 3))
+
+        image_aug, kpsoi_aug = aug(image=image, keypoints=kpsoi)
+
+        assert np.array_equal(image_aug, image)
+        assert np.allclose(kpsoi_aug.to_xy_array(), kpsoi.to_xy_array())
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                for _ in sm.xrange(3):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.Jigsaw(nb_rows=2, nb_cols=2, max_steps=2)
+
+                    image_aug = aug(image=image)
+
+                    # (2, 2, [C]) here, because rows/cols are padded to be
+                    # multiple of nb_rows and nb_cols
+                    shape_exp = tuple([2, 2] + list(shape[2:]))
+                    assert image_aug.dtype.name == "uint8"
+                    assert np.array_equal(image_aug,
+                                          np.zeros(shape_exp, dtype=np.uint8))
+
+    def test_get_parameters(self):
+        aug = iaa.Jigsaw(nb_rows=1, nb_cols=2)
+        params = aug.get_parameters()
+        assert params[0] is aug.nb_rows
+        assert params[1] is aug.nb_cols
+        assert params[2] is aug.max_steps
+        assert params[3] is True
