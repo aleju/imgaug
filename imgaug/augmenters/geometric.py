@@ -39,6 +39,7 @@ import imgaug as ia
 from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 _VALID_DTYPES_CV2_ORDER_0 = {"uint8", "uint16", "int8", "int16", "int32",
@@ -353,6 +354,164 @@ def _compute_affine_warp_output_shape(matrix, input_shape):
     matrix_to_fit = tf.SimilarityTransform(translation=translation)
     matrix = matrix + matrix_to_fit
     return matrix, output_shape
+
+
+# TODO allow -1 destinations
+def apply_jigsaw(arr, destinations):
+    """Move cells of an image similar to a jigsaw puzzle.
+
+    This function will split the image into ``rows x cols`` cells and
+    move each cell to the target index given in `destinations`.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
+        * ``int32``: yes; fully tested
+        * ``int64``: yes; fully tested
+        * ``float16``: yes; fully tested
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: yes; fully tested
+        * ``bool``: yes; fully tested
+
+    Parameters
+    ----------
+    arr : ndarray
+        Array with at least two dimensions denoting height and width.
+
+    destinations : ndarray
+        2-dimensional array containing for each cell the id of the destination
+        cell. The order is expected to a flattened c-order, i.e. row by row.
+        The height of the image must be evenly divisible by the number of
+        rows in this array. Analogous for the width and columns.
+
+    Returns
+    -------
+    ndarray
+        Modified image with cells moved according to `destioations`.
+
+    """
+    nb_rows, nb_cols = destinations.shape[0:2]
+
+    assert arr.ndim >= 2, (
+        "Expected array with at least two dimensions, but got %d with "
+        "shape %s." % (arr.ndim, arr.shape))
+    assert (arr.shape[0] % nb_rows) == 0, (
+        "Expected image height to by divisible by number of rows, but got "
+        "height %d and %d rows. Use cropping or padding to modify the image "
+        "height or change the number of rows." % (arr.shape[0], nb_rows)
+    )
+    assert (arr.shape[1] % nb_cols) == 0, (
+        "Expected image width to by divisible by number of columns, but got "
+        "width %d and %d columns. Use cropping or padding to modify the image "
+        "width or change the number of columns." % (arr.shape[1], nb_cols)
+    )
+
+    cell_height = arr.shape[0] // nb_rows
+    cell_width = arr.shape[1] // nb_cols
+
+    dest_rows, dest_cols = np.unravel_index(
+        destinations.flatten(), (nb_rows, nb_cols))
+
+    result = np.zeros_like(arr)
+    i = 0
+    for source_row in np.arange(nb_rows):
+        for source_col in np.arange(nb_cols):
+            # TODO vectorize coords computation
+            dest_row, dest_col = dest_rows[i], dest_cols[i]
+
+            source_y1 = source_row * cell_height
+            source_y2 = source_y1 + cell_height
+            source_x1 = source_col * cell_width
+            source_x2 = source_x1 + cell_width
+
+            dest_y1 = dest_row * cell_height
+            dest_y2 = dest_y1 + cell_height
+            dest_x1 = dest_col * cell_width
+            dest_x2 = dest_x1 + cell_width
+
+            source = arr[source_y1:source_y2, source_x1:source_x2]
+            result[dest_y1:dest_y2, dest_x1:dest_x2] = source
+
+            i += 1
+
+    return result
+
+
+def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
+                                 connectivity=4):
+    """Generate a destination pattern for :func:`apply_jigsaw`.
+
+    Parameters
+    ----------
+    nb_rows : int
+        Number of rows to split the image into.
+
+    nb_cols : int
+        Number of columns to split the image into.
+
+    max_steps : int
+        Maximum number of cells that each cell may be moved.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+        RNG or seed to use. If ``None`` the global RNG will be used.
+
+    connectivity : int, optional
+        Whether a diagonal move of a cell counts as one step
+        (``connectivity=8``) or two steps (``connectivity=4``).
+
+    Returns
+    -------
+    ndarray
+        2-dimensional array containing for each cell the id of the target
+        cell.
+
+    """
+    assert connectivity in (4, 8), (
+            "Expected connectivity of 4 or 8, got %d." % (connectivity,))
+    random_state = iarandom.RNG(random_state)
+    steps = random_state.integers(0, max_steps, size=(nb_rows, nb_cols),
+                                  endpoint=True)
+    directions = random_state.integers(0, connectivity,
+                                       size=(nb_rows, nb_cols, max_steps),
+                                       endpoint=False)
+    destinations = np.arange(nb_rows*nb_cols).reshape((nb_rows, nb_cols))
+
+    for step in np.arange(max_steps):
+        directions_step = directions[:, :, step]
+
+        for y in np.arange(nb_rows):
+            for x in np.arange(nb_cols):
+                if steps[y, x] > 0:
+                    y_target, x_target = {
+                        0: (y-1, x+0),
+                        1: (y+0, x+1),
+                        2: (y+1, x+0),
+                        3: (y+0, x-1),
+                        4: (y-1, x-1),
+                        5: (y-1, x+1),
+                        6: (y+1, x+1),
+                        7: (y+1, x-1)
+                    }[directions_step[y, x]]
+                    y_target = max(min(y_target, nb_rows-1), 0)
+                    x_target = max(min(x_target, nb_cols-1), 0)
+
+                    target_steps = steps[y_target, x_target]
+                    if (y, x) != (y_target, x_target) and target_steps >= 1:
+                        source_dest = destinations[y, x]
+                        target_dest = destinations[y_target, x_target]
+                        destinations[y, x] = target_dest
+                        destinations[y_target, x_target] = source_dest
+
+                        steps[y, x] -= 1
+                        steps[y_target, x_target] -= 1
+
+    return destinations
 
 
 class _AffineSamplingResult(object):

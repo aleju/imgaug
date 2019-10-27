@@ -9075,3 +9075,183 @@ class TestWithPolarWarping(unittest.TestCase):
 
         assert aug.__repr__() == expected
         assert aug.__str__() == expected
+
+
+class Test_apply_jigsaw(unittest.TestCase):
+    def test_no_movement(self):
+        dtypes = ["bool",
+                  "uint8", "uint16", "uint32", "uint64",
+                  "int8", "int16", "int32", "int64",
+                  "float16", "float32", "float64", "float128"]
+
+        for dtype in dtypes:
+            with self.subTest(dtype=dtype):
+                arr = np.arange(20*20*1).reshape((20, 20, 1))
+                if dtype == "bool":
+                    mask = np.logical_or(
+                        arr % 4 == 0,
+                        arr % 7 == 0)
+                    arr[mask] = 1
+                    arr[~mask] = 0
+                arr = arr.astype(dtype)
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+                arr[0, 0] = min_value
+                arr[0, 1] = max_value
+
+                destinations = np.arange(5*5).reshape((5, 5))
+
+                observed = iaa.apply_jigsaw(arr, destinations)
+
+                if arr.dtype.kind != "f":
+                    assert np.array_equal(observed, arr)
+                else:
+                    atol = 1e-4 if dtype == "float16" else 1e-8
+                    assert np.allclose(observed, arr, rtol=0, atol=atol)
+
+    def test_no_movement_zero_sized_axes(self):
+        sizes = [
+            (0, 1),
+            (1, 0),
+            (0, 0)
+        ]
+
+        dtype = "uint8"
+        for size in sizes:
+            with self.subTest(size=size):
+                arr = np.zeros(size, dtype=dtype)
+                destinations = np.arange(1*1).reshape((1, 1))
+
+                observed = iaa.apply_jigsaw(arr, destinations)
+
+                assert np.array_equal(observed, arr)
+
+    def _test_two_cells_moved__n_channels(self, nb_channels):
+        dtypes = ["bool",
+                  "uint8", "uint16", "uint32", "uint64",
+                  "int8", "int16", "int32", "int64",
+                  "float16", "float32", "float64", "float128"]
+
+        for dtype in dtypes:
+            with self.subTest(dtype=dtype):
+                c = 1 if nb_channels is None else nb_channels
+                arr = np.arange(20*20*c)
+                if dtype == "bool":
+                    mask = np.logical_or(
+                        arr % 4 == 0,
+                        arr % 7 == 0)
+                    arr[mask] = 1
+                    arr[~mask] = 0
+                if nb_channels is not None:
+                    arr = arr.reshape((20, 20, c))
+                else:
+                    arr = arr.reshape((20, 20))
+                arr = arr.astype(dtype)
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+                arr[0, 0] = min_value
+                arr[0, 1] = max_value
+
+                destinations = np.arange(5*5).reshape((5, 5))
+                destinations[0, 0] = 4  # cell 0 will be filled with 4
+                destinations[0, 4] = 0  # cell 4 will be filled with 0
+                destinations[0, 1] = 6  # cell 1 will be filled with 6
+                destinations[1, 1] = 1  # cell 6 will be filled with 1
+
+                observed = iaa.apply_jigsaw(arr, destinations)
+
+                cell_0_obs = observed[0:4, 0:4]
+                cell_0_exp = arr[0:4, 16:20]
+                cell_4_obs = observed[0:4, 16:20]
+                cell_4_exp = arr[0:4, 0:4]
+                cell_1_obs = observed[0:4, 4:8]
+                cell_1_exp = arr[4:8, 4:8]
+                cell_6_obs = observed[4:8, 4:8]
+                cell_6_exp = arr[0:4, 4:8]
+                cell_2_obs = observed[0:4, 8:12]
+                cell_2_exp = arr[0:4, 8:12]
+                if arr.dtype.kind != "f":
+                    assert np.array_equal(cell_0_obs, cell_0_exp)
+                    assert np.array_equal(cell_4_obs, cell_4_exp)
+                    assert np.array_equal(cell_1_obs, cell_1_exp)
+                    assert np.array_equal(cell_6_obs, cell_6_exp)
+                    assert np.array_equal(cell_2_obs, cell_2_exp)
+                else:
+                    atol = 1e-4 if dtype == "float16" else 1e-8
+                    kwargs = {"rtol": 0, "atol": atol}
+                    assert np.allclose(cell_0_obs, cell_0_exp, **kwargs)
+                    assert np.allclose(cell_4_obs, cell_4_exp, **kwargs)
+                    assert np.allclose(cell_1_obs, cell_1_exp, **kwargs)
+                    assert np.allclose(cell_6_obs, cell_6_exp, **kwargs)
+                    assert np.allclose(cell_2_obs, cell_2_exp, **kwargs)
+
+                assert observed.shape == arr.shape
+                assert observed.dtype.name == dtype
+
+    def test_two_cells_moved__no_channels(self):
+        self._test_two_cells_moved__n_channels(None)
+
+    def test_two_cells_moved__1_channel(self):
+        self._test_two_cells_moved__n_channels(1)
+
+    def test_two_cells_moved__3_channels(self):
+        self._test_two_cells_moved__n_channels(3)
+
+
+class Test_generate_jigsaw_destinations(unittest.TestCase):
+    def test_max_steps_0(self):
+        rng = iarandom.RNG(0)
+        max_steps = 0
+        rows = 10
+        cols = 20
+
+        observed = iaa.generate_jigsaw_destinations(rows, cols, max_steps, rng,
+                                                    connectivity=8)
+
+        assert np.array_equal(
+            observed,
+            np.arange(rows*cols).reshape((rows, cols)))
+
+    def test_max_steps_1(self):
+        rng = iarandom.RNG(0)
+        max_steps = 1
+        rows = 10
+        cols = 20
+
+        observed = iaa.generate_jigsaw_destinations(rows, cols, max_steps, rng,
+                                                    connectivity=8)
+
+        yy = (observed // cols).reshape((rows, cols))
+        xx = np.mod(observed, cols).reshape((rows, cols))
+        yy_expected = np.tile(np.arange(rows).reshape((rows, 1)), (1, cols))
+        xx_expected = np.tile(np.arange(cols).reshape((1, cols)), (rows, 1))
+
+        yy_diff = yy_expected - yy
+        xx_diff = xx_expected - xx
+        dist = np.sqrt(yy_diff ** 2 + xx_diff ** 2)
+
+        assert np.min(dist) <= 0.01
+        assert np.any(dist >= np.sqrt(2) - 1e-4)
+        assert np.max(dist) <= np.sqrt(2) + 1e-4
+
+    def test_max_steps_1_connectivity_4(self):
+        rng = iarandom.RNG(0)
+        max_steps = 1
+        rows = 10
+        cols = 20
+
+        observed = iaa.generate_jigsaw_destinations(rows, cols, max_steps, rng,
+                                                    connectivity=4)
+
+        yy = (observed // cols).reshape((rows, cols))
+        xx = np.mod(observed, cols).reshape((rows, cols))
+        yy_expected = np.tile(np.arange(rows).reshape((rows, 1)), (1, cols))
+        xx_expected = np.tile(np.arange(cols).reshape((1, cols)), (rows, 1))
+
+        yy_diff = yy_expected - yy
+        xx_diff = xx_expected - xx
+        dist = np.sqrt(yy_diff ** 2 + xx_diff ** 2)
+
+        assert np.min(dist) <= 0.01
+        assert np.any(dist >= 0.99)
+        assert np.max(dist) <= 1.01
