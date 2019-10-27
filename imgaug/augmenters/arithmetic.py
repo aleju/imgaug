@@ -868,12 +868,25 @@ def _invert_bool(arr, min_value, max_value):
 
 
 def _invert_uint(arr, min_value, max_value):
-    if min_value == 0 and max_value == np.iinfo(arr.dtype).max:
-        return max_value - arr
-    return _invert_by_distance(
-        np.clip(arr, min_value, max_value),
-        min_value, max_value
-    )
+    if arr.dtype.name == "uint8":
+        if 0 in arr.shape:
+            return np.copy(arr)
+
+        if arr.flags["C_CONTIGUOUS"] is False:
+            arr = np.ascontiguousarray(arr)
+
+        table = _generate_table_for_invert_uint8(min_value, max_value)
+        arr_inv = cv2.LUT(arr, table)
+        if arr_inv.ndim == 2 and arr.ndim == 3:
+            arr_inv = arr_inv[:, :, np.newaxis]
+        return arr_inv
+    else:
+        if min_value == 0 and max_value == np.iinfo(arr.dtype).max:
+            return max_value - arr
+        return _invert_by_distance(
+            np.clip(arr, min_value, max_value),
+            min_value, max_value
+        )
 
 
 def _invert_int(arr, min_value, max_value):
@@ -941,6 +954,17 @@ def _invert_by_distance(arr, min_value, max_value):
         arr_modify = iadt.restore_dtypes_(
             arr_modify, arr.dtype, clip=False)
     return arr_modify
+
+
+def _generate_table_for_invert_uint8(min_value, max_value):
+    table = np.arange(256).astype(np.uint8)
+    full_value_range = (min_value == 0 and max_value == 255)
+    if full_value_range:
+        table = table[::-1]
+    else:
+        distance_from_min = np.abs(table - min_value)
+        table = max_value - distance_from_min
+    return table
 
 
 def compress_jpeg(image, compression):
