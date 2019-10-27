@@ -3557,6 +3557,30 @@ class TestInvert(unittest.TestCase):
         assert 300 - 75 < seen[0] < 300 + 75
         assert 700 - 75 < seen[1] < 700 + 75
 
+    def test_threshold(self):
+        arr = np.array([0, 10, 50, 150, 200, 255], dtype=np.uint8)
+        arr = arr.reshape((2, 3, 1))
+        aug = iaa.Invert(p=1.0, threshold=128, invert_above_threshold=True)
+
+        observed = aug.augment_image(arr)
+
+        expected = np.array([0, 10, 50, 255-150, 255-200, 255-255],
+                            dtype=np.uint8).reshape((2, 3, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_threshold_inv_below(self):
+        arr = np.array([0, 10, 50, 150, 200, 255], dtype=np.uint8)
+        arr = arr.reshape((2, 3, 1))
+        aug = iaa.Invert(p=1.0, threshold=128, invert_above_threshold=False)
+
+        observed = aug.augment_image(arr)
+
+        expected = np.array([255-0, 255-10, 255-50, 150, 200, 255],
+                            dtype=np.uint8).reshape((2, 3, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
     def test_keypoints_dont_change(self):
         # keypoints shouldnt be changed
         zeros = np.zeros((4, 4, 3), dtype=np.uint8)
@@ -3635,13 +3659,12 @@ class TestInvert(unittest.TestCase):
         # test get_parameters()
         aug = iaa.Invert(p=0.5, per_channel=False, min_value=10, max_value=20)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Binomial)
-        assert isinstance(params[0].p, iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
-        assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
-        assert params[1].value == 0
+        assert params[0] is aug.p
+        assert params[1] is aug.per_channel
         assert params[2] == 10
         assert params[3] == 20
+        assert params[4] is aug.threshold
+        assert params[5] is aug.invert_above_threshold
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)

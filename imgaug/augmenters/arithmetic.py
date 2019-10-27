@@ -841,8 +841,7 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
 
     threshold : None or number, optional
         A threshold to use in order to invert only numbers above or below
-        the threshold. If ``None`` or the dtype of `image` is boolean,
-        no thresholding will be used.
+        the threshold. If ``None`` no thresholding will be used.
 
     invert_above_threshold : bool, optional
         If ``True``, only values ``>=threshold`` will be inverted.
@@ -3102,7 +3101,7 @@ class Invert(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.invert`.
+        See :func:`imgaug.augmenters.arithmetic.invert_`.
 
     Parameters
     ----------
@@ -3137,6 +3136,28 @@ class Invert(meta.Augmenter):
         Maximum of the value range of input images, e.g. ``255`` for ``uint8``
         images. If set to ``None``, the value will be automatically derived
         from the image's dtype.
+
+    threshold : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        A threshold to use in order to invert only numbers above or below
+        the threshold. If ``None`` no thresholding will be used.
+
+            * If ``None``: No thresholding will be used.
+            * If ``number``: The value will be used for all images.
+            * If ``tuple`` ``(a, b)``: A value will be uniformly sampled per
+              image from the interval ``[a, b)``.
+            * If ``list``: A random value will be picked from the list per
+              image.
+            * If ``StochasticParameter``: Per batch of size ``N``, the
+              parameter will be queried once to return ``(N,)`` samples.
+
+    invert_above_threshold : bool or float or imgaug.parameters.StochasticParameter, optional
+        If ``True``, only values ``>=threshold`` will be inverted.
+        Otherwise, only values ``<threshold`` will be inverted.
+        If a ``number``, then expected to be in the interval ``[0.0, 1.0]`` and
+        denoting an imagewise probability. If a ``StochasticParameter`` then
+        ``(N,)`` values will be sampled from the parameter per batch of size
+        ``N`` and interpreted as ``True`` if ``>0.5``.
+        If `threshold` is ``None`` this parameter has no effect.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3184,6 +3205,7 @@ class Invert(meta.Augmenter):
     ]
 
     def __init__(self, p=0, per_channel=False, min_value=None, max_value=None,
+                 threshold=None, invert_above_threshold=0.5,
                  name=None, deterministic=False, random_state=None):
         super(Invert, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
@@ -3195,38 +3217,87 @@ class Invert(meta.Augmenter):
         self.min_value = min_value
         self.max_value = max_value
 
+        if threshold is None:
+            self.threshold = None
+        else:
+            self.threshold = iap.handle_continuous_param(
+                threshold, "threshold", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True)
+        self.invert_above_threshold = iap.handle_probability_param(
+            invert_above_threshold, "invert_above_threshold")
+
     def _augment_batch(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
-        images = batch.images
-        nb_images = len(images)
-        nb_channels = meta.estimate_max_number_of_channels(images)
-        rss = random_state.duplicate(2)
-        per_channel_samples = self.per_channel.draw_samples(
-            (nb_images,), random_state=rss[0])
-        p_samples = self.p.draw_samples((nb_images, nb_channels),
-                                        random_state=rss[1])
+        samples = self._draw_samples(batch, random_state)
 
-        gen = zip(images, per_channel_samples, p_samples)
-        for image, per_channel_samples_i, p_samples_i in gen:
-            if per_channel_samples_i > 0.5:
-                mask = p_samples_i > 0.5
-                image[..., mask] = invert_(image[..., mask],
-                                           self.min_value, self.max_value)
+        for i, image in enumerate(batch.images):
+            if 0 in image.shape:
+                continue
+
+            kwargs = {
+                "min_value": samples.min_value[i],
+                "max_value": samples.max_value[i],
+                "threshold": samples.threshold[i],
+                "invert_above_threshold": samples.invert_above_threshold[i]
+            }
+
+            if samples.per_channel[i]:
+                nb_channels = image.shape[2]
+                mask = samples.p[i, :nb_channels]
+                image[..., mask] = invert_(image[..., mask], **kwargs)
             else:
-                # p_samples_i.size == 0 is the case when the channel axis
-                # has value 0 and hence p_samples_i[0] fails. By still
-                # calling invert() in these cases instead of changing nothing
-                # we allow the unittests for Invert to also test invert().
-                if p_samples_i.size == 0 or p_samples_i[0] > 0.5:
-                    image[:, :, :] = invert_(image, self.min_value,
-                                             self.max_value)
+                if samples.p[i, 0]:
+                    image[:, :, :] = invert_(image, **kwargs)
 
         return batch
 
+    def _draw_samples(self, batch, random_state):
+        nb_images = batch.nb_rows
+        nb_channels = meta.estimate_max_number_of_channels(batch.images)
+        p = self.p.draw_samples((nb_images, nb_channels),
+                                random_state=random_state)
+        p = (p > 0.5)
+        per_channel = self.per_channel.draw_samples((nb_images,),
+                                                    random_state=random_state)
+        per_channel = (per_channel > 0.5)
+        min_value = [self.min_value] * nb_images
+        max_value = [self.max_value] * nb_images
+
+        if self.threshold is None:
+            threshold = [None] * nb_images
+        else:
+            threshold = self.threshold.draw_samples(
+                (nb_images,), random_state=random_state)
+
+        invert_above_threshold = self.invert_above_threshold.draw_samples(
+            (nb_images,), random_state=random_state)
+        invert_above_threshold = (invert_above_threshold > 0.5)
+
+        return _InvertSamples(
+            p=p,
+            per_channel=per_channel,
+            min_value=min_value,
+            max_value=max_value,
+            threshold=threshold,
+            invert_above_threshold=invert_above_threshold
+        )
+
     def get_parameters(self):
-        return [self.p, self.per_channel, self.min_value, self.max_value]
+        return [self.p, self.per_channel, self.min_value, self.max_value,
+                self.threshold, self.invert_above_threshold]
+
+
+class _InvertSamples(object):
+    def __init__(self, p, per_channel, min_value, max_value,
+                 threshold, invert_above_threshold):
+        self.p = p
+        self.per_channel = per_channel
+        self.min_value = min_value
+        self.max_value = max_value
+        self.threshold = threshold
+        self.invert_above_threshold = invert_above_threshold
 
 
 # TODO remove from examples

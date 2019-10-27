@@ -6,3 +6,5 @@
   of `imgaug.augmenters.arithmetic.invert()`.
 * Added parameters `threshold` and `invert_above_threshold` to
   `imgaug.augmenters.arithmetic.invert()`
+* Added parameters `threshold` and `invert_above_threshold` to
+  `imgaug.augmenters.arithmetic.Invert`.
