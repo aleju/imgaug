@@ -1049,6 +1049,61 @@ def _generate_table_for_invert_uint8(min_value, max_value, threshold,
     return table_inv
 
 
+def solarize(image, threshold=128):
+    """Invert pixel values above a threshold.
+
+    dtype support::
+
+        See :func:`solarize_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        See :func:`solarize_`.
+
+    threshold : None or number, optional
+        See :func:`solarize_`.
+
+    Returns
+    -------
+    ndarray
+        Inverted image.
+
+    """
+    return solarize_(np.copy(image), threshold=threshold)
+
+
+def solarize_(image, threshold=128):
+    """Invert pixel values above a threshold in-place.
+
+    This function is a wrapper around :func:`invert`.
+
+    This function performs the same transformation as
+    :func:`PIL.ImageOps.solarize`.
+
+    dtype support::
+
+        See :func:`invert_(min_value=None and max_value=None)`.
+
+    Parameters
+    ----------
+    image : ndarray
+        See :func:`invert_`.
+
+    threshold : None or number, optional
+        See :func:`invert_`.
+        Note: The default threshold is optimized for ``uint8`` images.
+
+    Returns
+    -------
+    ndarray
+        Inverted image. This *can* be the same array as input in `image`,
+        modified in-place.
+
+    """
+    return invert_(image, threshold=threshold)
+
+
 def compress_jpeg(image, compression):
     """Compress an image using jpeg compression.
 

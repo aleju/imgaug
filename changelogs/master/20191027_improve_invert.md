@@ -8,3 +8,7 @@
   `imgaug.augmenters.arithmetic.invert()`
 * Added parameters `threshold` and `invert_above_threshold` to
   `imgaug.augmenters.arithmetic.Invert`.
+* Added function `imgaug.augmenters.arithmetic.solarize()`, a wrapper around
+  `solarize_()`.
+* Added function `imgaug.augmenters.arithmetic.solarize_()`, a wrapper around
+  `invert_()`.

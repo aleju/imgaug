@@ -3452,6 +3452,75 @@ class Test_invert_(unittest.TestCase):
                 assert np.allclose(observed, expected, rtol=0, atol=1e-4)
 
 
+class Test_solarize(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.arithmetic.solarize_")
+    def test_mocked_defaults(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize(arr)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is not arr
+        assert np.array_equal(args[0], arr)
+        assert kwargs["threshold"] == 128
+        assert observed == "foo"
+
+    @mock.patch("imgaug.augmenters.arithmetic.solarize_")
+    def test_mocked(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize(arr, threshold=5)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is not arr
+        assert np.array_equal(args[0], arr)
+        assert kwargs["threshold"] == 5
+        assert observed == "foo"
+
+    def test_uint8(self):
+        arr = np.array([0, 10, 50, 150, 200, 255], dtype=np.uint8)
+        arr = arr.reshape((2, 3, 1))
+
+        observed = iaa.solarize(arr)
+
+        expected = np.array([0, 10, 50, 255-150, 255-200, 255-255],
+                            dtype=np.uint8).reshape((2, 3, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+
+class Test_solarize_(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked_defaults(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize_(arr)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is arr
+        assert kwargs["threshold"] == 128
+        assert observed == "foo"
+
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize_(arr, threshold=5)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is arr
+        assert kwargs["threshold"] == 5
+        assert observed == "foo"
+
+
 class TestInvert(unittest.TestCase):
     def setUp(self):
         reseed()
