@@ -877,17 +877,19 @@ class TestRemoveSaturation(unittest.TestCase):
 
     def test___init___defaults(self):
         aug = iaa.RemoveSaturation()
-        assert isinstance(aug.mul, iap.Subtract)
-        assert np.isclose(aug.mul.other_param.value, 1.0)
-        assert np.isclose(aug.mul.val.a.value, 0.0)
-        assert np.isclose(aug.mul.val.b.value, 1.0)
+        multiply = aug.children[0].children[0]
+        assert isinstance(multiply.mul, iap.Subtract)
+        assert np.isclose(multiply.mul.other_param.value, 1.0)
+        assert np.isclose(multiply.mul.val.a.value, 0.0)
+        assert np.isclose(multiply.mul.val.b.value, 1.0)
         assert aug.from_colorspace == iaa.CSPACE_RGB
 
     def test___init___custom(self):
         aug = iaa.RemoveSaturation(0.7, from_colorspace=iaa.CSPACE_HSV)
-        assert isinstance(aug.mul, iap.Subtract)
-        assert np.isclose(aug.mul.other_param.value, 1.0)
-        assert np.isclose(aug.mul.val.value, 0.7)
+        multiply = aug.children[0].children[0]
+        assert isinstance(multiply.mul, iap.Subtract)
+        assert np.isclose(multiply.mul.other_param.value, 1.0)
+        assert np.isclose(multiply.mul.val.value, 0.7)
         assert aug.from_colorspace == iaa.CSPACE_HSV
 
     def test_on_images(self):

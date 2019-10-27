@@ -2513,7 +2513,7 @@ class GrayscaleColorwise(meta.Augmenter):
     completely grayscale or completely unaffected due to the default setting
     of `alpha`.
 
-    >>> import imgaug.augmenters as iap
+    >>> import imgaug.parameters as iap
     >>> aug = iaa.GrayscaleColorwise(nb_bins=2, smoothness=0.0,
     >>>                              alpha=iap.Beta(0.5, 0.5))
 
