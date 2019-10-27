@@ -3096,6 +3096,53 @@ class TestCoarsePepper(unittest.TestCase):
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
+class Test_invert(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked_defaults(self, mock_invert):
+        mock_invert.return_value = "foo"
+        arr = np.zeros((1,), dtype=np.uint8)
+        observed = iaa.invert(arr)
+
+        assert observed == "foo"
+        args = mock_invert.call_args_list[0]
+        assert np.array_equal(mock_invert.call_args_list[0][0][0], arr)
+        assert args[1]["min_value"] is None
+        assert args[1]["max_value"] is None
+        assert args[1]["threshold"] is None
+        assert args[1]["invert_above_threshold"] is True
+
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked(self, mock_invert):
+        mock_invert.return_value = "foo"
+        arr = np.zeros((1,), dtype=np.uint8)
+        observed = iaa.invert(arr, min_value=1, max_value=10, threshold=5,
+                              invert_above_threshold=False)
+
+        assert observed == "foo"
+        args = mock_invert.call_args_list[0]
+        assert np.array_equal(mock_invert.call_args_list[0][0][0], arr)
+        assert args[1]["min_value"] == 1
+        assert args[1]["max_value"] == 10
+        assert args[1]["threshold"] == 5
+        assert args[1]["invert_above_threshold"] is False
+
+    def test_uint8(self):
+        values = np.array([0, 20, 45, 60, 128, 255], dtype=np.uint8)
+        expected = np.array([
+            255,
+            255-20,
+            255-45,
+            255-60,
+            255-128,
+            255-255
+        ], dtype=np.uint8)
+
+        observed = iaa.invert(values)
+
+        assert np.array_equal(observed, expected)
+        assert observed is not values
+
+
 # most parts of this function are tested via Invert
 class Test_invert_(unittest.TestCase):
     def test_arr_is_noncontiguous_uint8(self):
