@@ -5633,13 +5633,13 @@ class TestCenterPadToMultiplesOf(unittest.TestCase):
         assert np.array_equal(observed, expected)
 
 
-class TestCropToExponentsOf(unittest.TestCase):
+class TestCropToPowersOf(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test___init__(self):
-        aug = iaa.CropToExponentsOf(width_base=2, height_base=3,
-                                    position="center")
+        aug = iaa.CropToPowersOf(width_base=2, height_base=3,
+                                 position="center")
         assert aug.width_base == 2
         assert aug.height_base == 3
         assert np.isclose(aug.position[0].value, 0.5)
@@ -5647,7 +5647,7 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__no_change(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(3, 3, position="center")
+        aug = iaa.CropToPowersOf(3, 3, position="center")
 
         observed = aug(image=image)
 
@@ -5655,7 +5655,7 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__with_change(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(2, 2, position="center")
+        aug = iaa.CropToPowersOf(2, 2, position="center")
 
         observed = aug(image=image)
 
@@ -5663,8 +5663,8 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__only_width_changed(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(height_base=3, width_base=2,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=3, width_base=2,
+                                 position="center")
 
         observed = aug(image=image)
 
@@ -5672,8 +5672,8 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__only_height_changed(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(height_base=2, width_base=3,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=2, width_base=3,
+                                 position="center")
 
         observed = aug(image=image)
 
@@ -5681,7 +5681,7 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_on_3x4_image(self):
         image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
-        aug = iaa.CropToExponentsOf(2, 2, position="center")
+        aug = iaa.CropToPowersOf(2, 2, position="center")
 
         observed = aug(image=image)
 
@@ -5692,8 +5692,8 @@ class TestCropToExponentsOf(unittest.TestCase):
             np.arange((17*26*3)),
             255
         ).astype(np.uint8).reshape((17, 26, 3))
-        aug = iaa.CropToExponentsOf(height_base=2, width_base=3,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=2, width_base=3,
+                                 position="center")
 
         observed = aug(image=image)
 
@@ -5704,7 +5704,7 @@ class TestCropToExponentsOf(unittest.TestCase):
         # this should not lead to crops that result in exponent of B^0=1,
         # i.e. the respective axes should simply not be changed.
         image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
-        aug = iaa.CropToExponentsOf(10, 10, position="center")
+        aug = iaa.CropToPowersOf(10, 10, position="center")
 
         observed = aug(image=image)
 
@@ -5712,8 +5712,8 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_width_base_is_none(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(height_base=2, width_base=None,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=2, width_base=None,
+                                 position="center")
 
         observed = aug(image=image)
 
@@ -5721,8 +5721,8 @@ class TestCropToExponentsOf(unittest.TestCase):
 
     def test_height_base_is_none(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CropToExponentsOf(height_base=None, width_base=2,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=None, width_base=2,
+                                 position="center")
 
         observed = aug(image=image)
 
@@ -5733,8 +5733,8 @@ class TestCropToExponentsOf(unittest.TestCase):
         # and already tested there, so there is no need to test them again here
         arr = np.linspace(0, 1.0, 50*50).astype(np.float32).reshape((50, 50, 1))
         heatmap = ia.HeatmapsOnImage(arr, shape=(99, 99, 3))
-        aug = iaa.CropToExponentsOf(height_base=50, width_base=50,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=50, width_base=50,
+                                 position="center")
 
         observed = aug(heatmaps=heatmap)
 
@@ -5745,8 +5745,8 @@ class TestCropToExponentsOf(unittest.TestCase):
     def test_keypoints(self):
         kps = [ia.Keypoint(x=2, y=3)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(8, 4, 3))
-        aug = iaa.CropToExponentsOf(height_base=5, width_base=2,
-                                    position="center")
+        aug = iaa.CropToPowersOf(height_base=5, width_base=2,
+                                 position="center")
 
         observed = aug(keypoints=kpsoi)
 
@@ -5754,8 +5754,8 @@ class TestCropToExponentsOf(unittest.TestCase):
         assert observed.keypoints[0].y == 2
 
     def test_get_parameters(self):
-        aug = iaa.CropToExponentsOf(width_base=1, height_base=2,
-                                    position="center")
+        aug = iaa.CropToPowersOf(width_base=1, height_base=2,
+                                 position="center")
 
         params = aug.get_parameters()
 
@@ -5784,33 +5784,33 @@ class TestCropToExponentsOf(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                aug = iaa.CropToExponentsOf(2, 2)
+                aug = iaa.CropToPowersOf(2, 2)
 
                 image_aug = aug(image=image)
 
                 assert image_aug.shape == image.shape
 
 
-class TestCenterCropToExponentsOf(unittest.TestCase):
+class TestCenterCropToPowersOf(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_on_3x3_image__with_change(self):
         image = np.arange((5*11*3)).astype(np.uint8).reshape((5, 11, 3))
-        aug = iaa.CenterCropToExponentsOf(height_base=2, width_base=3)
+        aug = iaa.CenterCropToPowersOf(height_base=2, width_base=3)
 
         observed = aug(image=image)
 
         assert np.array_equal(observed, image[0:4, 1:10, :])
 
 
-class TestPadToExponentsOf(unittest.TestCase):
+class TestPadToPowersOf(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test___init__(self):
-        aug = iaa.PadToExponentsOf(width_base=2, height_base=3,
-                                   position="center")
+        aug = iaa.PadToPowersOf(width_base=2, height_base=3,
+                                position="center")
         assert aug.width_base == 2
         assert aug.height_base == 3
         assert np.isclose(aug.position[0].value, 0.5)
@@ -5818,7 +5818,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__no_change(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(3, 3, position="center")
+        aug = iaa.PadToPowersOf(3, 3, position="center")
 
         observed = aug(image=image)
 
@@ -5826,7 +5826,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__with_change(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(2, 2, position="center")
+        aug = iaa.PadToPowersOf(2, 2, position="center")
 
         observed = aug(image=image)
 
@@ -5835,8 +5835,8 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__only_width_changed(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(height_base=3, width_base=2,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=3, width_base=2,
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5845,8 +5845,8 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_on_3x3_image__only_height_changed(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(height_base=2, width_base=3,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=2, width_base=3,
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5855,7 +5855,7 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_on_3x4_image(self):
         image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
-        aug = iaa.PadToExponentsOf(2, 2, position="center")
+        aug = iaa.PadToPowersOf(2, 2, position="center")
 
         observed = aug(image=image)
 
@@ -5867,8 +5867,8 @@ class TestPadToExponentsOf(unittest.TestCase):
             np.arange((7*22*3)),
             255
         ).astype(np.uint8).reshape((7, 22, 3))
-        aug = iaa.PadToExponentsOf(height_base=12, width_base=2,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=12, width_base=2,
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5880,9 +5880,9 @@ class TestPadToExponentsOf(unittest.TestCase):
             np.arange((7*22*3)),
             255
         ).astype(np.uint8).reshape((7, 22, 3))
-        aug = iaa.PadToExponentsOf(height_base=12, width_base=2,
-                                   pad_cval=100,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=12, width_base=2,
+                                pad_cval=100,
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5894,9 +5894,9 @@ class TestPadToExponentsOf(unittest.TestCase):
             np.arange((7*22*3)),
             255
         ).astype(np.uint8).reshape((7, 22, 3))
-        aug = iaa.PadToExponentsOf(height_base=12, width_base=2,
-                                   pad_mode="edge",
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=12, width_base=2,
+                                pad_mode="edge",
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5905,8 +5905,8 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_width_base_is_none(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(height_base=2, width_base=None,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=2, width_base=None,
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5915,8 +5915,8 @@ class TestPadToExponentsOf(unittest.TestCase):
 
     def test_height_base_is_none(self):
         image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.PadToExponentsOf(height_base=None, width_base=2,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=None, width_base=2,
+                                position="center")
 
         observed = aug(image=image)
 
@@ -5928,8 +5928,8 @@ class TestPadToExponentsOf(unittest.TestCase):
         # and already tested there, so there is no need to test them again here
         arr = np.linspace(0, 1.0, 51*51).astype(np.float32).reshape((51, 51, 1))
         heatmap = ia.HeatmapsOnImage(arr, shape=(101, 101, 3))
-        aug = iaa.PadToExponentsOf(height_base=200, width_base=200,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=200, width_base=200,
+                                position="center")
 
         observed = aug(heatmaps=heatmap)
 
@@ -5940,8 +5940,8 @@ class TestPadToExponentsOf(unittest.TestCase):
     def test_keypoints(self):
         kps = [ia.Keypoint(x=2, y=3)]
         kpsoi = ia.KeypointsOnImage(kps, shape=(14, 4, 3))
-        aug = iaa.PadToExponentsOf(height_base=4, width_base=2,
-                                   position="center")
+        aug = iaa.PadToPowersOf(height_base=4, width_base=2,
+                                position="center")
 
         observed = aug(keypoints=kpsoi)
 
@@ -5949,9 +5949,9 @@ class TestPadToExponentsOf(unittest.TestCase):
         assert observed.keypoints[0].y == 4
 
     def test_get_parameters(self):
-        aug = iaa.PadToExponentsOf(width_base=1, height_base=2,
-                                   pad_cval=5, pad_mode="edge",
-                                   position="center")
+        aug = iaa.PadToPowersOf(width_base=1, height_base=2,
+                                pad_cval=5, pad_mode="edge",
+                                position="center")
 
         params = aug.get_parameters()
 
@@ -5982,7 +5982,7 @@ class TestPadToExponentsOf(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                aug = iaa.PadToExponentsOf(2, 2)
+                aug = iaa.PadToPowersOf(2, 2)
 
                 image_aug = aug(image=image)
 
@@ -5993,13 +5993,13 @@ class TestPadToExponentsOf(unittest.TestCase):
                 assert image_aug.shape == expected_shape
 
 
-class TestCenterPadToExponentsOf(unittest.TestCase):
+class TestCenterPadToPowersOf(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_on_3x3_image__with_change(self):
         image = np.arange((3*5*3)).astype(np.uint8).reshape((3, 5, 3))
-        aug = iaa.CenterPadToExponentsOf(height_base=2, width_base=2)
+        aug = iaa.CenterPadToPowersOf(height_base=2, width_base=2)
 
         observed = aug(image=image)
 

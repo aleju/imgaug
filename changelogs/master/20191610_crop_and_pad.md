@@ -10,8 +10,6 @@ The following functions were moved. Their old names are now deprecated.
   `imgaug.augmenters.size.compute_paddings_to_reach_aspect_ratio`.
 * Moved `imgaug.imgaug.compute_paddings_to_reach_multiples_of`
   to `imgaug.augmenters.size.compute_paddings_to_reach_multiples_of`.
-* Moved `imgaug.imgaug.compute_paddings_to_reach_exponents_of`
-  to `imgaug.augmenters.size.compute_paddings_to_reach_exponents_of`.
 
 
 The following augmenters were added:
@@ -21,10 +19,10 @@ The following augmenters were added:
 * Added augmenter `CenterCropToMultiplesOf`.
 * Added augmenter `PadToMultiplesOf`.
 * Added augmenter `CenterPadToMultiplesOf`.
-* Added augmenter `CropToExponentsOf`.
-* Added augmenter `CenterCropToExponentsOf`.
-* Added augmenter `PadToExponentsOf`.
-* Added augmenter `CenterPadToExponentsOf`.
+* Added augmenter `CropToPowersOf`.
+* Added augmenter `CenterCropToPowersOf`.
+* Added augmenter `PadToPowersOf`.
+* Added augmenter `CenterPadToPowersOf`.
 * Added augmenter `CropToAspectRatio`.
 * Added augmenter `CenterCropToAspectRatio`.
 * Added augmenter `PadToAspectRatio`.
@@ -44,9 +42,9 @@ Added functions:
 * Added function
   `imgaug.augmenters.size.compute_croppings_to_reach_multiples_of()`.
 * Added function
-  `imgaug.augmenters.size.compute_croppings_to_reach_exponents_of()`.
+  `imgaug.augmenters.size.compute_croppings_to_reach_powers_of()`.
 * Added function
-  `imgaug.augmenters.size.compute_paddings_to_reach_exponents_of()`.
+  `imgaug.augmenters.size.compute_paddings_to_reach_powers_of()`.
 
 
 Other changes:

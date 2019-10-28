@@ -27,10 +27,10 @@ List of augmenters:
     * CenterCropToMultiplesOf
     * PadToMultiplesOf
     * CenterPadToMultiplesOf
-    * CropToExponentsOf
-    * CenterCropToExponentsOf
-    * PadToExponentsOf
-    * CenterPadToExponentsOf
+    * CropToPowersOf
+    * CenterCropToPowersOf
+    * PadToPowersOf
+    * CenterPadToPowersOf
     * CropToAspectRatio
     * CenterCropToAspectRatio
     * PadToAspectRatio
@@ -931,12 +931,12 @@ def compute_croppings_to_reach_multiples_of(arr, height_multiple,
     return top, right, bottom, left
 
 
-def compute_paddings_to_reach_exponents_of(arr, height_base, width_base,
-                                           allow_zero_exponent=False):
-    """Compute paddings to reach exponents of given base values.
+def compute_paddings_to_reach_powers_of(arr, height_base, width_base,
+                                        allow_zero_exponent=False):
+    """Compute paddings to reach powers of given base values.
 
     For given axis size ``S``, padded size ``S'`` (``S' >= S``) and base ``B``
-    this function computes paddings that fullfill ``S' = B^E``, where ``E``
+    this function computes paddings that fulfill ``S' = B^E``, where ``E``
     is any exponent from the discrete interval ``[0 .. inf)``.
 
     See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
@@ -963,7 +963,7 @@ def compute_paddings_to_reach_exponents_of(arr, height_base, width_base,
     Returns
     -------
     tuple of int
-        Required padding amounts to fullfill ``S' = B^E`` given as a
+        Required padding amounts to fulfill ``S' = B^E`` given as a
         ``tuple`` of the form ``(top, right, bottom, left)``.
 
     """
@@ -1000,12 +1000,12 @@ def compute_paddings_to_reach_exponents_of(arr, height_base, width_base,
     return top, right, bottom, left
 
 
-def compute_croppings_to_reach_exponents_of(arr, height_base, width_base,
-                                            allow_zero_exponent=False):
-    """Compute croppings to reach exponents of given base values.
+def compute_croppings_to_reach_powers_of(arr, height_base, width_base,
+                                         allow_zero_exponent=False):
+    """Compute croppings to reach powers of given base values.
 
     For given axis size ``S``, cropped size ``S'`` (``S' <= S``) and base ``B``
-    this function computes croppings that fullfill ``S' = B^E``, where ``E``
+    this function computes croppings that fulfill ``S' = B^E``, where ``E``
     is any exponent from the discrete interval ``[0 .. inf)``.
 
     See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
@@ -1038,7 +1038,7 @@ def compute_croppings_to_reach_exponents_of(arr, height_base, width_base,
     Returns
     -------
     tuple of int
-        Required cropping amounts to fullfill ``S' = B^E`` given as a
+        Required cropping amounts to fulfill ``S' = B^E`` given as a
         ``tuple`` of the form ``(top, right, bottom, left)``.
 
     """
@@ -3456,11 +3456,11 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
             name=name, deterministic=deterministic, random_state=random_state)
 
 
-class CropToExponentsOf(CropToFixedSize):
-    """Crop images until their height/width is an exponent of a base.
+class CropToPowersOf(CropToFixedSize):
+    """Crop images until their height/width is a power of a base.
 
     This augmenter removes pixels from an axis with size ``S`` leading to the
-    new size ``S'`` until ``S' = B^E`` is fullfilled, where ``B`` is a
+    new size ``S'`` until ``S' = B^E`` is fulfilled, where ``B`` is a
     provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
     interval ``[1 .. inf)``.
 
@@ -3479,13 +3479,13 @@ class CropToExponentsOf(CropToFixedSize):
     ----------
     width_base : int or None
         Base for the width. Images will be cropped down until their
-        width fullfills ``width' = width_base ^ E`` with ``E`` being any
+        width fulfills ``width' = width_base ^ E`` with ``E`` being any
         natural number.
         If ``None``, image widths will not be altered.
 
     height_base : int or None
         Base for the height. Images will be cropped down until their
-        height fullfills ``height' = height_base ^ E`` with ``E`` being any
+        height fulfills ``height' = height_base ^ E`` with ``E`` being any
         natural number.
         If ``None``, image heights will not be altered.
 
@@ -3506,7 +3506,7 @@ class CropToExponentsOf(CropToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.CropToExponentsOf(height_base=3, width_base=2)
+    >>> aug = iaa.CropToPowersOf(height_base=3, width_base=2)
     >>> crop = aug(image=image)
 
     Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
@@ -3515,7 +3515,7 @@ class CropToExponentsOf(CropToFixedSize):
 
     def __init__(self, width_base, height_base, position="uniform",
                  name=None, deterministic=False, random_state=None):
-        super(CropToExponentsOf, self).__init__(
+        super(CropToPowersOf, self).__init__(
             width=None, height=None, position=position,
             name=name, deterministic=deterministic, random_state=random_state)
         self.width_base = width_base
@@ -3523,14 +3523,14 @@ class CropToExponentsOf(CropToFixedSize):
 
     def _draw_samples(self, batch, random_state):
         _sizes, offset_xs, offset_ys = super(
-            CropToExponentsOf, self
+            CropToPowersOf, self
         )._draw_samples(batch, random_state)
 
         shapes = batch.get_rowwise_shapes()
         sizes = []
         for shape in shapes:
             height, width = shape[0:2]
-            croppings = compute_croppings_to_reach_exponents_of(
+            croppings = compute_croppings_to_reach_powers_of(
                 shape,
                 height_base=self.height_base,
                 width_base=self.width_base)
@@ -3550,12 +3550,12 @@ class CropToExponentsOf(CropToFixedSize):
         return [self.width_base, self.height_base, self.position]
 
 
-class CenterCropToExponentsOf(CropToExponentsOf):
-    """Crop images equally on all sides until H/W is an exponent of a base.
+class CenterCropToPowersOf(CropToPowersOf):
+    """Crop images equally on all sides until H/W is a power of a base.
 
-    This is the same as :class`CropToExponentsOf`, but uses
+    This is the same as :class`CropToPowersOf`, but uses
     ``position="center"`` by default, which spreads the crop amounts equally
-    over all image sides, while :class`CropToExponentsOf` by default spreads
+    over all image sides, while :class`CropToPowersOf` by default spreads
     them randomly.
 
     dtype support::
@@ -3565,10 +3565,10 @@ class CenterCropToExponentsOf(CropToExponentsOf):
     Parameters
     ----------
     width_base : int or None
-        See :func:`CropToExponentsOf.__init__`.
+        See :func:`CropToPowersOf.__init__`.
 
     height_base : int or None
-        See :func:`CropToExponentsOf.__init__`.
+        See :func:`CropToPowersOf.__init__`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3584,7 +3584,7 @@ class CenterCropToExponentsOf(CropToExponentsOf):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.CenterCropToExponentsOf(height_base=3, width_base=2)
+    >>> aug = iaa.CenterCropToPowersOf(height_base=3, width_base=2)
     >>> crop = aug(image=image)
 
     Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
@@ -3595,16 +3595,16 @@ class CenterCropToExponentsOf(CropToExponentsOf):
 
     def __init__(self, width_base, height_base,
                  name=None, deterministic=False, random_state=None):
-        super(CenterCropToExponentsOf, self).__init__(
+        super(CenterCropToPowersOf, self).__init__(
             width_base=width_base, height_base=height_base, position="center",
             name=name, deterministic=deterministic, random_state=random_state)
 
 
-class PadToExponentsOf(PadToFixedSize):
-    """Pad images until their height/width is an exponent of a base.
+class PadToPowersOf(PadToFixedSize):
+    """Pad images until their height/width is a power of a base.
 
     This augmenter adds pixels to an axis with size ``S`` leading to the
-    new size ``S'`` until ``S' = B^E`` is fullfilled, where ``B`` is a
+    new size ``S'`` until ``S' = B^E`` is fulfilled, where ``B`` is a
     provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
     interval ``[1 .. inf)``.
 
@@ -3616,13 +3616,13 @@ class PadToExponentsOf(PadToFixedSize):
     ----------
     width_base : int or None
         Base for the width. Images will be padded down until their
-        width fullfills ``width' = width_base ^ E`` with ``E`` being any
+        width fulfills ``width' = width_base ^ E`` with ``E`` being any
         natural number.
         If ``None``, image widths will not be altered.
 
     height_base : int or None
         Base for the height. Images will be padded until their
-        height fullfills ``height' = height_base ^ E`` with ``E`` being any
+        height fulfills ``height' = height_base ^ E`` with ``E`` being any
         natural number.
         If ``None``, image heights will not be altered.
 
@@ -3649,7 +3649,7 @@ class PadToExponentsOf(PadToFixedSize):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.PadToExponentsOf(height_base=5, width_base=2)
+    >>> aug = iaa.PadToPowersOf(height_base=5, width_base=2)
     >>> image_padded = aug(image=image)
 
     Pad ``image`` to size ``25x16`` (``5^2`` and ``2^3``).
@@ -3660,7 +3660,7 @@ class PadToExponentsOf(PadToFixedSize):
                  pad_mode="constant", pad_cval=0,
                  position="uniform",
                  name=None, deterministic=False, random_state=None):
-        super(PadToExponentsOf, self).__init__(
+        super(PadToPowersOf, self).__init__(
             width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
             name=name, deterministic=deterministic, random_state=random_state)
@@ -3669,14 +3669,14 @@ class PadToExponentsOf(PadToFixedSize):
 
     def _draw_samples(self, batch, random_state):
         _sizes, pad_xs, pad_ys, pad_modes, pad_cvals = super(
-            PadToExponentsOf, self
+            PadToPowersOf, self
         )._draw_samples(batch, random_state)
 
         shapes = batch.get_rowwise_shapes()
         sizes = []
         for shape in shapes:
             height, width = shape[0:2]
-            paddings = compute_paddings_to_reach_exponents_of(
+            paddings = compute_paddings_to_reach_powers_of(
                 shape,
                 height_base=self.height_base,
                 width_base=self.width_base)
@@ -3698,12 +3698,12 @@ class PadToExponentsOf(PadToFixedSize):
                 self.position]
 
 
-class CenterPadToExponentsOf(PadToExponentsOf):
-    """Pad images equally on all sides until H/W is an exponent of a base.
+class CenterPadToPowersOf(PadToPowersOf):
+    """Pad images equally on all sides until H/W is a power of a base.
 
-    This is the same as :class`PadToExponentsOf`, but uses
+    This is the same as :class`PadToPowersOf`, but uses
     ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class`PadToExponentsOf` by default spreads
+    over all image sides, while :class`PadToPowersOf` by default spreads
     them randomly.
 
     dtype support::
@@ -3713,16 +3713,16 @@ class CenterPadToExponentsOf(PadToExponentsOf):
     Parameters
     ----------
     width_base : int or None
-        See :func:`PadToExponentsOf.__init__`.
+        See :func:`PadToPowersOf.__init__`.
 
     height_base : int or None
-        See :func:`PadToExponentsOf.__init__`.
+        See :func:`PadToPowersOf.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToExponentsOf.__init__`.
+        See :func:`imgaug.augmenters.size.PadToPowersOf.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToExponentsOf.__init__`.
+        See :func:`imgaug.augmenters.size.PadToPowersOf.__init__`.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -3738,7 +3738,7 @@ class CenterPadToExponentsOf(PadToExponentsOf):
     >>> import numpy as np
     >>> import imgaug.augmenters as iaa
     >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.CenterPadToExponentsOf(height_base=5, width_base=2)
+    >>> aug = iaa.CenterPadToPowersOf(height_base=5, width_base=2)
     >>> image_padded = aug(image=image)
 
     Pad ``image`` to size ``25x16`` (``5^2`` and ``2^3``).
@@ -3750,7 +3750,7 @@ class CenterPadToExponentsOf(PadToExponentsOf):
     def __init__(self, width_base, height_base,
                  pad_mode="constant", pad_cval=0,
                  name=None, deterministic=False, random_state=None):
-        super(CenterPadToExponentsOf, self).__init__(
+        super(CenterPadToPowersOf, self).__init__(
             width_base=width_base, height_base=height_base,
             pad_mode=pad_mode, pad_cval=pad_cval,
             position="center",
