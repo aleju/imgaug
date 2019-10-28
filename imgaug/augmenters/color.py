@@ -2838,7 +2838,7 @@ class _AbstractColorQuantization(meta.Augmenter):
         return image_aug
 
     @abstractmethod
-    def _quantize(self, image, count):
+    def _quantize(self, image, counts):
         """Apply the augmenter-specific quantization function to an image."""
 
     def get_parameters(self):
