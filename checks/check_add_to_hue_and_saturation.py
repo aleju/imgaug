@@ -22,7 +22,7 @@ def main():
     for value in np.arange(-255, 255, VAL_PER_STEP):
         aug = iaa.AddToHueAndSaturation(value=value)
         img_aug = aug.augment_image(image)
-        img_aug = ia.pad(img_aug, bottom=40)
+        img_aug = iaa.pad(img_aug, bottom=40)
         img_aug = ia.draw_text(img_aug, x=0, y=img_aug.shape[0]-38, text="value=%d" % (value,), size=30)
 
         cv2.imshow("aug", img_aug)

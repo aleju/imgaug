@@ -674,11 +674,6 @@ class BoundingBox(object):
             ``H'>0`` and ``W'>0``, otherwise only ``H'>=0`` and ``W'>=0``.
 
         """
-        pad_top = 0
-        pad_right = 0
-        pad_bottom = 0
-        pad_left = 0
-
         height, width = image.shape[0], image.shape[1]
         x1, x2, y1, y2 = self.x1_int, self.x2_int, self.y1_int, self.y2_int
 
@@ -706,6 +701,13 @@ class BoundingBox(object):
             # TODO probably more efficient to initialize an array of zeros
             #      and copy only the portions of the bb into that array that
             #      are natively inside the image area
+            from ..augmenters import size as iasize
+
+            pad_top = 0
+            pad_right = 0
+            pad_bottom = 0
+            pad_left = 0
+
             if x1 < 0:
                 pad_left = abs(x1)
                 x2 = x2 + pad_left
@@ -727,7 +729,7 @@ class BoundingBox(object):
                 if pad_max is None:
                     pad_max = max(paddings)
 
-                image = ia.pad(
+                image = iasize.pad(
                     image,
                     top=min(pad_top, pad_max),
                     right=min(pad_right, pad_max),

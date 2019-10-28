@@ -406,8 +406,9 @@ class SegmentationMapsOnImage(object):
             width ``W'=W+left+right``.
 
         """
-        arr_padded = ia.pad(self.arr, top=top, right=right, bottom=bottom,
-                            left=left, mode=mode, cval=cval)
+        from ..augmenters import size as iasize
+        arr_padded = iasize.pad(self.arr, top=top, right=right, bottom=bottom,
+                                left=left, mode=mode, cval=cval)
         return self.deepcopy(arr=arr_padded)
 
     def pad_to_aspect_ratio(self, aspect_ratio, mode="constant", cval=0,
@@ -453,7 +454,8 @@ class SegmentationMapsOnImage(object):
             ``True``.
 
         """
-        arr_padded, pad_amounts = ia.pad_to_aspect_ratio(
+        from ..augmenters import size as iasize
+        arr_padded, pad_amounts = iasize.pad_to_aspect_ratio(
             self.arr,
             aspect_ratio=aspect_ratio,
             mode=mode,
