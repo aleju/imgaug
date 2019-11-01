@@ -4627,13 +4627,14 @@ class TestCenterPadToFixedSize(unittest.TestCase):
         reseed()
 
     def test_image2d(self):
-        image = np.arange(4*4*3).astype(np.uint8).reshape((4, 4, 3))
-        aug = iaa.CenterPadToFixedSize(height=5, width=5)
+        for _ in np.arange(10):
+            image = np.arange(4*4*3).astype(np.uint8).reshape((4, 4, 3))
+            aug = iaa.CenterPadToFixedSize(height=5, width=5)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        expected = iaa.pad(image, right=1, bottom=1)
-        assert np.array_equal(observed, expected)
+            expected = iaa.pad(image, right=1, bottom=1)
+            assert np.array_equal(observed, expected)
 
 
 class TestCropToFixedSize(unittest.TestCase):
@@ -5258,12 +5259,13 @@ class TestCenterCropToFixedSize(unittest.TestCase):
         reseed()
 
     def test_on_single_image(self):
-        image = np.arange(11*11*2).astype(np.uint8).reshape((11, 11, 2))
-        aug = iaa.CenterCropToFixedSize(width=3, height=3)
+        for _ in np.arange(10):
+            image = np.arange(11*11*2).astype(np.uint8).reshape((11, 11, 2))
+            aug = iaa.CenterCropToFixedSize(width=3, height=3)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        assert np.array_equal(observed, image[5-1:5+2, 5-1:5+2, :])
+            assert np.array_equal(observed, image[5-1:5+2, 5-1:5+2, :])
 
 
 class TestCropToMultiplesOf(unittest.TestCase):
@@ -5423,12 +5425,15 @@ class TestCenterCropToMultiplesOf(unittest.TestCase):
         reseed()
 
     def test_on_3x4_image(self):
-        image = np.arange((5*6*3)).astype(np.uint8).reshape((5, 6, 3))
-        aug = iaa.CenterCropToMultiplesOf(height_multiple=2, width_multiple=2)
+        for _ in np.arange(10):
+            image = np.mod(np.arange((17*14*3)), 255)
+            image = image.astype(np.uint8).reshape((17, 14, 3))
+            aug = iaa.CenterCropToMultiplesOf(height_multiple=5,
+                                              width_multiple=5)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        assert np.array_equal(observed, image[0:4, 0:6, :])
+            assert np.array_equal(observed, image[1:-1, 2:-2, :])
 
 
 class TestPadToMultiplesOf(unittest.TestCase):
@@ -5624,13 +5629,14 @@ class TestCenterPadToMultiplesOf(unittest.TestCase):
         reseed()
 
     def test_on_3x4_image(self):
-        image = np.arange((3*4*3)).astype(np.uint8).reshape((3, 4, 3))
-        aug = iaa.CenterPadToMultiplesOf(2, 2)
+        for _ in np.arange(10):
+            image = np.arange((3*6*3)).astype(np.uint8).reshape((3, 6, 3))
+            aug = iaa.CenterPadToMultiplesOf(5, 5)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        expected = iaa.pad(image, bottom=1)
-        assert np.array_equal(observed, expected)
+            expected = iaa.pad(image, top=1, right=2, bottom=1, left=2)
+            assert np.array_equal(observed, expected)
 
 
 class TestCropToPowersOf(unittest.TestCase):
@@ -5796,12 +5802,13 @@ class TestCenterCropToPowersOf(unittest.TestCase):
         reseed()
 
     def test_on_3x3_image__with_change(self):
-        image = np.arange((5*11*3)).astype(np.uint8).reshape((5, 11, 3))
-        aug = iaa.CenterCropToPowersOf(height_base=2, width_base=3)
+        for _ in np.arange(10):
+            image = np.arange((11*13*3)).astype(np.uint8).reshape((11, 13, 3))
+            aug = iaa.CenterCropToPowersOf(height_base=2, width_base=3)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        assert np.array_equal(observed, image[0:4, 1:10, :])
+            assert np.array_equal(observed, image[1:-2, 2:-2, :])
 
 
 class TestPadToPowersOf(unittest.TestCase):
@@ -5998,13 +6005,14 @@ class TestCenterPadToPowersOf(unittest.TestCase):
         reseed()
 
     def test_on_3x3_image__with_change(self):
-        image = np.arange((3*5*3)).astype(np.uint8).reshape((3, 5, 3))
-        aug = iaa.CenterPadToPowersOf(height_base=2, width_base=2)
+        for _ in np.arange(10):
+            image = np.arange((5*13*3)).astype(np.uint8).reshape((5, 13, 3))
+            aug = iaa.CenterPadToPowersOf(height_base=2, width_base=2)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        expected = iaa.pad(image, bottom=1, right=2, left=1)
-        assert np.array_equal(observed, expected)
+            expected = iaa.pad(image, top=1, right=2, bottom=2, left=1)
+            assert np.array_equal(observed, expected)
 
 
 class TestCropToAspectRatio(unittest.TestCase):
@@ -6142,12 +6150,13 @@ class TestCenterCropToAspectRatio(unittest.TestCase):
         reseed()
 
     def test_on_5x4_image__with_change__wider(self):
-        image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
-        aug = iaa.CenterCropToAspectRatio(2.0)
+        for _ in np.arange(10):
+            image = np.arange((5*4*3)).astype(np.uint8).reshape((5, 4, 3))
+            aug = iaa.CenterCropToAspectRatio(2.0)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        assert np.array_equal(observed, image[1:3, 0:4, :])
+            assert np.array_equal(observed, image[1:3, 0:4, :])
 
 
 class TestPadToAspectRatio(unittest.TestCase):
@@ -6339,13 +6348,14 @@ class TestCenterPadToAspectRatio(unittest.TestCase):
         reseed()
 
     def test_on_3x3_image(self):
-        image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
-        aug = iaa.CenterPadToAspectRatio(2.0)
+        for _ in np.arange(10):
+            image = np.arange((3*3*3)).astype(np.uint8).reshape((3, 3, 3))
+            aug = iaa.CenterPadToAspectRatio(2.0)
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        expected = iaa.pad(image, left=1, right=2)
-        assert np.array_equal(observed, expected)
+            expected = iaa.pad(image, left=1, right=2)
+            assert np.array_equal(observed, expected)
 
 
 class TestCropToSquare(unittest.TestCase):
@@ -6366,12 +6376,13 @@ class TestCenterCropToSquare(unittest.TestCase):
         reseed()
 
     def test_on_7x4_image(self):
-        image = np.arange((7*4*3)).astype(np.uint8).reshape((7, 4, 3))
-        aug = iaa.CenterCropToSquare()
+        for _ in np.arange(10):
+            image = np.arange((7*4*3)).astype(np.uint8).reshape((7, 4, 3))
+            aug = iaa.CenterCropToSquare()
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        assert np.array_equal(observed, image[1:5, 0:4, :])
+            assert np.array_equal(observed, image[1:5, 0:4, :])
 
 
 class TestPadToSquare(unittest.TestCase):
@@ -6393,13 +6404,14 @@ class TestCenterPadToSquare(unittest.TestCase):
         reseed()
 
     def test_on_7x4_image(self):
-        image = np.arange((7*4*3)).astype(np.uint8).reshape((7, 4, 3))
-        aug = iaa.CenterPadToSquare()
+        for _ in np.arange(10):
+            image = np.arange((7*4*3)).astype(np.uint8).reshape((7, 4, 3))
+            aug = iaa.CenterPadToSquare()
 
-        observed = aug(image=image)
+            observed = aug(image=image)
 
-        expected = iaa.pad(image, left=1, right=2)
-        assert np.array_equal(observed, expected)
+            expected = iaa.pad(image, left=1, right=2)
+            assert np.array_equal(observed, expected)
 
 
 class TestKeepSizeByResize(unittest.TestCase):

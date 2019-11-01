@@ -3300,6 +3300,7 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
         super(CenterCropToMultiplesOf, self).__init__(
             width_multiple=width_multiple,
             height_multiple=height_multiple,
+            position="center",
             name=name, deterministic=deterministic, random_state=random_state)
 
 
@@ -3445,14 +3446,13 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
 
     def __init__(self, width_multiple, height_multiple,
                  pad_mode="constant", pad_cval=0,
-                 position="uniform",
                  name=None, deterministic=False, random_state=None):
         super(CenterPadToMultiplesOf, self).__init__(
             width_multiple=width_multiple,
             height_multiple=height_multiple,
             pad_mode=pad_mode,
             pad_cval=pad_cval,
-            position=position,
+            position="center",
             name=name, deterministic=deterministic, random_state=random_state)
 
 
