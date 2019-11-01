@@ -661,6 +661,68 @@ class Deterministic(StochasticParameter):
             return "Deterministic(%s)" % (str(self.value),)
 
 
+# TODO replace two-value parameters used in tests with this
+class DeterministicList(StochasticParameter):
+    """Parameter that repeats elements from a list in the given order.
+
+    E.g. of samples of shape ``(A, B, C)`` are requested, this parameter will
+    return the first ``A*B*C`` elements, reshaped to ``(A, B, C)`` from the
+    provided list. If the list contains less than ``A*B*C`` elements, it
+    will (by default) be tiled until it is long enough (i.e. the sampling
+    will start again at the first element, if necessary multiple times).
+
+    Parameters
+    ----------
+    values : ndarray or iterable of number
+        An iterable of values to sample from in the order within the iterable.
+
+    """
+
+    def __init__(self, values):
+        super(DeterministicList, self).__init__()
+
+        assert ia.is_iterable(values), (
+            "Expected to get an iterable as input, got type %s." % (
+                type(values).__name__,))
+        assert len(values) > 0, ("Expected to get at least one value, got "
+                                 "zero.")
+
+        if ia.is_np_array(values):
+            # this would not be able to handle e.g. [[1, 2], [3]] and output
+            # dtype object due to the non-regular shape, hence we have the
+            # else block
+            self.values = values.flatten()
+        else:
+            self.values = np.array(list(ia.flatten(values)))
+            kind = self.values.dtype.kind
+
+            # limit to 32bit instead of 64bit for efficiency
+            if kind == "i":
+                self.values = self.values.astype(np.int32)
+            elif kind == "f":
+                self.values = self.values.astype(np.float32)
+
+    def _draw_samples(self, size, random_state):
+        nb_requested = int(np.prod(size))
+        values = self.values
+        if nb_requested > self.values.size:
+            # we don't use itertools.cycle() here, as that would require
+            # running through a loop potentially many times (as `size` can
+            # be very large), which would be slow
+            multiplier = int(np.ceil(nb_requested / values.size))
+            values = np.tile(values, (multiplier,))
+        return values[:nb_requested].reshape(size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        if self.values.dtype.kind == "f":
+            values = ["%.4f" % (value,) for value in self.values]
+            return "DeterministicList([%s])" % (", ".join(values),)
+        return "DeterministicList(%s)" % (str(self.values.tolist()),)
+
+
 class Choice(StochasticParameter):
     """Parameter that samples value from a list of allowed values.
 
