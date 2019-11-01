@@ -865,8 +865,8 @@ class SnowflakesLayer(meta.Augmenter):
 
         height, width, nb_channels = image.shape
         downscale_factor = np.clip(1.0 - flake_size_sample, 0.001, 1.0)
-        height_down = int(height*downscale_factor)
-        width_down = int(width*downscale_factor)
+        height_down = max(1, int(height*downscale_factor))
+        width_down = max(1, int(width*downscale_factor))
         noise = self._generate_noise(
             height_down,
             width_down,
