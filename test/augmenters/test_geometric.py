@@ -5788,7 +5788,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         ]
 
         image = np.zeros((h-1, w-1, 4), dtype=np.uint8)
-        image = ia.pad(image, top=1, right=1, bottom=1, left=1, cval=50)
+        image = iaa.pad(image, top=1, right=1, bottom=1, left=1, cval=50)
         image[0+j:s+j+1, 0+j:s+j+1, 0] = 255
         image[0+j:s+j+1, w-s-j:w-j+1, 1] = 255
         image[h-s-j:h-j+1, w-s-j:w-j+1, 2] = 255
@@ -5964,7 +5964,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         segmap = ia.SegmentationMapsOnImage(arr, shape=(50, 50, 3))
 
         image = np.zeros((49, 49, 3), dtype=np.uint8)
-        image = ia.pad(image, top=1, right=1, bottom=1, left=1, cval=128)
+        image = iaa.pad(image, top=1, right=1, bottom=1, left=1, cval=128)
 
         for _ in sm.xrange(10):
             image_aug, segmap_aug = aug(image=image, segmentation_maps=segmap)
