@@ -5809,10 +5809,6 @@ class TestPerspectiveTransform(unittest.TestCase):
                 image_aug, bbsoi_aug = aug(image=image, bounding_boxes=bbsoi)
                 assert image_aug.shape == image.shape
 
-                import imageio
-                imageio.imwrite("tmp"+str(i)+".jpg", image_aug[:, :, 0:3])
-                i += 1
-
                 (tl_y1, tl_y2), (tl_x1, tl_x2) = coords_i[0]
                 (tr_y1, tr_y2), (tr_x1, tr_x2) = coords_i[1]
                 (br_y1, br_y2), (br_x1, br_x2) = coords_i[2]
