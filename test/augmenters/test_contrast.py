@@ -1125,6 +1125,61 @@ class Test_autocontrast(unittest.TestCase):
                         assert image_aug.shape == shape
 
 
+class TestAutocontrast(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @mock.patch("imgaug.augmenters.contrast.autocontrast")
+    def test_mocked(self, mock_auto):
+        image = np.mod(np.arange(10*10*3), 255)
+        image = image.reshape((10, 10, 3)).astype(np.uint8)
+        mock_auto.return_value = image
+        aug = iaa.Autocontrast(15)
+
+        _image_aug = aug(image=image)
+
+        assert np.array_equal(mock_auto.call_args_list[0][0][0], image)
+        assert mock_auto.call_args_list[0][0][1] == 15
+
+    @mock.patch("imgaug.augmenters.contrast.autocontrast")
+    def test_per_channel(self, mock_auto):
+        image = np.mod(np.arange(10*10*1), 255)
+        image = image.reshape((10, 10, 1)).astype(np.uint8)
+        image = np.tile(image, (1, 1, 100))
+        mock_auto.return_value = image[..., 0]
+        aug = iaa.Autocontrast((0, 30), per_channel=True)
+
+        _image_aug = aug(image=image)
+
+        assert mock_auto.call_count == 100
+        cutoffs = []
+        for i in np.arange(100):
+            assert np.array_equal(mock_auto.call_args_list[i][0][0],
+                                  image[..., i])
+            cutoffs.append(mock_auto.call_args_list[i][0][1])
+        assert len(set(cutoffs)) > 10
+
+    def test_integrationtest(self):
+        image = iarandom.RNG(0).integers(50, 150, size=(100, 100, 3))
+        image = image.astype(np.uint8)
+        aug = iaa.Autocontrast(10)
+
+        image_aug = aug(image=image)
+
+        assert np.min(image_aug) < 50
+        assert np.max(image_aug) > 150
+
+    def test_integrationtest_per_channel(self):
+        image = iarandom.RNG(0).integers(50, 150, size=(100, 100, 50))
+        image = image.astype(np.uint8)
+        aug = iaa.Autocontrast(10, per_channel=True)
+
+        image_aug = aug(image=image)
+
+        assert np.min(image_aug) < 50
+        assert np.max(image_aug) > 150
+
+
 class TestAllChannelsCLAHE(unittest.TestCase):
     def setUp(self):
         reseed()

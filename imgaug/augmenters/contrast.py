@@ -73,16 +73,20 @@ class _ContrastFuncWrapper(meta.Augmenter):
         gen = enumerate(zip(images, per_channel, rss[1:]))
         for i, (image, per_channel_i, rs) in gen:
             nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
+            # TODO improve efficiency by sampling once
             samples_i = [
                 param.draw_samples((nb_channels,), random_state=rs)
                 for param in self.params1d]
             if per_channel_i > 0.5:
                 input_dtype = image.dtype
-                image_aug = image.astype(np.float64)
+                # TODO This was previously a cast of image to float64. Do the
+                #      adjust_* functions return float64?
+                result = []
                 for c in sm.xrange(nb_channels):
                     samples_i_c = [sample_i[c] for sample_i in samples_i]
                     args = tuple([image[..., c]] + samples_i_c)
-                    image_aug[..., c] = self.func(*args)
+                    result.append(self.func(*args))
+                image_aug = np.stack(result, axis=-1)
                 image_aug = image_aug.astype(input_dtype)
             else:
                 # don't use something like samples_i[...][0] here, because
@@ -1106,6 +1110,84 @@ class Equalize(meta.Augmenter):
 
     def get_parameters(self):
         return []
+
+
+class Autocontrast(_ContrastFuncWrapper):
+    """Adjust contrast by cutting off ``p%`` of lowest/highest histogram values.
+
+    This augmenter is analogous to :func:`PIL.ImageOps.autocontrast`.
+
+    See :func:`imgaug.augmenters.contrast.autocontrast` for more details.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.contrast.autocontrast`.
+
+    Parameters
+    ----------
+    cutoff : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Percentage of values to cut off from the low and high end of each
+        image's histogram, before stretching it to ``[0, 255]``.
+
+            * If ``int``: The value will be used for all images.
+            * If ``tuple`` ``(a, b)``: A value will be uniformly sampled from
+              the discrete interval ``[a..b]`` per image.
+            * If ``list``: A random value will be sampled from the list
+              per image.
+            * If ``StochasticParameter``: A value will be sampled from that
+              parameter per image.
+
+    per_channel :  bool or float, optional
+        Whether to use the same value for all channels (``False``) or to
+        sample a new value for each channel (``True``). If this value is a
+        float ``p``, then for ``p`` percent of all images `per_channel` will
+        be treated as ``True``, otherwise as ``False``.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Autocontrast()
+
+    Modify the contrast of images by cutting off the ``0`` to ``20%`` lowest
+    and highest values from the histogram, then stretching it to full length.
+
+    >>> aug = iaa.Autocontrast((10, 20), per_channel=True)
+
+    Modify the contrast of images by cutting off the ``10`` to ``20%`` lowest
+    and highest values from the histogram, then stretching it to full length.
+    The cutoff value is sampled per *channel* instead of per *image*.
+
+    """
+    def __init__(self, cutoff=(0, 20), per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        params1d = [
+            iap.handle_discrete_param(
+                cutoff, "cutoff", value_range=(0, 49), tuple_to_uniform=True,
+                list_to_choice=True)
+        ]
+        func = autocontrast
+
+        super(Autocontrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8"],
+            dtypes_disallowed=["uint16", "uint32", "uint64",
+                               "int8", "int16", "int32", "int64",
+                               "float16", "float32", "float64",
+                               "float16", "float32", "float64", "float96",
+                               "float128", "float256", "bool"],
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar
