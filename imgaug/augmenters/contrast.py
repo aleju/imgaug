@@ -585,6 +585,168 @@ def _equalize_pil(image, mask=None):
     )
 
 
+def autocontrast(image, cutoff=0, ignore=None):
+    """Maximize (normalize) image contrast.
+
+    This function calculates a histogram of the input image, removes
+    **cutoff** percent of the lightest and darkest pixels from the histogram,
+    and remaps the image so that the darkest pixel becomes black (``0``), and
+    the lightest becomes white (``255``).
+
+    This function has identical inputs and outputs to
+    :func:`PIL.ImageOps.autocontrast`. The speed almost identical.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    image : ndarray
+        The image for which to enhance the contrast.
+
+    cutoff : number
+        How many percent to cut off at the low and high end of the
+        histogram. E.g. ``20`` will cut off the lowest and highest ``20%``
+        of values. Expected value range is ``[0, 100]``.
+
+    ignore : None or int or iterable of int
+        Intensity values to ignore, i.e. to treat as background. If ``None``,
+        no pixels will be ignored. Otherwise exactly the given intensity
+        value(s) will be ignored.
+
+    Returns
+    -------
+    ndarray
+        Contrast-enhanced image.
+
+    """
+    assert image.dtype.name == "uint8", (
+        "Can only apply autocontrast to uint8 images, got dtype %s." % (
+            image.dtype.name,))
+
+    if 0 in image.shape:
+        return np.copy(image)
+
+    standard_channels = (image.ndim == 2 or image.shape[2] == 3)
+
+    if cutoff and standard_channels:
+        return _autocontrast_pil(image, cutoff, ignore)
+    return _autocontrast(image, cutoff, ignore)
+
+
+def _autocontrast_pil(image, cutoff, ignore):
+    import PIL.Image
+    import PIL.ImageOps
+    return np.asarray(
+        PIL.ImageOps.autocontrast(
+            PIL.Image.fromarray(image),
+            cutoff=cutoff, ignore=ignore
+        )
+    )
+
+
+# This function is only faster than the corresponding PIL function if no
+# cutoff is used.
+# C901 is "<functionname> is too complex"
+def _autocontrast(image, cutoff, ignore):  # noqa: C901
+    if ignore is not None and not ia.is_iterable(ignore):
+        ignore = [ignore]
+
+    result = np.empty_like(image)
+    if result.ndim == 2:
+        result = result[..., np.newaxis]
+    nb_channels = image.shape[2] if image.ndim >= 3 else 1
+    for c_idx in sm.xrange(nb_channels):
+        # using [0] instead of [int(c_idx)] allows this to work with >4
+        # channels
+        if image.ndim == 2:
+            image_c = image
+        else:
+            image_c = image[:, :, c_idx:c_idx+1]
+        h = cv2.calcHist([image_c], [0], None, [256], [0, 256])
+        if ignore is not None:
+            h[ignore] = 0
+
+        if cutoff:
+            cs = np.cumsum(h)
+            n = cs[-1]
+            cut = n * cutoff // 100
+
+            # remove cutoff% pixels from the low end
+            lo_cut = cut - cs
+            lo_cut_nz = np.nonzero(lo_cut <= 0.0)[0]
+            if len(lo_cut_nz) == 0:
+                lo = 255
+            else:
+                lo = lo_cut_nz[0]
+            if lo > 0:
+                h[:lo] = 0
+            h[lo] = lo_cut[lo]
+
+            # remove cutoff% samples from the hi end
+            cs_rev = np.cumsum(h[::-1])
+            hi_cut = cs_rev - cut
+            hi_cut_nz = np.nonzero(hi_cut > 0.0)[0]
+            if len(hi_cut_nz) == 0:
+                hi = -1
+            else:
+                hi = 255 - hi_cut_nz[0]
+            h[hi+1:] = 0
+            if hi > -1:
+                h[hi] = hi_cut[255-hi]
+
+        # find lowest/highest samples after preprocessing
+        for lo, lo_val in enumerate(h):
+            if lo_val:
+                break
+        for hi in range(255, -1, -1):
+            if h[hi]:
+                break
+        if hi <= lo:
+            # don't bother
+            lut = np.arange(256)
+        else:
+            scale = 255.0 / (hi - lo)
+            offset = -lo * scale
+            ix = np.arange(256).astype(np.float64) * scale + offset
+            ix = np.clip(ix, 0, 255).astype(np.uint8)
+            lut = ix
+        lut = np.array(lut, dtype=np.uint8)
+
+        # Vectorized implementation of above block.
+        # This is overall slower.
+        # h_nz = np.nonzero(h)[0]
+        # if len(h_nz) <= 1:
+        #     lut = np.arange(256).astype(np.uint8)
+        # else:
+        #     lo = h_nz[0]
+        #     hi = h_nz[-1]
+        #
+        #     scale = 255.0 / (hi - lo)
+        #     offset = -lo * scale
+        #     ix = np.arange(256).astype(np.float64) * scale + offset
+        #     ix = np.clip(ix, 0, 255).astype(np.uint8)
+        #     lut = ix
+
+        result[:, :, c_idx] = cv2.LUT(image_c, lut)
+    if image.ndim == 2:
+        return result[..., 0]
+    return result
+
+
 class GammaContrast(_ContrastFuncWrapper):
     """
     Adjust image contrast by scaling pixel values to ``255*((v/255)**gamma)``.

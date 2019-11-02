@@ -1026,6 +1026,105 @@ class TestEqualize(unittest.TestCase):
             assert np.max(image_aug) > 150
 
 
+class Test_autocontrast(unittest.TestCase):
+    def test_by_comparison_with_pil(self):
+        rng = iarandom.RNG(0)
+        shapes = [
+            (1, 1),
+            (10, 10),
+            (1, 1, 3),
+            (1, 2, 3),
+            (2, 1, 3),
+            (2, 2, 3),
+            (5, 3, 3),
+            (10, 5, 3),
+            (5, 10, 3),
+            (10, 10, 3),
+            (20, 10, 3),
+            (20, 40, 3),
+            (50, 60, 3),
+            (100, 100, 3),
+            (200, 100, 3)
+        ]
+        images = [
+            rng.integers(0, 255, size=shape).astype(np.uint8)
+            for shape in shapes
+        ]
+        images = (
+            images
+            + [
+                np.full((1, 1, 3), 0, dtype=np.uint8),
+                np.full((1, 1, 3), 255, dtype=np.uint8),
+                np.full((20, 20, 3), 0, dtype=np.uint8),
+                np.full((20, 20, 3), 255, dtype=np.uint8)
+            ]
+        )
+
+        cutoffs = [0, 1, 2, 10, 50, 90, 99, 100]
+        ignores = [None, 0, 1, 100, 255, [0, 1], [5, 10, 50], [99, 100]]
+
+        for cutoff in cutoffs:
+            for ignore in ignores:
+                for i, image in enumerate(images):
+                    with self.subTest(cutoff=cutoff, ignore=ignore,
+                                      image_idx=i, image_shape=image.shape):
+                        result_pil = np.asarray(
+                            PIL.ImageOps.autocontrast(
+                                PIL.Image.fromarray(image),
+                                cutoff=cutoff,
+                                ignore=ignore
+                            )
+                        )
+                        result_iaa = iaa.autocontrast(image,
+                                                      cutoff=cutoff,
+                                                      ignore=ignore)
+                        assert np.array_equal(result_pil, result_iaa)
+
+    def test_unusual_channel_numbers(self):
+        nb_channels_lst = [1, 2, 4, 5, 512, 513]
+        for nb_channels in nb_channels_lst:
+            for size in [20]:
+                for cutoff in [0, 1, 10]:
+                    with self.subTest(nb_channels=nb_channels,
+                                      size=size,
+                                      cutoff=cutoff):
+                        shape = (size, size, nb_channels)
+                        image = iarandom.RNG(0).integers(50, 150, size=shape)
+                        image = image.astype(np.uint8)
+
+                        image_aug = iaa.autocontrast(image, cutoff=cutoff)
+
+                        if size > 1:
+                            channelwise_sums = np.sum(image_aug, axis=(0, 1))
+                            assert np.all(channelwise_sums > 0)
+                        assert np.min(image_aug) < 50
+                        assert np.max(image_aug) > 150
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            for cutoff in [0, 1, 10]:
+                for ignore in [None, 0, 1, [0, 1, 10]]:
+                    with self.subTest(shape=shape, cutoff=cutoff,
+                                      ignore=ignore):
+                        image = np.zeros(shape, dtype=np.uint8)
+
+                        image_aug = iaa.autocontrast(image, cutoff=cutoff,
+                                                     ignore=ignore)
+
+                        assert image_aug.dtype.name == "uint8"
+                        assert image_aug.shape == shape
+
+
 class TestAllChannelsCLAHE(unittest.TestCase):
     def setUp(self):
         reseed()
