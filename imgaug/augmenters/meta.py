@@ -2746,7 +2746,8 @@ class Augmenter(object):
 
     # TODO remove copy arg
     # TODO allow first arg to be string name, class type or func
-    def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
+    def remove_augmenters(self, func, copy=True, identity_if_topmost=True,
+                          noop_if_topmost=None):
         """Remove this augmenter or children that match a condition.
 
         Parameters
@@ -2765,7 +2766,7 @@ class Augmenter(object):
             Whether to copy this augmenter and all if its children before
             removing. If ``False``, removal is performed in-place.
 
-        noop_if_topmost : bool, optional
+        identity_if_topmost : bool, optional
             If ``True`` and the condition (lambda function) leads to the
             removal of the topmost augmenter (the one this function is called
             on initially), then that topmost augmenter will be replaced by an
@@ -2773,6 +2774,9 @@ class Augmenter(object):
             augmenter that doesn't change its inputs). If ``False``, ``None``
             will be returned in these cases.
             This can only be ``False`` if copy is set to ``True``.
+
+        noop_if_topmost : bool, optional
+            Deprecated.
 
         Returns
         -------
@@ -2795,13 +2799,18 @@ class Augmenter(object):
         object's children.
 
         """
+        if noop_if_topmost is not None:
+            ia.warn_deprecated("Parameter 'noop_if_topmost' is deprecated. "
+                               "Use 'identity_if_topmost' instead.")
+            identity_if_topmost = noop_if_topmost
+
         if func(self, []):
             if not copy:
                 raise Exception(
                     "Inplace removal of topmost augmenter requested, "
                     "which is currently not possible. Set 'copy' to True.")
 
-            if noop_if_topmost:
+            if identity_if_topmost:
                 return Identity()
             else:
                 return None

@@ -4556,13 +4556,28 @@ class TestAugmenter_remove(unittest.TestCase):
             assert expected in str(exc)
         assert got_exception
 
+    def test_remove_all_without_inplace_removal_and_no_identity(self):
+        def _func(aug, parents):
+            return True
+
+        augs = self.seq
+
+        augs = augs.remove_augmenters(_func, identity_if_topmost=False)
+
+        assert augs is None
+
     def test_remove_all_without_inplace_removal_and_no_noop(self):
         def _func(aug, parents):
             return True
 
         augs = self.seq
 
-        augs = augs.remove_augmenters(_func, noop_if_topmost=False)
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+
+            augs = augs.remove_augmenters(_func, noop_if_topmost=False)
+        assert len(caught_warnings) == 1
+        assert "deprecated" in str(caught_warnings[-1].message)
 
         assert augs is None
 
