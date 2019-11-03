@@ -781,7 +781,8 @@ class TestBatchInAugmentation(unittest.TestCase):
             ]
         )
 
-        with batch.propagation_hooks_ctx(iaa.Noop(), hooks, []) as batch_prop:
+        with batch.propagation_hooks_ctx(iaa.Identity(), hooks, []) \
+                as batch_prop:
             assert batch_prop.images is None
             assert batch_prop.keypoints is not None
             assert len(batch_prop.keypoints) == 3

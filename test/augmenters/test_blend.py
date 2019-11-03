@@ -817,7 +817,7 @@ class TestAlpha(unittest.TestCase):
 
     @classmethod
     def _test_cba_factor_is_1(cls, augf_name, cbaoi):
-        aug = iaa.Alpha(1.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+        aug = iaa.Alpha(1.0, iaa.Identity(), iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
 
@@ -825,7 +825,8 @@ class TestAlpha(unittest.TestCase):
 
     @classmethod
     def _test_cba_factor_is_0501(cls, augf_name, cbaoi):
-        aug = iaa.Alpha(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+        aug = iaa.Alpha(0.501, iaa.Identity(),
+                        iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
 
@@ -833,7 +834,7 @@ class TestAlpha(unittest.TestCase):
 
     @classmethod
     def _test_cba_factor_is_0(cls, augf_name, cbaoi):
-        aug = iaa.Alpha(0.0, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+        aug = iaa.Alpha(0.0, iaa.Identity(), iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
 
@@ -842,7 +843,8 @@ class TestAlpha(unittest.TestCase):
 
     @classmethod
     def _test_cba_factor_is_0499(cls, augf_name, cbaoi):
-        aug = iaa.Alpha(0.499, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+        aug = iaa.Alpha(0.499, iaa.Identity(),
+                        iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
 
@@ -853,7 +855,7 @@ class TestAlpha(unittest.TestCase):
     def _test_cba_factor_is_1_and_per_channel(cls, augf_name, cbaoi):
         aug = iaa.Alpha(
             1.0,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
 
@@ -865,7 +867,7 @@ class TestAlpha(unittest.TestCase):
     def _test_cba_factor_is_0_and_per_channel(cls, augf_name, cbaoi):
         aug = iaa.Alpha(
             0.0,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
 
@@ -879,7 +881,7 @@ class TestAlpha(unittest.TestCase):
             cls, augf_name, cbaoi):
         aug = iaa.Alpha(
             iap.Choice([0.49, 0.51]),
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
         expected_same = cbaoi.deepcopy()
@@ -911,7 +913,8 @@ class TestAlpha(unittest.TestCase):
     @classmethod
     def _test_empty_cba(cls, augf_name, cbaoi):
         # empty CBAs
-        aug = iaa.Alpha(0.501, iaa.Noop(), iaa.Affine(translate_px={"x": 1}))
+        aug = iaa.Alpha(0.501, iaa.Identity(),
+                        iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)(cbaoi)
 
@@ -979,7 +982,7 @@ class TestAlpha(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_get_parameters(self):
-        first = iaa.Noop()
+        first = iaa.Identity()
         second = iaa.Sequential([iaa.Add(1)])
         aug = iaa.Alpha(0.65, first, second, per_channel=1)
         params = aug.get_parameters()
@@ -989,7 +992,7 @@ class TestAlpha(unittest.TestCase):
         assert params[1].value == 1
 
     def test_get_children_lists(self):
-        first = iaa.Noop()
+        first = iaa.Identity()
         second = iaa.Sequential([iaa.Add(1)])
         aug = iaa.Alpha(0.65, first, second, per_channel=1)
         children_lsts = aug.get_children_lists()
@@ -1299,7 +1302,7 @@ class TestAlphaElementwise(unittest.TestCase):
         # TODO can this somehow be integrated into the CBA functions below?
         aug = iaa.Alpha(
             iap.Choice([0.49, 0.51]),
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
         kpsoi = self.kpsoi
@@ -1450,7 +1453,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_cba_factor_is_1(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             1.0,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
@@ -1461,7 +1464,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_cba_factor_is_0501(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.501,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
@@ -1472,7 +1475,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_cba_factor_is_0(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.0,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
@@ -1484,7 +1487,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_cba_factor_is_0499(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.499,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)([cbaoi])
@@ -1496,7 +1499,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_cba_factor_is_1_and_per_channel(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             1.0,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
 
@@ -1508,7 +1511,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_cba_factor_is_0_and_per_channel(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.0,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
 
@@ -1522,7 +1525,7 @@ class TestAlphaElementwise(unittest.TestCase):
             cls, augf_name, cbaoi, pointwise):
         aug = iaa.AlphaElementwise(
             iap.Choice([0.49, 0.51]),
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
 
@@ -1570,7 +1573,7 @@ class TestAlphaElementwise(unittest.TestCase):
     def _test_empty_cba(cls, augf_name, cbaoi):
         aug = iaa.AlphaElementwise(
             0.501,
-            iaa.Noop(),
+            iaa.Identity(),
             iaa.Affine(translate_px={"x": 1}))
 
         observed = getattr(aug, augf_name)(cbaoi)

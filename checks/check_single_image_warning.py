@@ -9,7 +9,7 @@ def main():
     def z(shape):
         return np.zeros(shape, dtype=np.uint8)
 
-    seq = iaa.Noop()
+    seq = iaa.Identity()
 
     print("This should generate NO warning:")
     _image_aug = seq.augment_images(z((1, 16, 16, 3)))

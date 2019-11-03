@@ -19,6 +19,7 @@ List of augmenters:
     * OneOf
     * Sometimes
     * WithChannels
+    * Identity
     * Noop
     * Lambda
     * AssertLambda
@@ -2801,7 +2802,7 @@ class Augmenter(object):
                     "which is currently not possible. Set 'copy' to True.")
 
             if noop_if_topmost:
-                return Noop()
+                return Identity()
             else:
                 return None
         else:
@@ -3769,13 +3770,11 @@ class WithChannels(Augmenter):
                           self.children, self.deterministic)
 
 
-class Noop(Augmenter):
-    """Augmenter that never changes input images ("no operation").
+class Identity(Augmenter):
+    """Augmenter that does not change the input data.
 
-    This augmenter is useful when you just want to use a placeholder augmenter
-    in some situation, so that you can continue to call augmentation methods
-    without actually transforming the input data. This allows to use the
-    same code for training and test.
+    This augmenter is useful e.g. during validation/testing as it allows
+    to re-use the training code without actually performing any augmentation.
 
     dtype support::
 
@@ -3807,14 +3806,42 @@ class Noop(Augmenter):
     """
 
     def __init__(self, name=None, deterministic=False, random_state=None):
-        super(Noop, self).__init__(name=name, deterministic=deterministic,
-                                   random_state=random_state)
+        super(Identity, self).__init__(name=name, deterministic=deterministic,
+                                       random_state=random_state)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         return batch
 
     def get_parameters(self):
         return []
+
+
+class Noop(Identity):
+    """Alias for augmenter :class:`Identity`.
+
+    It is recommended to now use :class:`Identity`. :class:`Noop` might be
+    deprecated in the future.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.meta.Identity`.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(Noop, self).__init__(name=name, deterministic=deterministic,
+                                   random_state=random_state)
 
 
 class Lambda(Augmenter):

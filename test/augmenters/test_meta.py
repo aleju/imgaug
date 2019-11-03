@@ -38,12 +38,12 @@ from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 IS_PY36_OR_HIGHER = (sys.version_info[0] == 3 and sys.version_info[1] >= 6)
 
 
-class TestNoop(unittest.TestCase):
+class TestIdentity(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_images(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         images = create_random_images((16, 70, 50, 3))
 
         observed = aug.augment_images(images)
@@ -52,7 +52,7 @@ class TestNoop(unittest.TestCase):
         assert np.array_equal(observed, expected)
 
     def test_images_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         images = create_random_images((16, 70, 50, 3))
 
         observed = aug_det.augment_images(images)
@@ -61,7 +61,7 @@ class TestNoop(unittest.TestCase):
         assert np.array_equal(observed, expected)
 
     def test_heatmaps(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         heatmaps_arr = np.linspace(0.0, 1.0, 2*2, dtype="float32")\
             .reshape((2, 2, 1))
         heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
@@ -71,7 +71,7 @@ class TestNoop(unittest.TestCase):
         assert np.allclose(observed.arr_0to1, heatmaps.arr_0to1)
 
     def test_heatmaps_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         heatmaps_arr = np.linspace(0.0, 1.0, 2*2, dtype="float32")\
             .reshape((2, 2, 1))
         heatmaps = ia.HeatmapsOnImage(heatmaps_arr, shape=(2, 2, 3))
@@ -81,7 +81,7 @@ class TestNoop(unittest.TestCase):
         assert np.allclose(observed.arr_0to1, heatmaps.arr_0to1)
 
     def test_segmentation_maps(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         segmaps_arr = np.arange(2*2).reshape((2, 2, 1)).astype(np.int32)
         segmaps = SegmentationMapsOnImage(segmaps_arr, shape=(2, 2, 3))
 
@@ -90,7 +90,7 @@ class TestNoop(unittest.TestCase):
         assert np.array_equal(observed.arr, segmaps.arr)
 
     def test_segmentation_maps_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         segmaps_arr = np.arange(2*2).reshape((2, 2, 1)).astype(np.int32)
         segmaps = SegmentationMapsOnImage(segmaps_arr, shape=(2, 2, 3))
 
@@ -99,7 +99,7 @@ class TestNoop(unittest.TestCase):
         assert np.array_equal(observed.arr, segmaps.arr)
 
     def test_keypoints(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         keypoints = create_random_keypoints((16, 70, 50, 3), 4)
 
         observed = aug.augment_keypoints(keypoints)
@@ -107,7 +107,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, keypoints)
 
     def test_keypoints_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         keypoints = create_random_keypoints((16, 70, 50, 3), 4)
 
         observed = aug_det.augment_keypoints(keypoints)
@@ -115,7 +115,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, keypoints)
 
     def test_polygons(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         polygon = ia.Polygon([(10, 10), (30, 10), (30, 50), (10, 50)])
         psoi = ia.PolygonsOnImage([polygon], shape=(100, 75, 3))
 
@@ -124,7 +124,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, psoi)
 
     def test_polygons_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         polygon = ia.Polygon([(10, 10), (30, 10), (30, 50), (10, 50)])
         psoi = ia.PolygonsOnImage([polygon], shape=(100, 75, 3))
 
@@ -133,7 +133,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, psoi)
 
     def test_line_strings(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         ls = LineString([(10, 10), (30, 10), (30, 50), (10, 50)])
         lsoi = LineStringsOnImage([ls], shape=(100, 75, 3))
 
@@ -142,7 +142,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, lsoi)
 
     def test_line_strings_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         ls = LineString([(10, 10), (30, 10), (30, 50), (10, 50)])
         lsoi = LineStringsOnImage([ls], shape=(100, 75, 3))
 
@@ -151,7 +151,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, lsoi)
 
     def test_bounding_boxes(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
         bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
 
@@ -160,7 +160,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, bbsoi)
 
     def test_bounding_boxes_deterministic(self):
-        aug_det = iaa.Noop().to_deterministic()
+        aug_det = iaa.Identity().to_deterministic()
         bbs = ia.BoundingBox(x1=10, y1=10, x2=30, y2=50)
         bbsoi = ia.BoundingBoxesOnImage([bbs], shape=(100, 75, 3))
 
@@ -169,7 +169,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, bbsoi)
 
     def test_keypoints_empty(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         kpsoi = ia.KeypointsOnImage([], shape=(4, 5, 3))
 
         observed = aug.augment_keypoints(kpsoi)
@@ -177,7 +177,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, kpsoi)
 
     def test_polygons_empty(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         psoi = ia.PolygonsOnImage([], shape=(4, 5, 3))
 
         observed = aug.augment_polygons(psoi)
@@ -185,7 +185,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, psoi)
 
     def test_line_strings_empty(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         lsoi = ia.LineStringsOnImage([], shape=(4, 5, 3))
 
         observed = aug.augment_line_strings(lsoi)
@@ -193,7 +193,7 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, lsoi)
 
     def test_bounding_boxes_empty(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         bbsoi = ia.BoundingBoxesOnImage([], shape=(4, 5, 3))
 
         observed = aug.augment_bounding_boxes(bbsoi)
@@ -201,10 +201,10 @@ class TestNoop(unittest.TestCase):
         assert_cbaois_equal(observed, bbsoi)
 
     def test_get_parameters(self):
-        assert iaa.Noop().get_parameters() == []
+        assert iaa.Identity().get_parameters() == []
 
     def test_other_dtypes_bool(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = np.zeros((3, 3), dtype=bool)
         image[0, 0] = True
 
@@ -214,7 +214,7 @@ class TestNoop(unittest.TestCase):
         assert np.all(image_aug == image)
 
     def test_other_dtypes_uint_int(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
 
         dtypes = ["uint8", "uint16", "uint32", "uint64",
                   "int8", "int32", "int64"]
@@ -233,7 +233,7 @@ class TestNoop(unittest.TestCase):
                 assert np.array_equal(image_aug, image)
 
     def test_other_dtypes_float(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
 
         dtypes = ["float16", "float32", "float64", "float128"]
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
@@ -247,6 +247,23 @@ class TestNoop(unittest.TestCase):
 
                 assert image_aug.dtype.name == dtype
                 assert np.all(image_aug == image)
+
+
+class TestNoop(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.Noop()
+        assert isinstance(aug, iaa.Identity)
+
+    def test_images(self):
+        image = np.mod(np.arange(10*10*3), 255)
+        image = image.astype(np.uint8).reshape((10, 10, 3))
+
+        image_aug = iaa.Noop()(image=image)
+
+        assert np.array_equal(image, image_aug)
 
 
 # TODO add tests for line strings
@@ -2296,7 +2313,7 @@ class TestAugmenter(unittest.TestCase):
             ia.BoundingBox(x1=1, x2=3, y1=4, y2=5),
             ia.BoundingBox(x1=2.5, x2=3, y1=0, y2=2)
         ], shape=(5, 10, 3))
-        aug = iaa.Noop()
+        aug = iaa.Identity()
 
         bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
 
@@ -2359,7 +2376,7 @@ class TestAugmenter(unittest.TestCase):
         heatmap = ia.HeatmapsOnImage(heatmap_arr.astype(np.float32),
                                      shape=(4, 4, 3))
 
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         heatmap_aug = aug.augment_heatmaps(heatmap)
         assert np.allclose(heatmap_aug.arr_0to1, heatmap.arr_0to1)
 
@@ -2729,7 +2746,7 @@ class TestAugmenter_augment_batches(unittest.TestCase):
             iaa.Sometimes(1.0, iaa.Fliplr(1)),
             iaa.WithColorspace("HSV", children=iaa.Add((-50, 50))),
             iaa.WithChannels([0], iaa.Add((-50, 50))),
-            iaa.Noop(name="Noop-nochange"),
+            iaa.Identity(name="Identity-nochange"),
             iaa.Lambda(
                 func_images=_lambda_func_images,
                 func_keypoints=_lambda_func_keypoints,
@@ -2816,7 +2833,7 @@ class TestAugmenter_augment_segmentation_maps(unittest.TestCase):
             [0, 1, 1]
         ])
         segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
-        aug = iaa.Noop()
+        aug = iaa.Identity()
 
         segmap_aug = aug.augment_segmentation_maps(segmap)
 
@@ -2829,7 +2846,7 @@ class TestAugmenter_augment_segmentation_maps(unittest.TestCase):
             [0, 1, 1]
         ])
         segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
-        aug = iaa.Noop()
+        aug = iaa.Identity()
 
         segmap_aug = aug.augment_segmentation_maps([segmap])[0]
 
@@ -3710,7 +3727,7 @@ class TestAugmenter_augment(unittest.TestCase):
         reseed()
 
     def test_image(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
 
         image_aug = aug.augment(image=image)
@@ -3719,7 +3736,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.array_equal(image_aug, image)
 
     def test_images_list(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
 
         images_aug = aug.augment(images=[image])
@@ -3728,7 +3745,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.array_equal(images_aug[0], image)
 
     def test_images_and_heatmaps(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
 
@@ -3739,7 +3756,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
 
     def test_images_and_segmentation_maps(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
 
@@ -3749,7 +3766,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
 
     def test_images_and_keypoints(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
 
@@ -3760,7 +3777,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(keypoints_aug[0], keypoints)
 
     def test_images_and_polygons(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
 
@@ -3771,7 +3788,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(polygons_aug[0], polygons)
 
     def test_images_and_line_strings(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         psoi = ia.quokka_polygons((128, 128), extract="square")
         lsoi = ia.LineStringsOnImage([
@@ -3785,7 +3802,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(lsoi_aug[0], lsoi)
 
     def test_images_and_bounding_boxes(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
 
@@ -3795,7 +3812,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(bbs_aug[0], bbs)
 
     def test_image_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
 
         batch = aug.augment(image=image, return_batch=True)
@@ -3804,7 +3821,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.array_equal(image, image_aug)
 
     def test_images_and_heatmaps_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
 
@@ -3817,7 +3834,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
 
     def test_images_and_segmentation_maps_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
 
@@ -3830,7 +3847,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.allclose(segmaps_aug[0].arr, segmaps.arr)
 
     def test_images_and_keypoints_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
 
@@ -3843,7 +3860,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(keypoints_aug[0], keypoints)
 
     def test_images_and_polygons_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
 
@@ -3856,7 +3873,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(polygons_aug[0], polygons)
 
     def test_images_and_line_strings_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         psoi = ia.quokka_polygons((128, 128), extract="square")
         lsoi = ia.LineStringsOnImage([
@@ -3872,7 +3889,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(lsoi_aug[0], lsoi)
 
     def test_images_and_bounding_boxes_return_batch(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
 
@@ -3885,7 +3902,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(bbs_aug[0], bbs)
 
     def test_non_image_data(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
@@ -3901,7 +3918,7 @@ class TestAugmenter_augment(unittest.TestCase):
         assert_cbaois_equal(polygons_aug[0], polygons)
 
     def test_non_image_data_unexpected_args_order(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
@@ -4064,7 +4081,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_none_of_them_images(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
 
@@ -4077,7 +4094,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_none_of_them_images_inverted(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
 
@@ -4090,7 +4107,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_inverted_order_heatmaps(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
 
@@ -4102,7 +4119,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_inverted_order_segmaps(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
 
@@ -4115,7 +4132,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_inverted_order_keypoints(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
 
@@ -4128,7 +4145,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_inverted_order_bbs(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         bbs = ia.quokka_bounding_boxes((128, 128), extract="square")
 
@@ -4141,7 +4158,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_inverted_order_polygons(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
 
@@ -4154,7 +4171,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_two_outputs_inverted_order_line_strings(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         psoi = ia.quokka_polygons((128, 128), extract="square")
         lsoi = ia.LineStringsOnImage([
@@ -4170,7 +4187,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_three_inputs_expected_order(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
@@ -4187,7 +4204,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_three_inputs_expected_order2(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
@@ -4204,7 +4221,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_three_inputs_inverted_order(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
@@ -4221,7 +4238,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_three_inputs_inverted_order2(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
@@ -4238,7 +4255,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_all_inputs_expected_order(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
@@ -4270,7 +4287,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(not IS_PY36_OR_HIGHER,
                      "Behaviour is only supported in python 3.6+")
     def test_py_gte_36_all_inputs_inverted_order(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
@@ -4302,7 +4319,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(IS_PY36_OR_HIGHER,
                      "Test checks behaviour for python <=3.5")
     def test_py_lte_35_calls_without_images_fail(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         keypoints = ia.quokka_keypoints((128, 128), extract="square")
         polygons = ia.quokka_polygons((128, 128), extract="square")
 
@@ -4318,7 +4335,7 @@ class TestAugmenter_augment(unittest.TestCase):
     @unittest.skipIf(IS_PY36_OR_HIGHER,
                      "Test checks behaviour for python <=3.5")
     def test_py_lte_35_calls_with_more_than_three_args_fail(self):
-        aug = iaa.Noop()
+        aug = iaa.Identity()
         image = ia.quokka((128, 128), extract="square")
         heatmaps = ia.quokka_heatmap((128, 128), extract="square")
         segmaps = ia.quokka_segmentation_map((128, 128), extract="square")
@@ -4341,8 +4358,8 @@ class TestAugmenter___call__(unittest.TestCase):
         image = ia.quokka(size=(128, 128), extract="square")
         heatmaps = ia.quokka_heatmap(size=(128, 128), extract="square")
 
-        images_aug, heatmaps_aug = iaa.Noop()(images=[image],
-                                              heatmaps=[heatmaps])
+        images_aug, heatmaps_aug = iaa.Identity()(images=[image],
+                                                  heatmaps=[heatmaps])
 
         assert np.array_equal(images_aug[0], image)
         assert np.allclose(heatmaps_aug[0].arr_0to1, heatmaps.arr_0to1)
@@ -4353,7 +4370,7 @@ class TestAugmenter_pool(unittest.TestCase):
         reseed()
 
     def test_pool(self):
-        augseq = iaa.Noop()
+        augseq = iaa.Identity()
 
         mock_Pool = mock.MagicMock()
         mock_Pool.return_value = mock_Pool
@@ -4378,10 +4395,10 @@ class TestAugmenter_find_augmenters_by_name(unittest.TestCase):
 
     @property
     def seq(self):
-        noop1 = iaa.Noop(name="Noop")
+        noop1 = iaa.Identity(name="Identity")
         fliplr = iaa.Fliplr(name="Fliplr")
         flipud = iaa.Flipud(name="Flipud")
-        noop2 = iaa.Noop(name="Noop2")
+        noop2 = iaa.Identity(name="Identity2")
         seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
         seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
         return seq1, seq2
@@ -4427,10 +4444,10 @@ class TestAugmenter_find_augmenters(unittest.TestCase):
 
     @property
     def seq(self):
-        noop1 = iaa.Noop(name="Noop")
+        noop1 = iaa.Identity(name="Identity")
         fliplr = iaa.Fliplr(name="Fliplr")
         flipud = iaa.Flipud(name="Flipud")
-        noop2 = iaa.Noop(name="Noop2")
+        noop2 = iaa.Identity(name="Identity2")
         seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
         seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
         return seq1, seq2
@@ -4479,10 +4496,10 @@ class TestAugmenter_remove(unittest.TestCase):
 
     @property
     def seq(self):
-        noop1 = iaa.Noop(name="Noop")
+        noop1 = iaa.Identity(name="Identity")
         fliplr = iaa.Fliplr(name="Fliplr")
         flipud = iaa.Flipud(name="Flipud")
-        noop2 = iaa.Noop(name="Noop2")
+        noop2 = iaa.Identity(name="Identity2")
         seq2 = iaa.Sequential([flipud, noop2], name="Seq2")
         seq1 = iaa.Sequential([noop1, fliplr, seq2], name="Seq")
         return seq1
@@ -4521,7 +4538,7 @@ class TestAugmenter_remove(unittest.TestCase):
         augs = augs.remove_augmenters(_func)
 
         assert augs is not None
-        assert isinstance(augs, iaa.Noop)
+        assert isinstance(augs, iaa.Identity)
 
     def test_remove_all_with_inplace_removal(self):
         def _func(aug, parents):
@@ -5450,7 +5467,7 @@ class TestSequential(unittest.TestCase):
             for random_order in [False, True]:
                 with self.subTest(shape=shape):
                     image = np.zeros(shape, dtype=np.uint8)
-                    aug = iaa.Sequential([iaa.Noop()],
+                    aug = iaa.Sequential([iaa.Identity()],
                                          random_order=random_order)
 
                     image_aug = aug(image=image)
@@ -5470,7 +5487,7 @@ class TestSequential(unittest.TestCase):
             for random_order in [False, True]:
                 with self.subTest(shape=shape):
                     image = np.zeros(shape, dtype=np.uint8)
-                    aug = iaa.Sequential([iaa.Noop()],
+                    aug = iaa.Sequential([iaa.Identity()],
                                          random_order=random_order)
 
                     image_aug = aug(image=image)
@@ -5517,8 +5534,8 @@ class TestSequential(unittest.TestCase):
     def test_other_dtypes_noop__bool(self):
         for random_order in [False, True]:
             aug = iaa.Sequential([
-                iaa.Noop(),
-                iaa.Noop()
+                iaa.Identity(),
+                iaa.Identity()
             ], random_order=random_order)
 
             image = np.zeros((3, 3), dtype=bool)
@@ -5534,8 +5551,8 @@ class TestSequential(unittest.TestCase):
         for dtype, random_order in itertools.product(dtypes, [False, True]):
             with self.subTest(dtype=dtype, random_order=random_order):
                 aug = iaa.Sequential([
-                    iaa.Noop(),
-                    iaa.Noop()
+                    iaa.Identity(),
+                    iaa.Identity()
                 ], random_order=random_order)
 
                 min_value, center_value, max_value = \
@@ -5555,8 +5572,8 @@ class TestSequential(unittest.TestCase):
             for dtype, value in zip(dtypes, values):
                 with self.subTest(dtype=dtype, random_order=random_order):
                     aug = iaa.Sequential([
-                        iaa.Noop(),
-                        iaa.Noop()
+                        iaa.Identity(),
+                        iaa.Identity()
                     ], random_order=random_order)
 
                     image = np.zeros((3, 3), dtype=dtype)
@@ -6059,7 +6076,7 @@ class TestSomeOf(unittest.TestCase):
                 with self.subTest(shape=shape):
                     image = np.zeros(shape, dtype=np.uint8)
                     aug = iaa.SomeOf(
-                        1, [iaa.Noop()], random_order=random_order)
+                        1, [iaa.Identity()], random_order=random_order)
 
                     image_aug = aug(image=image)
 
@@ -6079,7 +6096,7 @@ class TestSomeOf(unittest.TestCase):
                 with self.subTest(shape=shape):
                     image = np.zeros(shape, dtype=np.uint8)
                     aug = iaa.SomeOf(
-                        1, [iaa.Noop()], random_order=random_order)
+                        1, [iaa.Identity()], random_order=random_order)
 
                     image_aug = aug(image=image)
 
@@ -6091,9 +6108,9 @@ class TestSomeOf(unittest.TestCase):
         for random_order in [False, True]:
             with self.subTest(random_order=random_order):
                 aug = iaa.SomeOf(2, [
-                    iaa.Noop(),
-                    iaa.Noop(),
-                    iaa.Noop()
+                    iaa.Identity(),
+                    iaa.Identity(),
+                    iaa.Identity()
                 ], random_order=random_order)
 
                 image = np.zeros((3, 3), dtype=bool)
@@ -6110,9 +6127,9 @@ class TestSomeOf(unittest.TestCase):
         for dtype, random_order in itertools.product(dtypes, random_orders):
             with self.subTest(dtype=dtype, random_order=random_order):
                 aug = iaa.SomeOf(2, [
-                    iaa.Noop(),
-                    iaa.Noop(),
-                    iaa.Noop()
+                    iaa.Identity(),
+                    iaa.Identity(),
+                    iaa.Identity()
                 ], random_order=random_order)
 
                 min_value, center_value, max_value = \
@@ -6133,9 +6150,9 @@ class TestSomeOf(unittest.TestCase):
             for dtype, value in zip(dtypes, values):
                 with self.subTest(dtype=dtype, random_order=random_order):
                     aug = iaa.SomeOf(2, [
-                        iaa.Noop(),
-                        iaa.Noop(),
-                        iaa.Noop()
+                        iaa.Identity(),
+                        iaa.Identity(),
+                        iaa.Identity()
                     ], random_order=random_order)
                     image = np.zeros((3, 3), dtype=dtype)
                     image[0, 0] = value
@@ -6149,7 +6166,7 @@ class TestSomeOf(unittest.TestCase):
                 aug = iaa.SomeOf(2, [
                     iaa.Fliplr(1.0),
                     iaa.Flipud(1.0),
-                    iaa.Noop()
+                    iaa.Identity()
                 ], random_order=random_order)
 
                 image = np.zeros((3, 3), dtype=bool)
@@ -6177,7 +6194,7 @@ class TestSomeOf(unittest.TestCase):
                 aug = iaa.SomeOf(2, [
                     iaa.Fliplr(1.0),
                     iaa.Flipud(1.0),
-                    iaa.Noop()
+                    iaa.Identity()
                 ], random_order=random_order)
 
                 min_value, center_value, max_value = \
@@ -6209,7 +6226,7 @@ class TestSomeOf(unittest.TestCase):
                     aug = iaa.SomeOf(2, [
                         iaa.Fliplr(1.0),
                         iaa.Flipud(1.0),
-                        iaa.Noop()
+                        iaa.Identity()
                     ], random_order=random_order)
 
                     image = np.zeros((3, 3), dtype=dtype)
@@ -6233,7 +6250,7 @@ class TestOneOf(unittest.TestCase):
         reseed()
 
     def test_returns_someof(self):
-        child = iaa.Noop()
+        child = iaa.Identity()
         aug = iaa.OneOf(children=child)
         assert isinstance(aug, iaa.SomeOf)
         assert aug.n == 1
@@ -6829,7 +6846,7 @@ class TestSometimes(unittest.TestCase):
 
     @classmethod
     def _test_empty_cbaoi(cls, cbaoi, augf_name):
-        aug = iaa.Sometimes(0.5, iaa.Noop())
+        aug = iaa.Sometimes(0.5, iaa.Identity())
 
         observed = getattr(aug, augf_name)(cbaoi)
 
@@ -6933,7 +6950,7 @@ class TestSometimes(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                aug = iaa.Sometimes(1.0, iaa.Noop())
+                aug = iaa.Sometimes(1.0, iaa.Identity())
 
                 image_aug = aug(image=image)
 
@@ -6951,7 +6968,7 @@ class TestSometimes(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                aug = iaa.Sometimes(1.0, iaa.Noop())
+                aug = iaa.Sometimes(1.0, iaa.Identity())
 
                 image_aug = aug(image=image)
 
@@ -7178,7 +7195,7 @@ class TestSometimes(unittest.TestCase):
             _assert_all_valid_shapes([observed])
 
     def test_other_dtypes_via_noop__bool(self):
-        aug = iaa.Sometimes(1.0, iaa.Noop())
+        aug = iaa.Sometimes(1.0, iaa.Identity())
         image = np.zeros((3, 3), dtype=bool)
         image[0, 0] = True
 
@@ -7188,7 +7205,7 @@ class TestSometimes(unittest.TestCase):
         assert np.all(image_aug == image)
 
     def test_other_dtypes_via_noop__uint_int(self):
-        aug = iaa.Sometimes(1.0, iaa.Noop())
+        aug = iaa.Sometimes(1.0, iaa.Identity())
         dtypes = ["uint8", "uint16", "uint32", "uint64",
                   "int8", "int32", "int64"]
         for dtype in dtypes:
@@ -7205,7 +7222,7 @@ class TestSometimes(unittest.TestCase):
                 assert np.array_equal(image_aug, image)
 
     def test_other_dtypes_via_noop__float(self):
-        aug = iaa.Sometimes(1.0, iaa.Noop())
+        aug = iaa.Sometimes(1.0, iaa.Identity())
         dtypes = ["float16", "float32", "float64", "float128"]
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):
@@ -7656,7 +7673,7 @@ class TestWithChannels(unittest.TestCase):
         assert aug.get_children_lists() == [children]
 
     def test___repr___and___str__(self):
-        children = iaa.Sequential([iaa.Noop()])
+        children = iaa.Sequential([iaa.Identity()])
         aug = iaa.WithChannels(1, children, name="WithChannelsTest")
         expected = (
             "WithChannels("
@@ -7670,7 +7687,7 @@ class TestWithChannels(unittest.TestCase):
         assert aug.__str__() == expected
 
     def test_other_dtypes_via_noop__bool(self):
-        aug = iaa.WithChannels([0], iaa.Noop())
+        aug = iaa.WithChannels([0], iaa.Identity())
 
         image = np.zeros((3, 3, 2), dtype=bool)
         image[0, 0, :] = True
@@ -7679,7 +7696,7 @@ class TestWithChannels(unittest.TestCase):
         assert np.all(image_aug == image)
 
     def test_other_dtypes_via_noop__uint_int(self):
-        aug = iaa.WithChannels([0], iaa.Noop())
+        aug = iaa.WithChannels([0], iaa.Identity())
         dtypes = ["uint8", "uint16", "uint32", "uint64",
                   "int8", "int32", "int64"]
         for dtype in dtypes:
@@ -7696,7 +7713,7 @@ class TestWithChannels(unittest.TestCase):
                 assert np.array_equal(image_aug, image)
 
     def test_other_dtypes_via_noop__float(self):
-        aug = iaa.WithChannels([0], iaa.Noop())
+        aug = iaa.WithChannels([0], iaa.Identity())
         dtypes = ["float16", "float32", "float64", "float128"]
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):

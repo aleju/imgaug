@@ -571,7 +571,7 @@ class TestWithBrightnessChannels(unittest.TestCase):
         assert params[1] == iaa.CSPACE_RGB
 
     def test___str__(self):
-        child = iaa.Noop()
+        child = iaa.Identity()
         aug = iaa.WithBrightnessChannels(
             child,
             from_colorspace=iaa.CSPACE_RGB,
@@ -663,14 +663,14 @@ class TestMultiplyAndAddToBrightness(unittest.TestCase):
         aug = iaa.MultiplyAndAddToBrightness(add=0)
         assert aug.children.random_order is True
         assert isinstance(aug.children[0], iaa.Multiply)
-        assert isinstance(aug.children[1], iaa.Noop)
+        assert isinstance(aug.children[1], iaa.Identity)
         assert iaa.CSPACE_HSV in aug.to_colorspace.a
         assert aug.from_colorspace == iaa.CSPACE_RGB
 
     def test___init___mul_is_1(self):
         aug = iaa.MultiplyAndAddToBrightness(mul=1.0)
         assert aug.children.random_order is True
-        assert isinstance(aug.children[0], iaa.Noop)
+        assert isinstance(aug.children[0], iaa.Identity)
         assert isinstance(aug.children[1], iaa.Add)
         assert iaa.CSPACE_HSV in aug.to_colorspace.a
         assert aug.from_colorspace == iaa.CSPACE_RGB
@@ -718,9 +718,9 @@ class TestMultiplyAndAddToBrightness(unittest.TestCase):
     def test___str__(self):
         params = [
             (1.01, 1, iaa.Multiply(1.01), iaa.Add(1)),
-            (1.00, 1, iaa.Noop(), iaa.Add(1)),
-            (1.01, 0, iaa.Multiply(1.01), iaa.Noop()),
-            (1.00, 0, iaa.Noop(), iaa.Noop()),
+            (1.00, 1, iaa.Identity(), iaa.Add(1)),
+            (1.01, 0, iaa.Multiply(1.01), iaa.Identity()),
+            (1.00, 0, iaa.Identity(), iaa.Identity()),
         ]
 
         for mul, add, exp_mul, exp_add in params:
@@ -752,7 +752,7 @@ class TestWithHueAndSaturation(unittest.TestCase):
         reseed()
 
     def test___init__(self):
-        child = iaa.Noop()
+        child = iaa.Identity()
         aug = iaa.WithHueAndSaturation(child, from_colorspace="BGR")
         assert isinstance(aug.children, list)
         assert len(aug.children) == 1
@@ -918,29 +918,29 @@ class TestWithHueAndSaturation(unittest.TestCase):
         assert aug_dummy.call_count == 1
 
     def test__to_deterministic(self):
-        aug = iaa.WithHueAndSaturation([iaa.Noop()], from_colorspace="BGR")
+        aug = iaa.WithHueAndSaturation([iaa.Identity()], from_colorspace="BGR")
         aug_det = aug.to_deterministic()
 
         assert not aug.deterministic  # ensure copy
         assert not aug.children[0].deterministic
 
         assert aug_det.deterministic
-        assert isinstance(aug_det.children[0], iaa.Noop)
+        assert isinstance(aug_det.children[0], iaa.Identity)
         assert aug_det.children[0].deterministic
 
     def test_get_parameters(self):
-        aug = iaa.WithHueAndSaturation([iaa.Noop()], from_colorspace="BGR")
+        aug = iaa.WithHueAndSaturation([iaa.Identity()], from_colorspace="BGR")
         assert aug.get_parameters()[0] == "BGR"
 
     def test_get_children_lists(self):
-        child = iaa.Noop()
+        child = iaa.Identity()
         aug = iaa.WithHueAndSaturation(child)
         children_lists = aug.get_children_lists()
         assert len(children_lists) == 1
         assert len(children_lists[0]) == 1
         assert children_lists[0][0] is child
 
-        child = iaa.Noop()
+        child = iaa.Identity()
         aug = iaa.WithHueAndSaturation([child])
         children_lists = aug.get_children_lists()
         assert len(children_lists) == 1
@@ -948,7 +948,7 @@ class TestWithHueAndSaturation(unittest.TestCase):
         assert children_lists[0][0] is child
 
     def test___str__(self):
-        child = iaa.Sequential([iaa.Noop(name="foo")])
+        child = iaa.Sequential([iaa.Identity(name="foo")])
         aug = iaa.WithHueAndSaturation(child)
         observed = aug.__str__()
         expected = (

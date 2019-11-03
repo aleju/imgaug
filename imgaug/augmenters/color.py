@@ -1282,10 +1282,10 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
         mul = (
-            meta.Noop()
+            meta.Identity()
             if ia.is_single_number(mul) and np.isclose(mul, 1.0)
             else arithmetic.Multiply(mul))
-        add = meta.Noop() if add == 0 else arithmetic.Add(add)
+        add = meta.Identity() if add == 0 else arithmetic.Add(add)
 
         super(MultiplyAndAddToBrightness, self).__init__(
             children=meta.Sequential(
@@ -3277,8 +3277,8 @@ class _AbstractColorQuantization(meta.Augmenter):
                 image = image[:, :, 0:3]
 
             if self.to_colorspace is None:
-                cs = meta.Noop()
-                cs_inv = meta.Noop()
+                cs = meta.Identity()
+                cs_inv = meta.Identity()
             else:
                 # TODO quite hacky to recover the sampled to_colorspace here
                 #      by accessing _draw_samples(). Would be better to have
