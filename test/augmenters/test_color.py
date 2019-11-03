@@ -1261,6 +1261,58 @@ class TestMultiplyToSaturation(unittest.TestCase):
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
 
+class TestRemoveSaturation(unittest.TestCase):
+    @classmethod
+    def _compute_average_saturation(cls, image_rgb):
+        image_hsv = iaa.change_colorspace_(np.copy(image_rgb),
+                                           from_colorspace=iaa.CSPACE_RGB,
+                                           to_colorspace=iaa.CSPACE_HSV)
+        return np.average(image_hsv[:, :, 1])
+
+    def test___init___defaults(self):
+        aug = iaa.RemoveSaturation()
+        multiply = aug.children[0].children[0]
+        assert isinstance(multiply.mul, iap.Subtract)
+        assert np.isclose(multiply.mul.other_param.value, 1.0)
+        assert np.isclose(multiply.mul.val.a.value, 0.0)
+        assert np.isclose(multiply.mul.val.b.value, 1.0)
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___custom(self):
+        aug = iaa.RemoveSaturation(0.7, from_colorspace=iaa.CSPACE_HSV)
+        multiply = aug.children[0].children[0]
+        assert isinstance(multiply.mul, iap.Subtract)
+        assert np.isclose(multiply.mul.other_param.value, 1.0)
+        assert np.isclose(multiply.mul.val.value, 0.7)
+        assert aug.from_colorspace == iaa.CSPACE_HSV
+
+    def test_on_images(self):
+        image = np.mod(
+            np.arange(20*20*3),
+            255
+        ).astype(np.uint8).reshape((20, 20, 3))
+
+        # add 100 to the red channel here to make the image more saturated
+        image[..., 0] = np.clip((image[..., 0].astype(np.int32) + 100), 0, 255)
+
+        image_sat = self._compute_average_saturation(image)
+        aug = iaa.RemoveSaturation((0.2, 0.6))
+
+        images_aug = aug(images=[image] * 100)
+
+        saturations = []
+        for image_aug in images_aug:
+            sat = self._compute_average_saturation(image_aug)
+            saturations.append(sat)
+
+        assert len(set(np.int32(saturations))) > 10
+        # correct here to not use 1.0-x, as these are the saturations remaining
+        # after applying (1.0-x)*sat
+        # we add 0.02 here due to integer-float rounding effects
+        assert np.all(np.float32(saturations) <= (0.8 + 0.02) * image_sat)
+        assert np.any(np.float32(saturations) <= 0.5 * image_sat)
+
+
 class TestAddToHueAndSaturation(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -1719,6 +1771,395 @@ class TestGrayscale(unittest.TestCase):
             density = nb_samples / nb_iterations
             assert np.isclose(density, density_expected,
                               rtol=0, atol=density_tolerance)
+
+
+class TestGrayscaleColorwise(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___defaults(self):
+        aug = iaa.GrayscaleColorwise()
+        assert np.isclose(aug.nb_bins.a.value, 5)
+        assert np.isclose(aug.nb_bins.b.value, 15)
+        assert np.isclose(aug.smoothness.a.value, 0.1)
+        assert np.isclose(aug.smoothness.b.value, 0.3)
+        assert np.isclose(aug.alpha.a[0], 0.0)
+        assert np.isclose(aug.alpha.a[1], 1.0)
+        assert np.isclose(aug.offset.a.value, 0.0)
+        assert np.isclose(aug.offset.b.value, 1.0)
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+
+    def test___init___custom_settings(self):
+        aug = iaa.GrayscaleColorwise(
+            nb_bins=100,
+            smoothness=0.5,
+            alpha=0.7,
+            offset=0.9,
+            from_colorspace=iaa.CSPACE_HSV
+        )
+        assert aug.nb_bins.value == 100
+        assert np.isclose(aug.smoothness.value, 0.5)
+        assert np.isclose(aug.alpha.value, 0.7)
+        assert np.isclose(aug.offset.value, 0.9)
+        assert aug.from_colorspace == iaa.CSPACE_HSV
+
+    def test_drops_different_colors(self):
+        image = np.uint8([
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [255, 255, 0],
+            [255, 0, 255],
+            [0, 255, 255],
+            [255, 128, 128],
+            [128, 255, 128],
+            [128, 128, 255]
+        ]).reshape((1, 9, 3))
+        image_gray = iaa.Grayscale(1.0)(image=image)
+        aug = iaa.GrayscaleColorwise(nb_bins=256, smoothness=0)
+
+        nb_grayscaled = []
+        for _ in sm.xrange(50):
+            image_aug = aug(image=image)
+            grayscaled = np.sum((image_aug == image_gray).astype(np.int32),
+                                axis=2)
+            assert np.all(np.logical_or(grayscaled == 0, grayscaled == 3))
+            nb_grayscaled.append(np.sum(grayscaled == 3))
+
+        assert len(set(nb_grayscaled)) >= 5
+
+    def test_alpha_is_deterministic_0(self):
+        image = np.uint8([
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [255, 255, 0],
+            [255, 0, 255],
+            [0, 255, 255],
+            [255, 128, 128],
+            [128, 255, 128],
+            [128, 128, 255]
+        ]).reshape((1, 9, 3))
+        aug = iaa.GrayscaleColorwise(alpha=0.0)
+
+        image_aug = aug(image=image)
+
+        assert np.array_equal(image_aug, image)
+
+    def test_alpha_is_deterministic_1(self):
+        image = np.uint8([
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [255, 255, 0],
+            [255, 0, 255],
+            [0, 255, 255],
+            [255, 128, 128],
+            [128, 255, 128],
+            [128, 128, 255]
+        ]).reshape((1, 9, 3))
+        image_gray = iaa.Grayscale(1.0)(image=image)
+        aug = iaa.GrayscaleColorwise(alpha=1.0)
+
+        image_aug = aug(image=image)
+
+        assert np.array_equal(image_aug, image_gray)
+
+    def test_from_colorspace(self):
+        image = np.uint8([
+            [255, 0, 0],
+            [0, 255, 0],
+            [0, 0, 255],
+            [255, 255, 0],
+            [255, 0, 255],
+            [0, 255, 255],
+            [255, 128, 128],
+            [128, 255, 128],
+            [128, 128, 255]
+        ]).reshape((1, 9, 3))
+        image_gray = iaa.Grayscale(1.0, from_colorspace=iaa.CSPACE_BGR)(
+            image=image)
+        aug = iaa.GrayscaleColorwise(alpha=1.0, from_colorspace=iaa.CSPACE_BGR)
+
+        image_aug = aug(image=image)
+
+        assert np.array_equal(image_aug, image_gray)
+
+    def test__upscale_to_256_alpha_bins__1_to_256(self):
+        alphas = np.float32([0.5])
+
+        alphas_up = iaa.GrayscaleColorwise._upscale_to_256_alpha_bins(alphas)
+
+        assert alphas_up.shape == (256,)
+        assert np.allclose(alphas_up, 0.5)
+
+    def test__upscale_to_256_alpha_bins__2_to_256(self):
+        alphas = np.float32([1.0, 0.5])
+
+        alphas_up = iaa.GrayscaleColorwise._upscale_to_256_alpha_bins(alphas)
+
+        assert alphas_up.shape == (256,)
+        assert np.allclose(alphas_up[0:128], 1.0)
+        assert np.allclose(alphas_up[128:], 0.5)
+
+    def test__upscale_to_256_alpha_bins__255_to_256(self):
+        alphas = np.zeros((255,), dtype=np.float32)
+        alphas[0] = 0.25
+        alphas[1:254] = 0.5
+        alphas[254] = 1.0
+
+        alphas_up = iaa.GrayscaleColorwise._upscale_to_256_alpha_bins(alphas)
+
+        assert alphas_up.shape == (256,)
+        assert np.allclose(alphas_up[0:2], 0.25)
+        assert np.allclose(alphas_up[2:], 0.5)
+
+    def test__upscale_to_256_alpha_bins__256_to_256(self):
+        alphas = np.full((256,), 0.5, dtype=np.float32)
+
+        alphas_up = iaa.GrayscaleColorwise._upscale_to_256_alpha_bins(alphas)
+
+        assert alphas_up.shape == (256,)
+        assert np.allclose(alphas, 0.5)
+
+    def test__rotate_alpha_bins_by_offset__0(self):
+        alphas = np.linspace(0.0, 1.0, 256)
+
+        alphas_rot = iaa.GrayscaleColorwise._rotate_alpha_bins_by_offset(
+            alphas, 0)
+
+        assert np.allclose(alphas_rot, alphas)
+
+    def test__rotate_alpha_bins_by_offset__1(self):
+        alphas = np.linspace(0.0, 1.0, 256)
+
+        alphas_rot = iaa.GrayscaleColorwise._rotate_alpha_bins_by_offset(
+            alphas, 1)
+
+        assert np.allclose(alphas_rot[:-1], alphas[1:])
+        assert np.allclose(alphas_rot[-1:], alphas[:1])
+
+    def test__rotate_alpha_bins_by_offset__255(self):
+        alphas = np.linspace(0.0, 1.0, 256)
+
+        alphas_rot = iaa.GrayscaleColorwise._rotate_alpha_bins_by_offset(
+            alphas, 255)
+
+        assert np.allclose(alphas_rot[:-255], alphas[255:])
+        assert np.allclose(alphas_rot[-255:], alphas[:255])
+
+    def test__rotate_alpha_bins_by_offset__256(self):
+        alphas = np.linspace(0.0, 1.0, 256)
+
+        alphas_rot = iaa.GrayscaleColorwise._rotate_alpha_bins_by_offset(
+            alphas, 256)
+
+        assert np.allclose(alphas_rot, alphas)
+
+    def test__smoothen_alphas__0(self):
+        alphas = np.zeros((11,), dtype=np.float32)
+        alphas[5-3:5+3+1] = 1.0
+
+        alphas_smooth = iaa.GrayscaleColorwise._smoothen_alphas(
+            alphas, 0.0, 1.0)
+
+        assert np.allclose(alphas_smooth, alphas)
+
+    def test__smoothen_alphas__001(self):
+        alphas = np.zeros((11,), dtype=np.float32)
+        alphas[5-3:5+3+1] = 1.0
+
+        alphas_smooth = iaa.GrayscaleColorwise._smoothen_alphas(
+            alphas, 0.01, 1.0)
+
+        assert np.allclose(alphas_smooth, alphas, atol=0.02)
+
+    def test__smoothen_alphas__1(self):
+        alphas = np.zeros((11,), dtype=np.float32)
+        alphas[5-3:5+3+1] = 1.0
+
+        alphas_smooth = iaa.GrayscaleColorwise._smoothen_alphas(
+            alphas, 1.0, 1.0)
+
+        assert np.isclose(alphas_smooth[0], 0.0, atol=0.01)
+        assert not np.isclose(alphas_smooth[2], 1.0, atol=0.1)
+        assert np.isclose(alphas_smooth[5], 1.0, atol=0.01)
+
+    def test__generate_pixelwise_alpha_map(self):
+        image_hsv = np.uint8([
+            [0, 0, 0],
+            [50, 0, 0],
+            [100, 0, 0],
+            [150, 0, 0],
+            [200, 0, 0],
+            [250, 0, 0],
+            [255, 0, 0]
+        ]).reshape((1, 7, 3))
+        hue_to_alpha = np.zeros((256,), dtype=np.float32)
+        hue_to_alpha[0] = 0.1
+        hue_to_alpha[50] = 0.2
+        hue_to_alpha[100] = 0.3
+        hue_to_alpha[150] = 0.4
+        hue_to_alpha[200] = 0.5
+        hue_to_alpha[250] = 0.6
+        hue_to_alpha[255] = 0.7
+
+        mask = iaa.GrayscaleColorwise._generate_pixelwise_alpha_mask(
+            image_hsv, hue_to_alpha)
+
+        # a bit of tolerance here due to the mask being converted from
+        # [0, 255] to [0.0, 1.0]
+        assert np.allclose(
+            mask.flatten(),
+            [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            atol=0.05)
+
+    def test_get_parameters(self):
+        aug = iaa.GrayscaleColorwise(
+            nb_bins=100,
+            smoothness=0.5,
+            alpha=0.7,
+            offset=0.9,
+            from_colorspace=iaa.CSPACE_HSV
+        )
+
+        params = aug.get_parameters()
+
+        assert params[0].value == 100
+        assert np.isclose(params[1].value, 0.5)
+        assert np.isclose(params[2].value, 0.7)
+        assert np.isclose(params[3].value, 0.9)
+        assert params[4] == iaa.CSPACE_HSV
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.GrayscaleColorwise()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.shape == image.shape
+
+    def test_batch_contains_no_images(self):
+        hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
+                                 shape=(10, 10, 3))
+        aug = iaa.GrayscaleColorwise()
+
+        hms_aug = aug(heatmaps=hms)
+
+        assert np.allclose(hms_aug.arr_0to1, hms.arr_0to1)
+
+
+class TestRemoveSaturationColorwise(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @classmethod
+    def _remove_saturation(cls, image, from_colorspace):
+        image_hsv = iaa.change_colorspace_(np.copy(image),
+                                           to_colorspace=iaa.CSPACE_HSV,
+                                           from_colorspace=from_colorspace)
+        image_hsv[:, :, 1] *= 0
+        image_res = iaa.change_colorspace_(image_hsv,
+                                           to_colorspace=from_colorspace,
+                                           from_colorspace=iaa.CSPACE_HSV)
+        return image_res
+
+    def test_drops_different_colors(self):
+        image = np.uint8([
+            [0, 5, 10],
+            [10, 15, 20],
+            [20, 25, 30],
+            [30, 35, 40],
+            [40, 45, 50],
+            [50, 55, 60],
+            [60, 65, 70],
+            [70, 75, 80],
+            [80, 85, 90]
+        ]).reshape((1, 9, 3))
+        image[:, ::2, :] = image[:, ::2, ::-1]
+        image[:, ::3, :] = image[:, ::3, [0, 2, 1]]
+        image_gray = self._remove_saturation(image,
+                                             from_colorspace=iaa.CSPACE_RGB)
+        aug = iaa.RemoveSaturationColorwise(nb_bins=256, smoothness=0)
+
+        nb_grayscaled = []
+        for _ in sm.xrange(50):
+            image_aug = aug(image=image)
+            grayscaled = np.sum((image_aug == image_gray).astype(np.int32),
+                                axis=2)
+            assert np.all(np.logical_or(grayscaled == 1, grayscaled == 3))
+            nb_grayscaled.append(np.sum(grayscaled == 3))
+
+        assert len(set(nb_grayscaled)) >= 5
+
+    def test_alpha_is_deterministic_0(self):
+        image = np.uint8([
+            [200, 20, 30],
+            [20, 200, 30],
+            [20, 30, 200],
+            [200, 200, 20],
+            [200, 20, 200],
+            [20, 200, 200],
+            [200, 128, 128],
+            [128, 200, 128],
+            [128, 128, 200]
+        ]).reshape((1, 9, 3))
+        aug = iaa.RemoveSaturationColorwise(alpha=0.0)
+
+        image_aug = aug(image=image)
+
+        # small differences here, probably due to colorspace conversion
+        # inaccuracies
+        assert np.allclose(image_aug, image, atol=2.5)
+
+    def test_alpha_is_deterministic_1(self):
+        image = np.uint8([
+            [200, 20, 30],
+            [20, 200, 30],
+            [20, 30, 200],
+            [200, 200, 20],
+            [200, 20, 200],
+            [20, 200, 200],
+            [200, 128, 128],
+            [128, 200, 128],
+            [128, 128, 200]
+        ]).reshape((1, 9, 3))
+        image_gray = self._remove_saturation(image,
+                                             from_colorspace=iaa.CSPACE_RGB)
+        aug = iaa.RemoveSaturationColorwise(alpha=1.0)
+
+        image_aug = aug(image=image)
+
+        assert np.array_equal(image_aug, image_gray)
+
+    def test_from_colorspace(self):
+        image = np.uint8([
+            [200, 20, 30],
+            [20, 200, 30],
+            [20, 30, 200],
+            [200, 200, 20],
+            [200, 20, 200],
+            [20, 200, 200],
+            [200, 128, 128],
+            [128, 200, 128],
+            [128, 128, 200]
+        ]).reshape((1, 9, 3))
+        image_gray = self._remove_saturation(image,
+                                             from_colorspace=iaa.CSPACE_BGR)
+        aug = iaa.RemoveSaturationColorwise(alpha=1.0,
+                                            from_colorspace=iaa.CSPACE_BGR)
+
+        image_aug = aug(image=image)
+
+        assert np.array_equal(image_aug, image_gray)
 
 
 class TestChangeColorTemperature(unittest.TestCase):
