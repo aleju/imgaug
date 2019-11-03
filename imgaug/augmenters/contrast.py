@@ -608,7 +608,7 @@ class GammaContrast(_ContrastFuncWrapper):
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
 
-    per_channel :  bool or float, optional
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (``False``) or to
         sample a new value for each channel (``True``). If this value is a
         float ``p``, then for ``p`` percent of all images `per_channel` will
@@ -695,7 +695,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
 
-    per_channel :  bool or float, optional
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (``False``) or to
         sample a new value for each channel (``True``). If this value is a
         float ``p``, then for ``p`` percent of all images `per_channel` will
@@ -778,7 +778,7 @@ class LogContrast(_ContrastFuncWrapper):
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
 
-    per_channel :  bool or float, optional
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (``False``) or to
         sample a new value for each channel (``True``). If this value is a
         float ``p``, then for ``p`` percent of all images `per_channel` will
@@ -850,7 +850,7 @@ class LinearContrast(_ContrastFuncWrapper):
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
 
-    per_channel :  bool or float, optional
+    per_channel : bool or float, optional
         Whether to use the same value for all channels (``False``) or to
         sample a new value for each channel (``True``). If this value is a
         float ``p``, then for ``p`` percent of all images `per_channel` will
@@ -900,6 +900,50 @@ class LinearContrast(_ContrastFuncWrapper):
             deterministic=deterministic,
             random_state=random_state
         )
+
+
+class Equalize(meta.Augmenter):
+    """Equalize the image histogram.
+
+    This augmenter is identical in inputs and outputs to
+    :func:`PIL.ImageOps.equalize`.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.contrast.equalize_`.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Equalize()
+
+    Equalize the histograms of all input images.
+
+    """
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(Equalize, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        # pylint: disable=no-self-use
+        if batch.images:
+            for image in batch.images:
+                image[...] = equalize_(image)
+        return batch
+
+    def get_parameters(self):
+        return []
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar

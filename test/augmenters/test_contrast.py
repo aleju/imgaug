@@ -977,6 +977,38 @@ class Test_equalize(unittest.TestCase):
                 assert image_aug.shape == shape
 
 
+class TestEqualize(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @mock.patch("imgaug.augmenters.contrast.equalize_")
+    def test_mocked(self, mock_eq):
+        image = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        mock_eq.return_value = np.copy(image)
+        aug = iaa.Equalize()
+
+        _image_aug = aug(image=image)
+
+        assert mock_eq.call_count == 1
+        assert np.array_equal(mock_eq.call_args_list[0][0][0], image)
+
+    def test_integrationtest(self):
+        rng = iarandom.RNG(0)
+        for size in [20, 100]:
+            shape = (size, size, 3)
+            image = rng.integers(50, 150, size=shape)
+            image = image.astype(np.uint8)
+            aug = iaa.Equalize()
+
+            image_aug = aug(image=image)
+
+            if size > 1:
+                channelwise_sums = np.sum(image_aug, axis=(0, 1))
+                assert np.all(channelwise_sums > 0)
+            assert np.min(image_aug) < 50
+            assert np.max(image_aug) > 150
+
+
 class TestAllChannelsCLAHE(unittest.TestCase):
     def setUp(self):
         reseed()
