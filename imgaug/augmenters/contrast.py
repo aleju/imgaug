@@ -37,6 +37,9 @@ from .. import dtypes as iadt
 from ..augmentables import batches as iabatches
 
 
+_EQUALIZE_USE_PIL_BELOW = 64*64  # H*W
+
+
 class _ContrastFuncWrapper(meta.Augmenter):
     def __init__(self, func, params1d, per_channel, dtypes_allowed=None,
                  dtypes_disallowed=None,
@@ -429,6 +432,157 @@ def adjust_contrast_linear(arr, alpha):
                      * (arr.astype(np.float64)-center_value))
         image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
         return image_aug
+
+
+def equalize(image, mask=None):
+    """Equalize the image histogram.
+
+    See :func:`equalize_` for details.
+
+    This function is identical in inputs and outputs to
+    :func:`PIL.ImageOps.equalize`.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.contrast.equalize_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        ``uint8`` ``(H,W,[C])`` image to equalize.
+
+    mask : None or ndarray, optional
+        An optional mask. If given, only the pixels selected by the mask are
+        included in the analysis.
+
+    Returns
+    -------
+    ndarray
+        Equalized image.
+
+    """
+    # internally used method works in-place by default and hence needs a copy
+    size = image.size
+    if size == 0:
+        return np.copy(image)
+    elif size >= _EQUALIZE_USE_PIL_BELOW:
+        image = np.copy(image)
+    return equalize_(image, mask)
+
+
+def equalize_(image, mask=None):
+    """Equalize the image histogram in-place.
+
+    This function applies a non-linear mapping to the input image, in order
+    to create a uniform distribution of grayscale values in the output image.
+
+    This function is identical in inputs and outputs to
+    :func:`PIL.ImageOps.equalize`, except that it is allowed to modify the
+    input image in-place.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    image : ndarray
+        ``uint8`` ``(H,W,[C])`` image to equalize.
+
+    mask : None or ndarray, optional
+        An optional mask. If given, only the pixels selected by the mask are
+        included in the analysis.
+
+    Returns
+    -------
+    ndarray
+        Equalized image. *Might* have been modified in-place.
+
+    """
+    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+    if nb_channels not in [1, 3]:
+        result = [equalize_(image[:, :, c]) for c in np.arange(nb_channels)]
+        return np.stack(result, axis=-1)
+
+    assert image.dtype.name == "uint8", (
+        "Expected image of dtype uint8, got dtype %s." % (image.dtype.name,))
+    if mask is not None:
+        assert mask.ndim == 2, (
+            "Expected 2-dimensional mask, got shape %s." % (mask.shape,))
+        assert mask.dtype.name == "uint8", (
+            "Expected mask of dtype uint8, got dtype %s." % (mask.dtype.name,))
+
+    size = image.size
+    if size == 0:
+        return image
+    elif nb_channels == 3 and size < _EQUALIZE_USE_PIL_BELOW:
+        return _equalize_pil(image, mask)
+    return _equalize_no_pil_(image, mask)
+
+
+# note that this is supposed to be a non-PIL reimplementation of PIL's
+# equalize, which produces slightly different results from cv2.equalizeHist()
+def _equalize_no_pil_(image, mask=None):
+    flags = image.flags
+    if not flags["OWNDATA"]:
+        image = np.copy(image)
+    if not flags["C_CONTIGUOUS"]:
+        image = np.ascontiguousarray(image)
+
+    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+    lut = np.empty((1, 256, nb_channels), dtype=np.int32)
+
+    for c_idx in range(nb_channels):
+        if image.ndim == 2:
+            image_c = image[:, :, np.newaxis]
+        else:
+            image_c = image[:, :, c_idx:c_idx+1]
+        histo = cv2.calcHist([image_c], [0], mask, [256], [0, 256])
+        if len(histo.nonzero()[0]) <= 1:
+            lut[0, :, c_idx] = np.arange(256).astype(np.int32)
+            continue
+
+        step = np.sum(histo[:-1]) // 255
+        if not step:
+            lut[0, :, c_idx] = np.arange(256).astype(np.int32)
+            continue
+
+        n = step // 2
+        cs = np.cumsum(histo)
+        lut[0, 0, c_idx] = n
+        lut[0, 1:, c_idx] = n + cs[0:-1]
+        lut[0, :, c_idx] //= int(step)
+    lut = np.clip(lut, None, 255, out=lut).astype(np.uint8)
+    image = cv2.LUT(image, lut, dst=image)
+    if image.ndim == 2 and image.ndim == 3:
+        return image[..., np.newaxis]
+    return image
+
+
+def _equalize_pil(image, mask=None):
+    import PIL.Image
+    import PIL.ImageOps
+
+    if mask is not None:
+        mask = PIL.Image.fromarray(mask).convert("L")
+    return np.asarray(
+        PIL.ImageOps.equalize(
+            PIL.Image.fromarray(image),
+            mask=mask
+        )
+    )
 
 
 class GammaContrast(_ContrastFuncWrapper):

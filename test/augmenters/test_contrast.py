@@ -21,11 +21,14 @@ import six.moves as sm
 import skimage
 import skimage.data
 import cv2
+import PIL.Image
+import PIL.ImageOps
 
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
+from imgaug import random as iarandom
 from imgaug.augmenters import contrast as contrast_lib
 from imgaug.augmentables import batches as iabatches
 from imgaug.testutils import ArgCopyingMagicMock, keypoints_equal, reseed
@@ -883,6 +886,95 @@ class Test_adjust_contrast_linear(unittest.TestCase):
             [cv, cv, cv]
         ]
         assert np.array_equal(observed, expected)
+
+
+class Test_equalize(unittest.TestCase):
+    def test_by_comparison_with_pil(self):
+        shapes = [
+            (1, 1),
+            (2, 1),
+            (1, 2),
+            (2, 2),
+            (5, 5),
+            (10, 5),
+            (5, 10),
+            (10, 10),
+            (20, 20),
+            (100, 100),
+            (100, 200),
+            (200, 100),
+            (200, 200)
+        ]
+        shapes = shapes + [shape + (3,) for shape in shapes]
+
+        rng = iarandom.RNG(0)
+        images = [rng.integers(0, 255, size=shape).astype(np.uint8)
+                  for shape in shapes]
+        images = images + [
+            np.full((10, 10), 0, dtype=np.uint8),
+            np.full((10, 10), 128, dtype=np.uint8),
+            np.full((10, 10), 255, dtype=np.uint8)
+        ]
+
+        for i, image in enumerate(images):
+            mask_vals = [False, True] if image.size >= (100*100) else [False]
+            for use_mask in mask_vals:
+                with self.subTest(image_idx=i, shape=image.shape,
+                                  use_mask=use_mask):
+                    mask_np = None
+                    mask_pil = None
+                    if use_mask:
+                        mask_np = np.zeros(image.shape[0:2], dtype=np.uint8)
+                        mask_np[25:75, 25:75] = 1
+                        mask_pil = PIL.Image.fromarray(mask_np).convert("L")
+
+                    image_iaa = iaa.equalize(image, mask=mask_np)
+                    image_pil = np.asarray(
+                        PIL.ImageOps.equalize(
+                            PIL.Image.fromarray(image),
+                            mask=mask_pil
+                        )
+                    )
+
+                    assert np.array_equal(image_iaa, image_pil)
+
+    def test_unusual_channel_numbers(self):
+        nb_channels_lst = [1, 2, 4, 5, 512, 513]
+        for nb_channels in nb_channels_lst:
+            for size in [20, 100]:
+                with self.subTest(nb_channels=nb_channels,
+                                  size=size):
+                    shape = (size, size, nb_channels)
+                    image = iarandom.RNG(0).integers(50, 150, size=shape)
+                    image = image.astype(np.uint8)
+
+                    image_aug = iaa.equalize(image)
+
+                    if size > 1:
+                        channelwise_sums = np.sum(image_aug, axis=(0, 1))
+                        assert np.all(channelwise_sums > 0)
+                    assert np.min(image_aug) < 50
+                    assert np.max(image_aug) > 150
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+
+                image_aug = iaa.equalize(image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
 
 
 class TestAllChannelsCLAHE(unittest.TestCase):
