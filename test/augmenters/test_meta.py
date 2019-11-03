@@ -3946,10 +3946,10 @@ class TestAugmenter_augment(unittest.TestCase):
         assert np.allclose(heatmaps_aug[0][:, 1:], 1.0)
         assert np.all(segmaps_aug[0][:, 0] == 0)
         assert np.all(segmaps_aug[0][:, 1:] == 1)
-        assert kps_aug == [(1, 0), (2, 2)]
-        assert bbs_aug == [(1, 0, 2, 1), (2, 2, 3, 3)]
-        assert polygons_aug == [(1, 0), (2, 0), (2, 1)]
-        assert ls_aug == [(1, 0), (2, 0), (2, 1)]
+        assert np.allclose(kps_aug, [(1, 0), (2, 2)])
+        assert np.allclose(bbs_aug, [(1, 0, 2, 1), (2, 2, 3, 3)])
+        assert np.allclose(polygons_aug, [(1, 0), (2, 0), (2, 1)])
+        assert np.allclose(ls_aug, [(1, 0), (2, 0), (2, 1)])
 
     def test_alignment(self):
         # make sure that changes from augment() are aligned and vary between

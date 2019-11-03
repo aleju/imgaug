@@ -386,20 +386,27 @@ class _AffineSamplingResult(object):
         else:
             translate_x_px = translate_x
 
-        rotation_deg, shear_deg = np.deg2rad([
-            self.rotate[idx], self.shear[idx]])
+        rotation_rad, shear_x_rad, shear_y_rad = np.deg2rad([
+            self.rotate[idx],
+            self.shear[0][idx], self.shear[1][idx]])
 
         matrix_to_topleft = tf.SimilarityTransform(
             translation=[-shift_x, -shift_y])
+        matrix_shear_y_rot = tf.AffineTransform(rotation=-3.141592/2)
+        matrix_shear_y = tf.AffineTransform(shear=shear_y_rad)
+        matrix_shear_y_rot_inv = tf.AffineTransform(rotation=3.141592/2)
         matrix_transforms = tf.AffineTransform(
             scale=(scale_x, scale_y),
             translation=(translate_x_px, translate_y_px),
-            rotation=rotation_deg,
-            shear=shear_deg
+            rotation=rotation_rad,
+            shear=shear_x_rad
         )
         matrix_to_center = tf.SimilarityTransform(
             translation=[shift_x, shift_y])
         matrix = (matrix_to_topleft
+                  + matrix_shear_y_rot
+                  + matrix_shear_y
+                  + matrix_shear_y_rot_inv
                   + matrix_transforms
                   + matrix_to_center)
         if fit_output:
@@ -665,18 +672,25 @@ class Affine(meta.Augmenter):
             * If a ``StochasticParameter``, then this parameter will be used to
               sample the rotation value per image.
 
-    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
         Shear in degrees (**NOT** radians), i.e. expected value range is
-        around ``[-360, 360]``.
+        around ``[-360, 360]``, with reasonable values being in the range
+        of ``[-45, 45]``.
 
-            * If a number, then that value will be used for all images.
-            * If a tuple ``(a, b)``, then a value will be uniformly sampled
+            * If a number, then that value will be used for all images as
+              the shear on the x-axis (no shear on the y-axis will be done).
+            * If a tuple ``(a, b)``, then two value will be uniformly sampled
               per image from the interval ``[a, b]`` and be used as the
-              rotation value.
-            * If a list, then a random value will be sampled from that list
-              per image.
+              x- and y-shear value.
+            * If a list, then two random values will be sampled from that list
+              per image, denoting x- and y-shear.
             * If a ``StochasticParameter``, then this parameter will be used
-              to sample the shear value per image.
+              to sample the x- and y-shear values per image.
+            * If a dictionary, then similar to `translate_percent`, i.e. one
+              ``x`` key and/or one ``y`` key are expected, denoting the
+              shearing om the x- and y-axis respectively. The allowed datatypes
+              are again ``number``, ``tuple`` ``(a, b)``, ``list`` or
+              ``StochasticParameter``.
 
     order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         Interpolation order to use. Same meaning as in ``skimage``:
@@ -859,6 +873,13 @@ class Affine(meta.Augmenter):
     ``edge`` mode, which repeats the color of the spatially closest pixel
     of the corresponding image edge.
 
+    >>> aug = iaa.Affine(shear={"y": (-45, 45)})
+
+    Shear images only on the y-axis. Set `shear` to ``shear=(-45, 45)`` to
+    shear randomly on both axes, using for each image the same sample for
+    both the x- and y-axis. Use ``shear={"x": (-45, 45), "y": (-45, 45)}``
+    to get independent samples per axis.
+
     """
 
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
@@ -881,9 +902,7 @@ class Affine(meta.Augmenter):
         self.rotate = iap.handle_continuous_param(
             rotate, "rotate", value_range=None, tuple_to_uniform=True,
             list_to_choice=True)
-        self.shear = iap.handle_continuous_param(
-            shear, "shear", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
+        self.shear, self._shear_param_type = self._handle_shear_arg(shear)
         self.fit_output = fit_output
 
         # Special order, mode and cval parameters for heatmaps and
@@ -977,6 +996,31 @@ class Affine(meta.Augmenter):
                     translate_px, "translate_px", value_range=None,
                     tuple_to_uniform=True, list_to_choice=True,
                     allow_floats=False)
+
+    @classmethod
+    def _handle_shear_arg(cls, shear):
+        if isinstance(shear, dict):
+            assert "x" in shear or "y" in shear, (
+                "Expected shear dictionary to contain at "
+                "least key \"x\" or key \"y\". Found neither of them.")
+            x = shear.get("x", 0)
+            y = shear.get("y", 0)
+            return (
+                iap.handle_continuous_param(
+                    x, "shear['x']", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True),
+                iap.handle_continuous_param(
+                    y, "shear['y']", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True)
+            ), "dict"
+        else:
+            param_type = "other"
+            if ia.is_single_number(shear):
+                param_type = "single-number"
+            return iap.handle_continuous_param(
+                shear, "shear", value_range=None, tuple_to_uniform=True,
+                list_to_choice=True
+            ), param_type
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch.nb_rows, random_state)
@@ -1102,7 +1146,7 @@ class Affine(meta.Augmenter):
         return augmentables
 
     def _draw_samples(self, nb_samples, random_state):
-        rngs = random_state.duplicate(11)
+        rngs = random_state.duplicate(12)
 
         if isinstance(self.scale, tuple):
             scale_samples = (
@@ -1128,15 +1172,27 @@ class Affine(meta.Augmenter):
 
         rotate_samples = self.rotate.draw_samples((nb_samples,),
                                                   random_state=rngs[6])
-        shear_samples = self.shear.draw_samples((nb_samples,),
-                                                random_state=rngs[7])
+        if self._shear_param_type == "dict":
+            shear_samples = (
+                self.shear[0].draw_samples((nb_samples,), random_state=rngs[7]),
+                self.shear[1].draw_samples((nb_samples,), random_state=rngs[8])
+            )
+        elif self._shear_param_type == "single-number":
+            # only shear on the x-axis if a single number was given
+            shear_samples = self.shear.draw_samples((nb_samples,),
+                                                    random_state=rngs[7])
+            shear_samples = (shear_samples, np.zeros_like(shear_samples))
+        else:
+            shear_samples = self.shear.draw_samples((nb_samples,),
+                                                    random_state=rngs[7])
+            shear_samples = (shear_samples, shear_samples)
 
         cval_samples = self.cval.draw_samples((nb_samples, 3),
-                                              random_state=rngs[8])
-        mode_samples = self.mode.draw_samples((nb_samples,),
                                               random_state=rngs[9])
+        mode_samples = self.mode.draw_samples((nb_samples,),
+                                              random_state=rngs[10])
         order_samples = self.order.draw_samples((nb_samples,),
-                                                random_state=rngs[10])
+                                                random_state=rngs[11])
 
         return _AffineSamplingResult(
             scale=scale_samples,

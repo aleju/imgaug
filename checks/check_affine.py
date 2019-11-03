@@ -21,6 +21,30 @@ def main():
     image = data.astronaut()
     image = ia.imresize_single_image(image, (HEIGHT, WIDTH))
 
+    # testing new shear on x-/y-axis
+    shear_x = [iaa.Affine(shear=shear)(image=image)
+               for shear in np.linspace(0, 45, 10)]
+    shear_y = [iaa.Affine(shear={"y": shear})(image=image)
+               for shear in np.linspace(0, 45, 10)]
+    ia.imshow(
+        ia.draw_grid(shear_x + shear_y, cols=10, rows=2)
+    )
+    ia.imshow(
+        ia.draw_grid(
+            iaa.Affine(shear=(-45, 45))(images=[image]*16)
+        )
+    )
+    ia.imshow(
+        ia.draw_grid(
+            iaa.Affine(shear=[-45, -20, 0, 20, 45])(images=[image]*16)
+        )
+    )
+    ia.imshow(
+        ia.draw_grid(
+            iaa.Affine(shear={"y": (-45, 45)})(images=[image]*16)
+        )
+    )
+
     kps = []
     for y in range(NB_ROWS):
         ycoord = BB_Y1 + int(y * (BB_Y2 - BB_Y1) / (NB_COLS - 1))
