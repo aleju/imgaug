@@ -1851,6 +1851,27 @@ class TestAffine_rotate(unittest.TestCase):
             assert hm_aug.arr_0to1.shape == (28, 24, 1)
             assert (same / img_aug_mask.size) >= 0.9
 
+    def test_bounding_boxes_have_expected_shape_after_augmentation(self):
+        image = np.zeros((100, 100), dtype=np.uint8)
+        image[20:80, 20:80] = 255
+        bb = ia.BoundingBox(x1=20, y1=20, x2=80, y2=80)
+        bbsoi = ia.BoundingBoxesOnImage([bb], shape=image.shape)
+        for rotate in [10, 20, 40, 80, 120]:
+            with self.subTest(rotate=rotate):
+                aug = iaa.Affine(rotate=rotate, order=0)
+
+                image_aug, bbsoi_aug = aug(image=image, bounding_boxes=bbsoi)
+
+                xx = np.nonzero(np.max(image_aug > 100, axis=0))[0]
+                yy = np.nonzero(np.max(image_aug > 100, axis=1))[0]
+                bb_exp_x1 = xx[0]
+                bb_exp_x2 = xx[-1]
+                bb_exp_y1 = yy[0]
+                bb_exp_y2 = yy[-1]
+                bb_expected = ia.BoundingBox(x1=bb_exp_x1, y1=bb_exp_y1,
+                                             x2=bb_exp_x2, y2=bb_exp_y2)
+                assert bbsoi_aug.bounding_boxes[0].iou(bb_expected) > 0.95
+
 
 class TestAffine_cval(unittest.TestCase):
     @property

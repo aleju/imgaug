@@ -1007,9 +1007,23 @@ class Affine(meta.Augmenter):
                     if (not _is_identity_matrix(matrix)
                             and not cbaoi.empty
                             and not (0 in cbaoi.shape[0:2])):
-                        coords = cbaoi.to_xy_array()
-                        coords_aug = tf.matrix_transform(coords, matrix.params)
-                        cbaoi = cbaoi.fill_from_xy_array_(coords_aug)
+                        # TODO this is hacky
+                        if augm_name == "bounding_boxes":
+                            # Ensure that 4 points are used for bbs.
+                            # to_keypoints_on_images() does return 4 points,
+                            # to_xy_array() does not.
+                            kpsoi = cbaoi.to_keypoints_on_image()
+                            coords = kpsoi.to_xy_array()
+                            coords_aug = tf.matrix_transform(coords,
+                                                             matrix.params)
+                            kpsoi = kpsoi.fill_from_xy_array_(coords_aug)
+                            cbaoi = cbaoi.invert_to_keypoints_on_image_(
+                                kpsoi)
+                        else:
+                            coords = cbaoi.to_xy_array()
+                            coords_aug = tf.matrix_transform(coords,
+                                                             matrix.params)
+                            cbaoi = cbaoi.fill_from_xy_array_(coords_aug)
 
                     cbaoi.shape = output_shape
                     augm_value[i] = cbaoi
