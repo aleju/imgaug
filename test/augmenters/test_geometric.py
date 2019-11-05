@@ -2985,6 +2985,54 @@ class TestShearX(unittest.TestCase):
         assert not np.isclose(x2, x3)
 
 
+class TestShearY(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.ShearY(40)
+        assert isinstance(aug, iaa.Affine)
+        assert aug.shear[1].value == 40
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        def _find_coords(arr):
+            xx = np.nonzero(np.max(arr, axis=0) > 200)[0]
+            yy = np.nonzero(np.max(arr, axis=1) > 200)[0]
+            x1 = xx[0]
+            x2 = xx[-1]
+            y1 = yy[0]
+            y2 = yy[-1]
+            return x1+(x2-x1)/2, y1+(y2-y1)/2
+
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[20:20+1, 10:10+1, 0] = 255
+        image[20:20+1, 40:40+1, 1] = 255
+        image[30:30+1, 40:40+1, 2] = 255
+        image[30:30+1, 10:10+1, 3] = 255
+        aug = iaa.ShearY(30, order=0)
+
+        image_aug = aug(image=image)
+
+        x1, y1 = _find_coords(image_aug[..., 0])
+        x2, y2 = _find_coords(image_aug[..., 1])
+        x3, y3 = _find_coords(image_aug[..., 2])
+        x4, y4 = _find_coords(image_aug[..., 3])
+        assert y1 < 20
+        assert x1 > 10
+        assert x4 > 10
+        assert np.isclose(x1, x4)
+        assert y2 > 20
+        assert x2 < 40
+        assert x3 < 40
+        assert np.isclose(x2, x3)
+        assert not np.isclose(y1, y2)
+        assert not np.isclose(y3, y4)
+
+
 # TODO migrate to unittest and split up tests or remove AffineCv2
 def test_AffineCv2():
     reseed()
