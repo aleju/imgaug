@@ -2937,6 +2937,36 @@ class TestAffine_other(unittest.TestCase):
                     assert image_aug.shape == shape
 
 
+class TestScaleX(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.ScaleX(1.5)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.scale[0].value, 1.5)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        image = np.zeros((10, 10), dtype=np.uint8)
+        image[5, 5] = 255
+        aug = iaa.ScaleX(4.0, order=0)
+
+        image_aug = aug(image=image)
+
+        xx = np.nonzero(np.max(image_aug, axis=0) > 200)[0]
+        yy = np.nonzero(np.max(image_aug, axis=1) > 200)[0]
+        x1, x2 = xx[0], xx[-1]
+        y1, y2 = yy[0], yy[-1]
+        # not >=3, because if e.g. index 1 is spread to 0 to 3 after scaling,
+        # it covers four cells (0, 1, 2, 3), but 3-0 is 3
+        assert x2 - x1 >= 3
+        assert y2 - y1 < 1
+
+
 class TestShearX(unittest.TestCase):
     def setUp(self):
         reseed()
