@@ -15,6 +15,7 @@ and then e.g. ::
 List of augmenters:
     * Affine
     * ScaleX
+    * ScaleY
     * ShearX
     * ShearY
     * AffineCv2
@@ -1268,6 +1269,59 @@ class ScaleX(Affine):
                  name=None, deterministic=False, random_state=None):
         super(ScaleX, self).__init__(
             scale={"x": scale},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class ScaleY(Affine):
+    """Apply affine scaling on the y-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    Parameters
+    ----------
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``scale`` in :class:`Affine`, except that this scale
+        value only affects the y-axis. No dictionary input is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, scale, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(ScaleY, self).__init__(
+            scale={"y": scale},
             order=order,
             cval=cval,
             mode=mode,
