@@ -1235,6 +1235,10 @@ class ScaleX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1288,6 +1292,10 @@ class TranslateX(Affine):
     """Apply affine translation on the x-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1355,6 +1363,10 @@ class TranslateY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
     Parameters
     ----------
     percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1420,6 +1432,10 @@ class ScaleY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1474,6 +1490,10 @@ class Rotate(Affine):
     This is a wrapper around :class:`Affine`.
     It is the same as ``Affine(rotate=<value>)``.
 
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
     Parameters
     ----------
     rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -1525,6 +1545,10 @@ class ShearX(Affine):
     """Apply affine shear on the x-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1578,6 +1602,10 @@ class ShearY(Affine):
     """Apply affine shear on the y-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
