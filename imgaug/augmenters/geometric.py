@@ -16,6 +16,7 @@ List of augmenters:
     * Affine
     * ScaleX
     * ScaleY
+    * TranslateX
     * ShearX
     * ShearY
     * AffineCv2
@@ -1269,6 +1270,72 @@ class ScaleX(Affine):
                  name=None, deterministic=False, random_state=None):
         super(ScaleX, self).__init__(
             scale={"x": scale},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+# TODO make Affine more efficient for translation-only transformations
+class TranslateX(Affine):
+    """Apply affine translation on the x-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    Parameters
+    ----------
+    percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``translate_percent`` in :class:`Affine`, except that
+        this translation value only affects the x-axis. No dictionary input
+        is allowed.
+
+    px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
+        Analogous to ``translate_px`` in :class:`Affine`, except that
+        this translation value only affects the x-axis. No dictionary input
+        is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, percent=None, px=None, order=1,
+                 cval=0, mode="constant", fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        # we don't test here if both are not-None at the same time, because
+        # that is already checked in Affine
+        assert percent is not None or px is not None, (
+            "Expected either `percent` to be not-None or "
+            "`px` to be not-None, but both were None.")
+        super(TranslateX, self).__init__(
+            translate_percent=({"x": percent} if percent is not None else None),
+            translate_px=({"x": px} if px is not None else None),
             order=order,
             cval=cval,
             mode=mode,

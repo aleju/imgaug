@@ -2997,6 +2997,56 @@ class TestScaleY(unittest.TestCase):
         assert x2 - x1 < 1
 
 
+class TestTranslateX(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___translate_percent(self):
+        aug = iaa.TranslateX(percent=0.5)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.translate[0].value, 0.5)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test___init___translate_px(self):
+        aug = iaa.TranslateX(px=2)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.translate[0].value, 2)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test___init___both_none(self):
+        with self.assertRaises(AssertionError) as ctx:
+            _aug = iaa.TranslateX()
+        assert "but both were None" in str(ctx.exception)
+
+    def test_integrationtest_translate_percent(self):
+        image = np.full((50, 50), 255, dtype=np.uint8)
+        aug = iaa.TranslateX(percent=0.5, order=1, cval=0)
+
+        image_aug = aug(image=image)
+
+        expected = np.copy(image)
+        expected[:, 0:25] = 0
+        overlap = np.average(np.isclose(image_aug, expected, atol=1.01))
+        assert overlap > (1.0 - (1/50) - 1e-4)
+
+    def test_integrationtest_translate_px(self):
+        image = np.full((50, 50), 255, dtype=np.uint8)
+        aug = iaa.TranslateX(percent=25, order=1, cval=0)
+
+        image_aug = aug(image=image)
+
+        expected = np.copy(image)
+        expected[:, 0:25] = 0
+        overlap = np.average(np.isclose(image_aug, expected, atol=1.01))
+        assert overlap > (1.0 - (1/50) - 1e-4)
+
+
 class TestShearX(unittest.TestCase):
     def setUp(self):
         reseed()
