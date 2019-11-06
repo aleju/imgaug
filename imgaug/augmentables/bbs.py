@@ -189,6 +189,31 @@ class BoundingBox(object):
         """
         return self.height * self.width
 
+    def compute_area_out_of_image(self, image):
+        """Compute the area of the BB that is outside of the image plane.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Total area of the bounding box that is outside of the image plane.
+            Can be ``0.0``.
+
+        """
+        shape = normalize_shape(image)
+        height, width = shape[0:2]
+        bb_image = BoundingBox(x1=0, y1=0, x2=width, y2=height)
+        inter = self.intersection(bb_image, default=None)
+        area = self.area
+        return area if inter is None else area - inter.area
+
     # TODO add test for tuple of number
     def contains(self, other):
         """Estimate whether the bounding box contains a given point.
