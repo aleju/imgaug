@@ -393,6 +393,41 @@ class BoundingBox(object):
         area_union = self.area + other.area - inters.area
         return inters.area / area_union if area_union > 0 else 0.0
 
+    def compute_out_of_image_factor(self, image):
+        """Compute fraction of BB area outside of the image plane.
+
+        This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
+        bounding box that is outside of the image plane, while ``A`` is the
+        total area of the bounding box.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Fraction of the bounding box area that is outside of the image
+            plane. Returns ``0.0`` if the bounding box is fully inside of
+            the image plane. If the bounding box has an area of zero, the
+            result is ``1.0`` if its coordinates are outside of the image
+            plane, otherwise ``0.0``.
+
+        """
+        area = self.area
+        if area == 0:
+            shape = normalize_shape(image)
+            height, width = shape[0:2]
+            y1_outside = self.y1 < 0 or self.y1 >= height
+            x1_outside = self.x1 < 0 or self.x1 >= width
+            is_outside = (y1_outside or x1_outside)
+            return 1.0 if is_outside else 0.0
+        return self.compute_area_out_of_image(image) / area
+
     def is_fully_within_image(self, image):
         """Estimate whether the bounding box is fully inside the image area.
 
