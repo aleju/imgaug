@@ -574,6 +574,102 @@ class TestRNG(_Base):
         assert result == "foo"
         getattr(mock_gen, fname).assert_called_once_with(*args, **kwargs)
 
+    #
+    # outdated methods from RandomState
+    #
+
+    def test_rand_mocked(self):
+        self._test_sampling_func_alias("rand", "random", 1, 2, 3)
+
+    def test_randint_mocked(self):
+        self._test_sampling_func_alias("randint", "integers", 0, 100)
+
+    def randn(self):
+        self._test_sampling_func_alias("randn", "standard_normal", 1, 2, 3)
+
+    def random_integers(self):
+        self._test_sampling_func_alias("random_integers", "integers", 1, 2)
+
+    def random_sample(self):
+        self._test_sampling_func_alias("random_sample", "uniform", (1, 2, 3))
+
+    def tomaxint(self):
+        self._test_sampling_func_alias("tomaxint", "integers", (1, 2, 3))
+
+    def test_rand(self):
+        result = iarandom.RNG(0).rand(10, 20, 3)
+        assert result.dtype.name == "float32"
+        assert result.shape == (10, 20, 3)
+        assert np.all(result >= 0.0)
+        assert np.all(result <= 1.0)
+        assert np.any(result > 0.0)
+        assert np.any(result < 1.0)
+
+    def test_randint(self):
+        result = iarandom.RNG(0).randint(10, 100, size=(10, 20, 3))
+        assert result.dtype.name == "int32"
+        assert result.shape == (10, 20, 3)
+        assert np.all(result >= 10)
+        assert np.all(result <= 99)
+        assert np.any(result > 10)
+        assert np.any(result < 99)
+
+    def test_randn(self):
+        result = iarandom.RNG(0).randn(10, 50, 3)
+        assert result.dtype.name == "float32"
+        assert result.shape == (10, 50, 3)
+        assert np.any(result > 0.5)
+        assert np.any(result < -0.5)
+        assert np.average(np.logical_or(result < 2.0, result > -2.0)) > 0.5
+
+    def test_random_integers(self):
+        result = iarandom.RNG(0).random_integers(10, 100, size=(10, 20, 3))
+        assert result.dtype.name == "int32"
+        assert result.shape == (10, 20, 3)
+        assert np.all(result >= 10)
+        assert np.all(result <= 100)
+        assert np.any(result > 10)
+        assert np.any(result < 100)
+
+    def test_random_integers__no_high(self):
+        result = iarandom.RNG(0).random_integers(100, size=(10, 20, 3))
+        assert result.dtype.name == "int32"
+        assert result.shape == (10, 20, 3)
+        assert np.all(result >= 1)
+        assert np.all(result <= 100)
+        assert np.any(result > 1)
+        assert np.any(result < 100)
+
+    def test_random_sample(self):
+        result = iarandom.RNG(0).random_sample((10, 20, 3))
+        assert result.dtype.name == "float64"
+        assert result.shape == (10, 20, 3)
+        assert np.all(result >= 0.0)
+        assert np.all(result <= 1.0)
+        assert np.any(result > 0.0)
+        assert np.any(result < 1.0)
+
+    def test_tomaxint(self):
+        result = iarandom.RNG(0).tomaxint((10, 200, 3))
+        assert result.dtype.name == "int32"
+        assert result.shape == (10, 200, 3)
+        assert np.all(result >= 0)
+        assert np.any(result > 10000)
+
+    @classmethod
+    def _test_sampling_func_alias(cls, fname_alias, fname_subcall, *args,
+                                  **kwargs):
+
+        rng = iarandom.RNG(0)
+        mock_func = mock.Mock()
+        mock_func.return_value = "foo"
+        setattr(rng, fname_subcall, mock_func)
+
+        result = getattr(rng, fname_alias)(*args, **kwargs)
+
+        assert result == "foo"
+        assert mock_func.call_count == 1
+
 
 class Test_supports_new_numpy_rng_style(_Base):
     def test_call(self):
