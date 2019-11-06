@@ -294,6 +294,41 @@ class TestPolygon_width(unittest.TestCase):
         assert np.allclose(poly.width, 0.0, atol=1e-8, rtol=0)
 
 
+class TestPolygon_compute_area_out_of_image(unittest.TestCase):
+    def test_fully_inside_image_plane(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        image_shape = (10, 20, 3)
+        area_ooi = poly.compute_area_out_of_image(image_shape)
+        assert np.isclose(area_ooi, 0.0)
+
+    def test_partially_outside_of_image_plane(self):
+        poly = ia.Polygon([(-1, 0), (1, 0), (1, 2), (-1, 2)])
+        image_shape = (10, 20, 3)
+        area_ooi = poly.compute_area_out_of_image(image_shape)
+        assert np.isclose(area_ooi, 2.0)
+
+    def test_fully_outside_of_image_plane(self):
+        poly = ia.Polygon([(-1, 0), (0, 0), (0, 1), (-1, 1)])
+        image_shape = (10, 20, 3)
+        area_ooi = poly.compute_area_out_of_image(image_shape)
+        assert np.isclose(area_ooi, 1.0)
+
+    def test_multiple_polygons_after_clip(self):
+        # two polygons inside the image area remain after clipping
+        # result is (area - poly1 - poly2) or here the part of the polygon
+        # that is left of the y-axis (x=0.0)
+        poly = ia.Polygon([(-10, 0), (5, 0), (5, 5), (-5, 5),
+                           (-5, 10), (5, 10),
+                           (5, 15), (-10, 15)])
+        image_shape = (15, 10, 3)
+
+        area_ooi = poly.compute_area_out_of_image(image_shape)
+
+        # the part left of the y-axis is not exactly square, but has a hole
+        # on its right (vertically centered), hence we have to subtract 5*5
+        assert np.isclose(area_ooi, 10*15 - 5*5)
+
+
 class TestPolygon_project(unittest.TestCase):
     def test_project_square_to_image_of_identical_shape(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
