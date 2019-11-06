@@ -697,6 +697,90 @@ class RNG(object):
         """Call :func:`numpy.random.Generator.zipf`."""
         return self.generator.zipf(a=a, size=size)
 
+    ##################################################################
+    # Outdated methods from RandomState
+    # These are added here for backwards compatibility in case of old
+    # custom augmenters and Lambda calls that rely on the RandomState
+    # API.
+    ##################################################################
+
+    def rand(self, *args):
+        """Call :func:`numpy.random.RandomState.rand`.
+
+        .. warning ::
+
+            This method is outdated in numpy. Use :func:`RNG.random` instead.
+
+        """
+        return self.random(size=args)
+
+    def randint(self, low, high=None, size=None, dtype="int32"):
+        """Call :func:`numpy.random.RandomState.randint`.
+
+        .. note ::
+
+            Changed `dtype` argument default value from numpy's ``I`` to
+            ``int32``.
+
+        .. warning ::
+
+            This method is outdated in numpy. Use :func:`RNG.integers`
+            instead.
+
+        """
+        return self.integers(low=low, high=high, size=size, dtype=dtype,
+                             endpoint=False)
+
+    def randn(self, *args):
+        """Call :func:`numpy.random.RandomState.randn`.
+
+        .. warning ::
+
+            This method is outdated in numpy. Use :func:`RNG.standard_normal`
+            instead.
+
+        """
+        return self.standard_normal(size=args)
+
+    def random_integers(self, low, high=None, size=None):
+        """Call :func:`numpy.random.RandomState.random_integers`.
+
+        .. warning ::
+
+            This method is outdated in numpy. Use :func:`RNG.integers`
+            instead.
+
+        """
+        if high is None:
+            return self.integers(low=1, high=low, size=size, endpoint=True)
+        return self.integers(low=low, high=high, size=size, endpoint=True)
+
+    def random_sample(self, size):
+        """Call :func:`numpy.random.RandomState.random_sample`.
+
+        .. warning ::
+
+            This method is outdated in numpy. Use :func:`RNG.uniform`
+            instead.
+
+        """
+        return self.uniform(0.0, 1.0, size=size)
+
+    def tomaxint(self, size=None):
+        """Call :func:`numpy.random.RandomState.tomaxint`.
+
+        .. warning ::
+
+            This method is outdated in numpy. Use :func:`RNG.integers`
+            instead.
+
+        """
+        import sys
+        maxint = sys.maxsize
+        int32max = np.iinfo(np.int32).max
+        return self.integers(0, min(maxint, int32max), size=size,
+                             endpoint=True)
+
 
 def supports_new_numpy_rng_style():
     """
