@@ -236,8 +236,7 @@ class Polygon(object):
 
         """
         if len(self.exterior) < 3:
-            raise Exception("Cannot compute the polygon's area because it "
-                            "contains less than three points.")
+            return 0.0
         poly = self.to_shapely_polygon()
         return poly.area
 

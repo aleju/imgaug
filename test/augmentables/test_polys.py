@@ -239,13 +239,15 @@ class TestPolygon_area(unittest.TestCase):
 
     def test_polygon_with_two_points(self):
         poly = ia.Polygon([(0, 0), (1, 1)])
-        got_exception = False
-        try:
-            _ = poly.area
-        except Exception as exc:
-            assert "Cannot compute the polygon's area because" in str(exc)
-            got_exception = True
-        assert got_exception
+        assert np.isclose(poly.area, 0.0)
+
+    def test_polygon_with_one_point(self):
+        poly = ia.Polygon([(0, 0)])
+        assert np.isclose(poly.area, 0.0)
+
+    def test_polygon_with_zero_points(self):
+        poly = ia.Polygon([])
+        assert np.isclose(poly.area, 0.0)
 
 
 class TestPolygon_height(unittest.TestCase):
