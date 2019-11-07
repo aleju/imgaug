@@ -2038,6 +2038,18 @@ class TestLineStringsOnImage(unittest.TestCase):
         assert observed.line_strings[0] is ls1
         assert observed.shape == (100, 100, 3)
 
+    def test_remove_out_of_image_fraction(self):
+        item1 = ia.LineString([(5, 1), (9, 1)])
+        item2 = ia.LineString([(5, 1), (15, 1)])
+        item3 = ia.LineString([(15, 1), (25, 1)])
+        cbaoi = ia.LineStringsOnImage([item1, item2, item3],
+                                      shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction(0.6)
+
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
+
     def test_clip_out_of_image_with_two_simple_line_strings(self):
         ls1 = LineString([(0, 0), (1, 0), (2, 1)])
         ls2 = LineString([(10, 10)])

@@ -8,7 +8,8 @@ import skimage.measure
 import cv2
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords, interpolate_points
+from .utils import (normalize_shape, project_coords, interpolate_points,
+                    _remove_out_of_image_fraction)
 
 
 # TODO Add Line class and make LineString a list of Line elements
@@ -1797,6 +1798,26 @@ class LineStringsOnImage(object):
                      if not ls.is_out_of_image(
                          self.shape, fully=fully, partly=partly)]
         return LineStringsOnImage(lss_clean, shape=self.shape)
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all LS with an out of image fraction of at least `fraction`.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a line string has to have in
+            order to be removed. A fraction of ``1.0`` removes only line
+            strings that are ``100%`` outside of the image. A fraction of
+            ``0.0`` removes all line strings.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Reduced set of line strings, with those that had an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction, LineStringsOnImage)
 
     def clip_out_of_image(self):
         """

@@ -7,7 +7,8 @@ import skimage.draw
 import skimage.measure
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords
+from .utils import (normalize_shape, project_coords,
+                    _remove_out_of_image_fraction)
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -1417,10 +1418,8 @@ class BoundingBoxesOnImage(object):
             fraction greater or equal the given one removed.
 
         """
-        bbs_clean = [
-            bb for bb in self.bounding_boxes
-            if bb.compute_out_of_image_fraction(self.shape) < fraction]
-        return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
+        return _remove_out_of_image_fraction(self, fraction,
+                                             BoundingBoxesOnImage)
 
     @ia.deprecated(alt_func="BoundingBoxesOnImage.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "

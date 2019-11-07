@@ -293,3 +293,10 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
         result.append(cbaoi_recovered)
 
     return result
+
+
+def _remove_out_of_image_fraction(cbaoi, fraction, result_class):
+    items_clean = [
+        item for item in cbaoi.items
+        if item.compute_out_of_image_fraction(cbaoi.shape) < fraction]
+    return result_class(items_clean, shape=cbaoi.shape)
