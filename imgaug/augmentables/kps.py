@@ -7,7 +7,8 @@ import scipy.spatial.distance
 import six.moves as sm
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords
+from .utils import (normalize_shape, project_coords,
+                    _remove_out_of_image_fraction)
 
 
 def compute_geometric_median(points=None, eps=1e-5, X=None):
@@ -633,6 +634,30 @@ class KeypointsOnImage(object):
                 image, color=color, alpha=alpha, size=size, copy=False,
                 raise_if_out_of_image=raise_if_out_of_image)
         return image
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all KPs with an out of image fraction of at least `fraction`.
+
+        This method exists for consistency with other augmentables, e.g.
+        bounding boxes.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a keypoint has to have in
+            order to be removed. Note that any keypoint can only have a
+            fraction of either ``1.0`` (is outside) or ``0.0`` (is inside).
+            Set this to ``0.0+eps`` to remove all points that are outside of
+            the image. Setting this to ``0.0`` will remove all points.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.KeypointsOnImage
+            Reduced set of keypoints, with those thathad an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction, KeypointsOnImage)
 
     def shift(self, x=0, y=0):
         """Move the keypoints on the x/y-axis.

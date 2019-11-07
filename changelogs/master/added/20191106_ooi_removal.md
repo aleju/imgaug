@@ -10,6 +10,7 @@
 * Added `Polygon.compute_out_of_image_fraction()`.
 * Added `LineString.compute_out_of_image_fraction()`.
 
+* Added `KeypointsOnImage.remove_out_of_image_fraction()`.
 * Added `BoundingBoxesOnImage.remove_out_of_image_fraction()`.
 * Added `PolygonsOnImage.remove_out_of_image_fraction()`.
 * Added `LineStringsOnImage.remove_out_of_image_fraction()`.

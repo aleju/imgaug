@@ -598,6 +598,16 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         assert "Cannot draw keypoint" in str(context.exception)
 
+    def test_remove_out_of_image_fraction(self):
+        item1 = ia.Keypoint(x=5, y=1)
+        item2 = ia.Keypoint(x=15, y=1)
+        cbaoi = ia.KeypointsOnImage([item1, item2], shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction(0.6)
+
+        assert len(cbaoi_reduced.items) == 1
+        assert cbaoi_reduced.items == [item1]
+
     def test_shift_by_zero_on_both_axis(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
