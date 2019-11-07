@@ -129,36 +129,6 @@ class TestBoundingBox(unittest.TestCase):
         bb = ia.BoundingBox(y1=10.1, x1=20.2, y2=30.3, x2=40.4)
         assert np.isclose(bb.area, (30.3-10.1) * (40.4-20.2))
 
-    def test_compute_area_out_of_image__fully_inside(self):
-        bb = ia.BoundingBox(y1=10.1, x1=20.2, y2=30.3, x2=40.4)
-        image_shape = (100, 200, 3)
-        area_ooi = bb.compute_area_out_of_image(image_shape)
-        assert np.isclose(area_ooi, 0.0)
-
-    def test_compute_area_out_of_image__partially_ooi(self):
-        bb = ia.BoundingBox(y1=10, x1=-20, y2=30, x2=40)
-        image_shape = (100, 200, 3)
-        area_ooi = bb.compute_area_out_of_image(image_shape)
-        assert np.isclose(area_ooi, (0-(-20))*(30-10))
-
-    def test_compute_area_out_of_image__fully_ooi(self):
-        bb = ia.BoundingBox(y1=10, x1=-20, y2=30, x2=-10)
-        image_shape = (100, 200, 3)
-        area_ooi = bb.compute_area_out_of_image(image_shape)
-        assert np.isclose(area_ooi, 20*10)
-
-    def test_compute_area_out_of_image__zero_sized_image(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        image_shape = (0, 0, 3)
-        area_ooi = bb.compute_area_out_of_image(image_shape)
-        assert np.isclose(area_ooi, bb.area)
-
-    def test_compute_area_out_of_image__bb_has_zero_sized_area(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=10, x2=20)
-        image_shape = (100, 200, 3)
-        area_ooi = bb.compute_area_out_of_image(image_shape)
-        assert np.isclose(area_ooi, 0.0)
-
     def test_contains(self):
         bb = ia.BoundingBox(y1=1, x1=2, y2=1+4, x2=2+5, label=None)
         assert bb.contains(ia.Keypoint(x=2.5, y=1.5)) is True
@@ -331,6 +301,36 @@ class TestBoundingBox(unittest.TestCase):
         area_intersection = 5 * 5
         iou_expected = area_intersection / area_union
         assert np.isclose(iou, iou_expected)
+
+    def test_compute_out_of_image_area__fully_inside(self):
+        bb = ia.BoundingBox(y1=10.1, x1=20.2, y2=30.3, x2=40.4)
+        image_shape = (100, 200, 3)
+        area_ooi = bb.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, 0.0)
+
+    def test_compute_out_of_image_area__partially_ooi(self):
+        bb = ia.BoundingBox(y1=10, x1=-20, y2=30, x2=40)
+        image_shape = (100, 200, 3)
+        area_ooi = bb.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, (0-(-20))*(30-10))
+
+    def test_compute_out_of_image_area__fully_ooi(self):
+        bb = ia.BoundingBox(y1=10, x1=-20, y2=30, x2=-10)
+        image_shape = (100, 200, 3)
+        area_ooi = bb.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, 20*10)
+
+    def test_compute_out_of_image_area__zero_sized_image(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        image_shape = (0, 0, 3)
+        area_ooi = bb.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, bb.area)
+
+    def test_compute_out_of_image_area__bb_has_zero_sized_area(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=10, x2=20)
+        image_shape = (100, 200, 3)
+        area_ooi = bb.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, 0.0)
 
     def test_compute_out_of_image_factor__inside_image(self):
         bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)

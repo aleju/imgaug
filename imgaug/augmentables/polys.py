@@ -272,29 +272,6 @@ class Polygon(object):
         xx = self.xx
         return max(xx) - min(xx)
 
-    def compute_area_out_of_image(self, image):
-        """Compute the area of the BB that is outside of the image plane.
-
-        Parameters
-        ----------
-        image : (H,W,...) ndarray or tuple of int
-            Image dimensions to use.
-            If an ``ndarray``, its shape will be used.
-            If a ``tuple``, it is assumed to represent the image shape
-            and must contain at least two integers.
-
-        Returns
-        -------
-        float
-            Total area of the bounding box that is outside of the image plane.
-            Can be ``0.0``.
-
-        """
-        polys_clipped = self.clip_out_of_image(image)
-        if len(polys_clipped) == 0:
-            return self.area
-        return self.area - sum([poly.area for poly in polys_clipped])
-
     def project(self, from_shape, to_shape):
         """Project the polygon onto an image with different shape.
 
@@ -368,6 +345,29 @@ class Polygon(object):
             return closest_idx, distances[closest_idx]
         return closest_idx
 
+    def compute_out_of_image_area(self, image):
+        """Compute the area of the BB that is outside of the image plane.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Total area of the bounding box that is outside of the image plane.
+            Can be ``0.0``.
+
+        """
+        polys_clipped = self.clip_out_of_image(image)
+        if len(polys_clipped) == 0:
+            return self.area
+        return self.area - sum([poly.area for poly in polys_clipped])
+
     def compute_out_of_image_factor(self, image):
         """Compute fraction of polygon area outside of the image plane.
 
@@ -397,7 +397,7 @@ class Polygon(object):
         area = self.area
         if area == 0:
             return self.to_line_string().compute_out_of_image_factor(image)
-        return self.compute_area_out_of_image(image) / area
+        return self.compute_out_of_image_area(image) / area
 
     # TODO keep this method? it is almost an alias for is_out_of_image()
     def is_fully_within_image(self, image):
