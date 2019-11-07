@@ -5,6 +5,7 @@
 * Added `BoundingBox.compute_out_of_image_area()`.
 * Added `Polygon.compute_out_of_image_area()`.
 
+* Added `Keypoint.compute_out_of_image_fraction()`
 * Added `BoundingBox.compute_out_of_image_fraction()`.
 * Added `Polygon.compute_out_of_image_fraction()`.
 * Added `LineString.compute_out_of_image_fraction()`.

@@ -102,6 +102,24 @@ class TestKeypoint(unittest.TestCase):
         ooi = kp.is_out_of_image(image_shape)
         assert ooi
 
+    def test_compute_out_of_image_fraction(self):
+        kp = ia.Keypoint(y=1, x=2)
+        image_shape = (10, 20, 3)
+        fraction = kp.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(fraction, 0.0)
+
+    def test_compute_out_of_image_fraction_ooi_y(self):
+        kp = ia.Keypoint(y=11, x=2)
+        image_shape = (10, 20, 3)
+        fraction = kp.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(fraction, 1.0)
+
+    def test_compute_out_of_image_fraction_ooi_x(self):
+        kp = ia.Keypoint(y=1, x=21)
+        image_shape = (10, 20, 3)
+        fraction = kp.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(fraction, 1.0)
+
     def test_shift_on_y_axis(self):
         kp = ia.Keypoint(y=1, x=2)
         kp2 = kp.shift(y=1)

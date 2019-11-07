@@ -173,6 +173,30 @@ class Keypoint(object):
         x_inside = (0 <= self.x < width)
         return not y_inside or not x_inside
 
+    def compute_out_of_image_fraction(self, image):
+        """Compute fraction of the keypoint that is out of the image plane.
+
+        The fraction is always either ``1.0`` (point is outside of the image
+        plane) or ``0.0`` (point is inside the image plane). This method
+        exists for consistency with other augmentables, e.g. bounding boxes.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Either ``1.0`` (point is outside of the image plane) or
+            ``0.0`` (point is inside of it).
+
+        """
+        return float(self.is_out_of_image(image))
+
     def shift(self, x=0, y=0):
         """Move the keypoint around on an image.
 
