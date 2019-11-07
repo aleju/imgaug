@@ -388,14 +388,15 @@ class Polygon(object):
         float
             Fraction of the polygon area that is outside of the image
             plane. Returns ``0.0`` if the polygon is fully inside of
-            the image plane. If the polygon has an area of zero, the polygon
-            is treated similarly to a :class:`LineString`, i.e. the fraction
-            of the line that is inside the image plane is returned.
+            the image plane or has zero points. If the polygon has an area
+            of zero, the polygon is treated similarly to a :class:`LineString`,
+            i.e. the fraction of the line that is outside the image plane is
+            returned.
 
         """
         area = self.area
         if area == 0:
-            return self.to_line_string().compute_out_of_image_factor()
+            return self.to_line_string().compute_out_of_image_factor(image)
         return self.compute_area_out_of_image(image) / area
 
     # TODO keep this method? it is almost an alias for is_out_of_image()
