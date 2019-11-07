@@ -1512,6 +1512,17 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert len(bbsoi_removed.bounding_boxes) == 1
         assert bbsoi_removed.bounding_boxes[0] == bb1
 
+    def test_remove_out_of_image_fraction(self):
+        bb1 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=9)
+        bb2 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=15)
+        bb3 = ia.BoundingBox(y1=1, x1=15, y2=6, x2=25)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2, bb3], shape=(10, 10, 3))
+
+        bbsoi_removed = bbsoi.remove_out_of_image_fraction(0.6)
+
+        assert len(bbsoi_removed.bounding_boxes) == 2
+        assert bbsoi_removed.bounding_boxes == [bb1, bb2]
+
     def test_clip_out_of_image(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)

@@ -1399,6 +1399,29 @@ class BoundingBoxesOnImage(object):
             if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
 
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all BBs with an out of image fraction of at least `fraction`.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a bounding box has to have in
+            order to be removed. A fraction of ``1.0`` removes only bounding
+            boxes that are ``100%`` outside of the image. A fraction of ``0.0``
+            removes all bounding boxes.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Reduced set of bounding boxes, with those that had an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        bbs_clean = [
+            bb for bb in self.bounding_boxes
+            if bb.compute_out_of_image_fraction(self.shape) < fraction]
+        return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
+
     @ia.deprecated(alt_func="BoundingBoxesOnImage.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "
                            "interface.")
