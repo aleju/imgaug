@@ -368,7 +368,7 @@ class Polygon(object):
             return self.area
         return self.area - sum([poly.area for poly in polys_clipped])
 
-    def compute_out_of_image_factor(self, image):
+    def compute_out_of_image_fraction(self, image):
         """Compute fraction of polygon area outside of the image plane.
 
         This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
@@ -396,7 +396,7 @@ class Polygon(object):
         """
         area = self.area
         if area == 0:
-            return self.to_line_string().compute_out_of_image_factor(image)
+            return self.to_line_string().compute_out_of_image_fraction(image)
         return self.compute_out_of_image_area(image) / area
 
     # TODO keep this method? it is almost an alias for is_out_of_image()

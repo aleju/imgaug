@@ -333,7 +333,7 @@ class LineString(object):
         coords_proj = project_coords(self.coords, from_shape, to_shape)
         return self.copy(coords=coords_proj)
 
-    def compute_out_of_image_factor(self, image):
+    def compute_out_of_image_fraction(self, image):
         """Compute fraction of polygon area outside of the image plane.
 
         This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the

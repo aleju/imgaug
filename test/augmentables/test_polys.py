@@ -423,65 +423,65 @@ class TestPolygon_compute_out_of_image_area(unittest.TestCase):
         assert np.isclose(area_ooi, 10*15 - 5*5)
 
 
-class TestPolygon_compute_out_of_image_factor(unittest.TestCase):
+class TestPolygon_compute_out_of_image_fraction(unittest.TestCase):
     def test_polygon_with_zero_points(self):
         poly = ia.Polygon([])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.0)
 
     def test_polygon_with_one_point(self):
         poly = ia.Polygon([(1.0, 1.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.0)
 
     def test_polygon_with_one_point_ooi(self):
         poly = ia.Polygon([(-1.0, 1.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 1.0)
 
     def test_polygon_with_two_points(self):
         poly = ia.Polygon([(1.0, 1.0), (2.0, 1.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.0)
 
     def test_polygon_with_two_points_one_ooi(self):
         poly = ia.Polygon([(9.0, 1.0), (11.0, 1.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.5, atol=1e-3)
 
     def test_polygon_with_three_points_as_line(self):
         poly = ia.Polygon([(9.0, 1.0), (10.0, 1.0), (11.0, 1.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.5, atol=1e-3)
 
     def test_standard_polygon_not_ooi(self):
         poly = ia.Polygon([(1.0, 1.0), (2.0, 1.0), (2.0, 2.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.0)
 
     def test_standard_polygon_partially_ooi(self):
         poly = ia.Polygon([(9.0, 1.0), (11.0, 1.0), (11.0, 3.0), (9.0, 3.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 0.5, atol=1e-3)
 
     def test_standard_polygon_fully_ooi(self):
         poly = ia.Polygon([(11.0, 1.0), (13.0, 1.0), (13.0, 3.0), (11.0, 3.0)])
         image_shape = (10, 10, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 1.0)
 
     def test_zero_sized_image_axes(self):
         poly = ia.Polygon([(1.0, 1.0), (2.0, 1.0), (2.0, 2.0)])
         image_shape = (0, 0, 3)
-        factor = poly.compute_out_of_image_factor(image_shape)
+        factor = poly.compute_out_of_image_fraction(image_shape)
         assert np.isclose(factor, 1.0)
 
 

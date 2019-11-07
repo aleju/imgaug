@@ -393,7 +393,7 @@ class BoundingBox(object):
         area = self.area
         return area if inter is None else area - inter.area
 
-    def compute_out_of_image_factor(self, image):
+    def compute_out_of_image_fraction(self, image):
         """Compute fraction of BB area outside of the image plane.
 
         This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
