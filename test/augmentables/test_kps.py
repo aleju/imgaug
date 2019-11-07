@@ -84,6 +84,24 @@ class TestKeypoint(unittest.TestCase):
         assert kp2.y == 2
         assert kp2.x == 4
 
+    def test_is_out_of_image(self):
+        kp = ia.Keypoint(y=1, x=2)
+        image_shape = (10, 20, 3)
+        ooi = kp.is_out_of_image(image_shape)
+        assert not ooi
+
+    def test_is_out_of_image__ooi_y(self):
+        kp = ia.Keypoint(y=11, x=2)
+        image_shape = (10, 20, 3)
+        ooi = kp.is_out_of_image(image_shape)
+        assert ooi
+
+    def test_is_out_of_image__ooi_x(self):
+        kp = ia.Keypoint(y=1, x=21)
+        image_shape = (10, 20, 3)
+        ooi = kp.is_out_of_image(image_shape)
+        assert ooi
+
     def test_shift_on_y_axis(self):
         kp = ia.Keypoint(y=1, x=2)
         kp2 = kp.shift(y=1)

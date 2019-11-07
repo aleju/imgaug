@@ -149,6 +149,30 @@ class Keypoint(object):
         xy_proj = project_coords([(self.x, self.y)], from_shape, to_shape)
         return self.deepcopy(x=xy_proj[0][0], y=xy_proj[0][1])
 
+    def is_out_of_image(self, image):
+        """Estimate whether this point is outside of the given image plane.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        bool
+            ``True`` is the point is inside the image plane, ``False``
+            otherwise.
+
+        """
+        shape = normalize_shape(image)
+        height, width = shape[0:2]
+        y_inside = (0 <= self.y < height)
+        x_inside = (0 <= self.x < width)
+        return not y_inside or not x_inside
+
     def shift(self, x=0, y=0):
         """Move the keypoint around on an image.
 
