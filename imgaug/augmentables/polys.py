@@ -12,7 +12,8 @@ import collections
 
 from .. import imgaug as ia
 from .. import random as iarandom
-from .utils import normalize_shape, interpolate_points
+from .utils import (normalize_shape, interpolate_points,
+                    _remove_out_of_image_fraction)
 
 
 def recover_psois_(psois, psois_orig, recoverer, random_state):
@@ -1480,6 +1481,26 @@ class PolygonsOnImage(object):
         ]
         # TODO use deepcopy() here
         return PolygonsOnImage(polys_clean, shape=self.shape)
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all Polys with an out of image fraction of ``>=fraction``.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a polygon has to have in
+            order to be removed. A fraction of ``1.0`` removes only polygons
+            that are ``100%`` outside of the image. A fraction of ``0.0``
+            removes all polygons.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.PolygonsOnImage
+            Reduced set of polygons, with those that had an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction, PolygonsOnImage)
 
     def clip_out_of_image(self):
         """Clip off all parts from all polygons that are outside of an image.

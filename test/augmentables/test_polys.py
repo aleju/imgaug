@@ -2336,6 +2336,20 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
         assert poly_oi_rm.shape == (10, 10, 3)
 
 
+class TestPolygonsOnImage_remove_out_of_image_fraction(unittest.TestCase):
+    def test_three_polygons(self):
+        item1 = ia.Polygon([(5, 1), (9, 1), (9, 2), (5, 2)])
+        item2 = ia.Polygon([(5, 1), (15, 1), (15, 2), (5, 2)])
+        item3 = ia.Polygon([(15, 1), (25, 1), (25, 2), (15, 2)])
+        cbaoi = ia.PolygonsOnImage([item1, item2, item3],
+                                   shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction(0.6)
+
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
+
+
 class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
     # NOTE: clip_out_of_image() can change the order of points,
     # hence we check here for each expected point whether it appears
