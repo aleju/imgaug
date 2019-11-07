@@ -368,6 +368,36 @@ class Polygon(object):
             return closest_idx, distances[closest_idx]
         return closest_idx
 
+    def compute_out_of_image_factor(self, image):
+        """Compute fraction of polygon area outside of the image plane.
+
+        This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
+        polygon that is outside of the image plane, while ``A`` is the
+        total area of the bounding box.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Fraction of the polygon area that is outside of the image
+            plane. Returns ``0.0`` if the polygon is fully inside of
+            the image plane. If the polygon has an area of zero, the polygon
+            is treated similarly to a :class:`LineString`, i.e. the fraction
+            of the line that is inside the image plane is returned.
+
+        """
+        area = self.area
+        if area == 0:
+            return self.to_line_string().compute_out_of_image_factor()
+        return self.compute_area_out_of_image(image) / area
+
     # TODO keep this method? it is almost an alias for is_out_of_image()
     def is_fully_within_image(self, image):
         """Estimate whether the polygon is fully inside an image plane.
