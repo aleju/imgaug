@@ -8087,3 +8087,97 @@ class TestRemoveCBAsByOutOfImageFraction(unittest.TestCase):
         params = aug.get_parameters()
         assert len(params) == 1
         assert np.isclose(params[0], 0.51)
+
+
+class TestClipCBAsToImagePlanes(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_no_cbas_in_batch(self):
+        aug = iaa.RemoveCBAsByOutOfImageFraction(0.51)
+        dtypes = ["uint8", "uint16", "uint32", "uint64",
+                  "int8", "int16", "int32", "int64",
+                  "float16", "float32", "float64", "float128",
+                  "bool"]
+        for dt in dtypes:
+            arr = np.ones((5, 10, 3), dtype=dt)
+
+            image_aug = aug(image=arr)
+
+            assert image_aug.dtype.name == dt
+            assert image_aug.shape == (5, 10, 3)
+            if arr.dtype.kind == "f":
+                assert np.allclose(image_aug, 1.0)
+            else:
+                assert np.all(image_aug == 1)
+
+    def test_keypoints(self):
+        aug = iaa.RemoveCBAsByOutOfImageFraction(0.51)
+        item1 = ia.Keypoint(x=5, y=1)
+        item2 = ia.Keypoint(x=15, y=1)
+        cbaoi = ia.KeypointsOnImage([item1, item2], shape=(10, 10, 3))
+
+        cbaoi_aug = aug(keypoints=cbaoi)
+
+        assert len(cbaoi_aug.items) == 1
+        for item_obs, item_exp in zip(cbaoi_aug.items, [item1]):
+            assert item_obs.coords_almost_equals(item_exp)
+
+    def test_bounding_boxes(self):
+        aug = iaa.ClipCBAsToImagePlanes()
+        item1 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=9)
+        item2 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=15)
+        item3 = ia.BoundingBox(y1=1, x1=15, y2=6, x2=25)
+        cbaoi = ia.BoundingBoxesOnImage([item1, item2, item3],
+                                        shape=(10, 10, 3))
+
+        cbaoi_aug = aug(bounding_boxes=cbaoi)
+
+        expected = [
+            ia.BoundingBox(y1=1, x1=5, y2=6, x2=9),
+            ia.BoundingBox(y1=1, x1=5, y2=6, x2=10)
+        ]
+        assert len(cbaoi_aug.items) == len(expected)
+        for item_obs, item_exp in zip(cbaoi_aug.items, expected):
+            assert item_obs.coords_almost_equals(item_exp)
+
+    def test_polygons(self):
+        aug = iaa.ClipCBAsToImagePlanes()
+        item1 = ia.Polygon([(5, 1), (9, 1), (9, 2), (5, 2)])
+        item2 = ia.Polygon([(5, 1), (15, 1), (15, 2), (5, 2)])
+        item3 = ia.Polygon([(15, 1), (25, 1), (25, 2), (15, 2)])
+        cbaoi = ia.PolygonsOnImage([item1, item2, item3],
+                                   shape=(10, 10, 3))
+
+        cbaoi_aug = aug(polygons=cbaoi)
+
+        expected = [
+            ia.Polygon([(5, 1), (9, 1), (9, 2), (5, 2)]),
+            ia.Polygon([(5, 1), (10, 1), (10, 2), (5, 2)])
+        ]
+        assert len(cbaoi_aug.items) == len(expected)
+        for item_obs, item_exp in zip(cbaoi_aug.items, expected):
+            assert item_obs.coords_almost_equals(item_exp)
+
+    def test_line_strings(self):
+        aug = iaa.ClipCBAsToImagePlanes()
+        item1 = ia.LineString([(5, 1), (9, 1)])
+        item2 = ia.LineString([(5, 1), (15, 1)])
+        item3 = ia.LineString([(15, 1), (25, 1)])
+        cbaoi = ia.LineStringsOnImage([item1, item2, item3],
+                                      shape=(10, 10, 3))
+
+        cbaoi_aug = aug(line_strings=cbaoi)
+
+        expected = [
+            ia.LineString([(5, 1), (9, 1)]),
+            ia.LineString([(5, 1), (10, 1)])
+        ]
+        assert len(cbaoi_aug.items) == len(expected)
+        for item_obs, item_exp in zip(cbaoi_aug.items, expected):
+            assert item_obs.coords_almost_equals(item_exp, max_distance=1e-2)
+
+    def test_get_parameters(self):
+        aug = iaa.ClipCBAsToImagePlanes()
+        params = aug.get_parameters()
+        assert len(params) == 0

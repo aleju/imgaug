@@ -4786,3 +4786,67 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
 
     def get_parameters(self):
         return [self.fraction]
+
+
+class ClipCBAsToImagePlanes(Augmenter):
+    """Clip coordinate-based augmentables to areas within the image plane.
+
+    This augmenter inspects all coordinate-based augmentables (e.g.
+    bounding boxes, line strings) within a given batch and from each of them
+    parts that are outside of the image plane. Parts within the image plane
+    will be retained. This may e.g. shrink down bounding boxes. For keypoints,
+    it removes any single points outside of the image plane. Any augmentable
+    that is completely outside of the image plane will be removed.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
+        * ``int32``: yes; fully tested
+        * ``int64``: yes; fully tested
+        * ``float16``: yes; fully tested
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: yes; fully tested
+        * ``bool``: yes; fully tested
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ClipCBAsToImagePlanes()
+
+    Cut all coordinate-based augmentables (e.g. bounding boxes) down to areas
+    that are within the image planes of their corresponding images.
+
+    """
+
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(ClipCBAsToImagePlanes, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        for column in batch.columns:
+            if column.name in ["keypoints", "bounding_boxes", "polygons",
+                               "line_strings"]:
+                for i, cbaoi in enumerate(column.value):
+                    column.value[i] = cbaoi.clip_out_of_image()
+
+        return batch
+
+    def get_parameters(self):
+        return []
