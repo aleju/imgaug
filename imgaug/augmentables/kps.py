@@ -652,12 +652,27 @@ class KeypointsOnImage(object):
 
         Returns
         -------
-        imgaug.augmentables.bbs.KeypointsOnImage
+        imgaug.augmentables.kps.KeypointsOnImage
             Reduced set of keypoints, with those thathad an out of image
             fraction greater or equal the given one removed.
 
         """
         return _remove_out_of_image_fraction(self, fraction, KeypointsOnImage)
+
+    def clip_out_of_image(self):
+        """Remove all KPs that are outside of the image plane.
+
+        This method exists for consistency with other augmentables, e.g.
+        bounding boxes.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Keypoints that are inside the image plane.
+
+        """
+        # we could use anything >0 here as the fraction
+        return self.remove_out_of_image_fraction(0.5)
 
     def shift(self, x=0, y=0):
         """Move the keypoints on the x/y-axis.

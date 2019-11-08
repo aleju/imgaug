@@ -15,5 +15,7 @@
 * Added `PolygonsOnImage.remove_out_of_image_fraction()`.
 * Added `LineStringsOnImage.remove_out_of_image_fraction()`.
 
+* Added `KeypointsOnImage.clip_out_of_image()`.
+
 * Changed `Polygon.area` to return `0.0` if the polygon contains less than
   three points (previously: exception).
