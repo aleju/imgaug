@@ -17,5 +17,9 @@
 
 * Added `KeypointsOnImage.clip_out_of_image()`.
 
+* Added `imgaug.augmenters.meta.RemoveCBAsByOutOfImageFraction`.
+  Removes coordinate-based augmentables (e.g. BBs) that have at least a
+  specified fraction of their area outside of the image plane.
+
 * Changed `Polygon.area` to return `0.0` if the polygon contains less than
   three points (previously: exception).

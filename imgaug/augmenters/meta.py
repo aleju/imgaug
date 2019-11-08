@@ -4713,3 +4713,76 @@ def shuffle_channels(image, random_state, channels=None):
         for channel_source, channel_target in zip(channels, channels_perm):
             channels_perm_full[channel_source] = channel_target
         return image[..., channels_perm_full]
+
+
+class RemoveCBAsByOutOfImageFraction(Augmenter):
+    """Remove coordinate-based augmentables exceeding an out of image fraction.
+
+    This augmenter inspects all coordinate-based augmentables (e.g.
+    bounding boxes, line strings) within a given batch and removes any such
+    augmentable which's out of image fraction is exactly a given value or
+    greater than that. The out of image fraction denotes the fraction of the
+    augmentable's area that is outside of the image, e.g. for a bounding box
+    that has half of its area outside of the image it would be ``0.5``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; fully tested
+        * ``uint32``: yes; fully tested
+        * ``uint64``: yes; fully tested
+        * ``int8``: yes; fully tested
+        * ``int16``: yes; fully tested
+        * ``int32``: yes; fully tested
+        * ``int64``: yes; fully tested
+        * ``float16``: yes; fully tested
+        * ``float32``: yes; fully tested
+        * ``float64``: yes; fully tested
+        * ``float128``: yes; fully tested
+        * ``bool``: yes; fully tested
+
+    Parameters
+    ----------
+    fraction : number
+        Remove any augmentable for which ``fraction_{actual} >= fraction``,
+        where ``fraction_{actual}`` denotes the estimated out of image
+        fraction.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.RemoveCBAsByOutOfImageFraction(0.5)
+
+    Removes any coordinate-based augmentable (e.g. bounding boxes) which has
+    at least ``50%`` of its area outside of the image plane.
+
+    """
+
+    def __init__(self, fraction,
+                 name=None, deterministic=False, random_state=None):
+        super(RemoveCBAsByOutOfImageFraction, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+
+        self.fraction = fraction
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        for column in batch.columns:
+            if column.name in ["keypoints", "bounding_boxes", "polygons",
+                               "line_strings"]:
+                for i, cbaoi in enumerate(column.value):
+                    column.value[i] = cbaoi.remove_out_of_image_fraction(
+                        self.fraction)
+
+        return batch
+
+    def get_parameters(self):
+        return [self.fraction]
