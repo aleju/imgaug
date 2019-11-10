@@ -19,6 +19,7 @@ List of augmenters:
     * PerspectiveTransform
     * ElasticTransformation
     * Rot90
+    * WithPolarWarping
 
 """
 from __future__ import print_function, division, absolute_import
@@ -4051,3 +4052,642 @@ class Rot90(meta.Augmenter):
 
     def get_parameters(self):
         return [self.k, self.keep_size]
+
+
+# TODO semipolar
+class WithPolarWarping(meta.Augmenter):
+    """Augmenter that applies other augmenters in a polar-transformed space.
+
+    This augmenter first transforms an image into a polar representation,
+    then applies its child augmenter, then transforms back to cartesian
+    space. The polar representation is still in the image's input dtype
+    (i.e. ``uint8`` stays ``uint8``) and can be visualized. It can be thought
+    of as an "unrolled" version of the image, where previously circular lines
+    appear straight. Hence, applying child augmenters in that space can lead
+    to circular effects. E.g. replacing rectangular pixel areas in the polar
+    representation with black pixels will lead to curved black areas in
+    the cartesian result.
+
+    This augmenter can create new pixels in the image. It will fill these
+    with black pixels. For segmentation maps it will fill with class
+    id ``0``. For heatmaps it will fill with ``0.0``.
+
+    This augmenter is limited to arrays with a height and/or width of
+    ``32767`` or less.
+
+    .. warning ::
+
+        When augmenting coordinates in polar representation, it is possible
+        that these are shifted outside of the polar image, but are inside the
+        image plane after transforming back to cartesian representation,
+        usually on newly created pixels (i.e. black backgrounds).
+        These coordinates are currently not removed. It is recommended to
+        not use very strong child transformations when also augmenting
+        coordinate-based augmentables.
+
+    .. warning ::
+
+        For bounding boxes, this augmenter suffers from the same problem as
+        affine rotations applied to bounding boxes, i.e. the resulting
+        bounding boxes can have unintuitive (seemingly wrong) appearance.
+        This is due to coordinates being "rotated" that are inside the
+        bounding box, but do not fall on the object and actually are
+        background.
+        It is recommended to use this augmenter with caution when augmenting
+        bounding boxes.
+
+    .. warning ::
+
+        For polygons, this augmenter should not be combined with
+        augmenters that perform automatic polygon recovery for invalid
+        polygons, as the polygons will frequently appear broken in polar
+        representation and their "fixed" version will be very broken in
+        cartesian representation. Augmenters that perform such polygon
+        recovery are currently ``PerspectiveTransform``, ``PiecewiseAffine``
+        and ``ElasticTransformation``.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (3)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (4)
+
+        - (1) OpenCV produces error
+          ``TypeError: Expected cv::UMat for argument 'src'``
+        - (2) OpenCV produces array of nothing but zeros.
+        - (3) Mapepd to ``float32``.
+        - (4) Mapped to ``uint8``.
+
+    Parameters
+    ----------
+    children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
+        One or more augmenters to apply to images after they were transformed
+        to polar representation.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.WithPolarWarping(iaa.CropAndPad(percent=(-0.1, 0.1)))
+
+    Apply cropping and padding in polar representation, then warp back to
+    cartesian representation.
+
+    >>> aug = iaa.WithPolarWarping(
+    >>>     iaa.Affine(
+    >>>         translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}
+    >>>     )
+    >>> )
+
+    Apply affine translations in polar representation.
+
+    >>> aug = iaa.WithPolarWarping(iaa.AveragePooling((2, 8)))
+
+    Apply average pooling in polar representation. This leads to circular
+    bins.
+
+    """
+
+    def __init__(self, children, name=None, deterministic=False,
+                 random_state=None):
+        super(WithPolarWarping, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.children = meta.handle_children_list(children, self.name, "then")
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is not None:
+            iadt.gate_dtypes(
+                batch.images,
+                allowed=["bool",
+                         "uint8", "uint16",
+                         "int8", "int16", "int32",
+                         "float16", "float32", "float64"],
+                disallowed=["uint32", "uint64", "uint128", "uint256",
+                            "int64", "int128", "int256",
+                            "float96", "float128", "float256"],
+                augmenter=self)
+
+        with batch.propagation_hooks_ctx(self, hooks, parents):
+            batch, inv_data_bbs = self._convert_bbs_to_polygons_(batch)
+
+            inv_data = {}
+            for column in batch.columns:
+                func = getattr(self, "_warp_%s_" % (column.name,))
+                col_aug, inv_data_col = func(column.value)
+                setattr(batch, column.attr_name, col_aug)
+                inv_data[column.name] = inv_data_col
+
+            batch = self.children.augment_batch(batch,
+                                                parents=parents + [self],
+                                                hooks=hooks)
+            for column in batch.columns:
+                func = getattr(self, "_invert_warp_%s_" % (column.name,))
+                col_unaug = func(column.value, inv_data[column.name])
+                setattr(batch, column.attr_name, col_unaug)
+
+            batch = self._invert_convert_bbs_to_polygons_(batch, inv_data_bbs)
+
+        return batch
+
+    @classmethod
+    def _convert_bbs_to_polygons_(cls, batch):
+        batch_contained_polygons = batch.polygons is not None
+        if batch.bounding_boxes is None:
+            return batch, (False, batch_contained_polygons)
+
+        psois = [bbsoi.to_polygons_on_image() for bbsoi in batch.bounding_boxes]
+        psois = [psoi.subdivide(2) for psoi in psois]
+
+        # Mark Polygons that are really Bounding Boxes
+        for psoi in psois:
+            for polygon in psoi.polygons:
+                if polygon.label is None:
+                    polygon.label = "$$IMGAUG_BB_AS_POLYGON"
+                else:
+                    polygon.label = polygon.label + ";$$IMGAUG_BB_AS_POLYGON"
+
+        # Merge Fake-Polygons into existing Polygons
+        if batch.polygons is None:
+            batch.polygons = psois
+        else:
+            for psoi, bbs_as_psoi in zip(batch.polygons, psois):
+                assert psoi.shape == bbs_as_psoi.shape, (
+                    "Expected polygons and bounding boxes to have the same "
+                    ".shape value, got %s and %s." % (psoi.shape,
+                                                      bbs_as_psoi.shape))
+
+                psoi.polygons.extend(bbs_as_psoi.polygons)
+
+        batch.bounding_boxes = None
+
+        return batch, (True, batch_contained_polygons)
+
+    @classmethod
+    def _invert_convert_bbs_to_polygons_(cls, batch, inv_data):
+        batch_contained_bbs, batch_contained_polygons = inv_data
+
+        if not batch_contained_bbs:
+            return batch
+
+        bbsois = []
+        for psoi in batch.polygons:
+            polygons = []
+            bbs = []
+            for i, polygon in enumerate(psoi.polygons):
+                is_bb = False
+                if polygon.label is None:
+                    is_bb = False
+                elif polygon.label == "$$IMGAUG_BB_AS_POLYGON":
+                    polygon.label = None
+                    is_bb = True
+                elif polygon.label.endswith(";$$IMGAUG_BB_AS_POLYGON"):
+                    polygon.label = \
+                        polygon.label[:-len(";$$IMGAUG_BB_AS_POLYGON")]
+                    is_bb = True
+
+                if is_bb:
+                    bbs.append(polygon.to_bounding_box())
+                else:
+                    polygons.append(polygon)
+
+            psoi.polygons = polygons
+            bbsoi = ia.BoundingBoxesOnImage(bbs, shape=psoi.shape)
+            bbsois.append(bbsoi)
+
+        batch.bounding_boxes = bbsois
+
+        if not batch_contained_polygons:
+            batch.polygons = None
+
+        return batch
+
+    @classmethod
+    def _warp_images_(cls, images):
+        return cls._warp_arrays(images, False)
+
+    @classmethod
+    def _invert_warp_images_(cls, images_warped, inv_data):
+        return cls._invert_warp_arrays(images_warped, False, inv_data)
+
+    @classmethod
+    def _warp_heatmaps_(cls, heatmaps):
+        return cls._warp_maps_(heatmaps, "arr_0to1", False)
+
+    @classmethod
+    def _invert_warp_heatmaps_(cls, heatmaps_warped, inv_data):
+        return cls._invert_warp_maps_(heatmaps_warped, "arr_0to1", False,
+                                      inv_data)
+
+    @classmethod
+    def _warp_segmentation_maps_(cls, segmentation_maps):
+        return cls._warp_maps_(segmentation_maps, "arr", True)
+
+    @classmethod
+    def _invert_warp_segmentation_maps_(cls, segmentation_maps_warped,
+                                        inv_data):
+        return cls._invert_warp_maps_(segmentation_maps_warped, "arr", True,
+                                      inv_data)
+
+    @classmethod
+    def _warp_keypoints_(cls, kpsois):
+        return cls._warp_cbaois_(kpsois)
+
+    @classmethod
+    def _invert_warp_keypoints_(cls, kpsois_warped, image_shapes_orig):
+        return cls._invert_warp_cbaois_(kpsois_warped, image_shapes_orig)
+
+    @classmethod
+    def _warp_bounding_boxes_(cls, bbsois):
+        assert bbsois is None, ("Expected BBs to have been converted "
+                                "to polygons.")
+        return None
+
+    @classmethod
+    def _invert_warp_bounding_boxes_(cls, bbsois_warped, image_shapes_orig):
+        assert bbsois_warped is None, ("Expected BBs to have been converted "
+                                       "to polygons.")
+        return None
+
+    @classmethod
+    def _warp_polygons_(cls, psois):
+        return cls._warp_cbaois_(psois)
+
+    @classmethod
+    def _invert_warp_polygons_(cls, psois_warped, image_shapes_orig):
+        return cls._invert_warp_cbaois_(psois_warped, image_shapes_orig)
+
+    @classmethod
+    def _warp_line_strings_(cls, lsois):
+        return cls._warp_cbaois_(lsois)
+
+    @classmethod
+    def _invert_warp_line_strings_(cls, lsois_warped, image_shapes_orig):
+        return cls._invert_warp_cbaois_(lsois_warped, image_shapes_orig)
+
+    @classmethod
+    def _warp_arrays(cls, arrays, interpolation_nearest):
+        if arrays is None:
+            return None, None
+
+        flags = cv2.WARP_FILL_OUTLIERS + cv2.WARP_POLAR_LINEAR
+        if interpolation_nearest:
+            flags += cv2.INTER_NEAREST
+
+        arrays_warped = []
+        shapes_orig = []
+        for arr in arrays:
+            if 0 in arr.shape:
+                arrays_warped.append(arr)
+                shapes_orig.append(arr.shape)
+                continue
+
+            input_dtype = arr.dtype.name
+            if input_dtype == "bool":
+                arr = arr.astype(np.uint8) * 255
+            elif input_dtype == "float16":
+                arr = arr.astype(np.float32)
+
+            height, width = arr.shape[0:2]
+
+            # remap limitation, see docs for warpPolar()
+            assert height <= 32767 and width <= 32767, (
+                "WithPolarWarping._warp_arrays() can currently only handle "
+                "arrays with axis sizes below 32767, but got shape %s. This "
+                "is an OpenCV limitation." % (arr.shape,))
+
+            dest_size = (0, 0)
+            center_xy = (width/2, height/2)
+            max_radius = np.sqrt((height/2.0)**2.0 + (width/2.0)**2.0)
+
+            if arr.ndim == 3 and arr.shape[-1] > 512:
+                arr_warped = np.stack(
+                    [cv2.warpPolar(arr[..., c_idx], dest_size, center_xy,
+                                   max_radius, flags)
+                     for c_idx in np.arange(arr.shape[-1])],
+                    axis=-1)
+            else:
+                arr_warped = cv2.warpPolar(arr, dest_size, center_xy,
+                                           max_radius, flags)
+                if arr_warped.ndim == 2 and arr.ndim == 3:
+                    arr_warped = arr_warped[:, :, np.newaxis]
+
+            if input_dtype == "bool":
+                arr_warped = (arr_warped > 128)
+            elif input_dtype == "float16":
+                arr_warped = arr_warped.astype(np.float16)
+
+            arrays_warped.append(arr_warped)
+            shapes_orig.append(arr.shape)
+        return arrays_warped, shapes_orig
+
+    @classmethod
+    def _invert_warp_arrays(cls, arrays_warped, interpolation_nearest,
+                            inv_data):
+        shapes_orig = inv_data
+        if arrays_warped is None:
+            return None
+
+        flags = (cv2.WARP_FILL_OUTLIERS + cv2.WARP_POLAR_LINEAR
+                 + cv2.WARP_INVERSE_MAP)
+        if interpolation_nearest:
+            flags += cv2.INTER_NEAREST
+
+        # TODO this does per iteration almost the same as _warp_arrays()
+        #      make DRY
+        arrays_inv = []
+        for arr_warped, shape_orig in zip(arrays_warped, shapes_orig):
+            if 0 in arr_warped.shape:
+                arrays_inv.append(arr_warped)
+                continue
+
+            input_dtype = arr_warped.dtype.name
+            if input_dtype == "bool":
+                arr_warped = arr_warped.astype(np.uint8) * 255
+            elif input_dtype == "float16":
+                arr_warped = arr_warped.astype(np.float32)
+
+            height, width = shape_orig[0:2]
+
+            # remap limitation, see docs for warpPolar()
+            assert (arr_warped.shape[0] <= 32767
+                    and arr_warped.shape[1] <= 32767), (
+                "WithPolarWarping._warp_arrays() can currently only handle "
+                "arrays with axis sizes below 32767, but got shape %s. This "
+                "is an OpenCV limitation." % (arr_warped.shape,))
+
+            dest_size = (width, height)
+            center_xy = (width/2, height/2)
+            max_radius = np.sqrt((height/2.0)**2.0 + (width/2.0)**2.0)
+
+            if arr_warped.ndim == 3 and arr_warped.shape[-1] > 512:
+                arr_inv = np.stack(
+                    [cv2.warpPolar(arr_warped[..., c_idx], dest_size,
+                                   center_xy, max_radius, flags)
+                     for c_idx in np.arange(arr_warped.shape[-1])],
+                    axis=-1)
+            else:
+                arr_inv = cv2.warpPolar(arr_warped, dest_size, center_xy,
+                                        max_radius, flags)
+                if arr_inv.ndim == 2 and arr_warped.ndim == 3:
+                    arr_inv = arr_inv[:, :, np.newaxis]
+
+            if input_dtype == "bool":
+                arr_inv = (arr_inv > 128)
+            elif input_dtype == "float16":
+                arr_inv = arr_inv.astype(np.float16)
+
+            arrays_inv.append(arr_inv)
+        return arrays_inv
+
+    @classmethod
+    def _warp_maps_(cls, maps, arr_attr_name, interpolation_nearest):
+        if maps is None:
+            return None, None
+
+        skipped = [False] * len(maps)
+        arrays = []
+        shapes_imgs_orig = []
+        for i, map_i in enumerate(maps):
+            if 0 in map_i.shape:
+                skipped[i] = True
+                arrays.append(np.zeros((0, 0), dtype=np.int32))
+                shapes_imgs_orig.append(map_i.shape)
+            else:
+                arrays.append(getattr(map_i, arr_attr_name))
+                shapes_imgs_orig.append(map_i.shape)
+
+        arrays_warped, warparr_inv_data = cls._warp_arrays(
+            arrays, interpolation_nearest)
+        shapes_imgs_warped = cls._warp_shape_tuples(shapes_imgs_orig)
+
+        for i, map_i in enumerate(maps):
+            if not skipped[i]:
+                map_i.shape = shapes_imgs_warped[i]
+                setattr(map_i, arr_attr_name, arrays_warped[i])
+
+        return maps, (shapes_imgs_orig, warparr_inv_data, skipped)
+
+    @classmethod
+    def _invert_warp_maps_(cls, maps_warped, arr_attr_name,
+                           interpolation_nearest, invert_data):
+        if maps_warped is None:
+            return None
+
+        shapes_imgs_orig, warparr_inv_data, skipped = invert_data
+
+        arrays_warped = []
+        for i, map_warped in enumerate(maps_warped):
+            if skipped[i]:
+                arrays_warped.append(np.zeros((0, 0), dtype=np.int32))
+            else:
+                arrays_warped.append(getattr(map_warped, arr_attr_name))
+
+        arrays_inv = cls._invert_warp_arrays(arrays_warped,
+                                             interpolation_nearest,
+                                             warparr_inv_data)
+
+        for i, map_i in enumerate(maps_warped):
+            if not skipped[i]:
+                map_i.shape = shapes_imgs_orig[i]
+                setattr(map_i, arr_attr_name, arrays_inv[i])
+
+        return maps_warped
+
+    @classmethod
+    def _warp_coords(cls, coords, image_shapes):
+        if coords is None:
+            return None, None
+
+        image_shapes_warped = cls._warp_shape_tuples(image_shapes)
+
+        flags = cv2.WARP_POLAR_LINEAR
+
+        coords_warped = []
+        for coords_i, shape, shape_warped in zip(coords, image_shapes,
+                                                 image_shapes_warped):
+            if 0 in shape:
+                coords_warped.append(coords_i)
+                continue
+
+            height, width = shape[0:2]
+            dest_size = (shape_warped[1], shape_warped[0])
+            center_xy = (width/2, height/2)
+            max_radius = np.sqrt((height/2.0)**2.0 + (width/2.0)**2.0)
+
+            coords_i_warped = cls.warpPolarCoords(
+                coords_i, dest_size, center_xy, max_radius, flags)
+
+            coords_warped.append(coords_i_warped)
+        return coords_warped, image_shapes
+
+    @classmethod
+    def _invert_warp_coords(cls, coords_warped, image_shapes_after_aug,
+                            inv_data):
+        image_shapes_orig = inv_data
+        if coords_warped is None:
+            return None
+
+        flags = cv2.WARP_POLAR_LINEAR + cv2.WARP_INVERSE_MAP
+        coords_inv = []
+        gen = enumerate(zip(coords_warped, image_shapes_orig))
+        for i, (coords_i_warped, shape_orig) in gen:
+            if 0 in shape_orig:
+                coords_inv.append(coords_i_warped)
+                continue
+
+            shape_warped = image_shapes_after_aug[i]
+            height, width = shape_orig[0:2]
+            dest_size = (shape_warped[1], shape_warped[0])
+            center_xy = (width/2, height/2)
+            max_radius = np.sqrt((height/2.0)**2.0 + (width/2.0)**2.0)
+
+            coords_i_inv = cls.warpPolarCoords(coords_i_warped,
+                                               dest_size, center_xy,
+                                               max_radius, flags)
+
+            coords_inv.append(coords_i_inv)
+        return coords_inv
+
+    @classmethod
+    def _warp_cbaois_(cls, cbaois):
+        if cbaois is None:
+            return None, None
+
+        coords = [cbaoi.to_xy_array() for cbaoi in cbaois]
+        image_shapes = [cbaoi.shape for cbaoi in cbaois]
+        image_shapes_warped = cls._warp_shape_tuples(image_shapes)
+
+        coords_warped, inv_data = cls._warp_coords(coords, image_shapes)
+        for i, (cbaoi, coords_i_warped) in enumerate(zip(cbaois,
+                                                         coords_warped)):
+            cbaoi = cbaoi.fill_from_xy_array_(coords_i_warped)
+            cbaoi.shape = image_shapes_warped[i]
+            cbaois[i] = cbaoi
+
+        return cbaois, inv_data
+
+    @classmethod
+    def _invert_warp_cbaois_(cls, cbaois_warped, image_shapes_orig):
+        if cbaois_warped is None:
+            return None
+
+        coords = [cbaoi.to_xy_array() for cbaoi in cbaois_warped]
+        image_shapes_after_aug = [cbaoi.shape for cbaoi in cbaois_warped]
+
+        coords_warped = cls._invert_warp_coords(coords, image_shapes_after_aug,
+                                                image_shapes_orig)
+
+        cbaois = cbaois_warped
+        for i, (cbaoi, coords_i_warped) in enumerate(zip(cbaois,
+                                                         coords_warped)):
+            cbaoi = cbaoi.fill_from_xy_array_(coords_i_warped)
+            cbaoi.shape = image_shapes_orig[i]
+            cbaois[i] = cbaoi
+
+        return cbaois
+
+    @classmethod
+    def _warp_shape_tuples(cls, shapes):
+        pi = np.pi
+        result = []
+        for shape in shapes:
+            if 0 in shape:
+                result.append(shape)
+                continue
+
+            height, width = shape[0:2]
+            max_radius = np.sqrt((height/2.0)**2.0 + (width/2.0)**2.0)
+            # np.round() is here a replacement for cvRound(). It is not fully
+            # clear whether the two functions behave exactly identical in all
+            # situations.
+            # See
+            # https://github.com/opencv/opencv/blob/master/
+            # modules/core/include/opencv2/core/fast_math.hpp
+            # for OpenCV's implementation.
+            width = int(np.round(max_radius))
+            height = int(np.round(max_radius * pi))
+            result.append(tuple([height, width] + list(shape[2:])))
+        return result
+
+    @classmethod
+    def warpPolarCoords(cls, src, dsize, center, maxRadius, flags):
+        # See
+        # https://docs.opencv.org/3.4.8/da/d54/group__imgproc__transform.html
+        # for the equations
+        # or also
+        # https://github.com/opencv/opencv/blob/master/modules/imgproc/src/
+        # imgwarp.cpp
+        #
+        assert dsize[0] > 0
+        assert dsize[1] > 0
+
+        dsize_width = dsize[0]
+        dsize_height = dsize[1]
+
+        center_x = center[0]
+        center_y = center[1]
+
+        if np.logical_and(flags, cv2.WARP_INVERSE_MAP):
+            rho = src[:, 0]
+            phi = src[:, 1]
+            Kangle = dsize_height / (2*np.pi)
+            angleRad = phi / Kangle
+            if np.bitwise_and(flags, cv2.WARP_POLAR_LOG):
+                Klog = dsize_width / np.log(maxRadius)
+                magnitude = np.exp(rho / Klog)
+            else:
+                Klin = dsize_width / maxRadius
+                magnitude = rho / Klin
+            x = center_x + magnitude * np.cos(angleRad)
+            y = center_y + magnitude * np.sin(angleRad)
+
+            x = x[:, np.newaxis]
+            y = y[:, np.newaxis]
+
+            return np.concatenate([x, y], axis=1)
+        else:
+            x = src[:, 0]
+            y = src[:, 1]
+
+            Kangle = dsize_height / (2*np.pi)
+            Klin = dsize_width / maxRadius
+
+            I_x, I_y = (x - center_x, y - center_y)
+            magnitude_I, angle_I = cv2.cartToPolar(I_x, I_y)
+            phi = Kangle * angle_I
+            # TODO add semilog support here
+            rho = Klin * magnitude_I
+
+            return np.concatenate([rho, phi], axis=1)
+
+    def get_parameters(self):
+        return []
+
+    def get_children_lists(self):
+        return [self.children]
+
+    def __str__(self):
+        pattern = (
+            "%s("
+            "name=%s, children=%s, deterministic=%s"
+            ")")
+        return pattern % (self.__class__.__name__, self.name,
+                          self.children, self.deterministic)

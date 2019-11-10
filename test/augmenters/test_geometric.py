@@ -8474,3 +8474,604 @@ class TestRot90(unittest.TestCase):
                     assert image_aug.dtype.name == dtype
                     assert _allclose(image_aug[0, 0], 0)
                     assert _allclose(image_aug[2, 2], np.float128(value))
+
+
+class TestWithPolarWarping(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___single_augmenter_as_child(self):
+        aug = iaa.WithPolarWarping(iaa.Noop())
+        assert isinstance(aug.children, iaa.Sequential)
+        assert isinstance(aug.children[0], iaa.Noop)
+
+    def test___init___list_of_augmenters_as_child(self):
+        aug = iaa.WithPolarWarping([iaa.Noop(), iaa.Noop()])
+        assert isinstance(aug.children, iaa.Sequential)
+        assert isinstance(aug.children[0], iaa.Noop)
+        assert isinstance(aug.children[1], iaa.Noop)
+
+    def test_images_no_change(self):
+        image = np.mod(np.arange(10*20*3), 255).astype(np.uint8)
+        image = image.reshape((10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        image_aug = aug(image=image)
+
+        avg_dist = np.average(
+            np.abs(
+                image_aug.astype(np.int32)[2:-2, 2:-2]
+                - image.astype(np.int32)[2:-2, 2:-2]
+            )
+        )
+        assert image_aug.shape == (10, 20, 3)
+        assert avg_dist < 7.0
+
+    def test_heatmaps_no_change(self):
+        hm = np.linspace(0, 1.0, 10*20, dtype=np.float32).reshape((10, 20, 1))
+        hm = ia.HeatmapsOnImage(hm, shape=(10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        hm_aug = aug(heatmaps=hm)
+
+        avg_dist = np.average(
+            np.abs(
+                hm_aug.get_arr()[2:-2, 2:-2]
+                - hm.get_arr()[2:-2, 2:-2]
+            )
+        )
+        assert hm_aug.shape == (10, 20, 3)
+        assert avg_dist < 0.0125
+
+    def test_segmentation_maps_no_change(self):
+        sm = np.zeros((10, 20, 1), dtype=np.int32)
+        sm[1, 0:5] = 1
+        sm[3:3, 3:3] = 2
+        sm[7:9, :] = 3
+        sm = ia.SegmentationMapsOnImage(sm, shape=(10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        sm_aug = aug(segmentation_maps=sm)
+
+        p_same = np.average(
+            sm_aug.get_arr()[2:-2, 2:-2]
+            == sm.get_arr()[2:-2, 2:-2]
+        )
+        assert sm_aug.shape == (10, 20, 3)
+        assert p_same > 0.95
+
+    def test_keypoints_no_change(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=5, y=5),
+               ia.Keypoint(x=5, y=9)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        kpsoi_aug = aug(keypoints=kpsoi)
+
+        assert kpsoi_aug.shape == (10, 20, 3)
+        assert np.allclose(kpsoi_aug.to_xy_array(), kpsoi.to_xy_array(),
+                           atol=0.01)
+
+    def test_bounding_boxes_no_change(self):
+        bbs = [
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4, label="foo"),
+            ia.BoundingBox(x1=3, y1=5, x2=7, y2=10),
+        ]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        bbsoi_aug = aug(bounding_boxes=bbsoi)
+
+        assert bbsoi_aug.items[0].label == "foo"
+        assert bbsoi_aug.items[1].label is None
+        assert bbsoi_aug.shape == (10, 20, 3)
+        assert np.allclose(bbsoi_aug.to_xy_array(), bbsoi.to_xy_array(),
+                           atol=0.01)
+
+    def test_polygons_no_change(self):
+        ps = [
+            ia.Polygon([(0, 2), (4, 2), (4, 4)], label="foo"),
+            ia.Polygon([(0, 0), (5, 0), (5, 5), (0, 5)])
+        ]
+        psoi = ia.PolygonsOnImage(ps, shape=(10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        psoi_aug = aug(polygons=psoi)
+
+        assert psoi_aug.items[0].label == "foo"
+        assert psoi_aug.items[1].label is None
+        assert psoi_aug.shape == (10, 20, 3)
+        assert np.allclose(psoi_aug.to_xy_array(), psoi.to_xy_array(),
+                           atol=0.01)
+
+    def test_line_strings_no_change(self):
+        ls = [
+            ia.LineString([(0, 2), (4, 2), (4, 4)]),
+            ia.LineString([(0, 0), (5, 0), (5, 5), (0, 5)])
+        ]
+        lsoi = ia.LineStringsOnImage(ls, shape=(10, 20, 3))
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        lsoi_aug = aug(line_strings=lsoi)
+
+        assert lsoi_aug.shape == (10, 20, 3)
+        assert np.allclose(lsoi_aug.to_xy_array(), lsoi.to_xy_array(),
+                           atol=0.01)
+
+    def test_bounding_boxes_and_polygons_provided_no_change(self):
+        bbs = [
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4, label="foo"),
+            ia.BoundingBox(x1=3, y1=5, x2=7, y2=10),
+        ]
+        bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(10, 20, 3))
+        ps = [
+            ia.Polygon([(0, 2), (4, 2), (4, 4)], label="foo"),
+            ia.Polygon([(0, 0), (5, 0), (5, 5), (0, 5)])
+        ]
+        psoi = ia.PolygonsOnImage(ps, shape=(10, 20, 3))
+
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        aug = aug.to_deterministic()
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+        psoi_aug = aug.augment_polygons(psoi)
+
+        assert bbsoi_aug.items[0].label == "foo"
+        assert bbsoi_aug.items[1].label is None
+        assert bbsoi_aug.shape == (10, 20, 3)
+        assert np.allclose(bbsoi_aug.to_xy_array(), bbsoi.to_xy_array(),
+                           atol=0.01)
+
+        assert psoi_aug.items[0].label == "foo"
+        assert psoi_aug.items[1].label is None
+        assert psoi_aug.shape == (10, 20, 3)
+        assert np.allclose(psoi_aug.to_xy_array(), psoi.to_xy_array(),
+                           atol=0.01)
+
+    def test_images_translation_x(self):
+        image = np.zeros((50, 70, 3), dtype=np.uint8)
+        image[20-1:20+1, 30-1:30+1, 0] = 255
+        image[30-1:30+1, 40-1:40+1, 1] = 255
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        image_aug = aug(image=image)
+
+        x1 = np.argmax(np.max(image_aug[..., 0], axis=0))
+        y1 = np.argmax(np.max(image_aug[..., 0], axis=1))
+        x2 = np.argmax(np.max(image_aug[..., 1], axis=0))
+        y2 = np.argmax(np.max(image_aug[..., 1], axis=1))
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert image_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_heatmaps_translation_x(self):
+        hm = np.zeros((50, 70, 2), dtype=np.float32)
+        hm[20-1:20+1, 30-1:30+1, 0] = 1.0
+        hm[30-1:30+1, 40-1:40+1, 1] = 1.0
+        hm = ia.HeatmapsOnImage(hm, shape=(50, 70, 3))
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        hm_aug = aug(heatmaps=hm)
+
+        hm_aug_arr = hm_aug.get_arr()
+        x1 = np.argmax(np.max(hm_aug_arr[..., 0], axis=0))
+        y1 = np.argmax(np.max(hm_aug_arr[..., 0], axis=1))
+        x2 = np.argmax(np.max(hm_aug_arr[..., 1], axis=0))
+        y2 = np.argmax(np.max(hm_aug_arr[..., 1], axis=1))
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert hm_aug_arr.shape == (50, 70, 2)
+        assert hm_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_segmentation_maps_translation_x(self):
+        sm = np.zeros((50, 70, 2), dtype=np.int32)
+        sm[20-1:20+1, 30-1:30+1, 0] = 1
+        sm[30-1:30+1, 40-1:40+1, 1] = 2
+        sm = ia.SegmentationMapsOnImage(sm, shape=(50, 70, 3))
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        sm_aug = aug(segmentation_maps=sm)
+
+        sm_aug_arr = sm_aug.get_arr()
+        x1 = np.argmax(np.max(sm_aug_arr[..., 0], axis=0))
+        y1 = np.argmax(np.max(sm_aug_arr[..., 0], axis=1))
+        x2 = np.argmax(np.max(sm_aug_arr[..., 1], axis=0))
+        y2 = np.argmax(np.max(sm_aug_arr[..., 1], axis=1))
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert sm_aug_arr.shape == (50, 70, 2)
+        assert sm_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_keypoints_translation_x(self):
+        cbas = [ia.Keypoint(y=20, x=30), ia.Keypoint(y=30, x=40)]
+        cbaoi = ia.KeypointsOnImage(cbas, shape=(50, 70, 3))
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        cbaoi_aug = aug(keypoints=cbaoi)
+
+        x1 = cbaoi_aug.items[0].x
+        y1 = cbaoi_aug.items[0].y
+        x2 = cbaoi_aug.items[1].x
+        y2 = cbaoi_aug.items[1].y
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert cbaoi_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_bounding_boxes_translation_x(self):
+        cbas = [ia.BoundingBox(y1=20, x1=30, y2=20+2, x2=30+2),
+                ia.BoundingBox(y1=30, x1=40, y2=30+2, x2=40+2)]
+        cbaoi = ia.BoundingBoxesOnImage(cbas, shape=(50, 70, 3))
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        cbaoi_aug = aug(bounding_boxes=cbaoi)
+
+        x1 = cbaoi_aug.items[0].x1
+        y1 = cbaoi_aug.items[0].y1
+        x2 = cbaoi_aug.items[1].x2
+        y2 = cbaoi_aug.items[1].y2
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert cbaoi_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_polygons_translation_x(self):
+        cbas = [ia.Polygon([(30, 20), (30+2, 20), (30+2, 20+2)]),
+                ia.Polygon([(40, 30), (40+2, 30), (40+2, 30+2)])]
+        cbaoi = ia.PolygonsOnImage(cbas, shape=(50, 70, 3))
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        cbaoi_aug = aug(polygons=cbaoi)
+
+        x1 = cbaoi_aug.items[0].coords[0][0]
+        y1 = cbaoi_aug.items[0].coords[0][1]
+        x2 = cbaoi_aug.items[1].coords[2][0]
+        y2 = cbaoi_aug.items[1].coords[2][1]
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert cbaoi_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_line_strings_translation_x(self):
+        cbas = [ia.LineString([(30, 20), (30+2, 20), (30+2, 20+2)]),
+                ia.LineString([(40, 30), (40+2, 30), (40+2, 30+2)])]
+        cbaoi = ia.LineStringsOnImage(cbas, shape=(50, 70, 3))
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 15}))
+
+        cbaoi_aug = aug(line_strings=cbaoi)
+
+        x1 = cbaoi_aug.items[0].coords[0][0]
+        y1 = cbaoi_aug.items[0].coords[0][1]
+        x2 = cbaoi_aug.items[1].coords[2][0]
+        y2 = cbaoi_aug.items[1].coords[2][1]
+
+        # translation on x axis in polar representation should move all points
+        # a bit away from the center
+        min_diff = 4
+        assert cbaoi_aug.shape == (50, 70, 3)
+        assert x1 < 30 - min_diff
+        assert y1 < 20 - min_diff
+        assert x2 > 40 + min_diff
+        assert y2 > 30 + min_diff
+
+    def test_image_heatmap_alignment(self):
+        image = np.zeros((80, 100, 3), dtype=np.uint8)
+        image[40-10:40+10, 50-10:50+10, :] = 255
+        hm = np.zeros((40, 50, 1), dtype=np.float32)
+        hm[20-5:20+5, 25-5:25+5, :] = 1.0
+        hm = ia.HeatmapsOnImage(hm, shape=image.shape)
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 10}))
+
+        image_aug, hm_aug = aug(image=image, heatmaps=hm)
+
+        hm_aug_arr = hm_aug.get_arr()
+        hm_aug_arr_rs = ia.imresize_single_image(hm_aug_arr, (80, 100),
+                                                 interpolation="nearest")
+        overlap = np.average(
+            (image_aug[..., 0] > 200)
+            == (hm_aug_arr_rs[..., 0] > 0.9)
+        )
+        assert image_aug.shape == (80, 100, 3)
+        assert hm_aug.shape == (80, 100, 3)
+        assert hm_aug_arr.shape == (40, 50, 1)
+        assert overlap > 0.96
+
+    def test_image_segmentation_map_alignment(self):
+        image = np.zeros((80, 100, 3), dtype=np.uint8)
+        image[40-10:40+10, 50-10:50+10, :] = 255
+        sm = np.zeros((40, 50, 1), dtype=np.int32)
+        sm[20-5:20+5, 25-5:25+5, :] = 1
+        sm = ia.SegmentationMapsOnImage(sm, shape=image.shape)
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 10}))
+
+        image_aug, sm_aug = aug(image=image, segmentation_maps=sm)
+
+        sm_aug_arr = sm_aug.get_arr()
+        sm_aug_arr_rs = ia.imresize_single_image(sm_aug_arr, (80, 100),
+                                                 interpolation="nearest")
+        overlap = np.average(
+            (image_aug[..., 0] > 200)
+            == (sm_aug_arr_rs[..., 0] == 1)
+        )
+        assert image_aug.shape == (80, 100, 3)
+        assert sm_aug.shape == (80, 100, 3)
+        assert sm_aug_arr.shape == (40, 50, 1)
+        assert overlap > 0.96
+
+    def test_image_keypoint_alignment(self):
+        image = np.zeros((80, 100, 3), dtype=np.uint8)
+        image[40-10:40-10+3, 50-10:50-10+3, :] = 255
+        image[40+10:40+10+3, 50+10:50+10+3, :] = 255
+
+        kps = [ia.Keypoint(y=40-10+1.5, x=50-10+1.5),
+               ia.Keypoint(y=40+10+1.5, x=50+10+1.5)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=image.shape)
+        aug = iaa.WithPolarWarping(iaa.Affine(translate_px={"x": 10}))
+
+        image_aug, kpsoi_aug = aug(image=image, keypoints=kpsoi)
+
+        kp1 = kpsoi_aug.items[0]
+        kp2 = kpsoi_aug.items[1]
+        kp1_intensity = image_aug[int(kp1.y), int(kp1.x), 0]
+        kp2_intensity = image_aug[int(kp2.y), int(kp2.x), 0]
+        assert image_aug.shape == (80, 100, 3)
+        assert kpsoi_aug.shape == (80, 100, 3)
+        assert kp1_intensity > 200
+        assert kp2_intensity > 200
+
+    def test_image_is_noncontiguous(self):
+        image = np.mod(np.arange(10*20*3), 255).astype(np.uint8)
+        image = image.reshape((10, 20, 3))
+        image_cp = np.fliplr(np.copy(image))
+        image = np.fliplr(image)
+        assert image.flags["C_CONTIGUOUS"] is False
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        image_aug = aug(image=image)
+
+        avg_dist = np.average(
+            np.abs(
+                image_aug.astype(np.int32)[2:-2, 2:-2]
+                - image_cp.astype(np.int32)[2:-2, 2:-2]
+            )
+        )
+        assert image_aug.shape == (10, 20, 3)
+        assert avg_dist < 7.0
+
+    def test_image_is_view(self):
+        image = np.mod(np.arange(10*20*3), 255).astype(np.uint8)
+        image = image.reshape((10, 20, 3))
+        image_cp = np.copy(image)[2:, 2:, :]
+        image = image[2:, 2:, :]
+        assert image.flags["OWNDATA"] is False
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        image_aug = aug(image=image)
+
+        avg_dist = np.average(
+            np.abs(
+                image_aug.astype(np.int32)[2:-2, 2:-2]
+                - image_cp.astype(np.int32)[2:-2, 2:-2]
+            )
+        )
+        assert image_aug.shape == (8, 18, 3)
+        assert avg_dist < 7.0
+
+    def test_propagation_hooks(self):
+        image = np.mod(np.arange(30*30), 255).astype(np.uint8)
+        image = image.reshape((30, 30))
+        aug = iaa.WithPolarWarping(iaa.Add(50))
+
+        def _propagator(images, augmenter, parents, default):
+            return False if augmenter is aug else default
+
+        hooks = ia.HooksImages(propagator=_propagator)
+
+        observed1 = aug.augment_image(image)
+        observed2 = aug.augment_image(image, hooks=hooks)
+
+        image_plus50 = np.clip(image.astype(np.int32)+50, 0, 255)
+        diff1 = np.abs(observed1[2:-2].astype(np.int32)
+                       - image_plus50[2:-2].astype(np.int32))
+        diff2 = np.abs(observed2[2:-2].astype(np.int32)
+                       - image_plus50[2:-2].astype(np.int32))
+        overlap_1_add = np.average(diff1 <= 1)
+        overlap_2_add = np.average(diff2 <= 2)
+        assert overlap_1_add >= 0.9
+        assert overlap_2_add < 0.01
+
+    def test_unusual_channel_numbers(self):
+        shapes = [
+            (5, 5, 4),
+            (5, 5, 5),
+            (5, 5, 512),
+            (5, 5, 513)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.WithPolarWarping(iaa.Noop())
+
+                image_aug = aug(image=image)
+
+                shape_expected = tuple([shape[1], shape[0]] + list(shape[2:]))
+                assert np.all(image_aug == 0)
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape_expected
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=1, y=2)],
+                                            shape=image.shape)
+                sm_arr = np.zeros((3, 3), dtype=np.int32)
+                sm_arr[1, 1] = 1
+                sm = ia.SegmentationMapsOnImage(sm_arr, shape=image.shape)
+                aug = iaa.WithPolarWarping(iaa.Noop())
+
+                aug_det = aug.to_deterministic()
+                image_aug = aug(image=image)
+                kpsoi_aug = aug(keypoints=kpsoi)
+                sm_aug = aug(segmentation_maps=sm)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+                assert np.allclose(kpsoi_aug.to_xy_array(),
+                                   kpsoi.to_xy_array())
+                assert kpsoi_aug.shape == shape
+                assert np.array_equal(sm_aug.get_arr(), sm_arr)
+                assert sm_aug.shape == shape
+
+    def test_other_dtypes_bool(self):
+        aug = iaa.WithPolarWarping(iaa.Noop())
+        arr = np.zeros((20, 20), dtype=bool)
+        arr[10-3:10+3, 10-3:10+3] = True
+
+        arr_aug = aug(image=arr)
+
+        overlap = np.average(arr_aug == arr)
+        assert arr_aug.shape == (20, 20)
+        assert arr_aug.dtype.name == "bool"
+        assert overlap > 0.95
+
+    def test_other_dtypes_uint_int(self):
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        dtypes = ["uint8", "uint16",
+                  "int8", "int16", "int32",]
+        for dtype in dtypes:
+            with self.subTest(dtype=dtype):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+                center_value = int(center_value)
+
+                image = np.zeros((30, 10), dtype=dtype)
+                image[0:10, :] = min_value
+                image[10:20, :] = center_value
+                image[20:30, :] = max_value
+                image = iaa.pad(image, top=2, right=2, bottom=2, left=2,
+                                cval=0)
+
+                image_aug = aug.augment_image(image)
+                image_aug = image_aug[2:-2, 2:-2]
+
+                overlap_min = np.average(image_aug[0:10] == min_value)
+                overlap_cv = np.average(image_aug[10:20] == center_value)
+                overlap_max = np.average(image_aug[20:30] == max_value)
+                assert image_aug.dtype.name == dtype
+                assert overlap_min > 0.9
+                assert overlap_cv > 0.9
+                assert overlap_max > 0.9
+
+    def test_other_dtypes_float(self):
+        def _avg_close(arr_aug, expected_val):
+            atol = 1e-8
+            return np.average(np.isclose(arr_aug, expected_val,
+                                         rtol=0, atol=atol))
+
+        aug = iaa.WithPolarWarping(iaa.Noop())
+
+        dtypes = ["float16", "float32", "float64"]
+        for dtype in dtypes:
+            with self.subTest(dtype=dtype):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+                center_value = center_value
+
+                image = np.zeros((70, 10), dtype=dtype)
+                image[0:10, :] = min_value
+                image[10:20, :] = center_value
+                image[20:30, :] = max_value
+                image[30:40, :] = -1.0
+                image[40:50, :] = 1.0
+                image[50:60, :] = -100.0
+                image[60:70, :] = 100.0
+                image = iaa.pad(image, top=2, right=2, bottom=2, left=2,
+                                cval=0)
+
+                image_aug = aug.augment_image(image)
+                image_aug = image_aug[2:-2, 2:-2]
+
+                overlap1 = _avg_close(image_aug[0:10], min_value)
+                overlap2 = _avg_close(image_aug[10:20], center_value)
+                overlap3 = _avg_close(image_aug[20:30], max_value)
+                overlap4 = _avg_close(image_aug[30:40], -1.0)
+                overlap5 = _avg_close(image_aug[40:50], 1.0)
+                overlap6 = _avg_close(image_aug[50:60], -100.0)
+                overlap7 = _avg_close(image_aug[60:70], 100.0)
+                assert image_aug.dtype.name == dtype
+                assert overlap1 > 0.9
+                assert overlap2 > 0.9
+                assert overlap3 > 0.9
+                assert overlap4 > 0.9
+                assert overlap5 > 0.9
+                assert overlap6 > 0.9
+                assert overlap7 > 0.9
+
+    def test_get_parameters(self):
+        aug = iaa.WithPolarWarping(iaa.Noop())
+        params = aug.get_parameters()
+        assert len(params) == 0
+
+    def test_get_children_lists(self):
+        children = iaa.Sequential([iaa.Noop()])
+        aug = iaa.WithPolarWarping(children)
+        assert aug.get_children_lists() == [children]
+
+    def test___repr___and___str__(self):
+        children = iaa.Sequential([iaa.Noop()])
+        aug = iaa.WithPolarWarping(children, name="WithPolarWarpingTest")
+        expected = (
+            "WithPolarWarping("
+            "name=WithPolarWarpingTest, "
+            "children=%s, "
+            "deterministic=False"
+            ")" % (str(children),))
+
+        assert aug.__repr__() == expected
+        assert aug.__str__() == expected
