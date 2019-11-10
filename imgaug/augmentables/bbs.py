@@ -761,6 +761,7 @@ class BoundingBox(object):
 
     # TODO also add to_heatmap
     # TODO add this to BoundingBoxesOnImage
+    # TODO add label to keypoints?
     def to_keypoints(self):
         """Convert the BB's corners to keypoints (clockwise, from top left).
 
