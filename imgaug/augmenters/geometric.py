@@ -365,26 +365,31 @@ class _AffineSamplingResult(object):
         self.mode = mode
         self.order = order
 
-    def to_matrix(self, idx, arr_shape, fit_output, shift_add=(0.5, 0.5)):
+    def to_matrix(self, idx, arr_shape, image_shape, fit_output,
+                  shift_add=(0.5, 0.5)):
+        if 0 in image_shape:
+            return tf.AffineTransform(), arr_shape
+
         height, width = arr_shape[0:2]
+
         # for images we use additional shifts of (0.5, 0.5) as otherwise
         # we get an ugly black border for 90deg rotations
         shift_y = height / 2.0 - shift_add[0]
         shift_x = width / 2.0 - shift_add[1]
+
         scale_y = self.scale[1][idx]  # TODO 1 and 0 should be inverted here
         scale_x = self.scale[0][idx]
+
         translate_y = self.translate[1][idx]  # TODO same as above
         translate_x = self.translate[0][idx]
         if ia.is_single_float(translate_y):
-            translate_y_px = int(
-                np.round(translate_y * height))
+            translate_y_px = translate_y * arr_shape[0]
         else:
-            translate_y_px = translate_y
+            translate_y_px = (translate_y / image_shape[0]) * arr_shape[0]
         if ia.is_single_float(translate_x):
-            translate_x_px = int(
-                np.round(translate_x * width))
+            translate_x_px = translate_x * arr_shape[1]
         else:
-            translate_x_px = translate_x
+            translate_x_px = (translate_x / image_shape[1]) * arr_shape[1]
 
         rotation_rad, shear_x_rad, shear_y_rad = np.deg2rad([
             self.rotate[idx],
@@ -414,7 +419,7 @@ class _AffineSamplingResult(object):
         return matrix, arr_shape
 
     def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.0, 0.0)):
-        return self.to_matrix(idx, arr_shape, fit_output, shift_add)
+        return self.to_matrix(idx, arr_shape, arr_shape, fit_output, shift_add)
 
     def copy(self):
         return _AffineSamplingResult(
@@ -1075,6 +1080,7 @@ class Affine(meta.Augmenter):
         return batch
 
     def _augment_images_by_samples(self, images, samples,
+                                   image_shapes=None,
                                    return_matrices=False):
         nb_images = len(images)
         input_was_array = ia.is_np_array(images)
@@ -1085,7 +1091,10 @@ class Affine(meta.Augmenter):
         for i in sm.xrange(nb_images):
             image = images[i]
 
+            image_shape = (image.shape if image_shapes is None
+                           else image_shapes[i])
             matrix, output_shape = samples.to_matrix(i, image.shape,
+                                                     image_shape,
                                                      self.fit_output)
 
             cval = samples.cval[i]
@@ -1131,8 +1140,9 @@ class Affine(meta.Augmenter):
 
         arrs = [getattr(augmentable, arr_attr_name)
                 for augmentable in augmentables]
+        image_shapes = [augmentable.shape for augmentable in augmentables]
         arrs_aug, matrices = self._augment_images_by_samples(
-            arrs, samples, return_matrices=True)
+            arrs, samples, image_shapes=image_shapes, return_matrices=True)
 
         gen = zip(augmentables, arrs_aug, matrices, samples.order)
         for augmentable_i, arr_aug, matrix, order_i in gen:

@@ -1355,7 +1355,7 @@ class TestAffine_translate(unittest.TestCase):
 
         observed = getattr(aug, augf_name)(cbaoi)
 
-        assert_cbaois_equal(observed, cbaoi_translated)
+        assert_cbaois_equal(observed, cbaoi_translated, max_distance=1e-3)
 
     # ---------------------
     # translate: fraction of the image size (towards the bottom)
@@ -2396,6 +2396,77 @@ class TestAffine_fit_output(unittest.TestCase):
 class TestAffine_alignment(unittest.TestCase):
     def setUp(self):
         reseed()
+
+    def test_image_segmap_alignment_with_translate_px(self):
+        image = np.zeros((80, 100, 3), dtype=np.uint8)
+        image[40-10:40+10, 50-10:50+10, :] = 255
+        hm = np.zeros((40, 50, 1), dtype=np.float32)
+        hm[20-5:20+5, 25-5:25+5, 0] = 1.0
+        hm = ia.HeatmapsOnImage(hm, shape=image.shape)
+
+        # note that if x is an odd value (e.g. 1), the projection is a bit
+        # less accurate as x=1 projected to a half-sized segmap is x=0.5,
+        # leading to interpolation effects
+        xvals = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, [0, 10, 20]]
+
+        for xvals_i in xvals:
+            with self.subTest(x=xvals_i):
+                aug = iaa.Affine(translate_px={"x": xvals_i})
+                iterations = 2 if ia.is_single_number(xvals_i) else 20
+
+                for _ in np.arange(iterations):
+                    image_aug, hm_aug = aug(image=image, heatmaps=hm)
+
+                    hm_aug_arr_rs = ia.imresize_single_image(
+                        hm_aug.get_arr(), (80, 100), interpolation="nearest")
+                    overlap_true = np.sum(
+                        np.logical_and(
+                            (image_aug[..., 0] > 220),
+                            (hm_aug_arr_rs[..., 0] > 0.9)
+                        )
+                    )
+                    p_same_on_zero_cells = np.average(
+                        (image_aug[..., 0] > 220)
+                        == (hm_aug_arr_rs[..., 0] > 0.9))
+                    assert overlap_true > 19*19
+                    assert p_same_on_zero_cells > 0.98
+
+    def test_image_segmap_alignment_with_translate_percent(self):
+        image = np.zeros((80, 100, 3), dtype=np.uint8)
+        image[40-10:40+10, 50-10:50+10, :] = 255
+        hm = np.zeros((40, 50, 1), dtype=np.float32)
+        hm[20-5:20+5, 25-5:25+5, 0] = 1.0
+        hm = ia.HeatmapsOnImage(hm, shape=image.shape)
+
+        # note that if x is an odd value (e.g. 1), the projection is a bit
+        # less accurate as x=1 projected to a half-sized segmap is x=0.5,
+        # leading to interpolation effects
+        width = image.shape[1]
+        xvals = [0/width, 2/width, 4/width, 6/width, 8/width, 10/width,
+                 12/width, 14/width, 16/width, 18/width, 20/width,
+                 [0/width, 10/width, 20/width]]
+
+        for xvals_i in xvals:
+            with self.subTest(x=xvals_i):
+                aug = iaa.Affine(translate_percent={"x": xvals_i})
+                iterations = 2 if ia.is_single_number(xvals_i) else 20
+
+                for _ in np.arange(iterations):
+                    image_aug, hm_aug = aug(image=image, heatmaps=hm)
+
+                    hm_aug_arr_rs = ia.imresize_single_image(
+                        hm_aug.get_arr(), (80, 100), interpolation="nearest")
+                    overlap_true = np.sum(
+                        np.logical_and(
+                            (image_aug[..., 0] > 220),
+                            (hm_aug_arr_rs[..., 0] > 0.9)
+                        )
+                    )
+                    p_same_on_zero_cells = np.average(
+                        (image_aug[..., 0] > 220)
+                        == (hm_aug_arr_rs[..., 0] > 0.9))
+                    assert overlap_true > 19*19
+                    assert p_same_on_zero_cells > 0.98
 
     def test_image_keypoint_alignment(self):
         aug = iaa.Affine(rotate=[0, 180], order=0)
