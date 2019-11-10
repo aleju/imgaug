@@ -710,6 +710,18 @@ class TestBoundingBox(unittest.TestCase):
         assert kps[3].y == 3
         assert kps[3].x == 1
 
+    def test_to_polygon(self):
+        bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3)
+
+        poly = bb.to_polygon()
+
+        assert poly.coords_almost_equals([
+            (1, 1),
+            (3, 1),
+            (3, 3,),
+            (1, 3)
+        ])
+
     def test_coords_almost_equals(self):
         bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
         other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)

@@ -781,6 +781,25 @@ class BoundingBox(object):
             Keypoint(x=self.x1, y=self.y2)
         ]
 
+    def to_polygon(self):
+        """Convert this bounding box to a polygon covering the same area.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.Polygon
+            The bounding box converted to a polygon.
+
+        """
+        # TODO get rid of this deferred import
+        from imgaug.augmentables.polys import Polygon
+
+        return Polygon([
+            (self.x1, self.y1),
+            (self.x2, self.y1),
+            (self.x2, self.y2),
+            (self.x1, self.y2)
+        ], label=self.label)
+
     def coords_almost_equals(self, other, max_distance=1e-4):
         """Estimate if this and another BB have almost identical coordinates.
 
