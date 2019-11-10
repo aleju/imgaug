@@ -1,4 +1,4 @@
-# Added Polygon Subdivision
+# Added Polygon Subdivision #489
 
 * Added method `imgaug.augmentables.polys.Polygon.subdivide(N)`.
   The method increases the polygon's corner point count by interpolating

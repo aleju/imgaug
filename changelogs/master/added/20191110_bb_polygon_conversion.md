@@ -1,4 +1,4 @@
-# Bounding Box to Polygon Conversion
+# Bounding Box to Polygon Conversion #489
 
 * Added method `imgaug.augmentables.bbs.BoundingBox.to_polygon()`.
 * Added method
