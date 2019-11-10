@@ -1478,6 +1478,21 @@ class BoundingBoxesOnImage(object):
         self.shape = kpsoi.shape
         return self
 
+    def to_polygons_on_image(self):
+        """Convert the bounding boxes to one ``PolygonsOnImage`` instance.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.PolygonsOnImage
+            A ``PolygonsOnImage`` containing polygons. Each polygon covers
+            the same area as the corresponding bounding box.
+
+        """
+        from .polys import PolygonsOnImage
+
+        polygons = [bb.to_polygon() for bb in self.bounding_boxes]
+        return PolygonsOnImage(polygons, shape=self.shape)
+
     def copy(self):
         """Create a shallow copy of the ``BoundingBoxesOnImage`` instance.
 
