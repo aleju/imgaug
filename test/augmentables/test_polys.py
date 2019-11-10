@@ -2411,6 +2411,44 @@ class TestPolygonsOnImage_shift(unittest.TestCase):
         assert poly_oi_shifted.shape == (10, 11, 3)
 
 
+class TestPolygonsOnImage_subdivide(unittest.TestCase):
+    def test_mocked(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)])],
+            shape=(10, 11, 3))
+        mock_sub = mock.Mock()
+        mock_sub.return_value = "foo"
+        poly_oi.items[0].subdivide = mock_sub
+        poly_oi.items[1].subdivide = mock_sub
+
+        poly_oi_sub = poly_oi.subdivide(2)
+
+        assert mock_sub.call_count == 2
+        assert mock_sub.call_args_list[0][0][0] == 2
+        assert mock_sub.call_args_list[1][0][0] == 2
+        assert poly_oi_sub.items == ["foo", "foo"]
+
+    def test_with_zero_polygons(self):
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        poly_oi_sub = poly_oi.subdivide(1)
+        assert len(poly_oi_sub.polygons) == 0
+        assert poly_oi_sub.shape == (10, 11, 3)
+
+    def test_with_one_polygon(self):
+        poly_oi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0)])],
+                                     shape=(10, 11, 3))
+        poly_oi_sub = poly_oi.subdivide(1)
+        assert poly_oi_sub.shape == (10, 11, 3)
+        assert len(poly_oi_sub.items) == 1
+        assert poly_oi_sub.items[0].coords_almost_equals([
+            (0, 0),
+            (0.5, 0),
+            (1, 0),
+            (0.5, 0)
+        ])
+
+
 class TestPolygonsOnImage_to_xy_array(unittest.TestCase):
     def test_filled_object(self):
         psoi = ia.PolygonsOnImage(

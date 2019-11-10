@@ -1519,6 +1519,23 @@ class PolygonsOnImage(object):
         ]
         return PolygonsOnImage(polys_new, shape=self.shape)
 
+    def subdivide(self, points_per_edge):
+        """Interpolate ``N`` points on each polygon.
+
+        Parameters
+        ----------
+        points_per_edge : int
+            Number of points to interpolate on each edge.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.PolygonsOnImage
+            Subdivided polygons.
+
+        """
+        polys_new = [poly.subdivide(points_per_edge) for poly in self.polygons]
+        return PolygonsOnImage(polys_new, shape=self.shape)
+
     def to_xy_array(self):
         """Convert all polygon coordinates to one array of shape ``(N,2)``.
 
