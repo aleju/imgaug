@@ -1023,41 +1023,52 @@ class MotionBlur(iaa_convolutional.Convolve):
             direction, "direction", value_range=(-1.0-1e-6, 1.0+1e-6),
             tuple_to_uniform=True, list_to_choice=True)
 
-        def _create_matrices(_image, nb_channels, random_state_func):
-            # avoid cyclic import between blur and geometric
-            from . import geometric as iaa_geometric
-
-            # force discrete for k_sample via int() in case of stochastic
-            # parameter
-            k_sample = int(
-                k_param.draw_sample(random_state=random_state_func))
-            angle_sample = angle_param.draw_sample(
-                random_state=random_state_func)
-            direction_sample = direction_param.draw_sample(
-                random_state=random_state_func)
-
-            k_sample = k_sample if k_sample % 2 != 0 else k_sample + 1
-            direction_sample = np.clip(direction_sample, -1.0, 1.0)
-            direction_sample = (direction_sample + 1.0) / 2.0
-
-            matrix = np.zeros((k_sample, k_sample), dtype=np.float32)
-            matrix[:, k_sample//2] = np.linspace(
-                float(direction_sample),
-                1.0 - float(direction_sample),
-                num=k_sample)
-            rot = iaa_geometric.Affine(rotate=angle_sample, order=order)
-
-            # FIXME astype(float32) should be before /255.0 here?
-            matrix = (
-                rot.augment_image(
-                    (matrix * 255).astype(np.uint8)
-                ) / 255.0).astype(np.float32)
-
-            return [matrix/np.sum(matrix)] * nb_channels
+        matrix_gen = _MotionBlurMatrixGenerator(k_param, angle_param,
+                                                direction_param, order)
 
         super(MotionBlur, self).__init__(
-            _create_matrices, name=name, deterministic=deterministic,
+            matrix_gen, name=name, deterministic=deterministic,
             random_state=random_state)
+
+
+class _MotionBlurMatrixGenerator(object):
+    def __init__(self, k, angle, direction, order):
+        self.k = k
+        self.angle = angle
+        self.direction = direction
+        self.order = order
+
+    def __call__(self, _image, nb_channels, random_state):
+        # avoid cyclic import between blur and geometric
+        from . import geometric as iaa_geometric
+
+        # force discrete for k_sample via int() in case of stochastic
+        # parameter
+        k_sample = int(
+            self.k.draw_sample(random_state=random_state))
+        angle_sample = self.angle.draw_sample(
+            random_state=random_state)
+        direction_sample = self.direction.draw_sample(
+            random_state=random_state)
+
+        k_sample = k_sample if k_sample % 2 != 0 else k_sample + 1
+        direction_sample = np.clip(direction_sample, -1.0, 1.0)
+        direction_sample = (direction_sample + 1.0) / 2.0
+
+        matrix = np.zeros((k_sample, k_sample), dtype=np.float32)
+        matrix[:, k_sample//2] = np.linspace(
+            float(direction_sample),
+            1.0 - float(direction_sample),
+            num=k_sample)
+        rot = iaa_geometric.Affine(rotate=angle_sample, order=self.order)
+
+        matrix = (
+            rot.augment_image(
+                (matrix * 255).astype(np.uint8)
+            ).astype(np.float32) / 255.0
+        )
+
+        return [matrix/np.sum(matrix)] * nb_channels
 
 
 # TODO add a per_channel flag?

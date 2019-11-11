@@ -1632,6 +1632,10 @@ class TestMotionBlur(unittest.TestCase):
         expected = np.tile(expected[..., np.newaxis], (1, 1, 3))
         assert np.allclose(img_aug, expected)
 
+    def test_pickleable(self):
+        aug = iaa.MotionBlur((3, 11), random_state=1)
+        test_pickleable_uint8_img(aug, iterations=10)
+
 
 class TestMeanShiftBlur(unittest.TestCase):
     def setUp(self):
