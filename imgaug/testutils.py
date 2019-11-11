@@ -15,6 +15,10 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import imgaug as ia
 import imgaug.random as iarandom
@@ -126,3 +130,14 @@ def reseed(seed=0):
     iarandom.seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+
+
+def runtest_pickleable_uint8_img(augmenter, shape=(15, 15, 3), iterations=3):
+    image = np.mod(np.arange(int(np.prod(shape))), 256).astype(np.uint8)
+    image = image.reshape(shape)
+    augmenter_pkl = pickle.loads(pickle.dumps(augmenter, protocol=-1))
+
+    for _ in np.arange(iterations):
+        image_aug = augmenter(image=image)
+        image_aug_pkl = augmenter_pkl(image=image)
+        assert np.array_equal(image_aug, image_aug_pkl)
