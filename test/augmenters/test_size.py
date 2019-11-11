@@ -26,7 +26,8 @@ from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 import imgaug.augmenters.size as iaa_size
 from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
-                              assert_cbaois_equal, shift_cbaoi)
+                              assert_cbaois_equal, shift_cbaoi,
+                              runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
@@ -1439,6 +1440,12 @@ class TestResize(unittest.TestCase):
                             assert image_aug.shape == (10, 20, 3)
                             assert np.all(image_aug >= 1 - 1e-4)
 
+    def test_pickleable(self):
+        aug = iaa.Resize({"height": (10, 30), "width": (10, 30)},
+                         interpolation=["nearest", "linear"],
+                         random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
+
 
 class TestPad(unittest.TestCase):
     def setUp(self):
@@ -2837,6 +2844,10 @@ class TestPad(unittest.TestCase):
                     assert np.all(_isclose(image_aug[mask],
                                            np.float128(value)))
 
+    def test_pickleable(self):
+        aug = iaa.Pad((0, 10), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5)
+
 
 class TestCrop(unittest.TestCase):
     def setUp(self):
@@ -3946,6 +3957,10 @@ class TestCrop(unittest.TestCase):
                     assert np.all(_isclose(image_aug[mask],
                                            np.float128(value)))
 
+    def test_pickleable(self):
+        aug = iaa.Crop((0, 10), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(30, 30, 1))
+
 
 class TestPadToFixedSize(unittest.TestCase):
     def setUp(self):
@@ -4621,6 +4636,10 @@ class TestPadToFixedSize(unittest.TestCase):
                     assert np.all(_isclose(image_aug[mask],
                                            np.float128(value)))
 
+    def test_pickleable(self):
+        aug = iaa.PadToFixedSize(20, 20, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(10, 10, 1))
+
 
 class TestCenterPadToFixedSize(unittest.TestCase):
     def setUp(self):
@@ -5253,6 +5272,10 @@ class TestCropToFixedSize(unittest.TestCase):
                     assert np.all(_isclose(image_aug[mask],
                                            np.float128(value)))
 
+    def test_pickleable(self):
+        aug = iaa.CropToFixedSize(10, 10, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(20, 20, 1))
+
 
 class TestCenterCropToFixedSize(unittest.TestCase):
     def setUp(self):
@@ -5418,6 +5441,10 @@ class TestCropToMultiplesOf(unittest.TestCase):
                 image_aug = aug(image=image)
 
                 assert image_aug.shape == image.shape
+
+    def test_pickleable(self):
+        aug = iaa.CropToMultiplesOf(5, 5, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(14, 14, 1))
 
 
 class TestCenterCropToMultiplesOf(unittest.TestCase):
@@ -5623,6 +5650,10 @@ class TestPadToMultiplesOf(unittest.TestCase):
                                        + list(shape[2:]))
                 assert image_aug.shape == expected_shape
 
+    def test_pickleable(self):
+        aug = iaa.PadToMultiplesOf(5, 5, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(11, 11, 1))
+
 
 class TestCenterPadToMultiplesOf(unittest.TestCase):
     def setUp(self):
@@ -5795,6 +5826,10 @@ class TestCropToPowersOf(unittest.TestCase):
                 image_aug = aug(image=image)
 
                 assert image_aug.shape == image.shape
+
+    def test_pickleable(self):
+        aug = iaa.CropToPowersOf(2, 2, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(15, 15, 1))
 
 
 class TestCenterCropToPowersOf(unittest.TestCase):
@@ -5999,6 +6034,10 @@ class TestPadToPowersOf(unittest.TestCase):
                                        + list(shape[2:]))
                 assert image_aug.shape == expected_shape
 
+    def test_pickleable(self):
+        aug = iaa.PadToPowersOf(2, 2, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(9, 9, 1))
+
 
 class TestCenterPadToPowersOf(unittest.TestCase):
     def setUp(self):
@@ -6143,6 +6182,10 @@ class TestCropToAspectRatio(unittest.TestCase):
                     image_aug = aug(image=image)
 
                     assert image_aug.shape == image.shape
+
+    def test_pickleable(self):
+        aug = iaa.CropToAspectRatio(1.0, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(20, 10, 1))
 
 
 class TestCenterCropToAspectRatio(unittest.TestCase):
@@ -6341,6 +6384,10 @@ class TestPadToAspectRatio(unittest.TestCase):
 
                 expected_shape = tuple([h_exp, w_exp] + list(shape[2:]))
                 assert image_aug.shape == expected_shape
+
+    def test_pickleable(self):
+        aug = iaa.PadToAspectRatio(2.0, position="uniform", random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(10, 10, 1))
 
 
 class TestCenterPadToAspectRatio(unittest.TestCase):
@@ -6848,3 +6895,9 @@ class TestKeepSizeByResize(unittest.TestCase):
                 image_aug = aug(image=image)
 
                 assert image_aug.shape == image.shape
+
+    def test_pickleable(self):
+        aug = iaa.KeepSizeByResize([
+            iaa.CropToFixedSize(10, 10, position="uniform", random_state=1)
+        ], interpolation=["nearest", "linear"], random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(15, 15, 1))

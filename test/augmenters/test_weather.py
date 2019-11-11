@@ -20,7 +20,7 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 
 
 class _TwoValueParam(iap.StochasticParameter):
@@ -159,6 +159,12 @@ class TestFastSnowyLandscape(unittest.TestCase):
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
 
+    def test_pickleable(self):
+        aug = iaa.FastSnowyLandscape(lightness_threshold=(50, 150),
+                                     lightness_multiplier=(1.0, 3.0),
+                                     random_state=1)
+        runtest_pickleable_uint8_img(aug)
+
 
 # only a very rough test here currently, because the augmenter is fairly hard
 # to test
@@ -234,6 +240,10 @@ class TestClouds(unittest.TestCase):
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
 
+    def test_pickleable(self):
+        aug = iaa.Clouds(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
+
 
 # only a very rough test here currently, because the augmenter is fairly hard
 # to test
@@ -308,6 +318,10 @@ class TestFog(unittest.TestCase):
                 assert np.any(image_aug > 0)
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+    def test_pickleable(self):
+        aug = iaa.Fog(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
 
 
 # only a very rough test here currently, because the augmenter is fairly hard
@@ -389,6 +403,10 @@ class TestSnowflakes(unittest.TestCase):
 
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+    def test_pickleable(self):
+        aug = iaa.Snowflakes(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
 
     @classmethod
     def _measure_uniformity(cls, image, patch_size=5, n_patches=100):

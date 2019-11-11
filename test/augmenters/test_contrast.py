@@ -28,7 +28,8 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import contrast as contrast_lib
 from imgaug.augmentables import batches as iabatches
-from imgaug.testutils import ArgCopyingMagicMock, keypoints_equal, reseed
+from imgaug.testutils import (ArgCopyingMagicMock, keypoints_equal, reseed,
+                              runtest_pickleable_uint8_img)
 
 
 class TestGammaContrast(unittest.TestCase):
@@ -258,6 +259,10 @@ class TestGammaContrast(unittest.TestCase):
                                 value_aug = image_aug[0, 0, c]
                                 value_expected = expected[0, 0, c]
                                 assert _allclose(value_aug, value_expected)
+
+    def test_pickleable(self):
+        aug = iaa.GammaContrast((0.5, 2.0), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
 
 
 class TestSigmoidContrast(unittest.TestCase):
@@ -489,6 +494,10 @@ class TestSigmoidContrast(unittest.TestCase):
                         assert image_aug.dtype.name == dtype.name
                         assert _allclose(image_aug, expected)
 
+    def test_pickleable(self):
+        aug = iaa.SigmoidContrast(gain=(1, 2), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
+
 
 class TestLogContrast(unittest.TestCase):
     def setUp(self):
@@ -678,6 +687,10 @@ class TestLogContrast(unittest.TestCase):
                         assert image_aug.dtype.name == dtype
                         assert _allclose(image_aug, expected)
 
+    def test_pickleable(self):
+        aug = iaa.LogContrast((1, 2), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
+
 
 class TestLinearContrast(unittest.TestCase):
     def setUp(self):
@@ -797,6 +810,10 @@ class TestLinearContrast(unittest.TestCase):
                 assert image_aug.shape == shape
 
     # test for other dtypes are in Test_adjust_contrast_linear
+
+    def test_pickleable(self):
+        aug = iaa.LinearContrast((0.5, 2.0), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
 
 
 class Test_adjust_contrast_linear(unittest.TestCase):
@@ -1242,6 +1259,12 @@ class TestAllChannelsCLAHE(unittest.TestCase):
         assert params[1][1] is None
         assert params[2] == 2
         assert params[3].value == 1
+
+    def test_pickleable(self):
+        aug = iaa.AllChannelsCLAHE(clip_limit=(30, 50),
+                                   tile_grid_size_px=(4, 12),
+                                   random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
 
 
 class TestCLAHE(unittest.TestCase):
@@ -1799,6 +1822,12 @@ class TestCLAHE(unittest.TestCase):
         assert params[3] == iaa.CSPACE_BGR
         assert params[4] == iaa.CSPACE_HSV
 
+    def test_pickleable(self):
+        aug = iaa.CLAHE(clip_limit=(30, 50),
+                        tile_grid_size_px=(4, 12),
+                        random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
+
 
 class TestAllChannelsHistogramEqualization(unittest.TestCase):
     def setUp(self):
@@ -1960,6 +1989,10 @@ class TestAllChannelsHistogramEqualization(unittest.TestCase):
         params = aug.get_parameters()
         assert len(params) == 0
 
+    def test_pickleable(self):
+        aug = iaa.AllChannelsHistogramEqualization(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=2, shape=(100, 100, 3))
+
 
 class TestHistogramEqualization(unittest.TestCase):
     def setUp(self):
@@ -2073,3 +2106,7 @@ class TestHistogramEqualization(unittest.TestCase):
         params = aug.get_parameters()
         assert params[0] == iaa.CSPACE_BGR
         assert params[1] == iaa.CSPACE_HSV
+
+    def test_pickleable(self):
+        aug = iaa.HistogramEqualization(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=2, shape=(100, 100, 3))

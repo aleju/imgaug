@@ -23,7 +23,8 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
-from imgaug.testutils import keypoints_equal, reseed, assert_cbaois_equal
+from imgaug.testutils import (reseed, assert_cbaois_equal,
+                              runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters.flip as fliplib
@@ -482,6 +483,10 @@ class _TestFliplrAndFlipudBase(object):
                 image_aug = aug.augment_image(image)
                 assert image_aug.dtype.name == dtype
                 assert np.allclose(image_aug, expected, atol=atol)
+
+    def test_pickleable(self):
+        aug = self.create_aug(0.5)
+        runtest_pickleable_uint8_img(aug, iterations=20)
 
 
 class TestFliplr(_TestFliplrAndFlipudBase, unittest.TestCase):

@@ -26,7 +26,8 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.testutils import (
-    array_equal_lists, keypoints_equal, reseed, assert_cbaois_equal)
+    array_equal_lists, keypoints_equal, reseed, assert_cbaois_equal,
+    runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters.geometric as geometriclib
@@ -3008,6 +3009,11 @@ class TestAffine_other(unittest.TestCase):
                     assert image_aug.dtype.name == "uint8"
                     assert image_aug.shape == shape
 
+    def test_pickleable(self):
+        aug = iaa.Affine(scale=(0.9, 1.1), translate_px=(-4, 4),
+                         rotate=(-10, 10), shear=(-10, 10), order=[0, 1])
+        runtest_pickleable_uint8_img(aug, iterations=20)
+
 
 # TODO migrate to unittest and split up tests or remove AffineCv2
 def test_AffineCv2():
@@ -5076,6 +5082,11 @@ class TestPiecewiseAffine(unittest.TestCase):
                     assert np.any(_isclose(image_aug[~self.other_dtypes_mask],
                                            np.float128(value)))
 
+    def test_pickleable(self):
+        aug = iaa.PiecewiseAffine(scale=0.2, nb_rows=4, nb_cols=4,
+                                  random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(25, 25, 1))
+
 
 class TestPerspectiveTransform(unittest.TestCase):
     def setUp(self):
@@ -6267,6 +6278,10 @@ class TestPerspectiveTransform(unittest.TestCase):
                         np.sum(_isclose(image_aug, expected)) / expected.size
                     ) > 0.7
 
+    def test_pickleable(self):
+        aug = iaa.PerspectiveTransform(0.2, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=4, shape=(25, 25, 1))
+
 
 class _elastic_trans_temp_thresholds(object):
     def __init__(self, alpha, sigma):
@@ -7440,6 +7455,11 @@ class TestElasticTransformation(unittest.TestCase):
                                 rtol=0, atol=atol
                             ))
 
+    def test_pickleable(self):
+        aug = iaa.ElasticTransformation(alpha=(0.2, 1.5), sigma=(1.0, 10.0),
+                                        random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=4, shape=(25, 25, 1))
+
 
 class _TwoValueParam(iap.StochasticParameter):
     def __init__(self, v1, v2):
@@ -8476,6 +8496,10 @@ class TestRot90(unittest.TestCase):
                     assert _allclose(image_aug[0, 0], 0)
                     assert _allclose(image_aug[2, 2], np.float128(value))
 
+    def test_pickleable(self):
+        aug = iaa.Rot90([0, 1, 2, 3], random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5)
+
 
 class TestWithPolarWarping(unittest.TestCase):
     def setUp(self):
@@ -9076,6 +9100,12 @@ class TestWithPolarWarping(unittest.TestCase):
 
         assert aug.__repr__() == expected
         assert aug.__str__() == expected
+
+    def test_pickleable(self):
+        aug = iaa.WithPolarWarping(
+            iaa.Affine(translate_px=(0, 10), random_state=1),
+            random_state=2)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(25, 25, 1))
 
 
 class Test_apply_jigsaw(unittest.TestCase):

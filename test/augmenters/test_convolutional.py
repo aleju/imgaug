@@ -21,7 +21,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 
 
 # TODO add tests for EdgeDetect
@@ -399,6 +399,20 @@ class TestConvolve(unittest.TestCase):
                 got_exception = True
             assert got_exception
 
+    def test_pickleable__identity_matrix(self):
+        identity_matrix = np.int64([[1]])
+        aug = iaa.Convolve(identity_matrix, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
+
+    def test_pickleable__callback_function(self):
+        aug = iaa.Convolve(_convolve_pickleable_matrix_generator,
+                           random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
+
+
+def _convolve_pickleable_matrix_generator(_img, _nb_channels, random_state):
+    return np.float32([[random_state.integers(0, 5)]])
+
 
 class TestSharpen(unittest.TestCase):
     def setUp(self):
@@ -629,6 +643,10 @@ class TestSharpen(unittest.TestCase):
             < density_expected + density_tolerance)
     """
 
+    def test_pickleable(self):
+        aug = iaa.Sharpen(alpha=(0.0, 1.0), lightness=(1, 3), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)
+
 
 class TestEmboss(unittest.TestCase):
     def setUp(self):
@@ -776,3 +794,7 @@ class TestEmboss(unittest.TestCase):
             assert "Expected " in str(exc)
             got_exception = True
         assert got_exception
+
+    def test_pickleable(self):
+        aug = iaa.Emboss(alpha=(0.0, 1.0), strength=(1, 3), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)

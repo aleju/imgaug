@@ -25,7 +25,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
-from imgaug.testutils import keypoints_equal, reseed
+from imgaug.testutils import keypoints_equal, reseed, runtest_pickleable_uint8_img
 
 
 class Test_blur_gaussian_(unittest.TestCase):
@@ -824,6 +824,10 @@ class TestGaussianBlur(unittest.TestCase):
                 got_exception = True
             assert got_exception
 
+    def test_pickleable(self):
+        aug = iaa.GaussianBlur((0.1, 3.0), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
+
 
 class TestAverageBlur(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -1203,6 +1207,10 @@ class TestAverageBlur(unittest.TestCase):
                 got_exception = True
             assert got_exception
 
+    def test_pickleable(self):
+        aug = iaa.AverageBlur((1, 11), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
+
 
 class TestMedianBlur(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -1342,6 +1350,10 @@ class TestMedianBlur(unittest.TestCase):
         expected = kpsoi
         assert keypoints_equal(observed, expected)
 
+    def test_pickleable(self):
+        aug = iaa.MedianBlur((1, 11), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
+
 
 # TODO extend these tests
 class TestBilateralBlur(unittest.TestCase):
@@ -1362,6 +1374,10 @@ class TestBilateralBlur(unittest.TestCase):
                 image_aug = iaa.BilateralBlur(3)(image=image)
 
                 assert image_aug.shape == image.shape
+
+    def test_pickleable(self):
+        aug = iaa.BilateralBlur((1, 11), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
 
 class TestMotionBlur(unittest.TestCase):
@@ -1634,7 +1650,7 @@ class TestMotionBlur(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.MotionBlur((3, 11), random_state=1)
-        test_pickleable_uint8_img(aug, iterations=10)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
 
 class TestMeanShiftBlur(unittest.TestCase):
@@ -1703,3 +1719,7 @@ class TestMeanShiftBlur(unittest.TestCase):
         params = aug.get_parameters()
         assert params[0] is aug.spatial_window_radius
         assert params[1] is aug.color_window_radius
+
+    def test_pickleable(self):
+        aug = iaa.MeanShiftBlur(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(40, 40, 3))

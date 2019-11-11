@@ -23,7 +23,8 @@ import imgaug.random as iarandom
 import imgaug.augmenters.pooling as iapooling
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.testutils import reseed, assert_cbaois_equal
+from imgaug.testutils import (reseed, assert_cbaois_equal,
+                              runtest_pickleable_uint8_img)
 
 
 class Test_compute_shape_after_pooling(unittest.TestCase):
@@ -605,6 +606,10 @@ class _TestPoolingAugmentersBase(object):
         assert isinstance(params[0][0], iap.Deterministic)
         assert params[0][0].value == 2
         assert params[0][1] is None
+
+    def test_pickleable(self):
+        aug = self.augmenter((1, 7), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(25, 25, 1))
 
     def subTest(self, *args, **kwargs):
         raise NotImplementedError
