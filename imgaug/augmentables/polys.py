@@ -905,6 +905,30 @@ class Polygon(object):
         )
         return self.deepcopy(exterior=exterior)
 
+    def subdivide(self, points_per_edge):
+        """Derive a new polygon with ``N`` interpolated points per edge.
+
+        See :func:`imgaug.augmentables.lines.LineString.subdivide` for details.
+
+        Parameters
+        ----------
+        points_per_edge : int
+            Number of points to interpolate on each edge.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.Polygon
+            Polygon with subdivided edges.
+
+        """
+        if len(self.exterior) == 1:
+            return self.deepcopy()
+        ls = self.to_line_string(closed=True)
+        ls_sub = ls.subdivide(points_per_edge)
+        # [:-1] even works if the polygon contains zero points
+        exterior_subdivided = ls_sub.coords[:-1]
+        return Polygon(exterior_subdivided, label=self.label)
+
     def to_shapely_polygon(self):
         """Convert this polygon to a ``Shapely`` ``Polygon``.
 
@@ -1493,6 +1517,23 @@ class PolygonsOnImage(object):
             for poly
             in self.polygons
         ]
+        return PolygonsOnImage(polys_new, shape=self.shape)
+
+    def subdivide(self, points_per_edge):
+        """Interpolate ``N`` points on each polygon.
+
+        Parameters
+        ----------
+        points_per_edge : int
+            Number of points to interpolate on each edge.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.PolygonsOnImage
+            Subdivided polygons.
+
+        """
+        polys_new = [poly.subdivide(points_per_edge) for poly in self.polygons]
         return PolygonsOnImage(polys_new, shape=self.shape)
 
     def to_xy_array(self):

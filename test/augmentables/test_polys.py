@@ -1408,6 +1408,78 @@ class TestPolygon_change_first_point_by_index(unittest.TestCase):
         assert got_exception
 
 
+class TestPolygon_subdivide(unittest.TestCase):
+    def test_zero_points(self):
+        poly = ia.Polygon([])
+        poly_sub = poly.subdivide(1)
+        assert len(poly_sub.exterior) == 0
+
+    def test_one_point(self):
+        poly = ia.Polygon([(1, 1)])
+        poly_sub = poly.subdivide(1)
+        assert len(poly_sub.exterior) == 1
+
+    def test_two_points(self):
+        poly = ia.Polygon([(1, 2), (2, 4)])
+        poly_sub = poly.subdivide(1)
+        assert len(poly_sub.exterior) == 4
+        assert poly_sub.coords_almost_equals([
+            (1, 2),
+            (1.5, 3.0),
+            (2, 4),
+            (1.5, 3.0)
+        ])
+
+    def test_three_points(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly_sub = poly.subdivide(1)
+        assert len(poly_sub.exterior) == 6
+        assert poly_sub.coords_almost_equals([
+            (0, 0),
+            (0.5, 0.0),
+            (1, 0),
+            (1, 0.5),
+            (1, 1),
+            (0.5, 0.5)
+        ])
+
+    def test_three_points__n_points_0(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly_sub = poly.subdivide(0)
+        assert len(poly_sub.exterior) == 3
+        assert poly_sub.coords_almost_equals([
+            (0, 0),
+            (1, 0),
+            (1, 1),
+        ])
+
+    def test_three_points__n_points_2(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly_sub = poly.subdivide(2)
+        assert len(poly_sub.exterior) == 3+2*3
+        assert poly_sub.coords_almost_equals([
+            (0, 0),
+            (1/3, 0),
+            (2/3, 0),
+            (1, 0),
+            (1, 1/3),
+            (1, 2/3),
+            (1, 1),
+            (2/3, 2/3),
+            (1/3, 1/3)
+        ])
+
+    def test_label_none_is_preserved(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly_sub = poly.subdivide(1)
+        assert poly_sub.label is None
+
+    def test_label_str_is_preserved(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)], label="foo")
+        poly_sub = poly.subdivide(1)
+        assert poly_sub.label == "foo"
+
+
 class TestPolygon_to_shapely_line_string(unittest.TestCase):
     def test_three_point_polygon(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
@@ -2337,6 +2409,44 @@ class TestPolygonsOnImage_shift(unittest.TestCase):
                             (200-3, 200+2), (100-3, 200+2)],
                            rtol=0, atol=1e-4)
         assert poly_oi_shifted.shape == (10, 11, 3)
+
+
+class TestPolygonsOnImage_subdivide(unittest.TestCase):
+    def test_mocked(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)])],
+            shape=(10, 11, 3))
+        mock_sub = mock.Mock()
+        mock_sub.return_value = "foo"
+        poly_oi.items[0].subdivide = mock_sub
+        poly_oi.items[1].subdivide = mock_sub
+
+        poly_oi_sub = poly_oi.subdivide(2)
+
+        assert mock_sub.call_count == 2
+        assert mock_sub.call_args_list[0][0][0] == 2
+        assert mock_sub.call_args_list[1][0][0] == 2
+        assert poly_oi_sub.items == ["foo", "foo"]
+
+    def test_with_zero_polygons(self):
+        poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
+        poly_oi_sub = poly_oi.subdivide(1)
+        assert len(poly_oi_sub.polygons) == 0
+        assert poly_oi_sub.shape == (10, 11, 3)
+
+    def test_with_one_polygon(self):
+        poly_oi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0)])],
+                                     shape=(10, 11, 3))
+        poly_oi_sub = poly_oi.subdivide(1)
+        assert poly_oi_sub.shape == (10, 11, 3)
+        assert len(poly_oi_sub.items) == 1
+        assert poly_oi_sub.items[0].coords_almost_equals([
+            (0, 0),
+            (0.5, 0),
+            (1, 0),
+            (0.5, 0)
+        ])
 
 
 class TestPolygonsOnImage_to_xy_array(unittest.TestCase):

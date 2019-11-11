@@ -710,6 +710,18 @@ class TestBoundingBox(unittest.TestCase):
         assert kps[3].y == 3
         assert kps[3].x == 1
 
+    def test_to_polygon(self):
+        bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3)
+
+        poly = bb.to_polygon()
+
+        assert poly.coords_almost_equals([
+            (1, 1),
+            (3, 1),
+            (3, 3,),
+            (1, 3)
+        ])
+
     def test_coords_almost_equals(self):
         bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
         other = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
@@ -1543,6 +1555,36 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
 
         assert len(bbsoi_inv.bounding_boxes) == 0
         assert bbsoi_inv.shape == (10, 20, 30)
+
+    def test_to_polygons_on_image(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        psoi = bbsoi.to_polygons_on_image()
+
+        assert psoi.shape == (40, 50, 3)
+        assert len(psoi.items) == 2
+        assert psoi.items[0].coords_almost_equals([
+            (20, 10),
+            (40, 10),
+            (40, 30),
+            (20, 30)
+        ])
+        assert psoi.items[1].coords_almost_equals([
+            (25, 15),
+            (51, 15),
+            (51, 35),
+            (25, 35)
+        ])
+
+    def test_to_polygons_on_image__empty_instance(self):
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(40, 50, 3))
+
+        psoi = bbsoi.to_polygons_on_image()
+
+        assert psoi.shape == (40, 50, 3)
+        assert len(psoi.items) == 0
 
     def test_copy(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)

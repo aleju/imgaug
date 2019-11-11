@@ -38,19 +38,21 @@ class ArgCopyingMagicMock(mock.MagicMock):
             *args_copy, **kwargs_copy)
 
 
-def assert_cbaois_equal(observed, expected):
+def assert_cbaois_equal(observed, expected, max_distance=1e-4):
     if isinstance(observed, list) or isinstance(expected, list):
         assert isinstance(observed, list)
         assert isinstance(expected, list)
         assert len(observed) == len(expected)
         for observed_i, expected_i in zip(observed, expected):
-            assert_cbaois_equal(observed_i, expected_i)
+            assert_cbaois_equal(observed_i, expected_i,
+                                max_distance=max_distance)
     else:
         assert type(observed) == type(expected)
         assert len(observed.items) == len(expected.items)
         assert observed.shape == expected.shape
         for item_a, item_b in zip(observed.items, expected.items):
-            assert item_a.coords_almost_equals(item_b)
+            assert item_a.coords_almost_equals(item_b,
+                                               max_distance=max_distance)
         if isinstance(expected, ia.PolygonsOnImage):
             for item_obs, item_exp in zip(observed.items, expected.items):
                 if item_exp.is_valid:
