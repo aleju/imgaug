@@ -50,6 +50,8 @@ def _check_value_range(v, name, value_range):
             str(value_range),))
 
 
+# FIXME this uses _check_value_range, which checks for a<=x<=b, but a produced
+#       Uniform parameter has value range a<=x<b.
 def handle_continuous_param(param, name, value_range=None,
                             tuple_to_uniform=True, list_to_choice=True):
     if ia.is_single_number(param):

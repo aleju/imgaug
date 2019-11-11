@@ -6,8 +6,8 @@ import imgaug.augmenters as iaa
 
 def main():
     image = ia.quokka_square((256, 256))
-    image_q2 = iaa.quantize_colors_kmeans(image, 2)
-    image_q16 = iaa.quantize_colors_kmeans(image, 16)
+    image_q2 = iaa.quantize_kmeans(image, 2)
+    image_q16 = iaa.quantize_kmeans(image, 16)
     ia.imshow(np.hstack([image_q2, image_q16]))
 
     from_cs = "RGB"

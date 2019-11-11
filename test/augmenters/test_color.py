@@ -13,12 +13,15 @@ try:
 except ImportError:
     import mock
 import copy as copylib
+import warnings
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import cv2
+import PIL.Image
+import PIL.ImageOps
 
 import imgaug as ia
 import imgaug.random as iarandom
@@ -2245,35 +2248,35 @@ class TestKMeansColorQuantization(unittest.TestCase):
 
     @property
     def quantization_func_name(self):
-        return "imgaug.augmenters.color.quantize_colors_kmeans"
+        return "imgaug.augmenters.color.quantize_kmeans"
 
     def test___init___defaults(self):
         aug = self.augmenter()
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
-        assert aug.from_colorspace == iaa.ChangeColorspace.RGB
+        assert aug.from_colorspace == iaa.CSPACE_RGB
         assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.RGB,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace == [iaa.CSPACE_RGB,
+                                     iaa.CSPACE_Lab]
         assert aug.max_size == 128
         assert aug.interpolation == "linear"
 
     def test___init___custom_parameters(self):
         aug = self.augmenter(
             n_colors=(5, 8),
-            from_colorspace=iaa.ChangeColorspace.BGR,
-            to_colorspace=[iaa.ChangeColorspace.HSV, iaa.ChangeColorspace.Lab],
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
             max_size=None,
             interpolation="cubic"
         )
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 5
         assert aug.n_colors.b.value == 8
-        assert aug.from_colorspace == iaa.ChangeColorspace.BGR
+        assert aug.from_colorspace == iaa.CSPACE_BGR
         assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.HSV,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace == [iaa.CSPACE_HSV,
+                                     iaa.CSPACE_Lab]
         assert aug.max_size is None
         assert aug.interpolation == "cubic"
 
@@ -2517,8 +2520,8 @@ class TestKMeansColorQuantization(unittest.TestCase):
     def test_get_parameters(self):
         aug = self.augmenter(
             n_colors=(5, 8),
-            from_colorspace=iaa.ChangeColorspace.BGR,
-            to_colorspace=[iaa.ChangeColorspace.HSV, iaa.ChangeColorspace.Lab],
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
             max_size=None,
             interpolation="cubic"
         )
@@ -2526,15 +2529,38 @@ class TestKMeansColorQuantization(unittest.TestCase):
         assert isinstance(params[0], iap.DiscreteUniform)
         assert params[0].a.value == 5
         assert params[0].b.value == 8
-        assert params[1] == iaa.ChangeColorspace.BGR
+        assert params[1] == iaa.CSPACE_BGR
         assert isinstance(params[2], list)
-        assert params[2] == [iaa.ChangeColorspace.HSV,
-                             iaa.ChangeColorspace.Lab]
+        assert params[2] == [iaa.CSPACE_HSV,
+                             iaa.CSPACE_Lab]
         assert params[3] is None
         assert params[4] == "cubic"
 
 
 class Test_quantize_colors_kmeans(unittest.TestCase):
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_warns_deprecated(self, mock_warn):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+
+        _ = iaa.quantize_colors_kmeans(arr, 2)
+
+        assert mock_warn.call_count == 1
+
+    @mock.patch("imgaug.augmenters.color.quantize_kmeans")
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_calls_quantize_kmeans(self, mock_warn, mock_qu):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        mock_qu.return_value = "foo"
+
+        result = iaa.quantize_colors_kmeans(arr, 7)
+
+        mock_qu.assert_called_once_with(arr=arr, nb_clusters=7,
+                                        nb_max_iter=10, eps=1.0)
+        assert result == "foo"
+        assert mock_warn.call_count == 1
+
+
+class Test_quantize_kmeans(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -2553,7 +2579,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_colors_kmeans(image, 2)
+        observed = iaa.quantize_kmeans(image, 2)
 
         assert np.array_equal(observed, expected)
 
@@ -2573,7 +2599,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
         ])
         expected = np.copy(image)
 
-        observed = iaa.quantize_colors_kmeans(image, 100)
+        observed = iaa.quantize_kmeans(image, 100)
 
         assert np.array_equal(observed, expected)
 
@@ -2585,7 +2611,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
 
         got_exception = False
         try:
-            _ = iaa.quantize_colors_kmeans(image, 1)
+            _ = iaa.quantize_kmeans(image, 1)
         except AssertionError as exc:
             assert "[2..256]" in str(exc)
             got_exception = True
@@ -2599,7 +2625,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
         # same quantization
         images_quantized = []
         for _ in sm.xrange(20):
-            images_quantized.append(iaa.quantize_colors_kmeans(image, 20))
+            images_quantized.append(iaa.quantize_kmeans(image, 20))
 
         for image_quantized in images_quantized[1:]:
             assert np.array_equal(image_quantized, images_quantized[0])
@@ -2619,7 +2645,7 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_kmeans(image, 2)
+                image_aug = iaa.quantize_kmeans(image, 2)
 
                 assert np.all(image_aug == 0)
                 assert image_aug.dtype.name == "uint8"
@@ -2637,14 +2663,14 @@ class Test_quantize_colors_kmeans(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_kmeans(image, 2)
+                image_aug = iaa.quantize_kmeans(image, 2)
 
                 assert np.all(image_aug == 0)
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
 
 
-class UniformColorQuantization(TestKMeansColorQuantization):
+class TestUniformColorQuantization(TestKMeansColorQuantization):
     def setUp(self):
         reseed()
 
@@ -2654,14 +2680,14 @@ class UniformColorQuantization(TestKMeansColorQuantization):
 
     @property
     def quantization_func_name(self):
-        return "imgaug.augmenters.color.quantize_colors_uniform"
+        return "imgaug.augmenters.color.quantize_uniform_"
 
     def test___init___defaults(self):
         aug = self.augmenter()
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
-        assert aug.from_colorspace == iaa.ChangeColorspace.RGB
+        assert aug.from_colorspace == iaa.CSPACE_RGB
         assert aug.to_colorspace is None
         assert aug.max_size is None
         assert aug.interpolation == "linear"
@@ -2669,18 +2695,18 @@ class UniformColorQuantization(TestKMeansColorQuantization):
     def test___init___custom_parameters(self):
         aug = self.augmenter(
             n_colors=(5, 8),
-            from_colorspace=iaa.ChangeColorspace.BGR,
-            to_colorspace=[iaa.ChangeColorspace.HSV, iaa.ChangeColorspace.Lab],
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
             max_size=128,
             interpolation="cubic"
         )
         assert isinstance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 5
         assert aug.n_colors.b.value == 8
-        assert aug.from_colorspace == iaa.ChangeColorspace.BGR
+        assert aug.from_colorspace == iaa.CSPACE_BGR
         assert isinstance(aug.to_colorspace, list)
-        assert aug.to_colorspace == [iaa.ChangeColorspace.HSV,
-                                     iaa.ChangeColorspace.Lab]
+        assert aug.to_colorspace == [iaa.CSPACE_HSV,
+                                     iaa.CSPACE_Lab]
         assert aug.max_size == 128
         assert aug.interpolation == "cubic"
 
@@ -2781,7 +2807,137 @@ class UniformColorQuantization(TestKMeansColorQuantization):
             == "foo")
 
 
+# Not that many tests here as it is basically identical to e.g.
+# UniformColorQuantization
+class TestUniformColorQuantizationToNBits(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @property
+    def augmenter(self):
+        return iaa.UniformColorQuantizationToNBits
+
+    @property
+    def quantization_func_name(self):
+        return "imgaug.augmenters.color.quantize_uniform_to_n_bits"
+
+    def test___init___defaults(self):
+        aug = self.augmenter()
+        assert isinstance(aug.counts, iap.DiscreteUniform)
+        assert aug.counts.a.value == 1
+        assert aug.counts.b.value == 8
+        assert aug.from_colorspace == iaa.CSPACE_RGB
+        assert aug.to_colorspace is None
+        assert aug.max_size is None
+        assert aug.interpolation == "linear"
+
+    def test___init___custom_parameters(self):
+        aug = self.augmenter(
+            nb_bits=(5, 8),
+            from_colorspace=iaa.CSPACE_BGR,
+            to_colorspace=[iaa.CSPACE_HSV, iaa.CSPACE_Lab],
+            max_size=128,
+            interpolation="cubic"
+        )
+        assert isinstance(aug.counts, iap.DiscreteUniform)
+        assert aug.counts.a.value == 5
+        assert aug.counts.b.value == 8
+        assert aug.from_colorspace == iaa.CSPACE_BGR
+        assert isinstance(aug.to_colorspace, list)
+        assert aug.to_colorspace == [iaa.CSPACE_HSV,
+                                     iaa.CSPACE_Lab]
+        assert aug.max_size == 128
+        assert aug.interpolation == "cubic"
+
+    def test_images_with_1_channel_integrationtest(self):
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+        ])
+        expected = np.uint8([
+            [0, 0, 128, 128],
+            [0, 0, 128, 128],
+        ])
+
+        aug = self.augmenter(
+            nb_bits=1,
+            from_colorspace="RGB",
+            to_colorspace="RGB",
+            max_size=None)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, expected)
+
+    def test_images_with_3_channels_integrationtest(self):
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+        ])
+        expected = np.uint8([
+            [0, 0, 128, 128],
+            [0, 0, 128, 128],
+        ])
+
+        image = np.tile(image[..., np.newaxis], (1, 1, 3))
+        expected = np.tile(expected[..., np.newaxis], (1, 1, 3))
+
+        aug = self.augmenter(
+            nb_bits=1,
+            from_colorspace="RGB",
+            to_colorspace="RGB",
+            max_size=None)
+
+        observed = aug(image=image)
+
+        assert np.array_equal(observed, expected)
+
+
+class TestPosterize(TestUniformColorQuantizationToNBits):
+    @property
+    def augmenter(self):
+        return iaa.Posterize
+
+
 class Test_quantize_colors_uniform(unittest.TestCase):
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_warns_deprecated(self, mock_warn):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+
+        _ = iaa.quantize_colors_uniform(arr, 2)
+
+        assert mock_warn.call_count == 1
+
+    @mock.patch("imgaug.augmenters.color.quantize_uniform")
+    @mock.patch("imgaug.imgaug.warn_deprecated")
+    def test_calls_quantize_uniform(self, mock_warn, mock_qu):
+        arr = np.arange(1*1*3).astype(np.uint8).reshape((1, 1, 3))
+        mock_qu.return_value = "foo"
+
+        result = iaa.quantize_colors_uniform(arr, 7)
+
+        mock_qu.assert_called_once_with(arr=arr, nb_bins=7)
+        assert result == "foo"
+        assert mock_warn.call_count == 1
+
+
+class Test_quantize_uniform(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_")
+    def test_calls_inplace_function(self, mock_qu):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        mock_qu.return_value = "foo"
+
+        result = iaa.quantize_uniform(image, 3)
+
+        # image provided to in-place func must be copy with same content
+        assert mock_qu.call_args_list[0][0][0] is not image
+        assert np.array_equal(mock_qu.call_args_list[0][0][0], image)
+
+        assert mock_qu.call_args_list[0][1]["nb_bins"] == 3
+        assert result == "foo"
+
+
+class Test_quantize_uniform_(unittest.TestCase):
     def setUp(self):
         reseed()
 
@@ -2800,7 +2956,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_colors_uniform(image, 2)
+        observed = iaa.quantize_uniform_(np.copy(image), 2)
 
         assert np.array_equal(observed, expected)
 
@@ -2833,7 +2989,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
             expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
 
-        observed = iaa.quantize_colors_uniform(image, 4)
+        observed = iaa.quantize_uniform_(np.copy(image), 4)
 
         assert np.array_equal(observed, expected)
 
@@ -2855,6 +3011,34 @@ class Test_quantize_colors_uniform(unittest.TestCase):
     def test_images_with_3_channels_4_colors(self):
         self._test_images_with_n_channels_4_colors(3)
 
+    def test_to_bin_centers_is_false(self):
+        nb_channels = 3
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+            [127, 128, 220, 220]
+        ])
+
+        c1 = 0
+        c2 = 64
+        c3 = 128
+        c4 = 192
+
+        expected = np.uint8([
+            [c1, c1, c4, c4],
+            [c1, c1, c4, c4],
+            [c2, c3, c4, c4]
+        ])
+
+        image = np.tile(image[..., np.newaxis], (1, 1, nb_channels))
+        expected = np.tile(expected[..., np.newaxis], (1, 1, nb_channels))
+
+        observed = iaa.quantize_uniform_(np.copy(image),
+                                         4,
+                                         to_bin_centers=False)
+
+        assert np.array_equal(observed, expected)
+
     def test_failure_if_n_colors_less_than_2(self):
         image = np.uint8([
             [0, 0, 255, 255],
@@ -2863,11 +3047,30 @@ class Test_quantize_colors_uniform(unittest.TestCase):
 
         got_exception = False
         try:
-            _ = iaa.quantize_colors_uniform(image, 1)
+            _ = iaa.quantize_uniform_(np.copy(image), 1)
         except AssertionError as exc:
             assert "[2..256]" in str(exc)
             got_exception = True
         assert got_exception
+
+    def test_noncontiguous(self):
+        image = np.uint8([
+            [0, 0, 255, 255],
+            [0, 1, 255, 255],
+        ])
+        expected = np.uint8([
+            [192, 192, 64, 64],
+            [192, 192, 64, 64],
+        ])
+
+        image_v = np.fliplr(np.copy(image))
+        assert image_v.flags["C_CONTIGUOUS"] is False
+
+        observed = iaa.quantize_uniform_(image_v, 2)
+
+        assert observed.shape == (2, 4)
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
 
     def test_zero_sized_axes(self):
         shapes = [
@@ -2884,7 +3087,7 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_uniform(image, 2)
+                image_aug = iaa.quantize_uniform_(np.copy(image), 2)
 
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
@@ -2901,8 +3104,72 @@ class Test_quantize_colors_uniform(unittest.TestCase):
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
 
-                image_aug = iaa.quantize_colors_uniform(image, 2)
+                image_aug = iaa.quantize_uniform_(np.copy(image), 2)
 
                 assert np.any(image_aug > 0)
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+
+class Test_quantize_uniform_to_n_bits(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_to_n_bits_")
+    def test_calls_inplace_function(self, mock_qu):
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        mock_qu.return_value = "foo"
+
+        result = iaa.quantize_uniform_to_n_bits(image, 3)
+
+        # image provided to in-place func must be copy with same content
+        assert mock_qu.call_args_list[0][0][0] is not image
+        assert np.array_equal(mock_qu.call_args_list[0][0][0], image)
+
+        assert mock_qu.call_args_list[0][1]["nb_bits"] == 3
+        assert result == "foo"
+
+
+# not much testing necessary here as the function is a wrapper around
+# quantize_uniform()
+class Test_quantize_uniform_to_n_bits_(unittest.TestCase):
+    def test_by_comparison_with_pil(self):
+        image = np.arange(64*64*3).reshape((64, 64, 3))
+        image = np.mod(image, 255).astype(np.uint8)
+        for nb_bits in [1, 2, 3, 4, 5, 6, 7, 8]:
+            image_iaa = iaa.quantize_uniform_to_n_bits_(np.copy(image),
+                                                        nb_bits)
+            image_pil = np.asarray(
+                PIL.ImageOps.posterize(
+                    PIL.Image.fromarray(image),
+                    nb_bits
+                )
+            )
+
+            assert np.array_equal(image_iaa, image_pil)
+
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_")
+    def test_mocked(self, mock_qu):
+        mock_qu.return_value = "foo"
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        nb_bits = 3
+
+        result = iaa.quantize_uniform_to_n_bits_(np.copy(image), nb_bits)
+
+        # image provided to in-place func must be copy with same content
+        assert mock_qu.call_args_list[0][0][0] is not image
+        assert np.array_equal(mock_qu.call_args_list[0][0][0], image)
+
+        assert mock_qu.call_args_list[0][1]["nb_bins"] == 2**nb_bits
+        assert mock_qu.call_args_list[0][1]["to_bin_centers"] is False
+        assert result == "foo"
+
+
+class Test_posterize(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.color.quantize_uniform_to_n_bits")
+    def test_mocked(self, mock_qu):
+        mock_qu.return_value = "foo"
+        image = np.zeros((1, 1, 3), dtype=np.uint8)
+        nb_bits = 3
+
+        result = iaa.posterize(image, nb_bits)
+
+        mock_qu.assert_called_once_with(image, nb_bits)
+        assert result == "foo"

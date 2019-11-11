@@ -3211,7 +3211,9 @@ class ChangeColorTemperature(meta.Augmenter):
 @six.add_metaclass(ABCMeta)
 class _AbstractColorQuantization(meta.Augmenter):
     def __init__(self,
-                 n_colors=(2, 16), from_colorspace=CSPACE_RGB,
+                 counts=(2, 16),  # number of bits or colors
+                 counts_value_range=(2, None),
+                 from_colorspace=CSPACE_RGB,
                  to_colorspace=[CSPACE_RGB, CSPACE_Lab],
                  max_size=128,
                  interpolation="linear",
@@ -3220,8 +3222,9 @@ class _AbstractColorQuantization(meta.Augmenter):
         super(_AbstractColorQuantization, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-        self.n_colors = iap.handle_discrete_param(
-            n_colors, "n_colors", value_range=(2, None),
+        self.counts_value_range = counts_value_range
+        self.counts = iap.handle_discrete_param(
+            counts, "counts", value_range=counts_value_range,
             tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
         self.from_colorspace = from_colorspace
         self.to_colorspace = to_colorspace
@@ -3229,15 +3232,17 @@ class _AbstractColorQuantization(meta.Augmenter):
         self.interpolation = interpolation
 
     def _draw_samples(self, n_augmentables, random_state):
-        n_colors = self.n_colors.draw_samples((n_augmentables,), random_state)
+        counts = self.counts.draw_samples((n_augmentables,), random_state)
+        counts = np.round(counts).astype(np.int32)
 
-        # Quantizing down to less than 2 colors does not make any sense.
-        # Note that we canget <2 here despite the value range constraint
-        # in __init__ if a StochasticParameter was provided, e.g.
+        # Note that we can get values outside of the value range for counts
+        # here if a StochasticParameter was provided, e.g.
         # Deterministic(1) is currently not verified.
-        n_colors = np.clip(n_colors, 2, None)
+        counts = np.clip(counts,
+                         self.counts_value_range[0],
+                         self.counts_value_range[1])
 
-        return n_colors
+        return counts
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         if batch.images is None:
@@ -3245,14 +3250,14 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         images = batch.images
         rss = random_state.duplicate(1 + len(images))
-        n_colors = self._draw_samples(len(images), rss[-1])
+        counts = self._draw_samples(len(images), rss[-1])
 
         for i, image in enumerate(images):
-            batch.images[i] = self._augment_single_image(image, n_colors[i],
+            batch.images[i] = self._augment_single_image(image, counts[i],
                                                          rss[i])
         return batch
 
-    def _augment_single_image(self, image, n_colors, random_state):
+    def _augment_single_image(self, image, counts, random_state):
         assert image.shape[-1] in [1, 3, 4], (
             "Expected image with 1, 3 or 4 channels, "
             "got %d (shape: %s)." % (image.shape[-1], image.shape))
@@ -3263,7 +3268,7 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         if image.shape[-1] == 1:
             # 2D image
-            image_aug = self._quantize(image, n_colors)
+            image_aug = self._quantize(image, counts)
         else:
             # 3D image with 3 or 4 channels
             alpha_channel = None
@@ -3292,7 +3297,7 @@ class _AbstractColorQuantization(meta.Augmenter):
                     deterministic=True)
 
             image_tf = cs.augment_image(image)
-            image_tf_aug = self._quantize(image_tf, n_colors)
+            image_tf_aug = self._quantize(image_tf, counts)
             image_aug = cs_inv.augment_image(image_tf_aug)
 
             if alpha_channel is not None:
@@ -3307,11 +3312,11 @@ class _AbstractColorQuantization(meta.Augmenter):
         return image_aug
 
     @abstractmethod
-    def _quantize(self, image, n_colors):
+    def _quantize(self, image, counts):
         """Apply the augmenter-specific quantization function to an image."""
 
     def get_parameters(self):
-        return [self.n_colors,
+        return [self.counts,
                 self.from_colorspace,
                 self.to_colorspace,
                 self.max_size,
@@ -3465,23 +3470,44 @@ class KMeansColorQuantization(_AbstractColorQuantization):
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
         super(KMeansColorQuantization, self).__init__(
-            n_colors=n_colors,
+            counts=n_colors,
             from_colorspace=from_colorspace,
             to_colorspace=to_colorspace,
             max_size=max_size,
             interpolation=interpolation,
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _quantize(self, image, n_colors):
-        return quantize_colors_kmeans(image, n_colors)
+    @property
+    def n_colors(self):
+        """Alias for property ``counts``."""
+        return self.counts
+
+    def _quantize(self, image, counts):
+        return quantize_kmeans(image, counts)
 
 
+@ia.deprecated("imgaug.augmenters.colors.quantize_kmeans")
 def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
-    """
-    Apply k-Means color quantization to an image.
+    """Outdated name of :func:`quantize_kmeans`."""
+    return quantize_kmeans(arr=image, nb_clusters=n_colors,
+                           nb_max_iter=n_max_iter, eps=eps)
+
+
+def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
+    """Quantize an array into N bins using k-means clustering.
+
+    If the input is an image, this method returns in an image with a maximum
+    of ``N`` colors. Similar colors are grouped to their mean. The k-means
+    clustering happens across channels and not channelwise.
 
     Code similar to https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_ml/
     py_kmeans/py_kmeans_opencv/py_kmeans_opencv.html
+
+    .. warning ::
+
+        This function currently changes the RNG state of both OpenCV's
+        internal RNG and imgaug's global RNG. This is necessary in order
+        to ensure that the k-means clustering happens deterministically.
 
     dtype support::
 
@@ -3501,18 +3527,20 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
 
     Parameters
     ----------
-    image : ndarray
-        Image in which to quantize colors. Expected to be of shape ``(H,W)``
-        or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+    arr : ndarray
+        Array to quantize. Expected to be of shape ``(H,W)`` or ``(H,W,C)``
+        with ``C`` usually being ``1`` or ``3``.
 
-    n_colors : int
-        Maximum number of output colors.
+    nb_clusters : int
+        Number of clusters to quantize into, i.e. ``k`` in k-means clustering.
+        This corresponds to the maximum number of colors in an output image.
 
-    n_max_iter : int, optional
-        Maximum number of iterations in k-Means.
+    nb_max_iter : int, optional
+        Maximum number of iterations that the k-means clustering algorithm
+        is run.
 
     eps : float, optional
-        Minimum change of all clusters per k-Means iteration. If all clusters
+        Minimum change of all clusters per k-means iteration. If all clusters
         change by less than this amount in an iteration, the clustering is
         stopped.
 
@@ -3526,7 +3554,7 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_colors_kmeans(image, 6)
+    >>> image_quantized = iaa.quantize_kmeans(image, 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
@@ -3534,25 +3562,25 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     that the six remaining colors do have to appear in the input image.
 
     """
-    assert image.ndim in [2, 3], (
-        "Expected two- or three-dimensional image shape, "
-        "got shape %s." % (image.shape,))
-    assert image.dtype.name == "uint8", "Expected uint8 image, got %s." % (
-        image.dtype.name,)
-    assert 2 <= n_colors <= 256, (
-        "Expected n_colors to be in the discrete interval [2..256]. "
-        "Got a value of %d instead." % (n_colors,))
+    assert arr.ndim in [2, 3], (
+        "Expected two- or three-dimensional array shape, "
+        "got shape %s." % (arr.shape,))
+    assert arr.dtype.name == "uint8", "Expected uint8 array, got %s." % (
+        arr.dtype.name,)
+    assert 2 <= nb_clusters <= 256, (
+        "Expected nb_clusters to be in the discrete interval [2..256]. "
+        "Got a value of %d instead." % (nb_clusters,))
 
     # without this check, kmeans throws an exception
-    n_pixels = np.prod(image.shape[0:2])
-    if n_colors >= n_pixels:
-        return np.copy(image)
+    n_pixels = np.prod(arr.shape[0:2])
+    if nb_clusters >= n_pixels:
+        return np.copy(arr)
 
-    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
-    colors = image.reshape((-1, nb_channels)).astype(np.float32)
+    nb_channels = 1 if arr.ndim == 2 else arr.shape[-1]
+    pixel_vectors = arr.reshape((-1, nb_channels)).astype(np.float32)
 
     criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS,
-                n_max_iter, eps)
+                nb_max_iter, eps)
     attempts = 1
 
     # We want our quantization function to be deterministic (so that the
@@ -3566,16 +3594,17 @@ def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
     # TODO this is quite hacky
     cv2.setRNGSeed(1)
     _compactness, labels, centers = cv2.kmeans(
-        colors, n_colors, None, criteria, attempts, cv2.KMEANS_RANDOM_CENTERS)
+        pixel_vectors, nb_clusters, None, criteria, attempts,
+        cv2.KMEANS_RANDOM_CENTERS)
     # TODO replace by sample_seed function
     # cv2 seems to be able to handle SEED_MAX_VALUE (tested) but not floats
     cv2.setRNGSeed(iarandom.get_global_rng().generate_seed_())
 
     # Convert back to uint8 (or whatever the image dtype was) and to input
     # image shape
-    centers_uint8 = np.array(centers, dtype=image.dtype)
+    centers_uint8 = np.array(centers, dtype=arr.dtype)
     quantized_flat = centers_uint8[labels.flatten()]
-    return quantized_flat.reshape(image.shape)
+    return quantized_flat.reshape(arr.shape)
 
 
 class UniformColorQuantization(_AbstractColorQuantization):
@@ -3603,14 +3632,14 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_uniform`
+                :func:`imgaug.augmenters.color.quantize_uniform_`
             )
 
         if (image size > max_size)::
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_uniform`,
+                :func:`imgaug.augmenters.color.quantize_uniform_`,
                 :func:`imgaug.imgaug.imresize_single_image`
             )
 
@@ -3704,23 +3733,213 @@ class UniformColorQuantization(_AbstractColorQuantization):
                  name=None, deterministic=False, random_state=None):
         # pylint: disable=dangerous-default-value
         super(UniformColorQuantization, self).__init__(
-            n_colors=n_colors,
+            counts=n_colors,
             from_colorspace=from_colorspace,
             to_colorspace=to_colorspace,
             max_size=max_size,
             interpolation=interpolation,
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _quantize(self, image, n_colors):
-        return quantize_colors_uniform(image, n_colors)
+    @property
+    def n_colors(self):
+        """Alias for property ``counts``."""
+        return self.counts
+
+    def _quantize(self, image, counts):
+        return quantize_uniform_(image, counts)
 
 
+class UniformColorQuantizationToNBits(_AbstractColorQuantization):
+    """Quantize images by setting ``8-B`` bits of each component to zero.
+
+    This augmenter sets the ``8-B`` highest frequency (rightmost) bits of
+    each array component to zero. For ``B`` bits this is equivalent to
+    changing each component's intensity value ``v`` to
+    ``v' = v & (2**(8-B) - 1)``, e.g. for ``B=3`` this results in
+    ``v' = c & ~(2**(3-1) - 1) = c & ~3 = c & ~0000 0011 = c & 1111 1100``.
+
+    This augmenter behaves for ``B`` similarly to
+    ``UniformColorQuantization(2**B)``, but quantizes each bin with interval
+    ``(a, b)`` to ``a`` instead of ``a + (b-a)/2``.
+
+    This augmenter is comparable to :func:`PIL.ImageOps.posterize`.
+
+    .. note::
+
+        This augmenter expects input images to be either grayscale
+        or to have 3 or 4 channels and use colorspace `from_colorspace`. If
+        images have 4 channels, it is assumed that the 4th channel is an alpha
+        channel and it will not be quantized.
+
+    dtype support::
+
+        if (image size <= max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_uniform`
+            )
+
+        if (image size > max_size)::
+
+            minimum of (
+                ``imgaug.augmenters.color.ChangeColorspace``,
+                :func:`imgaug.augmenters.color.quantize_colors_uniform`,
+                :func:`imgaug.imgaug.imresize_single_image`
+            )
+
+    Parameters
+    ----------
+    nb_bits : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Number of bits to keep in each image's array component.
+
+            * If a number, exactly that value will always be used.
+            * If a tuple ``(a, b)``, then a value from the discrete
+              interval ``[a..b]`` will be sampled per image.
+            * If a list, then a random value will be sampled from that list
+              per image.
+            * If a ``StochasticParameter``, then a value will be sampled per
+              image from that parameter.
+
+    to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
+        The colorspace in which to perform the quantization.
+        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
+        This will be ignored for grayscale input images.
+
+            * If ``None`` the colorspace of input images will not be changed.
+            * If a string, it must be among the allowed colorspaces.
+            * If a list, it is expected to be a list of strings, each one
+              being an allowed colorspace. A random element from the list
+              will be chosen per image.
+            * If a StochasticParameter, it is expected to return string. A new
+              sample will be drawn per image.
+
+    from_colorspace : str, optional
+        The colorspace of the input images.
+        See `to_colorspace`. Only a single string is allowed.
+
+    max_size : None or int, optional
+        Maximum image size at which to perform the augmentation.
+        If the width or height of an image exceeds this value, it will be
+        downscaled before running the augmentation so that the longest side
+        matches `max_size`.
+        This is done to speed up the augmentation. The final output image has
+        the same size as the input image. Use ``None`` to apply no downscaling.
+
+    interpolation : int or str, optional
+        Interpolation method to use during downscaling when `max_size` is
+        exceeded. Valid methods are the same as in
+        :func:`imgaug.imgaug.imresize_single_image`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.UniformColorQuantizationToNBits()
+
+    Create an augmenter to apply uniform color quantization to images using a
+    random amount of bits to remove, sampled uniformly from the discrete
+    interval ``[1..8]``.
+
+    >>> aug = iaa.UniformColorQuantizationToNBits(nb_bits=(4, 8))
+
+    Create an augmenter that quantizes images by removing ``8-B`` rightmost
+    bits from each component, where ``B`` is uniformly sampled from the
+    discrete interval ``[4..8]``.
+
+    >>> aug = iaa.UniformColorQuantizationToNBits(
+    >>>     from_colorspace=iaa.CSPACE_BGR,
+    >>>     to_colorspace=[iaa.CSPACE_RGB, iaa.CSPACE_HSV])
+
+    Create an augmenter that uniformly quantizes images in either ``RGB``
+    or ``HSV`` colorspace (randomly picked per image). The input colorspace
+    of all images has to be ``BGR``.
+
+    """
+
+    def __init__(self,
+                 nb_bits=(1, 8),
+                 from_colorspace=CSPACE_RGB,
+                 to_colorspace=None,
+                 max_size=None,
+                 interpolation="linear",
+                 name=None, deterministic=False, random_state=None):
+        # pylint: disable=dangerous-default-value
+
+        # wrt value range: for discrete params, (1, 8) results in
+        # DiscreteUniform with interval [1, 8]
+        super(UniformColorQuantizationToNBits, self).__init__(
+            counts=nb_bits,
+            counts_value_range=(1, 8),
+            from_colorspace=from_colorspace,
+            to_colorspace=to_colorspace,
+            max_size=max_size,
+            interpolation=interpolation,
+            name=name, deterministic=deterministic, random_state=random_state)
+
+    def _quantize(self, image, counts):
+        return quantize_uniform_to_n_bits_(image, counts)
+
+
+class Posterize(UniformColorQuantizationToNBits):
+    """Alias for :class:`UniformColorQuantizationToNBits`."""
+    pass
+
+
+@ia.deprecated("imgaug.augmenters.colors.quantize_uniform")
 def quantize_colors_uniform(image, n_colors):
-    """Quantize colors into N bins with regular distance.
+    """Outdated name for :func:`quantize_uniform`."""
+    return quantize_uniform(arr=image, nb_bins=n_colors)
 
-    For ``uint8`` images the equation is ``floor(v/q)*q + q/2`` with
+
+def quantize_uniform(arr, nb_bins, to_bin_centers=True):
+    """Quantize an array into N equally-sized bins.
+
+    See :func:`quantize_uniform_` for details.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.quantize_uniform_`.
+
+    Parameters
+    ----------
+    arr : ndarray
+        See :func:`quantize_uniform_`.
+
+    nb_bins : int
+        See :func:`quantize_uniform_`.
+
+    to_bin_centers : bool
+        See :func:`quantize_uniform_`.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components.
+
+    """
+    return quantize_uniform_(np.copy(arr),
+                             nb_bins=nb_bins,
+                             to_bin_centers=to_bin_centers)
+
+
+def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
+    """Quantize an array into N equally-sized bins in-place.
+
+    This can be used to quantize/posterize an image into N colors.
+
+    For ``uint8`` arrays the equation is ``floor(v/q)*q + q/2`` with
     ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
-    the target number of colors after quantization.
+    the target number of bins (roughly matches number of colors) after
+    quantization.
 
     dtype support::
 
@@ -3740,44 +3959,224 @@ def quantize_colors_uniform(image, n_colors):
 
     Parameters
     ----------
-    image : ndarray
-        Image in which to quantize colors. Expected to be of shape ``(H,W)``
+    arr : ndarray
+        Array to quantize, usually an image. Expected to be of shape ``(H,W)``
         or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+        This array *may* be changed in-place.
 
-    n_colors : int
-        Maximum number of output colors.
+    nb_bins : int
+        Number of equally-sized bins to quantize into. This corresponds to
+        the maximum number of colors in an output image.
+
+    to_bin_centers : bool
+        Whether to quantize each bin ``(a, b)`` to ``a + (b-a)/2`` (center
+        of bin, ``True``) or to ``a`` (lower boundary, ``False``).
 
     Returns
     -------
     ndarray
-        Image with quantized colors.
+        Array with quantized components. This *may* be the input array with
+        components changed in-place.
 
     Examples
     --------
     >>> import imgaug.augmenters as iaa
     >>> import numpy as np
     >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
-    >>> image_quantized = iaa.quantize_colors_uniform(image, 6)
+    >>> image_quantized = iaa.quantize_uniform_(np.copy(image), 6)
 
     Generates a ``4x4`` image with ``3`` channels, containing consecutive
     values from ``0`` to ``4*4*3``, leading to an equal number of colors.
-    These colors are then quantized so that only ``6`` are remaining. Note
-    that the six remaining colors do have to appear in the input image.
+    Each component is then quantized into one of ``6`` bins that regularly
+    split up the value range of ``[0..255]``, i.e. the resolution w.r.t. to
+    the value range is reduced.
 
     """
-    assert image.dtype.name == "uint8", "Expected uint8 image, got %s." % (
-        image.dtype.name,)
-    assert 2 <= n_colors <= 256, (
-        "Expected n_colors to be in the discrete interval [2..256]. "
-        "Got a value of %d instead." % (n_colors,))
+    if nb_bins == 256 or 0 in arr.shape:
+        return arr
 
-    n_colors = np.clip(n_colors, 2, 256)
+    assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
+        arr.dtype.name,)
+    assert 2 <= nb_bins <= 256, (
+        "Expected nb_bins to be in the discrete interval [2..256]. "
+        "Got a value of %d instead." % (nb_bins,))
 
-    if n_colors == 256:
-        return np.copy(image)
+    if arr.flags["C_CONTIGUOUS"] is False:
+        arr = np.ascontiguousarray(arr)
 
-    q = 256 / n_colors
-    image_aug = np.floor(image.astype(np.float32) / q) * q + q/2
+    table_class = (_QuantizeUniformCenterizedLUTTableSingleton
+                   if to_bin_centers
+                   else _QuantizeUniformNotCenterizedLUTTableSingleton)
+    table = (table_class
+             .get_instance()
+             .get_for_nb_bins(nb_bins))
+    arr = cv2.LUT(arr, table, dst=arr)
+    return arr
 
-    image_aug_uint8 = np.clip(np.round(image_aug), 0, 255).astype(np.uint8)
-    return image_aug_uint8
+
+class _QuantizeUniformCenterizedLUTTableSingleton(object):
+    _INSTANCE = None
+
+    @classmethod
+    def get_instance(cls):
+        """Get singleton instance of :class:`_QuantizeUniformLUTTable`.
+
+        Returns
+        -------
+        _QuantizeUniformLUTTable
+            The global instance of :class:`_QuantizeUniformLUTTable`.
+
+        """
+        if cls._INSTANCE is None:
+            cls._INSTANCE = _QuantizeUniformLUTTable(centerize=True)
+        return cls._INSTANCE
+
+
+class _QuantizeUniformNotCenterizedLUTTableSingleton(object):
+    """Table for :func:`quantize_uniform` with ``to_bin_centers=False``."""
+    _INSTANCE = None
+
+    @classmethod
+    def get_instance(cls):
+        """Get singleton instance of :class:`_QuantizeUniformLUTTable`.
+
+        Returns
+        -------
+        _QuantizeUniformLUTTable
+            The global instance of :class:`_QuantizeUniformLUTTable`.
+
+        """
+        if cls._INSTANCE is None:
+            cls._INSTANCE = _QuantizeUniformLUTTable(centerize=False)
+        return cls._INSTANCE
+
+
+class _QuantizeUniformLUTTable(object):
+    def __init__(self, centerize):
+        self.table = self._generate_quantize_uniform_table(centerize)
+
+    def get_for_nb_bins(self, nb_bins):
+        return self.table[nb_bins, :]
+
+    @classmethod
+    def _generate_quantize_uniform_table(cls, centerize):
+        # For simplicity, we generate here the tables for nb_bins=0 (results
+        # in all zeros) and nb_bins=256 too, even though these should usually
+        # not be requested.
+        table = np.arange(0, 256).astype(np.float32)
+        table_all_nb_bins = np.zeros((256, 256), dtype=np.float32)
+
+        # This loop could be done a little bit faster by vectorizing it.
+        # It is expected to be run exactly once per run of a whole script,
+        # making the difference negligible.
+        for nb_bins in np.arange(1, 255).astype(np.uint8):
+            q = 256 / nb_bins
+            table_q_f32 = np.floor(table / q) * q
+            if centerize:
+                table_q_f32 = table_q_f32 + q/2
+            table_all_nb_bins[nb_bins] = table_q_f32
+        table_all_nb_bins = np.clip(
+            np.round(table_all_nb_bins), 0, 255).astype(np.uint8)
+        return table_all_nb_bins
+
+
+def quantize_uniform_to_n_bits(arr, nb_bits):
+    """Reduce each component in an array to a maximum number of bits.
+
+    See :func:`quantize_uniform_to_n_bits` for details.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.quantize_uniform_to_n_bits_`.
+
+    Parameters
+    ----------
+    arr : ndarray
+        See :func:`quantize_uniform_to_n_bits`.
+
+    nb_bits : int
+        See :func:`quantize_uniform_to_n_bits`.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components.
+
+    """
+    return quantize_uniform_to_n_bits_(np.copy(arr), nb_bits=nb_bits)
+
+
+def quantize_uniform_to_n_bits_(arr, nb_bits):
+    """Reduce each component in an array to a maximum number of bits in-place.
+
+    This operation sets the ``8-B`` highest frequency (rightmost) bits to zero.
+    For ``B`` bits this is equivalent to changing each component's intensity
+    value ``v`` to ``v' = v & (2**(8-B) - 1)``, e.g. for ``B=3`` this results
+    in ``v' = c & ~(2**(3-1) - 1) = c & ~3 = c & ~0000 0011 = c & 1111 1100``.
+
+    This is identical to :func:`quantize_uniform` with ``nb_bins=2**nb_bits``
+    and ``to_bin_centers=False``.
+
+    This function produces the same outputs as :func:`PIL.ImageOps.posterize`,
+    but is significantly faster.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.color.quantize_uniform_`.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Array to quantize, usually an image. Expected to be of shape ``(H,W)``
+        or ``(H,W,C)`` with ``C`` usually being ``1`` or ``3``.
+        This array *may* be changed in-place.
+
+    nb_bits : int
+        Number of bits to keep in each array component.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components. This *may* be the input array with
+        components changed in-place.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> import numpy as np
+    >>> image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape((4, 4, 3))
+    >>> image_quantized = iaa.quantize_uniform_to_n_bits_(np.copy(image), 6)
+
+    Generates a ``4x4`` image with ``3`` channels, containing consecutive
+    values from ``0`` to ``4*4*3``, leading to an equal number of colors.
+    These colors are then quantized so that each component's ``8-6=2``
+    rightmost bits are set to zero.
+
+    """
+    assert 1 <= nb_bits <= 8, (
+        "Expected nb_bits to be in the discrete interval [1..8]. "
+        "Got a value of %d instead." % (nb_bits,))
+    return quantize_uniform_(arr, nb_bins=2**nb_bits, to_bin_centers=False)
+
+
+def posterize(arr, nb_bits):
+    """Alias for :func:`quantize_uniform_to_n_bits`.
+
+    This function is an alias for :func:`quantize_uniform_to_n_bits` and was
+    added for users familiar with the same function in PIL.
+
+    Parameters
+    ----------
+    arr : ndarray
+        See :func:`quantize_uniform_to_n_bits`.
+
+    nb_bits : int
+        See :func:`quantize_uniform_to_n_bits`.
+
+    Returns
+    -------
+    ndarray
+        Array with quantized components.
+
+    """
+    return quantize_uniform_to_n_bits(arr, nb_bits)
