@@ -409,3 +409,28 @@ class TestSnowflakes(unittest.TestCase):
             patch = bb.extract_from_image(grad)
             stds.append(np.std(patch))
         return 1 / (1+np.std(stds))
+
+
+class TestSnowflakesLayer(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_large_snowflakes_size(self):
+        # Test for PR #471
+        # Snowflakes size is achieved via downscaling. Large values for
+        # snowflakes_size lead to more downscaling. Hence, values close to 1.0
+        # incur risk that the image is downscaled to (0, 0) or similar values.
+        aug = iaa.SnowflakesLayer(
+            density=0.5,
+            density_uniformity=0.5,
+            flake_size=1.0,
+            flake_size_uniformity=0.5,
+            angle=0.0,
+            speed=0.5,
+            blur_sigma_fraction=0.001
+        )
+        image = np.zeros((128, 128, 3), dtype=np.uint8)
+
+        image_aug = aug.augment_image(image)
+
+        assert np.average(image_aug) > 128
