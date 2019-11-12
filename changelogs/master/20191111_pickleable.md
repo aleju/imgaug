@@ -1,4 +1,6 @@
-# All Augmenters Pickle-able
+# All Augmenters Pickle-able #493
+
+Ensured that all augmenters can be pickled.
 
 * Added function `imgaug.testutils.runtest_pickleable_uint8_img()`.
 * Fixed `imgaug.augmenters.blur.MotionBlur` not being pickle-able.
