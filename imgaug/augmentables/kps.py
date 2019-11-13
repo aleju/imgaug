@@ -123,6 +123,30 @@ class Keypoint(object):
         """
         return int(np.round(self.y))
 
+    @property
+    def xy(self):
+        """Get the keypoint's x- and y-coordinate as a single array.
+
+        Returns
+        -------
+        ndarray
+            A ``(2,)`` ``ndarray`` denoting the xy-coordinate pair.
+
+        """
+        return self.coords[0, :]
+
+    @property
+    def xy_int(self):
+        """Get the keypoint's xy-coord, rounded to closest integer.
+
+        Returns
+        -------
+        ndarray
+            A ``(2,)`` ``ndarray`` denoting the xy-coordinate pair.
+
+        """
+        return np.round(self.xy).astype(np.int32)
+
     def project(self, from_shape, to_shape):
         """Project the keypoint onto a new position on a new image.
 

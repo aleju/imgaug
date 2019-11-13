@@ -13,3 +13,5 @@
 * Added ability to access coordinates of `BoundingBox`, `Polygon` and
   `LineString` using indices or slices, e.g. `line_string[1:]` to get an
   array of all coordinates except the first one.
+* Added property `Keypoint.xy`.
+* Added property `Keypoint.xy_int`.

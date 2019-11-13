@@ -60,6 +60,16 @@ class TestKeypoint(unittest.TestCase):
         assert np.isclose(kp.y, 1.7)
         assert kp.y_int == 2
 
+    def test_xy(self):
+        kp = ia.Keypoint(x=2, y=1.7)
+        assert np.allclose(kp.xy, (2, 1.7))
+
+    def test_xy_int(self):
+        kp = ia.Keypoint(x=1.3, y=1.6)
+        xy = kp.xy_int
+        assert np.allclose(xy, (1, 2))
+        assert xy.dtype.name == "int32"
+
     def test_project_same_image_size(self):
         kp = ia.Keypoint(y=1, x=2)
         kp2 = kp.project((10, 10), (10, 10))
