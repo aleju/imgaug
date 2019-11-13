@@ -10,3 +10,6 @@
   would iterate now over `bbs`.
 * Added ability to iterate over coordinates of `BoundingBox` (top-left,
   bottom-right), `Polygon` and `LineString` via `for xy in obj: ...`.
+* Added ability to access coordinates of `BoundingBox`, `Polygon` and
+  `LineString` using indices or slices, e.g. `line_string[1:]` to get an
+  array of all coordinates except the first one.

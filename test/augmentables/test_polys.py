@@ -2140,6 +2140,18 @@ class TestPolygon_almost_equals(unittest.TestCase):
         assert not poly_a.almost_equals(poly_b)
 
 
+class TestPolygon___getitem__(unittest.TestCase):
+    def test_with_three_points(self):
+        cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])
+        assert np.allclose(cba[0], (1, 2))
+        assert np.allclose(cba[1], (3, 4))
+        assert np.allclose(cba[2], (5, 5))
+
+    def test_with_three_points_slice(self):
+        cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])
+        assert np.allclose(cba[1:], [(3, 4), (5, 5)])
+
+
 class TestPolygon___iter__(unittest.TestCase):
     def test_with_three_points(self):
         cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])

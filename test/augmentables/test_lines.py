@@ -1713,6 +1713,15 @@ class TestLineString(unittest.TestCase):
                 # __str__() is tested more thoroughly in other tests
                 assert ls.__repr__() == ls.__str__()
 
+    def test___getitem__(self):
+        cba = ia.LineString([(0, 1), (2, 3)])
+        assert np.allclose(cba[0], (0, 1))
+        assert np.allclose(cba[1], (2, 3))
+
+    def test___getitem___slice(self):
+        cba = ia.LineString([(0, 1), (2, 3), (4, 5)])
+        assert np.allclose(cba[1:], [(2, 3), (4, 5)])
+
     def test___iter___two_points(self):
         cba = LineString([(1, 2), (3, 4)])
         for i, xy in enumerate(cba):

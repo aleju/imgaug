@@ -1036,6 +1036,11 @@ class TestBoundingBox(unittest.TestCase):
         assert bb2.label == "asd"
         assert bb.label == "test"
 
+    def test___getitem__(self):
+        cba = ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
+        assert np.allclose(cba[0], (1, 2))
+        assert np.allclose(cba[1], (3, 4))
+
     def test___iter__(self):
         cba = ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
         for i, xy in enumerate(cba):

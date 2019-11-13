@@ -1045,6 +1045,17 @@ class BoundingBox(object):
         #      the deepcopy from copy()
         return self.copy(x1=x1, y1=y1, x2=x2, y2=y2, label=label)
 
+    def __getitem__(self, indices):
+        """Get the coordinate(s) with given indices.
+
+        Returns
+        -------
+        ndarray
+            xy-coordinate(s) as ``ndarray``.
+
+        """
+        return self.coords[indices]
+
     def __iter__(self):
         """Iterate over the coordinates of this instance.
 
