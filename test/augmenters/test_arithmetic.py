@@ -3752,6 +3752,447 @@ class TestCoarsePepper(unittest.TestCase):
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
 
+class Test_invert(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked_defaults(self, mock_invert):
+        mock_invert.return_value = "foo"
+        arr = np.zeros((1,), dtype=np.uint8)
+        observed = iaa.invert(arr)
+
+        assert observed == "foo"
+        args = mock_invert.call_args_list[0]
+        assert np.array_equal(mock_invert.call_args_list[0][0][0], arr)
+        assert args[1]["min_value"] is None
+        assert args[1]["max_value"] is None
+        assert args[1]["threshold"] is None
+        assert args[1]["invert_above_threshold"] is True
+
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked(self, mock_invert):
+        mock_invert.return_value = "foo"
+        arr = np.zeros((1,), dtype=np.uint8)
+        observed = iaa.invert(arr, min_value=1, max_value=10, threshold=5,
+                              invert_above_threshold=False)
+
+        assert observed == "foo"
+        args = mock_invert.call_args_list[0]
+        assert np.array_equal(mock_invert.call_args_list[0][0][0], arr)
+        assert args[1]["min_value"] == 1
+        assert args[1]["max_value"] == 10
+        assert args[1]["threshold"] == 5
+        assert args[1]["invert_above_threshold"] is False
+
+    def test_uint8(self):
+        values = np.array([0, 20, 45, 60, 128, 255], dtype=np.uint8)
+        expected = np.array([
+            255,
+            255-20,
+            255-45,
+            255-60,
+            255-128,
+            255-255
+        ], dtype=np.uint8)
+
+        observed = iaa.invert(values)
+
+        assert np.array_equal(observed, expected)
+        assert observed is not values
+
+
+# most parts of this function are tested via Invert
+class Test_invert_(unittest.TestCase):
+    def test_arr_is_noncontiguous_uint8(self):
+        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+        max_vr_flipped = np.fliplr(np.copy(zeros + 255))
+
+        observed = iaa.invert_(max_vr_flipped)
+        expected = zeros
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_arr_is_view_uint8(self):
+        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+        max_vr_view = np.copy(zeros + 255)[:, :, [0, 2]]
+
+        observed = iaa.invert_(max_vr_view)
+        expected = zeros[:, :, [0, 2]]
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_uint(self):
+        dtypes = ["uint8", "uint16", "uint32", "uint64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    max_value - 0,
+                    max_value - 20,
+                    max_value - 45,
+                    max_value - 60,
+                    max_value - center_value,
+                    min_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values))
+
+                assert np.array_equal(observed, expected)
+
+    def test_uint_with_threshold_50_inv_above(self):
+        threshold = 50
+        dtypes = ["uint8", "uint16", "uint32", "uint64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    0,
+                    20,
+                    45,
+                    max_value - 60,
+                    max_value - center_value,
+                    min_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.array_equal(observed, expected)
+
+    def test_uint_with_threshold_0_inv_above(self):
+        threshold = 0
+        dtypes = ["uint8", "uint16", "uint32", "uint64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    max_value - 0,
+                    max_value - 20,
+                    max_value - 45,
+                    max_value - 60,
+                    max_value - center_value,
+                    min_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.array_equal(observed, expected)
+
+    def test_uint8_with_threshold_255_inv_above(self):
+        threshold = 255
+        dtypes = ["uint8"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    0,
+                    20,
+                    45,
+                    60,
+                    center_value,
+                    min_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.array_equal(observed, expected)
+
+    def test_uint8_with_threshold_256_inv_above(self):
+        threshold = 256
+        dtypes = ["uint8"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    0,
+                    20,
+                    45,
+                    60,
+                    center_value,
+                    max_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.array_equal(observed, expected)
+
+    def test_uint_with_threshold_50_inv_below(self):
+        threshold = 50
+        dtypes = ["uint8", "uint16", "uint32", "uint64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    max_value - 0,
+                    max_value - 20,
+                    max_value - 45,
+                    60,
+                    center_value,
+                    max_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=False)
+
+                assert np.array_equal(observed, expected)
+
+    def test_uint_with_threshold_50_inv_above_with_min_max(self):
+        threshold = 50
+        # uint64 does not support custom min/max, hence removed it here
+        dtypes = ["uint8", "uint16", "uint32"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([0, 20, 45, 60, center_value, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    0,  # not clipped to 10 as only >thresh affected
+                    20,
+                    45,
+                    100 - 50,
+                    100 - 90,
+                    100 - 90
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       min_value=10,
+                                       max_value=100,
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.array_equal(observed, expected)
+
+    def test_int_with_threshold_50_inv_above(self):
+        threshold = 50
+        dtypes = ["int8", "int16", "int32", "int64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([-45, -20, center_value, 20, 45, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    -45,
+                    -20,
+                    center_value,
+                    20,
+                    45,
+                    min_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.array_equal(observed, expected)
+
+    def test_int_with_threshold_50_inv_below(self):
+        threshold = 50
+        dtypes = ["int8", "int16", "int32", "int64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = int(center_value)
+
+                values = np.array([-45, -20, center_value, 20, 45, max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    (-1) * (-45) - 1,
+                    (-1) * (-20) - 1,
+                    (-1) * center_value - 1,
+                    (-1) * 20 - 1,
+                    (-1) * 45 - 1,
+                    max_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=False)
+
+                assert np.array_equal(observed, expected)
+
+    def test_float_with_threshold_50_inv_above(self):
+        threshold = 50
+        dtypes = ["float16", "float32", "float64", "float128"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = center_value
+
+                values = np.array([-45.5, -20.5, center_value, 20.5, 45.5,
+                                   max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    -45.5,
+                    -20.5,
+                    center_value,
+                    20.5,
+                    45.5,
+                    min_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=True)
+
+                assert np.allclose(observed, expected, rtol=0, atol=1e-4)
+
+    def test_float_with_threshold_50_inv_below(self):
+        threshold = 50
+        dtypes = ["float16", "float32", "float64", "float128"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dt)
+                center_value = center_value
+
+                values = np.array([-45.5, -20.5, center_value, 20.5, 45.5,
+                                   max_value],
+                                  dtype=dt)
+                expected = np.array([
+                    (-1) * (-45.5),
+                    (-1) * (-20.5),
+                    (-1) * center_value,
+                    (-1) * 20.5,
+                    (-1) * 45.5,
+                    max_value
+                ], dtype=dt)
+
+                observed = iaa.invert_(np.copy(values),
+                                       threshold=threshold,
+                                       invert_above_threshold=False)
+
+                assert np.allclose(observed, expected, rtol=0, atol=1e-4)
+
+
+class Test_solarize(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.arithmetic.solarize_")
+    def test_mocked_defaults(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize(arr)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is not arr
+        assert np.array_equal(args[0], arr)
+        assert kwargs["threshold"] == 128
+        assert observed == "foo"
+
+    @mock.patch("imgaug.augmenters.arithmetic.solarize_")
+    def test_mocked(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize(arr, threshold=5)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is not arr
+        assert np.array_equal(args[0], arr)
+        assert kwargs["threshold"] == 5
+        assert observed == "foo"
+
+    def test_uint8(self):
+        arr = np.array([0, 10, 50, 150, 200, 255], dtype=np.uint8)
+        arr = arr.reshape((2, 3, 1))
+
+        observed = iaa.solarize(arr)
+
+        expected = np.array([0, 10, 50, 255-150, 255-200, 255-255],
+                            dtype=np.uint8).reshape((2, 3, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_compare_with_pil(self):
+        import PIL.Image
+        import PIL.ImageOps
+
+        def _solarize_pil(image, threshold):
+            img = PIL.Image.fromarray(image)
+            return np.asarray(PIL.ImageOps.solarize(img, threshold))
+
+        image = np.mod(np.arange(20*20*3), 255).astype(np.uint8)\
+            .reshape((20, 20, 3))
+
+        for threshold in np.arange(256):
+            image_pil = _solarize_pil(image, threshold)
+            image_iaa = iaa.solarize(image, threshold)
+            assert np.array_equal(image_pil, image_iaa)
+
+
+class Test_solarize_(unittest.TestCase):
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked_defaults(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize_(arr)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is arr
+        assert kwargs["threshold"] == 128
+        assert observed == "foo"
+
+    @mock.patch("imgaug.augmenters.arithmetic.invert_")
+    def test_mocked(self, mock_sol):
+        arr = np.zeros((1,), dtype=np.uint8)
+        mock_sol.return_value = "foo"
+
+        observed = iaa.solarize_(arr, threshold=5)
+
+        args = mock_sol.call_args_list[0][0]
+        kwargs = mock_sol.call_args_list[0][1]
+        assert args[0] is arr
+        assert kwargs["threshold"] == 5
+        assert observed == "foo"
+
+
 class TestInvert(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -3857,6 +4298,30 @@ class TestInvert(unittest.TestCase):
         assert 300 - 75 < seen[0] < 300 + 75
         assert 700 - 75 < seen[1] < 700 + 75
 
+    def test_threshold(self):
+        arr = np.array([0, 10, 50, 150, 200, 255], dtype=np.uint8)
+        arr = arr.reshape((2, 3, 1))
+        aug = iaa.Invert(p=1.0, threshold=128, invert_above_threshold=True)
+
+        observed = aug.augment_image(arr)
+
+        expected = np.array([0, 10, 50, 255-150, 255-200, 255-255],
+                            dtype=np.uint8).reshape((2, 3, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_threshold_inv_below(self):
+        arr = np.array([0, 10, 50, 150, 200, 255], dtype=np.uint8)
+        arr = arr.reshape((2, 3, 1))
+        aug = iaa.Invert(p=1.0, threshold=128, invert_above_threshold=False)
+
+        observed = aug.augment_image(arr)
+
+        expected = np.array([255-0, 255-10, 255-50, 150, 200, 255],
+                            dtype=np.uint8).reshape((2, 3, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
     def test_keypoints_dont_change(self):
         # keypoints shouldnt be changed
         zeros = np.zeros((4, 4, 3), dtype=np.uint8)
@@ -3935,13 +4400,12 @@ class TestInvert(unittest.TestCase):
         # test get_parameters()
         aug = iaa.Invert(p=0.5, per_channel=False, min_value=10, max_value=20)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Binomial)
-        assert isinstance(params[0].p, iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
-        assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
-        assert params[1].value == 0
+        assert params[0] is aug.p
+        assert params[1] is aug.per_channel
         assert params[2] == 10
         assert params[3] == 20
+        assert params[4] is aug.threshold
+        assert params[5] is aug.invert_above_threshold
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
@@ -4102,6 +4566,27 @@ class TestInvert(unittest.TestCase):
                 else:
                     assert np.allclose(image_center_aug, image_center)
                 assert np.allclose(image_max_aug, image_min)
+
+
+class TestSolarize(unittest.TestCase):
+    def test_p_is_one(self):
+        zeros = np.zeros((4, 4, 3), dtype=np.uint8)
+
+        observed = iaa.Solarize(p=1.0).augment_image(zeros)
+
+        expected = zeros
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_p_is_one_some_values_above_threshold(self):
+        arr = np.array([0, 99, 111, 200]).astype(np.uint8).reshape((2, 2, 1))
+
+        observed = iaa.Solarize(p=1.0, threshold=(100, 110))(image=arr)
+
+        expected = np.array([0, 99, 255-111, 255-200])\
+            .astype(np.uint8).reshape((2, 2, 1))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
 
 
 class TestContrastNormalization(unittest.TestCase):
