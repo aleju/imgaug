@@ -1283,6 +1283,17 @@ class Polygon(object):
             exterior=np.copy(self.exterior) if exterior is None else exterior,
             label=self.label if label is None else label)
 
+    def __iter__(self):
+        """Iterate over the coordinates of this instance.
+
+        Yields
+        ------
+        ndarray
+            An ``(2,)`` ``ndarray`` denoting an xy-coordinate pair.
+
+        """
+        return iter(self.exterior)
+
     def __repr__(self):
         return self.__str__()
 

@@ -2140,6 +2140,27 @@ class TestPolygon_almost_equals(unittest.TestCase):
         assert not poly_a.almost_equals(poly_b)
 
 
+class TestPolygon___iter__(unittest.TestCase):
+    def test_with_three_points(self):
+        cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])
+        for i, xy in enumerate(cba):
+            assert i in [0, 1, 2]
+            if i == 0:
+                assert np.allclose(xy, (1, 2))
+            elif i == 1:
+                assert np.allclose(xy, (3, 4))
+            elif i == 2:
+                assert np.allclose(xy, (5, 5))
+        assert i == 2
+
+    def test_with_zero_points(self):
+        cba = ia.Polygon([])
+        i = 0
+        for xy in cba:
+            i += 1
+        assert i == 0
+
+
 # TODO add test for _convert_points_to_shapely_line_string
 
 

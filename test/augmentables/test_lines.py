@@ -1713,6 +1713,23 @@ class TestLineString(unittest.TestCase):
                 # __str__() is tested more thoroughly in other tests
                 assert ls.__repr__() == ls.__str__()
 
+    def test___iter___two_points(self):
+        cba = LineString([(1, 2), (3, 4)])
+        for i, xy in enumerate(cba):
+            assert i in [0, 1]
+            if i == 0:
+                assert np.allclose(xy, (1, 2))
+            elif i == 1:
+                assert np.allclose(xy, (3, 4))
+        assert i == 1
+
+    def test___iter___zero_points(self):
+        cba = LineString([])
+        i = 0
+        for xy in cba:
+            i += 1
+        assert i == 0
+
     def test___str__(self):
         coords = [
             [(0, 0), (1, 0), (1, 1)],

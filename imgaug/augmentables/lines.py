@@ -1531,6 +1531,17 @@ class LineString(object):
             coords=np.copy(self.coords) if coords is None else coords,
             label=copylib.deepcopy(self.label) if label is None else label)
 
+    def __iter__(self):
+        """Iterate over the coordinates of this instance.
+
+        Yields
+        ------
+        ndarray
+            An ``(2,)`` ``ndarray`` denoting an xy-coordinate pair.
+
+        """
+        return iter(self.coords)
+
     def __repr__(self):
         return self.__str__()
 

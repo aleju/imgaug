@@ -862,6 +862,7 @@ class BoundingBox(object):
             (self.x1, self.y2)
         ], label=self.label)
 
+    # TODO also introduce similar area_almost_equals()
     def coords_almost_equals(self, other, max_distance=1e-4):
         """Estimate if this and another BB have almost identical coordinates.
 
@@ -886,17 +887,18 @@ class BoundingBox(object):
             coordinates.
 
         """
-        if ia.is_np_array(other):
+        if isinstance(other, BoundingBox):
+            coords_b = other.coords.flat
+        elif ia.is_np_array(other):
             # we use flat here in case other is (N,2) instead of (4,)
             coords_b = other.flat
         elif ia.is_iterable(other):
             coords_b = list(ia.flatten(other))
         else:
-            assert isinstance(other, BoundingBox), (
+            raise ValueError(
                 "Expected 'other' to be an iterable containing two "
                 "(x,y)-coordinate pairs or a BoundingBox. "
                 "Got type %s." % (type(other),))
-            coords_b = other.coords.flat
 
         coords_a = self.coords
 
@@ -1042,6 +1044,17 @@ class BoundingBox(object):
         # TODO write specific copy routine with deepcopy for label and remove
         #      the deepcopy from copy()
         return self.copy(x1=x1, y1=y1, x2=x2, y2=y2, label=label)
+
+    def __iter__(self):
+        """Iterate over the coordinates of this instance.
+
+        Yields
+        ------
+        ndarray
+            An ``(2,)`` ``ndarray`` denoting an xy-coordinate pair.
+
+        """
+        return iter(self.coords)
 
     def __repr__(self):
         return self.__str__()

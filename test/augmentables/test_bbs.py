@@ -860,7 +860,7 @@ class TestBoundingBox(unittest.TestCase):
     def test_coords_almost_equals__bad_datatype(self):
         bb = ia.BoundingBox(x1=1, y1=3, x2=1, y2=3)
 
-        with self.assertRaises(AssertionError) as cm:
+        with self.assertRaises(ValueError) as cm:
             _ = bb.coords_almost_equals(False)
 
         assert "Expected 'other'" in str(cm.exception)
@@ -1035,6 +1035,16 @@ class TestBoundingBox(unittest.TestCase):
         assert bb2.x2 == 35
         assert bb2.label == "asd"
         assert bb.label == "test"
+
+    def test___iter__(self):
+        cba = ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
+        for i, xy in enumerate(cba):
+            assert i in [0, 1]
+            if i == 0:
+                assert np.allclose(xy, (1, 2))
+            elif i == 1:
+                assert np.allclose(xy, (3, 4))
+        assert i == 1
 
     def test_string_conversion(self):
         bb = ia.BoundingBox(y1=1, y2=3, x1=1, x2=3)
