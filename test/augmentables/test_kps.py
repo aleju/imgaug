@@ -1131,6 +1131,21 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert kpi2.keypoints[1].x == 3
         assert kpi2.keypoints[1].y == 4
 
+    def test___iter__(self):
+        cbas = [ia.Keypoint(x=1, y=2),
+                ia.Keypoint(x=3, y=4)]
+        cbasoi = ia.KeypointsOnImage(cbas, shape=(40, 50, 3))
+
+        for i, cba in enumerate(cbasoi):
+            assert cba is cbas[i]
+
+    def test___iter___empty(self):
+        cbasoi = ia.KeypointsOnImage([], shape=(40, 50, 3))
+        i = 0
+        for _cba in cbasoi:
+            i += 1
+        assert i == 0
+
     def test_string_conversion(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))

@@ -1601,6 +1601,19 @@ class BoundingBoxesOnImage(IAugmentable):
         bbs = [bb.deepcopy() for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs, tuple(self.shape))
 
+    def __iter__(self):
+        """Iterate over the bounding boxes in this container.
+
+        Yields
+        ------
+        Polygon
+            A bounding box in this container.
+            The order is identical to the order in the bounding box list
+            provided upon class initialization.
+
+        """
+        return iter(self.bounding_boxes)
+
     def __repr__(self):
         return self.__str__()
 

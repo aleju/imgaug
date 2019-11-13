@@ -1203,6 +1203,19 @@ class KeypointsOnImage(IAugmentable):
             shape = tuple(self.shape)
         return KeypointsOnImage(keypoints, shape)
 
+    def __iter__(self):
+        """Iterate over the keypoints in this container.
+
+        Yields
+        ------
+        Keypoint
+            A keypoint in this container.
+            The order is identical to the order in the keypoint list
+            provided upon class initialization.
+
+        """
+        return iter(self.items)
+
     def __repr__(self):
         return self.__str__()
 

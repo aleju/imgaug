@@ -2789,6 +2789,23 @@ class TestPolygonsOnImage_deepcopy(unittest.TestCase):
                            rtol=0, atol=1e-4)
 
 
+class TestPolygonsOnImage___iter__(unittest.TestCase):
+    def test_with_two_polygons(self):
+        cbas = [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+                ia.Polygon([(1, 0), (2, 2), (1.5, 3)])]
+        cbasoi = ia.PolygonsOnImage(cbas, shape=(40, 50, 3))
+
+        for i, cba in enumerate(cbasoi):
+            assert cba is cbas[i]
+
+    def test_with_zero_polygons(self):
+        cbasoi = ia.PolygonsOnImage([], shape=(40, 50, 3))
+        i = 0
+        for _cba in cbasoi:
+            i += 1
+        assert i == 0
+
+
 class TestPolygonsOnImage___repr___and___str__(unittest.TestCase):
     def test_with_zero_polygons(self):
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))

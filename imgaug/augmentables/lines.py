@@ -2056,6 +2056,19 @@ class LineStringsOnImage(IAugmentable):
             line_strings=[ls.deepcopy() for ls in lss],
             shape=tuple(shape))
 
+    def __iter__(self):
+        """Iterate over the line strings in this container.
+
+        Yields
+        ------
+        LineString
+            A line string in this container.
+            The order is identical to the order in the line string list
+            provided upon class initialization.
+
+        """
+        return iter(self.line_strings)
+
     def __repr__(self):
         return self.__str__()
 
