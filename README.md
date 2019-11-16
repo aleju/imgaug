@@ -1,6 +1,7 @@
 # imgaug
 
 이 파이썬 라이브러리는 기계 학습 프로젝트를 위한 이미지를 보강하는데 도움이 됩니다.
+
 Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로운 이미지 세트로 변환합니다.
 
 [![Build Status](https://travis-ci.org/aleju/imgaug.svg?branch=master)](https://travis-ci.org/aleju/imgaug)
