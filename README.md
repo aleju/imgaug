@@ -1,7 +1,7 @@
 # imgaug
 
-This python library helps you with augmenting images for your machine learning projects.
-It converts a set of input images into a new, much larger set of slightly altered images.
+이 파이썬 라이브러리는 기계 학습 프로젝트를 위한 이미지를 보강하는데 도움이 됩니다.
+Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로운 이미지 세트로 변환합니다.
 
 [![Build Status](https://travis-ci.org/aleju/imgaug.svg?branch=master)](https://travis-ci.org/aleju/imgaug)
 [![codecov](https://codecov.io/gh/aleju/imgaug/branch/master/graph/badge.svg)](https://codecov.io/gh/aleju/imgaug)
@@ -11,16 +11,16 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 <tr>
 <th>&nbsp;</th>
-<th>Image</th>
+<th>이미지</th>
 <th>Heatmaps</th>
-<th>Seg. Maps</th>
-<th>Keypoints</th>
-<th>Bounding Boxes,<br>Polygons</th>
+<th>분할 Maps</th>
+<th>주요지점</th>
+<th>경계 상자,<br>다각형</th>
 </tr>
 
-<!-- Line 1: Original Input -->
+<!-- Line 1: Original Input(입력값) -->
 <tr>
-<td><em>Original Input</em></td>
+<td><em>입력값</em></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/noop_image.jpg?raw=true" height="83" width="124" alt="input images"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/noop_heatmap.jpg?raw=true" height="83" width="124" alt="input heatmaps"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/noop_segmap.jpg?raw=true" height="83" width="124" alt="input segmentation maps"></td>
@@ -28,9 +28,9 @@ It converts a set of input images into a new, much larger set of slightly altere
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/noop_bbs.jpg?raw=true" height="83" width="124" alt="input bounding boxes"></td>
 </tr>
 
-<!-- Line 2: Gauss. Noise + Contrast + Sharpen -->
+<!-- Line 2: 가우스. 잡읍 + 대조 + 갈다 -->
 <tr>
-<td>Gauss. Noise<br>+&nbsp;Contrast<br>+&nbsp;Sharpen</td>
+<td>가우스. 잡음<br>+&nbsp;대조<br>+&nbsp;갈다</td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/non_geometric_image.jpg?raw=true" height="83" width="124" alt="non geometric augmentations, applied to images"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/non_geometric_heatmap.jpg?raw=true" height="83" width="124" alt="non geometric augmentations, applied to heatmaps"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/non_geometric_segmap.jpg?raw=true" height="83" width="124" alt="non geometric augmentations, applied to segmentation maps"></td>
@@ -38,9 +38,9 @@ It converts a set of input images into a new, much larger set of slightly altere
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/non_geometric_bbs.jpg?raw=true" height="83" width="124" alt="non geometric augmentations, applied to bounding boxes"></td>
 </tr>
 
-<!-- Line 3: Affine -->
+<!-- Line 3: Affine(벡터화) -->
 <tr>
-<td>Affine</td>
+<td>벡터화</td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/affine_image.jpg?raw=true" height="83" width="124" alt="affine augmentations, applied to images"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/affine_heatmap.jpg?raw=true" height="83" width="124" alt="affine augmentations, applied to heatmaps"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/affine_segmap.jpg?raw=true" height="83" width="124" alt="affine augmentations, applied to segmentation maps"></td>
@@ -48,9 +48,9 @@ It converts a set of input images into a new, much larger set of slightly altere
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/affine_bbs.jpg?raw=true" height="83" width="124" alt="affine augmentations, applied to bounding boxes"></td>
 </tr>
 
-<!-- Line 4: Crop + Pad -->
+<!-- Line 4: Crop + Pad (다듬기+채우기) -->
 <tr>
-<td>Crop<br>+&nbsp;Pad</td>
+<td>다듬기<br>+&nbsp;채우기</td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/cropandpad_image.jpg?raw=true" height="83" width="124" alt="crop and pad augmentations, applied to images"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/cropandpad_heatmap.jpg?raw=true" height="83" width="124" alt="crop and pad augmentations, applied to heatmaps"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/cropandpad_segmap.jpg?raw=true" height="83" width="124" alt="crop and pad augmentations, applied to segmentation maps"></td>
@@ -60,7 +60,7 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 <!-- Line 5: Fliplr + Perspective -->
 <tr>
-<td>Fliplr<br>+&nbsp;Perspective</td>
+<td>배열 뒤집기<br>+&nbsp;원근법</td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/fliplr_perspective_image.jpg" height="83" width="124" alt="Horizontal flip and perspective transform augmentations, applied to images"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/fliplr_perspective_heatmap.jpg?raw=true" height="83" width="124" alt="Horizontal flip and perspective transform augmentations, applied to heatmaps"></td>
 <td><img src="https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/small_overview/fliplr_perspective_segmap.jpg?raw=true" height="83" width="124" alt="Horizontal flip and perspective transform augmentations, applied to segmentation maps"></td>
@@ -71,36 +71,36 @@ It converts a set of input images into a new, much larger set of slightly altere
 </table>
 
 
-**More (strong) example augmentations of one input image:**
+**하나의 입력 이미지의 더 많은 (강력한) 예제 기능 증강:**
 
 ![64 quokkas](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/examples_grid.jpg?raw=true "64 quokkas")
 
 
 ## Table of Contents
 
-1. [Features](#features)
-2. [Installation](#installation)
-3. [Documentation](#documentation)
-4. [Recent Changes](#recent_changes)
-5. [Example Images](#example_images)
-6. [Code Examples](#code_examples)
-7. [List of augmenters](#list_of_augmenters)
-8. [Citation](#citation)
+1. [특징](#feature)
+2. [설치](#installation)
+3. [참고자료](#documentation)
+4. [최근 변경사항](#recent_changes)
+5. [예시 이미지](#example_images)
+6. [코드 예제](#code_examples)
+7. [증강 목록](#list_of_augmenters)
+8. [인용](#citation)
 
 
-<a name="features"/>
+<a name="feature"/>
 
-## Features
+## 특징
 
-* Many augmentation techniques
-  * E.g. affine transformations, perspective transformations, contrast changes, gaussian noise, dropout of regions, hue/saturation changes, cropping/padding, blurring, ...
-  * Optimized for high performance
-  * Easy to apply augmentations only to some images
-  * Easy to apply augmentations in random order
-* Support for
-  * Images (full support for uint8, for other dtypes see [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html))
-  * Heatmaps (float32), Segmentation Maps (int), Masks (bool)
-    * May be smaller/larger than their corresponding images. *No* extra lines of code needed for e.g. crop. 
+* 많은 증강 기법
+  * 예.아핀 변환, 원근법 변환, 대조 변화, 가우시안 소음, 지역 중퇴, 색상 / 포화 변화, 자르기 / 패딩, 흐림, ...
+  * 고성능 최적화
+  * 일부 이미지에만 확대를 적용하기 쉽다.
+  * 무작위로 증강을 적용하기 쉽다
+* 다음을 지원합니다.
+  * 이미지 (uint8에 대한 전체 지원, 다른 dtypes에 대한 지원은 [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html)를 참조하십시오.)
+  * Heatmaps (float32), 분할 Maps (int), Masks (bool)
+    * 해당 이미지보다 작거나 클 수 있습니다. 예.자르기 같은 기능을 위한 추가 코드 라인이 필요 *없습니다*. 
   * Keypoints/Landmarks (int/float coordinates)
   * Bounding Boxes (int/float coordinates)
   * Polygons (int/float coordinates) (Beta)
@@ -120,11 +120,11 @@ It converts a set of input images into a new, much larger set of slightly altere
 
 <a name="installation"/>
 
-## Installation
+## 설치
 
 The library supports python 2.7 and 3.4+.
 
-### Installation: Anaconda
+### 설치: 아나콘다
 
 To install the library in anaconda, perform the following commands:
 ```bash
@@ -134,7 +134,7 @@ conda install imgaug
 
 You can deinstall the library again via `conda remove imgaug`.
 
-### Installation: pip
+### 설치: pip
 
 To install the library via pip, first install all requirements:
 ```bash
@@ -157,7 +157,7 @@ line string augmentation will crash without it.
 
 To deinstall the library, just execute `pip uninstall imgaug`.
 
-### Installation: From Source
+### 설치: From Source
 
 Alternatively, you can download the repository via
 `git clone https://github.com/aleju/imgaug` and install manually via
@@ -166,7 +166,7 @@ Alternatively, you can download the repository via
 
 <a name="documentation"/>
 
-## Documentation
+## 참고자료
 
 Example jupyter notebooks:
   * [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
@@ -193,7 +193,7 @@ repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
 
 <a name="recent_changes"/>
 
-## Recent Changes
+## 최근 변경사항
 
 * **0.3.0**: Reworked segmentation map augmentation, adapted to numpy 1.17+
   random number sampling API, several new augmenters.
