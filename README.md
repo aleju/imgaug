@@ -71,7 +71,7 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 </table>
 
 
-**하나의 입력 이미지의 더 많은 (강력한) 예제 기능 증강:**
+**하나의 입력 이미지의 더 많은 (강력한) 예제 기능:**
 
 ![64 quokkas](https://raw.githubusercontent.com/aleju/imgaug-doc/master/readme_images/examples_grid.jpg?raw=true "64 quokkas")
 
@@ -94,8 +94,8 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 
 * 많은 증강 기법
   * 예.아핀 변환, 원근법 변환, 대조 변화, 가우시안 소음, 지역 중퇴, 색상 / 포화 변화, 자르기 / 패딩, 흐림, ...
-  * 고성능 최적화
-  * 일부 이미지에만 확대를 적용하기 쉽다.
+* 고성능 최적화
+  * 일부 이미지에만 확대를 적용하기 쉽습니다.
   * 무작위로 증강을 적용하기 쉽다
 * 다음을 지원합니다.
   * 이미지 (uint8에 대한 전체 지원, 다른 dtypes에 대한 지원은 [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html)를 참조하십시오.)
