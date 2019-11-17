@@ -13,7 +13,7 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 <tr>
 <th>&nbsp;</th>
 <th>이미지</th>
-<th>적외선 열지도(Heatmaps)</th>
+<th>히트맵</th>
 <th>분할 지도</th>
 <th>주요지점</th>
 <th>경계 상자,<br>다각형</th>
@@ -169,20 +169,20 @@ pip install git+https://github.com/aleju/imgaug.git
 ## 참고자료
 
 jupyter notebooks 예시:
-  * [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
-  * [Multicore Augmentation](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
-  * Augment and work with: [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
-    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
-    [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
-    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
-    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
-    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb) 
+  * [이미지를 로드하고 증강한다](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
+  * [다중 증강](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
+  * 증강 및 작업 : [키포인트/랜드마크](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
+    [경계 상자](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
+    [다각형](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
+    [선 문자열](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
+    [히트맵](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
+    [분할맵](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb) 
 
 더 많은 자료: [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks).
 
 ReadTheDocs 페이지 예제 (보통 notebooks보다 최신 버전이 적다):
-* [Quick example code on how to use the library](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
-* [Examples for some of the supported augmentation techniques](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
+* [라이브러리 사용 방법에 대한 간단한 예제 코드](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
+* [지원되는 증강 기술 예제](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
 * [API](http://imgaug.readthedocs.io/en/latest/source/api.html)
 
 더 많은 RTD 자료: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
@@ -603,9 +603,8 @@ ReadTheDocs 페이지 예제 (보통 notebooks보다 최신 버전이 적다):
 
 ### Example: Simple Training Setting
 
-A standard machine learning situation.
-Train on batches of images and augment each batch via crop, horizontal
-flip ("Fliplr") and gaussian blur:
+표준 기계 학습 상황.
+이미지 배치 교육 및 크롭, 수평 플립("Fliplr") 및 gaussian blur를 통해 각 배치 확대:
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
@@ -642,10 +641,9 @@ for batch_idx in range(100):
 ```
 
 
-### Example: Very Complex Augmentation Pipeline
+### Example: 매우 복잡한 확장 PipeLine
 
-Apply a very heavy augmentation pipeline to images (used to create the image 
-at the very top of this readme):
+이미지에 매우 무거운 증강 pipeline 적용(이 판독값 맨 위에 이미지를 생성하는 데 사용):
 ```python
 import numpy as np
 import imgaug as ia
@@ -734,9 +732,9 @@ images_aug = seq(images=images)
 ```
 
 
-### Example: Augment Images and Keypoints
+### Example: 확장 이미지와 Keypoints
 
-Augment images and keypoints/landmarks on the same images:
+동일한 영상의 영상 및 keypoints/landmarks 확대:
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
@@ -761,11 +759,9 @@ print("Image 2 center", np.argmax(images_aug[1, 64, 64:64+6, 0]))
 print("Points 1", points_aug[0])
 print("Points 2", points_aug[1])
 ```
-Note that all coordinates in `imgaug` are subpixel-accurate, which is
-why `x=0.5, y=0.5` denotes the center of the pixel of the top left pixel.
+`imgaug`의 모든 좌표는 서브픽셀 정확도로 `x=0.5, y=0.5`는 왼쪽 상단 픽셀의 픽셀 중심을 나타낸다.
 
-
-### Example: Augment Images and Bounding Boxes
+### Example: 확장 이미지 및 Bounding Boxes
 
 ```python
 import numpy as np
@@ -789,7 +785,7 @@ images_aug, bbs_aug = seq(images=images, bounding_boxes=bbs)
 ```
 
 
-### Example: Augment Images and Polygons
+### Example: 증강 이미지 및 
 
 ```python
 import numpy as np
@@ -812,10 +808,9 @@ images_aug, polygons_aug = seq(images=images, polygons=polygons)
 ```
 
 
-### Example: Augment Images and LineStrings
+### Example: 확장 이미지 및 LineStrings
 
-LineStrings are similar to polygons, but are not closed, may intersect with
-themselves and don't have an inner area.
+LineStrings는 폴리곤과 유사하지만 닫히지 않으며, 자신과 교차하며 내부 영역이 없을 수 있다.
 ```python
 import numpy as np
 import imgaug as ia
@@ -838,13 +833,13 @@ images_aug, ls_aug = seq(images=images, line_strings=ls)
 ```
 
 
-### Example: Augment Images and Heatmaps
+### Example: 확장 이미지 및 히트맵
 
-Heatmaps are dense float arrays with values between `0.0` and `1.0`.
-They can be used e.g. when training models to predict facial landmark
-locations. Note that the heatmaps here have lower height and width than the
-images. `imgaug` handles that case automatically. The crop pixel amounts will
-be halved for the heatmaps.
+히트맵은 `0.0`~`1.0`의 값을 갖는 고밀도 플로트 배열이다.
+예를 들어 얼굴 특징 위치를 예측하기 위해 모델을 훈련할 때 사용할 수 있다.
+히트맵은 이미지보다 낮은 높이와 폭을 가지고 있다는 점에 유의해야한다.
+`imgaug`는 그 일을 자동으로 처리한다.
+크롭 픽셀 양은 히트맵의 경우 반으로 줄어들 것이다.
 
 ```python
 import numpy as np
@@ -865,11 +860,10 @@ images_aug, heatmaps_aug = seq(images=images, heatmaps=heatmaps)
 ```
 
 
-### Example: Augment Images and Segmentation Maps
+### Example: 확장 이미지 및 세그먼트 맵
 
-This is similar to heatmaps, but the dense arrays have dtype `int32`.
-Operations such as resizing will automatically use nearest neighbour
-interpolation.
+이는 히트맵과 비슷하지만 촘촘한 배열은 dtype `int32`을 가지고 있다.
+크기 조정과 같은 작업은 자동으로 가장 가까운 인접 보조를 사용한다.
 
 ```python
 import numpy as np
@@ -890,9 +884,9 @@ images_aug, segmaps_aug = seq(images=images, segmentation_maps=segmaps)
 ```
 
 
-### Example: Visualize Augmented Images
+### Example: 증강된 이미지 시각화
 
-Quickly show example results of your augmentation sequence:
+확대된 시퀀스의 예제 결과를 표시:
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
@@ -907,10 +901,9 @@ seq.show_grid([images[0], images[1]], cols=8, rows=8)
 ```
 
 
-### Example: Visualize Augmented Non-Image Data
+### Example: 증강된 이미지가 아닌 데이터 시각화하기
 
-`imgaug` contains many helper function, among these functions to quickly
-visualize augmented non-image results, such as bounding boxes or heatmaps.
+imgaug에는 바운딩 박스나 히트맵과 같은 이미지가 아닌 결과를 빠르게 시각화 할수 있는 많은 기능이 포함되어 있다.
 
 ```python
 import numpy as np
@@ -949,14 +942,12 @@ image_with_hms = hms.draw_on_image(image)
 ia.imshow(image_with_hms)
 ```
 
-LineStrings and segmentation maps support similar methods as shown above.
+LineStrings 과 segmentation maps 도 위와 같은 방법을 지원한다. 
 
 
-### Example: Using Augmenters Only Once 
+### Example: 증강 한 번만 사용하기 
 
-While the interface is adapted towards re-using instances of augmenters
-many times, you are also free to use them only once. The overhead to
-instantiate the augmenters each time is usually negligible.
+인터페이스는 기능 보강 인스턴스를 여러 번 재사용하도록 조정되어 있지만 한 번만 자유롭게 사용할 수도 있다. augmenter를 매번 인스턴스화하는 오버 헤드는 대개 무시할 만하다.
 
 ```python
 from imgaug import augmenters as iaa
@@ -975,15 +966,14 @@ images_aug = iaa.Sometimes(0.5, iaa.GaussianBlur(3.0))(images=images)
 ```
 
 
-### Example: Multicore Augmentation
+### Example: 멀티코어 증강
 
-Images can be augmented in **background processes** using the
-method `augment_batches(batches, background=True)`, where `batches` is
-a list/generator of
+이미지는 `augment_batches(batches, background=True)`방식을 이용하여 백그라운드 프로세스에서 보강될 수 있다. `batches`는
 [imgaug.augmentables.batches.UnnormalizedBatch](https://imgaug.readthedocs.io/en/latest/_modules/imgaug/augmentables/batches.html#UnnormalizedBatch)
 or
 [imgaug.augmentables.batches.Batch](https://imgaug.readthedocs.io/en/latest/source/api_augmentables_batches.html#imgaug.augmentables.batches.Batch).
-The following example augments a list of image batches in the background:
+의 목록/생성기이다.
+아래의 예는 백그라운드에서 이미지 batch를 보강한다.
 ```python
 import skimage.data
 import imgaug as ia
@@ -1016,23 +1006,18 @@ for images_aug in augseq.augment_batches(batches, background=True):
     ia.imshow(ia.draw_grid(images_aug.images_aug, cols=8))
 ```
 
-If you need more control over the background augmentation, e.g. to set
-seeds, control the number of used CPU cores or constraint the memory usage,
-see the corresponding
+백그라운드 augmentation에 더 많은 통제가 필요하다면, (예: 시드 설정, 사용 된 CPU 코어 수 제어 또는 메모리 사용량 제한)
+그에 해당하는
 [multicore augmentation notebook](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
-or the API about
+이나
 [Augmenter.pool()](https://imgaug.readthedocs.io/en/latest/source/api_augmenters_meta.html#imgaug.augmenters.meta.Augmenter.pool)
-and
+과
 [imgaug.multicore.Pool](https://imgaug.readthedocs.io/en/latest/source/api_multicore.html#imgaug.multicore.Pool).
+에 대한 API 를 참조하시오.
 
+### Example: 매개변수로서의 확률 분포
 
-### Example: Probability Distributions as Parameters
-
-Most augmenters support using tuples `(a, b)` as a shortcut to denote
-`uniform(a, b)` or lists `[a, b, c]` to denote a set of allowed values from
-which one will be picked randomly. If you require more complex probability
-distributions (e.g. gaussians, truncated gaussians or poisson distributions)
-you can use stochastic parameters from `imgaug.parameters`:
+대부분의 augmenter는 튜플  `(a, b)`을 `uniform(a, b)`을 나타내는 바로 가기로 사용하거나 목록 `[a, b, c]`를 사용하여 하나를 임의로 선택할 수있는 허용 된 값 세트를 나타낸다. 더 복잡한 확률 분포 (예 : 가우시안, 잘린 가우시안 또는 포아송 분포)가 필요한 경우 `imgaug.parameters`에서 확률 매개 변수를 사용할 수 있다.
 
 ```python
 import numpy as np
@@ -1054,13 +1039,12 @@ blurer = iaa.GaussianBlur(iap.Clip(iap.Normal(1.0, 0.1), 0.1, 3.0))
 images_aug = blurer(images=images)
 ```
 
-There are many more probability distributions in the library, e.g. truncated
-gaussian distribution, poisson distribution or beta distribution.
+라이브러리에는 더 많은 확률 분포가 있다. (예 : 절단 된 가우시안 분포, 포아송 분포 또는 베타 분포.) 
 
 
 ### Example: WithChannels
 
-Apply an augmenter only to specific image channels:
+특정 이미지 채널에만 증강을 적용: 
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
@@ -1081,9 +1065,7 @@ images_aug = aug(images=images)
 
 ### Example: Hooks
 
-You can **dynamically deactivate augmenters** in an already defined sequence.
-We show this here by running a second array (`heatmaps`) through the pipeline,
-but only apply a subset of augmenters to that input.
+미리 정해진 순서에 따라 증강을 자유롭게 비활성화 할 수 있다. 여기서는 파이프 라인을 통해 두 번째 배열(`heatmaps`)을 실행하여, 해당 입력에 증강의 subset만 적용한다. 
 ```python
 import numpy as np
 import imgaug as ia
@@ -1129,189 +1111,187 @@ heatmaps_aug = seq_det(images=heatmaps, hooks=hooks_heatmaps)
 
 <a name="list_of_augmenters"/>
 
-## List of Augmenters
+## 증강 목록
 
-The following is a list of available augmenters.
-Note that most of the below mentioned variables can be set to ranges, e.g. `A=(0.0, 1.0)` to sample a random value between 0 and 1.0 per image,
-or `A=[0.0, 0.5, 1.0]` to sample randomly either `0.0` or `0.5` or `1.0` per image.
+다음은 사용 가능한 증강의 목록이다. 아래에 언급 된 대부분의 변수는 범위로 설정할 수 있다. (예 : 이미지 당 0과 1.0 사이의 임의의 값을 샘플링하려면 `A=(0.0, 1.0)`, 이미지 당 `0.0`이나 `0.5` 또는 `1.0`을 임의로 샘플링하려면 `A=[0.0, 0.5, 1.0]`. 
 
-**arithmetic**
+**산수**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Add(V, PCH) | Adds value `V` to each image. If `PCH` is true, then the sampled values may be different per channel. |
-| AddElementwise(V, PCH) | Adds value `V` to each pixel. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
-| AdditiveGaussianNoise(L, S, PCH) | Adds white/gaussian noise pixelwise to an image. The noise comes from the normal distribution `N(L,S)`. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
-| AdditiveLaplaceNoise(L, S, PCH) | Adds noise sampled from a laplace distribution following `Laplace(L, S)` to images. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
-| AdditivePoissonNoise(L, PCH) | Adds noise sampled from a poisson distribution with `L` being the `lambda` exponent. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
-| Multiply(V, PCH) | Multiplies each image by value `V`, leading to darker/brighter images. If `PCH` is true, then the sampled values may be different per channel. |
-| MultiplyElementwise(V, PCH) | Multiplies each pixel by value `V`, leading to darker/brighter pixels. If `PCH` is true, then the sampled values may be different per channel (and pixel). |
-| Dropout(P, PCH) | Sets pixels to zero with probability `P`. If `PCH` is true, then channels may be treated differently, otherwise whole pixels are set to zero. |
-| CoarseDropout(P, SPX, SPC, PCH) | Like `Dropout`, but samples the locations of pixels that are to be set to zero from a coarser/smaller image, which has pixel size `SPX` or relative size `SPC`. I.e. if `SPC` has a small value, the coarse map is small, resulting in large rectangles being dropped. |
-| ReplaceElementwise(M, R, PCH) | Replaces pixels in an image by replacements `R`. Replaces the pixels identified by mask `M`. `M` can be a probability, e.g. `0.05` to replace 5% of all pixels. If `PCH` is true, then the mask will be sampled per image, pixel *and additionally channel*. |
-| ImpulseNoise(P) | Replaces `P` percent of all pixels with impulse noise, i.e. very light/dark RGB colors. This is an alias for `SaltAndPepper(P, PCH=True)`. |
-| SaltAndPepper(P, PCH) | Replaces `P` percent of all pixels with very white or black colors. If `PCH` is true, then different pixels will be replaced per channel. |
-| CoarseSaltAndPepper(P, SPX, SPC, PCH) | Similar to `CoarseDropout`, but instead of setting regions to zero, they are replaced by very white or black colors. If `PCH` is true, then the coarse replacement masks are sampled once per image and channel. |
-| Salt(P, PCH) | Similar to `SaltAndPepper`, but only replaces with very white colors, i.e. no black colors. |
-| CoarseSalt(P, SPX, SPC, PCH) | Similar to `CoarseSaltAndPepper`, but only replaces with very white colors, i.e. no black colors. |
-| Pepper(P, PCH) | Similar to `SaltAndPepper`, but only replaces with very black colors, i.e. no white colors. |
-| CoarsePepper(P, SPX, SPC, PCH) | Similar to `CoarseSaltAndPepper`, but only replaces with very black colors, i.e. no white colors. |
-| Invert(P, PCH) | Inverts with probability `P` all pixels in an image, i.e. sets them to (1-pixel_value). If `PCH` is true, each channel is treated individually (leading to only some channels being inverted). |
-| ContrastNormalization(S, PCH) | Changes the contrast in images, by moving pixel values away or closer to 128. The direction and strength is defined by `S`. If `PCH` is set to true, the process happens channel-wise with possibly different `S`. |
-| JpegCompression(C) | Applies JPEG compression of strength `C` (value range: 0 to 100) to an image. Higher values of `C` lead to more visual artifacts. |
+| Add(V, PCH) | `V`값을 각 이미지에 추가한다. `PCH`가 참이라면, 샘플 값이 채널마다 달라진다.  |
+| AddElementwise(V, PCH) | `V`값을 각 픽셀 단위에 추가한다. `PCH`가 참이라면, 샘플 값이 채널마다 달라진다. (픽셀 마다)  |
+| AdditiveGaussianNoise(L, S, PCH) | 픽셀단위의 화이트 노이즈와 가우시안 노이즈를 이미지에 첨가한다. 노이즈는 정규 분포 `N(L,S)` 를 따른다. `PCH`가 참이라면, 샘플 값이 채널마다 달라진다. (픽셀 마다) |
+| AdditiveLaplaceNoise(L, S, PCH) | `Laplace(L, S)`에 따라 laplace 분포에서 샘플링 된 노이즈를 이미지에 추가한다. `PCH`가 참이라면 샘플링 된 값이 채널 (및 픽셀)마다 다를 수 있다. |
+| AdditivePoissonNoise(L, PCH) | L이 람다 지수 인 포아송 분포에서 샘플링 된 노이즈를 추가한다. `PCH`가 참이라면 샘플링 된 값이 채널 (및 픽셀)마다 다를 수 있다. |
+| Multiply(V, PCH) | 각 이미지에 `V`값을 곱하여 더 어둡고 밝은 이미지로 만든다. `PCH`가 참이면 샘플링 된 값이 채널마다 다를 수 있다. |
+| MultiplyElementwise(V, PCH) | 각 픽셀에 값 `V`를 곱하여 더 어둡고 밝은 픽셀로 만든다. `PCH`가 참이면 샘플링 된 값이 채널 (및 픽셀)마다 다를 수 있다.  |
+| Dropout(P, PCH) |확률이 P 인 픽셀을 0으로 설정한다. `PCH`가 참이면 채널이 다르게 처리 될 수 있으며, 그렇지 않으면 전체 픽셀이 0으로 설정된다.  |
+| CoarseDropout(P, SPX, SPC, PCH) | `Dropout`과 유사하지만 픽셀 크기가 `SPX`이거나 상대적 크기가 `SPC` 인 거친 / 작은 이미지에서 0으로 설정 될 픽셀의 위치를 샘플링한다. 즉 `SPC`에 작은 값이 있으면 대략적인 맵이 작으므로 큰 사각형이 삭제된다. |
+| ReplaceElementwise(M, R, PCH) | 이미지의 픽셀을 `R`로 대체한다. 마스크 `M`으로 식별된 픽셀로 대체한다. `M`은 확률이 될 수 있다. 예를 들어 모든 픽셀의 5 %를 대체하려면 `0.05`이다. `PCH`가 참이면 마스크는 이미지, 픽셀 및 추가로 채널별로 샘플링된다.|
+| ImpulseNoise(P) | 모든 픽셀의 `P` 퍼센트를 임펄스 노이즈, 즉 매우 밝거나 어두운 RGB 색상으로 대체한다. `SaltAndPepper(P, PCH=True)`와 같다.  |
+| SaltAndPepper(P, PCH) | 모든 픽셀의 `P` 퍼센트를 매우 흰색 또는 검은 색으로 바꾼다. PCH가 참이면 채널마다 다른 픽셀이 교체된다. |
+| CoarseSaltAndPepper(P, SPX, SPC, PCH) |`CoarseDropout`과 유사하지만 영역을 0으로 설정하는 대신 매우 흰색 또는 검은 색으로 바꾼다. `PCH`가 참이면, coarse 교체 마스크는 이미지 및 채널당 한 번 샘플링된다.  |
+| Salt(P, PCH) | `SaltAndPepper`와 유사하지만 검은 색이 아닌 매우 흰색으로만 대체된다.  |
+| CoarseSalt(P, SPX, SPC, PCH) | `CoarseSaltAndPepper`와 유사하지만 검은 색이 아닌 매우 흰색으로만 대체된다. |
+| Pepper(P, PCH) | `SaltAndPepper`와 유사하지만 흰 색이 아닌 매우 검은 색으로만 대체된다.  |
+| CoarsePepper(P, SPX, SPC, PCH) | `CoarseSaltAndPepper`와 유사하지만 흰 색이 아닌 매우 검은 색으로만 대체된다. |
+| Invert(P, PCH) | 이미지의 모든 픽셀을 확률 P로 반전한다. 즉, (1-pixel_value)로 설정한다. PCH가 참이면 각 채널이 개별적으로 처리된다 (일부 채널 만 반전 됨).  |
+| ContrastNormalization(S, PCH) | 픽셀 값을 128보다 가까이 또는 더 가깝게 이동하여 이미지의 차이를 변경한다. 방향과 강도는 S로 정의된다. PCH가 true로 설정되면 프로세스는 다른 가능한 S로 채널 단위로 발생한다.  |
+| JpegCompression(C) | 강도 C (값 범위 : 0 ~ 100)의 JPEG 압축을 이미지에 적용한다. C 값이 높을수록 시각적 인공물이 더 많이 나타난다.  |
 
 
-**blend**
+**혼합**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Alpha(A, FG, BG, PCH) | Augments images using augmenters `FG` and `BG` independently, then blends the result using alpha `A`. Both `FG` and `BG` default to doing nothing if not provided. E.g. use `Alpha(0.9, FG)` to augment images via `FG`, then blend the result, keeping 10% of the original image (before `FG`). If `PCH` is set to true, the process happens channel-wise with possibly different `A` (`FG` and `BG` are computed once per image). |
-| AlphaElementwise(A, FG, BG, PCH) | Same as `Alpha`, but performs the blending pixel-wise using a continuous mask (values 0.0 to 1.0) sampled from `A`. If `PCH` is set to true, the process happens both pixel- and channel-wise. |
-| SimplexNoiseAlpha(FG, BG, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `Alpha`, but uses a mask to blend the results from augmenters `FG` and `BG`. The mask is sampled from simplex noise, which tends to be blobby. The mask is gathered in `I` iterations (default: `1 to 3`), each iteration is combined using aggregation method `AGG` (default `max`, i.e. maximum value from all iterations per pixel). Each mask is sampled in low resolution space with max resolution `SM` (default 2 to 16px) and upscaled to image size using method `UP` (default: linear or cubic or nearest neighbour upsampling). If `SIG` is true, a sigmoid is applied to the mask with threshold `SIGT`, which makes the blobs have values closer to 0.0 or 1.0. |
-| FrequencyNoiseAlpha(E, FG, BG, PCH, SM, UP, I, AGG, SIG, SIGT) | Similar to `SimplexNoiseAlpha`, but generates noise masks from the frequency domain. Exponent `E` is used to increase/decrease frequency components. High values for `E` pronounce high frequency components. Use values in the range -4 to 4, with -2 roughly generated cloud-like patterns. |
+| Alpha(A, FG, BG, PCH) | 증강 `FG`와 `BG`를 사용하여 이미지를 보강 한 다음 alpha `A`를 사용하여 결과를 혼합한다. FG와 BG는 기본적으로 제공되지 않으면 아무 것도 수행하지 않는다. 예 : `Alpha(0.9, FG)`를 사용하여 `FG`를 통해 이미지를 확대 한 다음 결과를 혼합하여 원래 이미지의 10 %를 유지한다 (`FG` 이전). PCH가 true로 설정되면 프로세스는 A와 다르게 채널 단위로 발생한다 (FG 및 BG는 이미지 당 한 번 계산 됨).  |
+| AlphaElementwise(A, FG, BG, PCH) |`Alpha`와 동일하지만 A에서 샘플링 된 연속 마스크 (값 0.0 ~ 1.0)를 사용하여 픽셀 단위로 블렌딩을 수행한다. PCH가 true로 설정되면 프로세스는 픽셀 단위와 채널 단위로 발생한다.  |
+| SimplexNoiseAlpha(FG, BG, PCH, SM, UP, I, AGG, SIG, SIGT) | `Alpha`와 유사하지만 마스크를 사용하여 증강 FG 및 BG의 결과를 혼합한다. 마스크는 단순 노이즈에서 샘플링되며, 이는 거친 경향이 있다. 마스크는 I 반복 (기본값 : 1 ~ 3)으로 수집되며 각 반복은 집계 방법 AGG (기본 최대, 즉 픽셀 당 모든 반복의 최대 값)를 사용하여 결합된다. 각 마스크는 최대 해상도 SM (기본값 2 ~ 16px)의 저해상도 공간에서 샘플링되며 UP 방법 (기본값 : 선형 또는 3 차 또는 가장 가까운 인접 업 샘플링)을 사용하여 이미지 크기로 업 스케일된다. SIG가 true이면 임계 값 SIGT를 사용하여 S 자형이 마스크에 적용되어 블롭의 값이 0.0 또는 1.0에 가까워진다. |
+| FrequencyNoiseAlpha(E, FG, BG, PCH, SM, UP, I, AGG, SIG, SIGT) |`SimplexNoiseAlpha`와 유사하지만 주파수 영역에서 노이즈 마스크를 생성한다. 지수 E는 주파수 성분을 증가 / 감소시키는 데 사용된다. E의 값이 높으면 고주파 성분이 발음된다. 대략 -2에서 생성 된 구름 같은 패턴과 함께 -4에서 4 사이의 값을 사용하시오.  |
 
 
-**blur**
+**블러**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| GaussianBlur(S) | Blurs images using a gaussian kernel with size `S`. |
-| AverageBlur(K) | Blurs images using a simple averaging kernel with size `K`. |
-| MedianBlur(K) | Blurs images using a median over neihbourhoods of size `K`. |
-| BilateralBlur(D, SC, SS) | Blurs images using a bilateral filter with distance `D` (like kernel size). `SC` is a sigma for the (influence) distance in color space, `SS` a sigma for the spatial distance. |
-| MotionBlur(K, A, D, O) | Blurs an image using a motion blur kernel with size `K`. `A` is the angle of the blur in degrees to the y-axis (value range: 0 to 360, clockwise). `D` is the blur direction (value range: -1.0 to 1.0, 1.0 is forward from the center). `O` is the interpolation order (`O=0` is fast, `O=1` slightly slower but more accurate). |
+| GaussianBlur(S) | 크기가 S 인 가우스 커널을 사용하여 이미지를 흐리게한다. |
+| AverageBlur(K) | 크기가 K 인 간단한 averaging 커널을 사용하여 이미지를 흐리게한다. |
+| MedianBlur(K) | K 크기의 중간 값을 통해 중앙값을 사용하여 이미지를 흐리게한다. |
+| BilateralBlur(D, SC, SS) | 거리 D (커널 크기 등)의 양방향 필터를 사용하여 이미지를 흐리게한다. SC는 색 공간의 (영향) 거리에 대한 시그마이고, SS는 공간 거리에 대한 시그마이다.  |
+| MotionBlur(K, A, D, O) | 크기가 K 인 모션 블러 커널을 사용하여 이미지를 흐리게한다. A는 y 축에 대한 흐림 각도이다 (값 범위 : 0-360, 시계 방향). D는 흐림 방향이다 (값 범위 : -1.0 ~ 1.0, 1.0은 중앙에서 앞으로). O은 보간 순서이다 (O = 0은 빠름, O = 1은 약간 느리지 만 더 정확하다). |
 
 
-**color**
+**색상**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| WithColorspace(T, F, CH) | Converts images from colorspace `T` to `F`, applies child augmenters `CH` and then converts back from `F` to `T`. |
-| AddToHueAndSaturation(V, PCH, F, C) | Adds value `V` to each pixel in HSV space (i.e. modifying hue and saturation). Converts from colorspace F to HSV (default is F=RGB). Selects channels C before augmenting (default is C=[0,1]). If `PCH` is true, then the sampled values may be different per channel. |
-| ChangeColorspace(T, F, A) | Converts images from colorspace `F` to `T` and mixes with the original image using alpha `A`. Grayscale remains at three channels. (Fairly untested augmenter, use at own risk.) |
-| Grayscale(A, F) | Converts images from colorspace F (default: RGB) to grayscale and mixes with the original image using alpha `A`. |
+| WithColorspace(T, F, CH) | 색상 공간 T에서 F로 이미지를 변환하고 자식 증강 CH를 적용한 다음 F에서 T로 다시 변환한다. |
+| AddToHueAndSaturation(V, PCH, F, C) | HSV 공간의 각 픽셀에 값 V를 추가한다 (예 : 색조 및 채도 수정). 색 공간 F에서 HSV로 변환한다 (기본값은 F = RGB). 증강 하기 전에 채널 C를 선택한다 (기본값은 C = [0,1]). PCH가 참이면 샘플링 된 값이 채널마다 다를 수 있다.  |
+| ChangeColorspace(T, F, A) | 색상 공간 F에서 T로 이미지를 변환하고 alpha 'A'를 사용하여 원본 이미지와 혼합한다. 회색조는 3 채널로 유지된다. (실제로 테스트되지 않은 증강이므로 위험이 감수 될수 있다.)  |
+| Grayscale(A, F) | 색상 공간 F (기본값 : RGB)에서 이미지를 회색조로 변환하고 alpha 'A'를 사용하여 원본 이미지와 혼합한다.  |
 
 
-**contrast**
+**대조**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| GammaContrast(G, PCH) | Applies gamma contrast adjustment following `I_ij' = I_ij**G'`, where `G'` is a gamma value sampled from `G` and `I_ij` a pixel (converted to 0 to 1.0 space). If `PCH` is true, a different `G'` is sampled per image and channel. |
-| SigmoidContrast(G, C, PCH) | Similar to GammaContrast, but applies `I_ij' = 1/(1 + exp(G' * (C' - I_ij)))`, where `G'` is a gain value sampled from `G` and `C'` is a cutoff value sampled from `C`. |
-| LogContrast(G, PCH) | Similar to GammaContrast, but applies `I_ij = G' * log(1 + I_ij)`, where `G'` is a gain value sampled from `G`. |
-| LinearContrast(S, PCH) | Similar to GammaContrast, but applies `I_ij = 128 + S' * (I_ij - 128)`, where `S'` is a strength value sampled from `S`. This augmenter is identical to ContrastNormalization (which will be deprecated in the future). |
-| AllChannelsHistogramEqualization() | Applies standard histogram equalization to each channel of each input image. |
-| HistogramEqualization(F, T) | Similar to `AllChannelsHistogramEqualization`, but expects images to be in colorspace `F`, converts to colorspace `T` and normalizes only an intensity-related channel, e.g. `L` for `T=Lab` (default for `T`) or `V` for `T=HSV`. | 
-| AllChannelsCLAHE(CL, K, Kmin, PCH) | Contrast Limited Adaptive Histogram Equalization (histogram equalization in small image patches), applied to each image channel with clipping limit `CL` and kernel size `K` (clipped to range `[Kmin, inf)`). If `PCH` is true, different values for `CL` and `K` are sampled per channel. |
-| CLAHE(CL, K, Kmin, F, T) | Similar to `HistogramEqualization`, this applies CLAHE only to intensity-related channels in Lab/HSV/HLS colorspace. (Usually this works significantly better than `AllChannelsCLAHE`.) |
+| GammaContrast(G, PCH) | `I_ij' = I_ij**G'`다음에 감마 대비 조정을 적용한다. 여기서 `G'`는 G에서 샘플링 된 감마 값이고 픽셀에서 `I_ij` (0에서 1.0 공간으로 변환)이다. PCH가 참이면 이미지와 채널마다 다른 `G'`가 샘플링된다. |
+| SigmoidContrast(G, C, PCH) | GammaContrast와 유사하지만 `I_ij' = 1/(1 + exp(G' * (C' - I_ij)))`를 적용한다. 여기서 `G'`는 G에서 샘플링 된 이득 값이고`C'`는 C에서 샘플링 된 손실 값이다.  |
+| LogContrast(G, PCH) | GammaContrast와 유사하지만 `I_ij = G' * log(1 + I_ij)`를 적용한다. 여기서 `G'`는 G에서 샘플링 된 이득 값이다.  |
+| LinearContrast(S, PCH) | GammaContrast와 유사하지만 `I_ij = 128 + S' * (I_ij - 128)`를 적용한다. 여기서 `S'`는 S에서 샘플링 된 강도 값이다. 이 증강은 ContrastNormalization과 동일하다 (향후 더 이상 사용되지 않음). |
+| AllChannelsHistogramEqualization() | 각 입력 이미지의 각 채널에 표준 Histogram Equalization을 적용한다.  |
+| HistogramEqualization(F, T) | `AllChannelsHistogramEqualization` 와 유사하지만 이미지가 색상 공간 F에있을 것으로 예상하고 색상 공간 T로 변환하고 강도 관련 채널 만 정규화한다 (예 : T = Lab의 경우 L (T의 기본값) 또는 T = HSV의 V이다. | 
+| AllChannelsCLAHE(CL, K, Kmin, PCH) | 클리핑 제한 CL 및 커널 사이즈 K (범위 `[Kmin, inf)`로 클리핑 됨)를 사용하여 각 이미지 채널에 적용되는 Limited Adaptive Histrogram Equalization을 대조한다.(작은 이미지 패치의 Histogram Equalization). PCH가 참이면 채널마다 CL 및 K에 대한 다른 값이 샘플링된다. |
+| CLAHE(CL, K, Kmin, F, T) | `HistogramEqualization`과 유사하게 Lab / HSV / HLS 색 공간의 강도 관련 채널에만 CLAHE를 적용한다. (일반적으로 이것은 `AllChannelsCLAHE`보다 훨씬 잘 작동한다.)  |
 
 
-**convolutional**
+**합성**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Convolve(M) | Convolves images with matrix `M`, which can be a lambda function. |
-| Sharpen(A, L) | Runs a sharpening kernel over each image with lightness `L` (low values result in dark images). Mixes the result with the original image using alpha `A`. |
-| Emboss(A, S) | Runs an emboss kernel over each image with strength `S`. Mixes the result with the original image using alpha `A`. |
-| EdgeDetect(A) | Runs an edge detection kernel over each image. Mixes the result with the original image using alpha `A`. |
-| DirectedEdgeDetect(A, D) | Runs a directed edge detection kernel over each image, which detects each from direction `D` (default: random direction from 0 to 360 degrees, chosen per image). Mixes the result with the original image using alpha `A`. |
+| Convolve(M) | 람다 함수일 가능성이 있는 행렬 M으로 이미지를 통합한다.  |
+| Sharpen(A, L) | 밝기 L로 각 이미지에 선명하게 커널을 실행한다 (값이 낮으면 이미지가 어두워진다). Alpha 'A'를 사용하여 결과를 원본 이미지와 혼합한다. |
+| Emboss(A, S) | 강도가 S 인 각 이미지에서 emboss 커널을 실행한다. Alpha 'A'를 사용하여 결과를 원본 이미지와 혼합한다. |
+| EdgeDetect(A) | 각 이미지에서 edge detection 커널을 실행한다. Alpha 'A'를 사용하여 결과를 원본 이미지와 혼합한다. |
+| DirectedEdgeDetect(A, D) | 각 이미지에 대해 방향 지정 edge detection 커널을 실행하여 각 방향 D에서 감지한다 (기본값 : 이미지 당 선택한 0에서 360 도의 임의 방향). Alpha 'A'를 사용하여 결과를 원본 이미지와 혼합한다. |
 
 
-**edges**
+**엣지**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Canny(A, HT, SK, C) | Applies canny edge detection to each image with hysteresis thresholds `HT` and sobel kernel size `SK`. Converts binary image to color using class `C`. Alpha blends with input image using factor `A`. |
+| Canny(A, HT, SK, C) | 히스테리시스 임계 값 HT 및 소벨 커널 크기 SK를 사용하여 각 이미지에 canny edge detection을 적용한다. 클래스 C를 사용하여 이진 이미지를 색상으로 변환한다. Alpha는 요소 A를 사용하여 입력 이미지와 혼합한다. |
 
 
-**flip**
+**뒤집기**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Fliplr(P) | Horizontally flips images with probability `P`. |
-| Flipud(P) | Vertically flips images with probability `P`. |
+| Fliplr(P) | 확률 P로 이미지를 가로로 뒤집는다. |
+| Flipud(P) | 확률 P로 이미지를 세로로 뒤집는다. |
 
 
-**geometric**
+**기하**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Affine(S, TPX, TPC, R, SH, O, CVAL, FO, M, B) | Applies affine transformations to images. Scales them by `S` (>1=zoom in, <1=zoom out), translates them by `TPX` pixels or `TPC` percent, rotates them by `R` degrees and shears them by `SH` degrees. Interpolation happens with order `O` (0 or 1 are good and fast). If `FO` is true, the output image plane size will be fitted to the distorted image size, i.e. images rotated by 45deg will not be partially outside of the image plane. `M` controls how to handle pixels in the output image plane that have no correspondence in the input image plane. If `M='constant'` then `CVAL` defines a constant value with which to fill these pixels. `B` allows to set the backend framework (currently `cv2` or `skimage`). |
-| AffineCv2(S, TPX, TPC, R, SH, O, CVAL, M, B) | Same as Affine, but uses only `cv2` as its backend. Currently does not support `FO=true`. Might be deprecated in the future. |
-| PiecewiseAffine(S, R, C, O, M, CVAL) | Places a regular grid of points on the image. The grid has `R` rows and `C` columns. Then moves the points (and the image areas around them) by amounts that are samples from normal distribution N(0,`S`), leading to local distortions of varying strengths. `O`, `M` and `CVAL` are defined as in `Affine`. |
-| PerspectiveTransform(S, KS) | Applies a random four-point perspective transform to the image (kinda like an advanced form of cropping). Each point has a random distance from the image corner, derived from a normal distribution with sigma `S`. If `KS` is set to True (default), each image will be resized back to its original size. |
-| ElasticTransformation(S, SM, O, CVAL, M) | Moves each pixel individually around based on distortion fields. `SM` defines the smoothness of the distortion field and `S` its strength. `O` is the interpolation order, `CVAL` a constant fill value for newly created pixels and `M` the fill mode (see also augmenter `Affine`). |
-| Rot90(K, KS) | Rotate images `K` times clockwise by 90 degrees. (This is faster than `Affine`.) If `KS` is true, the resulting image will be resized to have the same size as the original input image. |
+| Affine(S, TPX, TPC, R, SH, O, CVAL, FO, M, B) | 이미지에 아핀 변환을 적용한다. S로 스케일을 조정하고 (> 1 = 확대, <1 = 확대), TPX 픽셀 또는 TPC 백분율로 변환하고, R 도씩 회전하고 SH도만큼 기울인다. 순서 O로 보간이 발생한다 (0 또는 1이 양호하고 빠름). FO가 참이면 출력 이미지 평면 크기가 왜곡 된 이미지 크기에 맞춰진다. 즉 45도 회전 한 이미지는 이미지 평면 외부에 있지 않다. M은 입력 이미지 평면에 해당하지 않는 출력 이미지 평면의 픽셀을 처리하는 방법을 제어한다. `M='constant'`이면 CVAL은 이러한 픽셀을 채울 상수 값을 정의한다. B는 백엔드 프레임 워크 (현재 `cv2` 또는 `skimage`)를 설정할 수 있다. |
+| AffineCv2(S, TPX, TPC, R, SH, O, CVAL, M, B) | 'Affine'과 동일하지만 백엔드로 cv2 만 사용한다. 현재 FO = true를 지원하지 않는다. 향후에는 더 이상 사용되지 않을 수 있다. |
+| PiecewiseAffine(S, R, C, O, M, CVAL) |이미지에 일정한 점 격자를 배치한다. 그리드에는 R 행과 C 열이 있다. 그런 다음 정규 분포 N (0, S)의 샘플 인 양만큼 점 (및 그 주변의 이미지 영역)을 이동하여 다양한 강도의 local distortion을 일으킨다. O, M 및 CVAL은 `Affine`에서와 같이 정의된다.  |
+| PerspectiveTransform(S, KS) |임의의 4 점 투시 변환을 이미지에 적용한다 (advanced 클리핑 형태와 유사). 각 점은 시그마 S를 사용한 정규 분포에서 파생 된 이미지의 코너로부터 임의의 거리를 갖는다. KS가 True (기본값)로 설정되면 각 이미지의 크기가 원래 크기로 다시 조정된다. |
+| ElasticTransformation(S, SM, O, CVAL, M) | 왜곡 필드를 기준으로 각 픽셀을 개별적으로 이동한다. SM은 왜곡 필드의 평활도와 S 강도를 정의한다. O는 보간 순서이며, CVAL은 새로 생성 된 픽셀에 대한 상수 채우기 값이고 M은 채우기 모드이다 (증강 `Affine` 참조). |
+| Rot90(K, KS) | 이미지를 시계 방향으로 90도 회전한다. (이것은 `Affine`보다 빠르다.) KS가 true이면 결과 이미지는 원래 입력 이미지와 동일한 크기로 크기가 조정된다. |
 
 
-**meta**
+**메타**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Sequential(C, R) | Takes a list of child augmenters `C` and applies them in that order to images. If `R` is true (default: false), then the order is random (chosen once per batch). |
-| SomeOf(N, C, R) | Applies `N` randomly selected augmenters from a list of augmenters `C` to each image. The augmenters are chosen per image. `R` is the same as for `Sequential`. `N` can be a range, e.g. `(1, 3)` in order to pick 1 to 3. |
-| OneOf(C) | Identical to `SomeOf(1, C)`. |
-| Sometimes(P, C, D) | Augments images with probability `P` by using child augmenters `C`, otherwise uses `D`. `D` can be None, then only `P` percent of all images are augmented via `C`. |
-| WithColorspace(T, F, C) | Transforms images from colorspace `F` (default: RGB) to colorspace `T`, applies augmenters `C` and then converts back to `F`. |
-| WithChannels(H, C) | Selects from each image channels `H` (e.g. `[0,1]` for red and green in RGB images), applies child augmenters `C` to these channels and merges the result back into the original images. |
-| Noop() | Does nothing. (Useful for validation/test.) |
-| Lambda(I, K) | Applies lambda function `I` to images and `K` to keypoints. |
-| AssertLambda(I, K) | Checks images via lambda function `I` and keypoints via `K` and raises an error if false is returned by either of them. |
-| AssertShape(S) | Raises an error if input images are not of shape `S`. |
-| ChannelShuffle(P, C) | Permutes the order of the color channels for `P` percent of all images. Shuffles by default all channels, but may restrict to a subset using `C` (list of channel indices). |
+| Sequential(C, R) |자식 증강 `C`의 목록을 가져 와서 이 순서대로 이미지에 적용한다. R이 true이면 (기본값 : false) 순서는 무작위이다 (배치 당 한 번 선택). |
+| SomeOf(N, C, R) | 증강 `C` 목록에서 임의로 선택된 N 개의 증강을 각 이미지에 적용한다. 증강은 이미지마다 선택된다. R은 `Sequential`과 동일하다. N은 범위 일 수 있다 (예 : 1에서 3을 선택하기 위해 (1, 3). |
+| OneOf(C) | SomeOf(1, C)와 동일. |
+| Sometimes(P, C, D) | 자식 증강 `C`를 사용하여 확률 P로 이미지를 보강하고, 그렇지 않으면 D를 사용한다. D는 없음 일 수 있으며, 모든 이미지의 P % 만 `C`를 통해 증강.  |
+| WithColorspace(T, F, C) | 이미지를 색상 공간 F (기본값 : RGB)에서 색상 공간 T로 변환하고, 증강 C를 적용한 다음 다시 F로 변환한다.  |
+| WithChannels(H, C) | 각 이미지 채널 H (예 : RGB 이미지에서 빨강 및 녹색의 경우 `[0,1]`)에서 선택하고 자식 증강 `C`를 이 채널에 적용하고 결과를 원래 이미지로 다시 병합한다.  |
+| Noop() | 아무것도 하지 않는다. (검증 / 테스트에 유용하다.) |
+| Lambda(I, K) | 람다 함수 I을 이미지에 적용하고 K를 keypoint에 적용한다. |
+| AssertLambda(I, K) | 람다 함수 I을 통해 이미지를 확인하고 K를 통해 keypoint를 확인하고 둘 중 하나에 의해 false가 반환되면 오류가 발생한다. |
+| AssertShape(S) | 입력 이미지의 모양이 'S'가 아닌 경우 오류가 발생한다.  |
+| ChannelShuffle(P, C) | 모든 이미지의 P 퍼센트에 대한 색상 채널 순서를 변경한다. 기본적으로 모든 채널을 셔플하지만 'C' (채널 인덱스 목록)를 사용하는 부분집합으로 제한 할 수 있다.  |
 
 
-**pooling**
+**풀링**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| AveragePooling(K, KS) | Average-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
-| MaxPooling(K, KS) | Max-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
-| MinPooling(K, KS) | Min-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
-| MedianPooling(K, KS) | Median-pool with kernel size `K`. If `KS=True`, resize pooled images back to the input image size. |
+| AveragePooling(K, KS) |커널 크기가 K 인 평균 풀. KS = True이면 풀링 된 이미지의 크기를 입력 이미지 크기로 다시 조정하시오.  |
+| MaxPooling(K, KS) | 커널 크기가 K 인 최대 풀. KS = True이면 풀링 된 이미지의 크기를 입력 이미지 크기로 다시 조정하시오.  |
+| MinPooling(K, KS) | 커널 크기가 K 인 최소 풀. KS = True이면 풀링 된 이미지의 크기를 입력 이미지 크기로 다시 조정하시오.  |
+| MedianPooling(K, KS) | 커널 크기가 K 인 중앙 풀. KS = True이면 풀링 된 이미지의 크기를 입력 이미지 크기로 다시 조정하시오. |
 
 
-**segmentation**
+**분할**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Superpixels(P, N, M) | Generates `N` superpixels of the image at (max) resolution `M` and resizes back to the original size. Then `P` percent of all superpixel areas in the original image are replaced by the superpixel. `(1-P)` percent remain unaltered. |
-| Voronoi(PS, P, M) | Queries point sampler `PS` to get coordinates of Voronoi cells. Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
-| UniformVoronoi(N, P, M) | Places `N` Voronoi cells randomly on each image. Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
-| RegularGridVoronoi(H, W, P, M) | Places a regular grid of `HxW` (height x width) Voronoi cells on each image. Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
-| RelativeRegularGridVoronoi(HPC, WPC, P, M) | Places a regular grid of `HPC*H x WPC*W` Voronoi cells on each image (`H`, `W` are the image height and width). Replaces in each cell all pixels with prob. `P` by their average. Does these steps at max resolution `M`. |
+| Superpixels(P, N, M) | (최대) 해상도 M에서 이미지의 N 수퍼 픽셀을 생성하고 원래 크기로 다시 크기를 조정한다. 그런 다음 원본 이미지의 모든 수퍼 픽셀 영역의 P %가 수퍼 픽셀로 대체된다. (1-P) 퍼센트는 변경되지 않는다.  |
+| Voronoi(PS, P, M) |Voronoi 셀의 좌표를 얻기 위해 샘플러 PS를 쿼리한다. 각 셀에서 모든 픽셀을 프로브로 바꾼다. 평균으로 P. 최대 해상도 M에서 이 단계를 수행한다. |
+| UniformVoronoi(N, P, M) | 각 이미지에 `N` Voronoi 셀을 무작위로 배치한다. 각 셀에서 모든 픽셀을 프로브로 바꾼다. 평균으로 P. 최대 해상도 M에서이 단계를 수행한다. |
+| RegularGridVoronoi(H, W, P, M) |각 이미지에 'H'x'W' (높이 x 너비) Voronoi 셀의 규칙적인 그리드를 배치한다. 각 셀에서 모든 픽셀을 프로브로 바꾼다. 평균으로 P. 최대 해상도 M에서이 단계를 수행한다. |
+| RelativeRegularGridVoronoi(HPC, WPC, P, M) |각 이미지에 `HPC*H x WPC*W` Voronoi 셀의 규칙적인 그리드를 배치한다 (H, W는 이미지 높이 및 너비). 각 셀에서 모든 픽셀을 프로브로 바꾼다. 평균으로 P. 최대 해상도 M에서이 단계를 수행한다. |
 
 
-**size**
+**크기**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| Resize(S, I) | Resizes images to size `S`. Common use case would be to use `S={"height":H, "width":W}` to resize all images to shape `HxW`. `H` and `W` may be floats (e.g. resize to `50%` of original size). Either `H` or `W` may be `"keep-aspect-ratio"` to define only one side's new size and resize the other side correspondingly. `I` is the interpolation to use (default: `cubic`). |
-| CropAndPad(PX, PC, PM, PCV, KS) | Crops away or pads `PX` pixels or `PC` percent of pixels at top/right/bottom/left of images. Negative values result in cropping, positive in padding. `PM` defines the pad mode (e.g. use uniform color for all added pixels). `PCV` controls the color of added pixels if `PM=constant`. If `KS` is true (default), the resulting image is resized back to the original size. |
-| Pad(PX, PC, PM, PCV, KS) | Shortcut for CropAndPad(), which only adds pixels. Only positive values are allowed for `PX` and `PC`. |
-| Crop(PX, PC, KS) | Shortcut for CropAndPad(), which only crops away pixels. Only positive values are allowed for `PX` and `PC` (e.g. a value of 5 results in 5 pixels cropped away). |
-| PadToFixedSize(W, H, PM, PCV, POS) | Pads all images up to height `H` and width `W`. `PM` and `PCV` are the same as in `Pad`. `POS` defines the position around which to pad, e.g. `POS="center"` pads equally on all sides, `POS="left-top"` pads only the top and left sides. |
-| CropToFixedSize(W, H, POS) | Similar to `PadToFixedSize`, but crops down to height `H` and width `W` instead of padding. |
-| KeepSizeByResize(CH, I, IH) | Applies child augmenters `CH` (e.g. cropping) and afterwards resizes all images back to their original size. `I` is the interpolation used for images, `IH` the interpolation used for heatmaps. |
+| Resize(S, I) | 이미지의 크기를 S로 조정한다. 일반적인 사용 사례는 `S={"height":H, "width":W}`를 사용하여 모든 이미지의 크기를 `HxW` 모양으로 조정하는 것이다. H와 W는 플로트 일 수 있다 (예 : 원래 크기의 50 %로 크기 조정). H 또는 W는 한쪽의 새 크기만 정의하고 다른 쪽의 크기를 적절하게 조정하기 위해 `"종횡비 유지"`일 수 있다. I는 (기본값 : `cubic`)을 사용하기 위한 보간이다. |
+| CropAndPad(PX, PC, PM, PCV, KS) | 이미지의 위 / 오른쪽 / 아래 / 왼쪽에서 PX 픽셀 또는 픽셀의 PC 백분율을 자르거나 채운다. 음수 값은 잘라내기, 양수 값은 채우기를 실행한다. PM은 패드 모드를 정의한다 (예 : 추가 된 모든 픽셀에 균일 한 색상 사용). PMV가 일정한 경우 PCV는 추가 된 픽셀의 색상을 제어한다. KS가 true (기본값)이면 결과 이미지가 원래 크기로 다시 조정된다. |
+| Pad(PX, PC, PM, PCV, KS) | CropAndPad () 의 픽셀을 추가하기만 하는 숏컷이다. PX 및 PC에는 양수 값만 허용된다.  |
+| Crop(PX, PC, KS) | CropAndPad ()의 픽셀을 잘라내기만 하는 숏컷이다. PX 및 PC에는 양수 값만 사용할 수 있다 (예 : 5 값은 5 픽셀이 잘린다).  |
+| PadToFixedSize(W, H, PM, PCV, POS) |높이 H와 너비 W까지의 모든 이미지를 채운다. PM 및 PCV는 'Pad'와 동일하다. POS는 패딩 할 위치를 정의한다. POS = "center"는 모든면에 똑같이, POS = "left-top"은 윗면과 왼쪽만 채운다.  |
+| CropToFixedSize(W, H, POS) | `PadToFixedSize`와 비슷하지만 패딩 대신 높이 H와 너비 W로 자른다.  |
+| KeepSizeByResize(CH, I, IH) | 자식 증강 CH (예 : 자르기)를 적용한 후 모든 이미지의 크기를 원래 크기로 다시 조정한다. I는 이미지에 사용 된 보간이고, IH는 히트맵에 사용되는 보간이다.  |
 
 
-**weather**
+**날씨**
 
-| Augmenter | Description |
+| 증강 | 정의 |
 | --- | --- |
-| FastSnowyLandscape(LT, LM) | Converts landscape images to snowy landscapes by increasing in HLS colorspace the lightness `L` of all pixels with `L<LT` by a factor of `LM`. |
-| Clouds() | Adds clouds of various shapes and densities to images. Can be senseful to be combined with an *overlay* augmenter, e.g. `SimplexNoiseAlpha`. |
-| Fog() | Adds fog-like cloud structures of various shapes and densities to images. Can be senseful to be combined with an *overlay* augmenter, e.g. `SimplexNoiseAlpha`. |
-| CloudLayer(IM, IFE, ICS, AMIN, AMUL, ASPXM, AFE, S, DMUL) | Adds a single layer of clouds to an image. `IM` is the mean intensity of the clouds, `IFE` a frequency noise exponent for the intensities (leading to non-uniform colors), `ICS` controls the variance of a gaussian for intensity sampling, `AM` is the minimum opacity of the clouds (values >0 are typical of fog), `AMUL` a multiplier for opacity values, `ASPXM` controls the minimum grid size at which to sample opacity values, `AFE` is a frequency noise exponent for opacity values, `S` controls the sparsity of clouds and `DMUL` is a cloud density multiplier. This interface is not final and will likely change in the future. |
-| Snowflakes(D, DU, FS, FSU, A, S) | Adds snowflakes with density `D`, density uniformity `DU`, snowflake size `FS`, snowflake size uniformity `FSU`, falling angle `A` and speed `S` to an image. One to three layers of snowflakes are added, hence the values should be stochastic. |
-| SnowflakesLayer(D, DU, FS, FSU, A, S, BSF, BSL) | Adds a single layer of snowflakes to an image. See augmenter `Snowflakes`. `BSF` and `BSL` control a gaussian blur applied to the snowflakes. |
+| FastSnowyLandscape(LT, LM) | HLS 색상 공간에서 `L<LT`를 갖는 모든 픽셀의 밝기 L을 LM의 계수로 증가시켜 풍경 이미지를 눈 풍경으로 변환  |
+| Clouds() | 다양한 모양과 밀도의 구름을 이미지에 추가한다. *오버레이* 증강과 같이 쓰는 것이 좋다.(예:`SimplexNoiseAlpha`) |
+| Fog() | 다양한 모양과 밀도의 안개 같은 구름 구조를 이미지에 추가한다. *오버레이* 증강과 같이 쓰는 것이 좋다. (예:`SimplexNoiseAlpha`)  |
+| CloudLayer(IM, IFE, ICS, AMIN, AMUL, ASPXM, AFE, S, DMUL) | 이미지에 단일 구름 레이어를 추가한다. IM은 구름의 평균 강도, IFE는 강도에 대한 주파수 노이즈 지수 (고르지 않은 색상으로 이어짐), ICS는 강도 샘플링을 위한 가우시안의 분산을 제어하고 AM은 구름의 최소 불투명도 (값> 0은 일반적인 안개), 불투명도 값의 승수 AMUL, ASPXM은 불투명도 값을 샘플링 할 최소 그리드 크기를 제어하고, AFE는 불투명도 값의 주파수 노이즈 지수, S는 구름의 희소성을 제어하고 DMUL은 구름 밀도 멀티 플라이어이다. 이 인터페이스는 최종적이 아니며 향후 변경 될 수 있다.  |
+| Snowflakes(D, DU, FS, FSU, A, S) | 밀도 D, 밀도 균일도 DU, 눈송이 크기 FS, 눈송이 크기 균일도 FSU, 떨어지는 각도 A 및 속도 S를 가진 눈송이를 이미지에 추가한다. 1 ~ 3 층의 눈송이가 추가되므로 값은 확률론적이어야 한다.  |
+| SnowflakesLayer(D, DU, FS, FSU, A, S, BSF, BSL) | 이미지에 눈송이의 단일 레이어를 추가한다. `Snowflakes` 증강을 참조하시오. BSF 및 BSL은 눈송이에 적용되는 가우시안 블러를 제어한다. |
 
 
 <a name="citation"/>
 
-## Citation
+## 인용
 
-If this library has helped you during your research, feel free to cite it:
+이 라이브러리가 연구에 도움이 되었다면, 마음대로 인용해도 좋음 :
 ```latex
 @misc{imgaug,
   author = {Jung, Alexander B.
@@ -1340,3 +1320,4 @@ If this library has helped you during your research, feel free to cite it:
   note = {Online; accessed 25-Sept-2019}
 }
 ```
+
