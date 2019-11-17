@@ -603,9 +603,8 @@ ReadTheDocs 페이지 예제 (보통 notebooks보다 최신 버전이 적다):
 
 ### Example: Simple Training Setting
 
-A standard machine learning situation.
-Train on batches of images and augment each batch via crop, horizontal
-flip ("Fliplr") and gaussian blur:
+표준 기계 학습 상황.
+이미지 배치 교육 및 크롭, 수평 플립("Fliplr") 및 gaussian blur를 통해 각 배치 확대:
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
@@ -642,10 +641,9 @@ for batch_idx in range(100):
 ```
 
 
-### Example: Very Complex Augmentation Pipeline
+### Example: 매우 복잡한 확장 PipeLine
 
-Apply a very heavy augmentation pipeline to images (used to create the image 
-at the very top of this readme):
+이미지에 매우 무거운 증강 pipeline 적용(이 판독값 맨 위에 이미지를 생성하는 데 사용):
 ```python
 import numpy as np
 import imgaug as ia
@@ -734,9 +732,9 @@ images_aug = seq(images=images)
 ```
 
 
-### Example: Augment Images and Keypoints
+### Example: 확장 이미지와 Keypoints
 
-Augment images and keypoints/landmarks on the same images:
+동일한 영상의 영상 및 keypoints/landmarks 확대:
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
@@ -761,11 +759,9 @@ print("Image 2 center", np.argmax(images_aug[1, 64, 64:64+6, 0]))
 print("Points 1", points_aug[0])
 print("Points 2", points_aug[1])
 ```
-Note that all coordinates in `imgaug` are subpixel-accurate, which is
-why `x=0.5, y=0.5` denotes the center of the pixel of the top left pixel.
+`imgaug`의 모든 좌표는 서브픽셀 정확도로 `x=0.5, y=0.5`는 왼쪽 상단 픽셀의 픽셀 중심을 나타낸다.
 
-
-### Example: Augment Images and Bounding Boxes
+### Example: 확장 이미지 및 Bounding Boxes
 
 ```python
 import numpy as np
@@ -789,7 +785,7 @@ images_aug, bbs_aug = seq(images=images, bounding_boxes=bbs)
 ```
 
 
-### Example: Augment Images and Polygons
+### Example: 증강 이미지 및 폴리곤
 
 ```python
 import numpy as np
@@ -812,10 +808,9 @@ images_aug, polygons_aug = seq(images=images, polygons=polygons)
 ```
 
 
-### Example: Augment Images and LineStrings
+### Example: 확장 이미지 및 LineStrings
 
-LineStrings are similar to polygons, but are not closed, may intersect with
-themselves and don't have an inner area.
+LineStrings는 폴리곤과 유사하지만 닫히지 않으며, 자신과 교차하며 내부 영역이 없을 수 있다.
 ```python
 import numpy as np
 import imgaug as ia
@@ -838,13 +833,13 @@ images_aug, ls_aug = seq(images=images, line_strings=ls)
 ```
 
 
-### Example: Augment Images and Heatmaps
+### Example: 확장 이미지 및 히트맵
 
-Heatmaps are dense float arrays with values between `0.0` and `1.0`.
-They can be used e.g. when training models to predict facial landmark
-locations. Note that the heatmaps here have lower height and width than the
-images. `imgaug` handles that case automatically. The crop pixel amounts will
-be halved for the heatmaps.
+히트맵은 `0.0`~`1.0`의 값을 갖는 고밀도 플로트 배열이다.
+예를 들어 얼굴 특징 위치를 예측하기 위해 모델을 훈련할 때 사용할 수 있다.
+히트맵은 이미지보다 낮은 높이와 폭을 가지고 있다는 점에 유의해야한다.
+`imgaug`는 그 일을 자동으로 처리한다.
+크롭 픽셀 양은 히트맵의 경우 반으로 줄어들 것이다.
 
 ```python
 import numpy as np
@@ -865,11 +860,10 @@ images_aug, heatmaps_aug = seq(images=images, heatmaps=heatmaps)
 ```
 
 
-### Example: Augment Images and Segmentation Maps
+### Example: 확장 이미지 및 세그먼트 맵
 
-This is similar to heatmaps, but the dense arrays have dtype `int32`.
-Operations such as resizing will automatically use nearest neighbour
-interpolation.
+이는 히트맵과 비슷하지만 촘촘한 배열은 dtype `int32`을 가지고 있다.
+크기 조정과 같은 작업은 자동으로 가장 가까운 인접 보조를 사용한다.
 
 ```python
 import numpy as np
@@ -890,9 +884,9 @@ images_aug, segmaps_aug = seq(images=images, segmentation_maps=segmaps)
 ```
 
 
-### Example: Visualize Augmented Images
+### Example: 증강된 이미지 시각화
 
-Quickly show example results of your augmentation sequence:
+확대된 시퀀스의 예제 결과를 표시:
 ```python
 import numpy as np
 import imgaug.augmenters as iaa
