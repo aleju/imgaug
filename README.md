@@ -13,7 +13,7 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 <tr>
 <th>&nbsp;</th>
 <th>이미지</th>
-<th>적외선 열지도(Heatmaps)</th>
+<th></th>
 <th>분할 지도</th>
 <th>주요지점</th>
 <th>경계 상자,<br>다각형</th>
@@ -169,20 +169,20 @@ pip install git+https://github.com/aleju/imgaug.git
 ## 참고자료
 
 jupyter notebooks 예시:
-  * [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
-  * [Multicore Augmentation](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
-  * Augment and work with: [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
-    [Bounding Boxes](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
-    [Polygons](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
-    [Line Strings](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
-    [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
-    [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb) 
+  * [이미지를 로드하고 증강한다](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
+  * [다중 증강](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
+  * 증강 및 작업 : [키포인트/랜드마크](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
+    [경계 상자](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B02%20-%20Augment%20Bounding%20Boxes.ipynb),
+    [다각형](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B03%20-%20Augment%20Polygons.ipynb),
+    [선 문자열](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B06%20-%20Augment%20Line%20Strings.ipynb),
+    [히트맵](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
+    [분할맵](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb) 
 
 더 많은 자료: [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks).
 
 ReadTheDocs 페이지 예제 (보통 notebooks보다 최신 버전이 적다):
-* [Quick example code on how to use the library](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
-* [Examples for some of the supported augmentation techniques](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
+* [라이브러리 사용 방법에 대한 간단한 예제 코드](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
+* [지원되는 증강 기술 예제](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
 * [API](http://imgaug.readthedocs.io/en/latest/source/api.html)
 
 더 많은 RTD 자료: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
