@@ -114,7 +114,7 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 * 많은 도우미 기능
   * 예 : 열 지도, 분할 지도, 키포인트, 경계 상자등 그리기, ...
   * 예 : 축척 분할 맵, 이미지 / 맵의 평균 / 최대 풀, 패드 이미지 대 종횡비 (예. 제곱)
-  * 예 : 키포인트를 거리 맵으로 변환하고, 바운딩 상자 내의 픽셀을 이미지에서 추출하고, 폴리곤을 이미지 평면으로 클립하고, ...
+  * 예 : 키포인트를 거리 맵으로 변환, 바운딩 상자 내의 픽셀을 이미지에서 추출, 폴리곤을 이미지 평면으로 클립, ...
 * 다수의 CPU 코어에서 증강 지원
 
 
@@ -122,7 +122,7 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 
 ## 설치
 
-이 라이브러리는 python 2.7과 3.4+를 지원함니다.
+이 라이브러리는 python 2.7과 3.4+를 지원한다.
 
 ### 설치: 아나콘다
 
@@ -132,7 +132,7 @@ conda config --add channels conda-forge
 conda install imgaug
 ```
 
-`conda remove imgaug`를 통해 라이브러리를 삭제할 수 있다..
+`conda remove imgaug`를 통해 라이브러리를 삭제할 수 있다.
 
 ### 설치: pip
 
@@ -141,7 +141,7 @@ pip을 통해 라이브러리를 설치하려면 먼저 모든 요구 사항을 
 pip install six numpy scipy Pillow matplotlib scikit-image opencv-python imageio Shapely
 ```
 
-그런 다음, pypi를 통해 imgaug를 설치하십시오(github 버전에 따라 지연될 수 있다.):
+그런 다음, pypi를 통해 imgaug를 설치하십시오 (github 버전에 따라 지연될 수 있다):
 ```bash
 pip install imgaug
 ```
