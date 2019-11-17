@@ -415,10 +415,12 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         In case of mode ``linear_ramp``, the parameter `cval` will be used as
         the ``end_values`` parameter to :func:`numpy.pad`.
 
-    cval : number, optional
+    cval : number or iterable of number, optional
         Value to use for padding if `mode` is ``constant``.
         See :func:`numpy.pad` for details. The cval is expected to match the
-        input array's dtype and value range.
+        input array's dtype and value range. If an iterable is used, it is
+        expected to contain one value per channel. The number of values
+        and number of channels are expected to match.
 
     Returns
     -------
@@ -432,7 +434,9 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     _assert_two_or_three_dims(arr)
     assert all([v >= 0 for v in [top, right, bottom, left]]), (
         "Expected padding amounts that are >=0, but got %d, %d, %d, %d "
-        "(top, right, botto, left)" % (top, right, bottom, left))
+        "(top, right, bottom, left)" % (top, right, bottom, left))
+
+    is_multi_cval = ia.is_iterable(cval)
 
     if top > 0 or right > 0 or bottom > 0 or left > 0:
         min_value, _, max_value = iadt.get_value_range_of_dtype(arr.dtype)
@@ -443,7 +447,10 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         if arr.dtype.name == "float128":
             cval = np.float128(cval)  # pylint: disable=no-member
 
-        cval = max(min(cval, max_value), min_value)
+        if is_multi_cval:
+            cval = np.clip(cval, min_value, max_value)
+        else:
+            cval = max(min(cval, max_value), min_value)
 
         # Note that copyMakeBorder() hangs/runs endlessly if arr has an
         # axis of size 0 and mode is "reflect".
@@ -482,16 +489,19 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         bad_shape_cv2 = (arr.ndim == 3 and arr.shape[-1] == 0)
 
         if not bad_datatype_cv2 and not bad_mode_cv2 and not bad_shape_cv2:
-            cval = (
-                float(cval)
-                if arr.dtype.kind == "f"
-                else int(cval)
-            )  # results in TypeError otherwise for np inputs
+            # convert cval to expected type, as otherwise we get TypeError
+            # for np inputs
+            kind = arr.dtype.kind
+            if is_multi_cval:
+                cval = [float(cval_c) if kind == "f" else int(cval_c)
+                        for cval_c in cval]
+            else:
+                cval = float(cval) if kind == "f" else int(cval)
 
             if arr.ndim == 2 or arr.shape[2] <= 4:
                 # without this, only the first channel is padded with the cval,
                 # all following channels with 0
-                if arr.ndim == 3:
+                if arr.ndim == 3 and not is_multi_cval:
                     cval = tuple([cval] * arr.shape[2])
 
                 arr_pad = cv2.copyMakeBorder(
@@ -502,9 +512,10 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
             else:
                 result = []
                 channel_start_idx = 0
+                cval = cval if is_multi_cval else tuple([cval] * arr.shape[2])
                 while channel_start_idx < arr.shape[2]:
                     arr_c = arr[..., channel_start_idx:channel_start_idx+4]
-                    cval_c = tuple([cval] * arr_c.shape[2])
+                    cval_c = cval[channel_start_idx:channel_start_idx+4]
                     arr_pad_c = cv2.copyMakeBorder(
                         arr_c, top=top, bottom=bottom, left=left, right=right,
                         borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
@@ -521,11 +532,25 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
                 paddings_np.append((0, 0))
 
             if mode == "constant":
-                arr_pad = np.pad(arr, paddings_np, mode=mode,
-                                 constant_values=cval)
+                if arr.ndim > 2 and is_multi_cval:
+                    arr_pad_chans = [
+                        np.pad(arr[..., c], paddings_np[0:2], mode=mode,
+                               constant_values=cval[c])
+                        for c in np.arange(arr.shape[2])]
+                    arr_pad = np.stack(arr_pad_chans, axis=-1)
+                else:
+                    arr_pad = np.pad(arr, paddings_np, mode=mode,
+                                     constant_values=cval)
             elif mode == "linear_ramp":
-                arr_pad = np.pad(arr, paddings_np, mode=mode,
-                                 end_values=cval)
+                if arr.ndim > 2 and is_multi_cval:
+                    arr_pad_chans = [
+                        np.pad(arr[..., c], paddings_np[0:2], mode=mode,
+                               end_values=cval[c])
+                        for c in np.arange(arr.shape[2])]
+                    arr_pad = np.stack(arr_pad_chans, axis=-1)
+                else:
+                    arr_pad = np.pad(arr, paddings_np, mode=mode,
+                                     end_values=cval)
             else:
                 arr_pad = np.pad(arr, paddings_np, mode=mode)
 
