@@ -100,7 +100,7 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
   * 무작위로 증강을 적용하기 쉽다
 * 다음을 지원한다.
   * 이미지 (uint8에 대한 전체 지원, 다른 dtypes에 대한 지원은 [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html)를 참조하십시오.)
-  * Heatmaps (float32), 분할 Maps (int), Masks (bool)
+  * Heatmaps (float32), 분할 맵 (int), Masks (bool)
     * 해당 이미지보다 작거나 클 수 있다. 예.자르기 같은 기능을 위한 추가 코드 라인이 필요 *없다*. 
   * 키포인트/랜드마크 (int/float coordinates)
   * 경계상자 (int/float coordinates)
@@ -209,10 +209,6 @@ ReadTheDocs 페이지 예제 (보통 notebooks보다 최신 버전이 적다):
 
 아래 이미지는 대부분의 증강 기법에 대한 예제를 보여준다.
 
-Values written in the form `(a, b)` denote a uniform distribution,
-i.e. the value is randomly picked from the interval .
-Line strings are supported by all augmenters, but are not explicitly visualized
-here.
 (a, b) 형태로 쓰여진 값은 균일한 분포를 나타내며,
 즉, 값은 간격 `[a, b]`에서 랜덤하게 선택된다.
 선 문자열은 모든 증강자에서 지원되지만 여기서 명시적으로 시각화되지는 않는다.
