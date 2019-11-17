@@ -1,8 +1,8 @@
 # imgaug
 
-이 파이썬 라이브러리는 기계 학습 프로젝트를 위한 이미지를 보강하는데 도움이 됩니다.
+이 파이썬 라이브러리는 기계 학습 프로젝트를 위한 이미지를 보강하는데 도움이 된다.
 
-Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로운 이미지 세트로 변환합니다.
+Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로운 이미지 세트로 변환한다.
 
 [![Build Status](https://travis-ci.org/aleju/imgaug.svg?branch=master)](https://travis-ci.org/aleju/imgaug)
 [![codecov](https://codecov.io/gh/aleju/imgaug/branch/master/graph/badge.svg)](https://codecov.io/gh/aleju/imgaug)
@@ -13,8 +13,8 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 <tr>
 <th>&nbsp;</th>
 <th>이미지</th>
-<th>Heatmaps</th>
-<th>분할 Maps</th>
+<th>적외선 열지도(Heatmaps)</th>
+<th>분할 지도</th>
 <th>주요지점</th>
 <th>경계 상자,<br>다각형</th>
 </tr>
@@ -96,72 +96,71 @@ Imgaug는 입력된 이미지 세트를 훨씬 더 큰 약간 변경된 새로�
 * 많은 증강 기법
   * 예.아핀 변환, 원근법 변환, 대조 변화, 가우시안 소음, 지역 중퇴, 색상 / 포화 변화, 자르기 / 패딩, 흐림, ...
 * 고성능 최적화
-  * 일부 이미지에만 확대를 적용하기 쉽습니다.
+  * 일부 이미지에만 확대를 적용하기 쉽다.
   * 무작위로 증강을 적용하기 쉽다
-* 다음을 지원합니다.
+* 다음을 지원한다.
   * 이미지 (uint8에 대한 전체 지원, 다른 dtypes에 대한 지원은 [documentation](https://imgaug.readthedocs.io/en/latest/source/dtype_support.html)를 참조하십시오.)
   * Heatmaps (float32), 분할 Maps (int), Masks (bool)
-    * 해당 이미지보다 작거나 클 수 있습니다. 예.자르기 같은 기능을 위한 추가 코드 라인이 필요 *없습니다*. 
-  * Keypoints/Landmarks (int/float coordinates)
-  * Bounding Boxes (int/float coordinates)
-  * Polygons (int/float coordinates) (Beta)
-  * Line Strings (int/float coordinates) (Beta)
-* Automatic alignment of sampled random values
-  * Example: Rotate image and segmentation map on it by the same value sampled from `uniform(-10°, 45°)`. (0 extra lines of code.)
-* Probability distributions as parameters
-  * Example: Rotate images by values sampled from `uniform(-10°, 45°)`.
-  * Example: Rotate images by values sampled from `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`", where `ABS(.)` is the absolute function, `N(.)` the gaussian distribution and `B(.)` the beta distribution.
-* Many helper functions
-  * Example: Draw heatmaps, segmentation maps, keypoints, bounding boxes, ...
-  * Example: Scale segmentation maps, average/max pool of images/maps, pad images to aspect
-    ratios (e.g. to square them)
-  * Example: Convert keypoints to distance maps, extract pixels within bounding boxes from images, clip polygon to the image plane, ...
-* Support for augmentation on multiple CPU cores
+    * 해당 이미지보다 작거나 클 수 있다. 예.자르기 같은 기능을 위한 추가 코드 라인이 필요 *없다*. 
+  * 키포인트/랜드마크 (int/float coordinates)
+  * 경계상자 (int/float coordinates)
+  * 다각형 (int/float coordinates) (Beta)
+  * 선 문자열 (int/float coordinates) (Beta)
+* 샘플링된 랜덤 값의 자동 정렬
+  * 예: 이미지와 분할 맵을 균일한 값(-10°, 45°)으로 샘플링하여 동일 값으로 회전시킨다. (0개의 추가 코드 라인)
+* 확률 분포를 매개변수로 사용
+  * 예: 이미지들을 균일(-10°, 45°)에서 샘플링한 값들로 회전시킨다.
+  * 예: `ABS(.)`는 절대함수, `N(.)`는 가우시안 분포, 그리고 `B(.)`는 베타 분포일때, `ABS(N(0, 20.0))*(1+B(1.0, 1.0))`에서 샘플링된 값으로 이미지들을 회전시킨다.
+* 많은 도우미 기능
+  * 예 : 열 지도, 분할 지도, 키포인트, 경계 상자등 그리기, ...
+  * 예 : 축척 분할 맵, 이미지 / 맵의 평균 / 최대 풀, 패드 이미지 대 종횡비 (예. 제곱)
+  * 예 : 키포인트를 거리 맵으로 변환하고, 바운딩 상자 내의 픽셀을 이미지에서 추출하고, 폴리곤을 이미지 평면으로 클립하고, ...
+* 다수의 CPU 코어에서 증강 지원
 
 
 <a name="installation"/>
 
 ## 설치
 
-The library supports python 2.7 and 3.4+.
+이 라이브러리는 python 2.7과 3.4+를 지원함니다.
 
 ### 설치: 아나콘다
 
-To install the library in anaconda, perform the following commands:
+아나콘다에 라이브러리를 설치하려면 다음 명령을 수행하십시오:
 ```bash
 conda config --add channels conda-forge
 conda install imgaug
 ```
 
-You can deinstall the library again via `conda remove imgaug`.
+`conda remove imgaug`를 통해 라이브러리를 삭제할 수 있다..
 
 ### 설치: pip
 
-To install the library via pip, first install all requirements:
+pip을 통해 라이브러리를 설치하려면 먼저 모든 요구 사항을 설치하십시오:
 ```bash
 pip install six numpy scipy Pillow matplotlib scikit-image opencv-python imageio Shapely
 ```
 
-Then install imgaug either via pypi (can lag behind the github version):
+그런 다음, pypi를 통해 imgaug를 설치하십시오(github 버전에 따라 지연될 수 있다.):
 ```bash
 pip install imgaug
 ```
 
-or install the latest version directly from github:
+또는 github에서 최신 버전을 직접 설치하십시오:
 ```bash
 pip install git+https://github.com/aleju/imgaug.git
 ```
 
-In rare cases, `Shapely` can cause issues to install.
-You can skip the package in these cases -- but note that at least polygon and
-line string augmentation will crash without it.
+드물게, `Shapely` 설치 문제를 일으킬 수 있다.
+이 경우 패키지를 건너뛸 수 있다 -- 하지만 폴리곤과 선 문자열 증강은
+`Shapely`없이는 충돌할 수 있다.
 
-To deinstall the library, just execute `pip uninstall imgaug`.
+라이브러리를 삭제하기 위해서는, `pip uninstall imgaug`를 실행하면 된다.
 
 ### 설치: From Source
 
-Alternatively, you can download the repository via
-`git clone https://github.com/aleju/imgaug` and install manually via
+또는, 저장소를 통해 다운로드할 수 있다.
+`git clone https://github.com/aleju/imgaug` 그리고 다음 명령어를 통해 수동으로 설치할 수 있다.
 `cd imgaug && python setup.py install`.
 
 
@@ -169,7 +168,7 @@ Alternatively, you can download the repository via
 
 ## 참고자료
 
-Example jupyter notebooks:
+jupyter notebooks 예시:
   * [Load and Augment an Image](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A01%20-%20Load%20and%20Augment%20an%20Image.ipynb)
   * [Multicore Augmentation](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/A03%20-%20Multicore%20Augmentation.ipynb)
   * Augment and work with: [Keypoints/Landmarks](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B01%20-%20Augment%20Keypoints.ipynb),
@@ -179,42 +178,44 @@ Example jupyter notebooks:
     [Heatmaps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B04%20-%20Augment%20Heatmaps.ipynb),
     [Segmentation Maps](https://nbviewer.jupyter.org/github/aleju/imgaug-doc/blob/master/notebooks/B05%20-%20Augment%20Segmentation%20Maps.ipynb) 
 
-More notebooks: [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks).
+더 많은 자료: [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks).
 
-Example ReadTheDocs pages (usually less up to date than the notebooks):
+ReadTheDocs 페이지 예제 (보통 notebooks보다 최신 버전이 적다):
 * [Quick example code on how to use the library](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
 * [Examples for some of the supported augmentation techniques](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
 * [API](http://imgaug.readthedocs.io/en/latest/source/api.html)
 
-More RTD documentation: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
+더 많은 RTD 자료: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
 
-All documentation related files of this project are hosted in the
-repository [imgaug-doc](https://github.com/aleju/imgaug-doc).
+이 프로젝트의 모든 문서 관련 파일은 다음 저장소에 호스팅되어 있다. [imgaug-doc](https://github.com/aleju/imgaug-doc).
 
 
 <a name="recent_changes"/>
 
 ## 최근 변경사항
 
-* **0.3.0**: Reworked segmentation map augmentation, adapted to numpy 1.17+
-  random number sampling API, several new augmenters.
-* **0.2.9**: Added polygon augmentation, added line string augmentation,
-  simplified augmentation interface.
-* **0.2.8**: Improved performance, dtype support and multicore augmentation.
+* **0.3.0**: 재 작업된 분할 맵 증강이 numpy 1.17+에 적용되었다.
+  난수 샘플링 API, 몇 개의 새로운 증강기.
+* **0.2.9**: 추가된 폴리곤 증강, 추가된 선 문자열 증강,
+단순화된 증강 인터페이스.
+* **0.2.8**: 향상된 성능, dtype 지원 및 멀티 코어 증강.
 
-See [changelogs/](changelogs/) for more details.
+자세한 내용은 [changelogs/](changelogs/)를 참조하십시오.
 
 
 <a name="example_images"/>
 
-## Example Images
+## 예시 이미지
 
-The images below show examples for most augmentation techniques.
+아래 이미지는 대부분의 증강 기법에 대한 예제를 보여준다.
 
 Values written in the form `(a, b)` denote a uniform distribution,
-i.e. the value is randomly picked from the interval `[a, b]`.
+i.e. the value is randomly picked from the interval .
 Line strings are supported by all augmenters, but are not explicitly visualized
 here.
+(a, b) 형태로 쓰여진 값은 균일한 분포를 나타내며,
+즉, 값은 간격 `[a, b]`에서 랜덤하게 선택된다.
+선 문자열은 모든 증강자에서 지원되지만 여기서 명시적으로 시각화되지는 않는다.
 
 <table>
 
