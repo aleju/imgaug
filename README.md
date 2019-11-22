@@ -785,7 +785,7 @@ images_aug, bbs_aug = seq(images=images, bounding_boxes=bbs)
 ```
 
 
-### Example: 증강 이미지 및 
+### Example: 증강 이미지 및 다각형
 
 ```python
 import numpy as np
