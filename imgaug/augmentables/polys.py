@@ -12,7 +12,8 @@ import collections
 
 from .. import imgaug as ia
 from .. import random as iarandom
-from .utils import normalize_shape, interpolate_points
+from .utils import (normalize_shape, interpolate_points,
+                    _remove_out_of_image_fraction)
 
 
 def recover_psois_(psois, psois_orig, recoverer, random_state):
@@ -236,8 +237,7 @@ class Polygon(object):
 
         """
         if len(self.exterior) < 3:
-            raise Exception("Cannot compute the polygon's area because it "
-                            "contains less than three points.")
+            return 0.0
         poly = self.to_shapely_polygon()
         return poly.area
 
@@ -345,6 +345,60 @@ class Polygon(object):
         if return_distance:
             return closest_idx, distances[closest_idx]
         return closest_idx
+
+    def compute_out_of_image_area(self, image):
+        """Compute the area of the BB that is outside of the image plane.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Total area of the bounding box that is outside of the image plane.
+            Can be ``0.0``.
+
+        """
+        polys_clipped = self.clip_out_of_image(image)
+        if len(polys_clipped) == 0:
+            return self.area
+        return self.area - sum([poly.area for poly in polys_clipped])
+
+    def compute_out_of_image_fraction(self, image):
+        """Compute fraction of polygon area outside of the image plane.
+
+        This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
+        polygon that is outside of the image plane, while ``A`` is the
+        total area of the bounding box.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Fraction of the polygon area that is outside of the image
+            plane. Returns ``0.0`` if the polygon is fully inside of
+            the image plane or has zero points. If the polygon has an area
+            of zero, the polygon is treated similarly to a :class:`LineString`,
+            i.e. the fraction of the line that is outside the image plane is
+            returned.
+
+        """
+        area = self.area
+        if area == 0:
+            return self.to_line_string().compute_out_of_image_fraction(image)
+        return self.compute_out_of_image_area(image) / area
 
     # TODO keep this method? it is almost an alias for is_out_of_image()
     def is_fully_within_image(self, image):
@@ -1451,6 +1505,26 @@ class PolygonsOnImage(object):
         ]
         # TODO use deepcopy() here
         return PolygonsOnImage(polys_clean, shape=self.shape)
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all Polys with an out of image fraction of ``>=fraction``.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a polygon has to have in
+            order to be removed. A fraction of ``1.0`` removes only polygons
+            that are ``100%`` outside of the image. A fraction of ``0.0``
+            removes all polygons.
+
+        Returns
+        -------
+        imgaug.augmentables.polys.PolygonsOnImage
+            Reduced set of polygons, with those that had an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction, PolygonsOnImage)
 
     def clip_out_of_image(self):
         """Clip off all parts from all polygons that are outside of an image.

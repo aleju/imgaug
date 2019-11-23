@@ -7,7 +7,8 @@ import scipy.spatial.distance
 import six.moves as sm
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords
+from .utils import (normalize_shape, project_coords,
+                    _remove_out_of_image_fraction)
 
 
 def compute_geometric_median(points=None, eps=1e-5, X=None):
@@ -148,6 +149,54 @@ class Keypoint(object):
         """
         xy_proj = project_coords([(self.x, self.y)], from_shape, to_shape)
         return self.deepcopy(x=xy_proj[0][0], y=xy_proj[0][1])
+
+    def is_out_of_image(self, image):
+        """Estimate whether this point is outside of the given image plane.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        bool
+            ``True`` is the point is inside the image plane, ``False``
+            otherwise.
+
+        """
+        shape = normalize_shape(image)
+        height, width = shape[0:2]
+        y_inside = (0 <= self.y < height)
+        x_inside = (0 <= self.x < width)
+        return not y_inside or not x_inside
+
+    def compute_out_of_image_fraction(self, image):
+        """Compute fraction of the keypoint that is out of the image plane.
+
+        The fraction is always either ``1.0`` (point is outside of the image
+        plane) or ``0.0`` (point is inside the image plane). This method
+        exists for consistency with other augmentables, e.g. bounding boxes.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Either ``1.0`` (point is outside of the image plane) or
+            ``0.0`` (point is inside of it).
+
+        """
+        return float(self.is_out_of_image(image))
 
     def shift(self, x=0, y=0):
         """Move the keypoint around on an image.
@@ -585,6 +634,45 @@ class KeypointsOnImage(object):
                 image, color=color, alpha=alpha, size=size, copy=False,
                 raise_if_out_of_image=raise_if_out_of_image)
         return image
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all KPs with an out of image fraction of at least `fraction`.
+
+        This method exists for consistency with other augmentables, e.g.
+        bounding boxes.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a keypoint has to have in
+            order to be removed. Note that any keypoint can only have a
+            fraction of either ``1.0`` (is outside) or ``0.0`` (is inside).
+            Set this to ``0.0+eps`` to remove all points that are outside of
+            the image. Setting this to ``0.0`` will remove all points.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Reduced set of keypoints, with those thathad an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction, KeypointsOnImage)
+
+    def clip_out_of_image(self):
+        """Remove all KPs that are outside of the image plane.
+
+        This method exists for consistency with other augmentables, e.g.
+        bounding boxes.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Keypoints that are inside the image plane.
+
+        """
+        # we could use anything >0 here as the fraction
+        return self.remove_out_of_image_fraction(0.5)
 
     def shift(self, x=0, y=0):
         """Move the keypoints on the x/y-axis.

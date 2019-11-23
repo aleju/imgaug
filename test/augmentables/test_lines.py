@@ -334,6 +334,56 @@ class TestLineString(unittest.TestCase):
         ls_proj = ls.project((10, 10), (20, 20))
         assert ls_proj.coords.shape == (0, 2)
 
+    def test_compute_out_of_image_fraction__no_points(self):
+        ls = LineString([])
+        image_shape = (100, 200, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_compute_out_of_image_fraction__one_point(self):
+        ls = LineString([(1.0, 2.0)])
+        image_shape = (100, 200, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_compute_out_of_image_fraction__one_point__ooi(self):
+        ls = LineString([(-10.0, -20.0)])
+        image_shape = (100, 200, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 1.0)
+
+    def test_compute_out_of_image_fraction__two_points(self):
+        ls = LineString([(1.0, 2.0), (10.0, 20.0)])
+        image_shape = (100, 200, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_compute_out_of_image_fraction__three_points_at_same_pos(self):
+        ls = LineString([(10.0, 20.0), (10.0, 20.0), (10.0, 20.0)])
+        image_shape = (100, 200, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert len(ls.coords) == 3
+        assert np.isclose(factor, 0.0)
+
+    def test_compute_out_of_image_fraction__partially_ooi(self):
+        ls = LineString([(9.0, 1.0), (11.0, 1.0)])
+        image_shape = (10, 10, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.5, atol=1e-3)
+
+    def test_compute_out_of_image_fraction__leaves_image_multiple_times(self):
+        ls = LineString([(9.0, 1.0), (11.0, 1.0), (11.0, 3.0),
+                         (9.0, 3.0), (9.0, 5.0), (11.0, 5.0)])
+        image_shape = (10, 10, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.5, atol=1e-3)
+
+    def test_compute_out_of_image_fraction__fully_ooi(self):
+        ls = LineString([(15.0, 15.0), (20.0, 15.0)])
+        image_shape = (10, 10, 3)
+        factor = ls.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 1.0)
+
     def test_is_fully_within_image_with_simple_line_string(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
         assert ls.is_fully_within_image((10, 10))
@@ -1987,6 +2037,18 @@ class TestLineStringsOnImage(unittest.TestCase):
         assert len(observed.line_strings) == 1
         assert observed.line_strings[0] is ls1
         assert observed.shape == (100, 100, 3)
+
+    def test_remove_out_of_image_fraction(self):
+        item1 = ia.LineString([(5, 1), (9, 1)])
+        item2 = ia.LineString([(5, 1), (15, 1)])
+        item3 = ia.LineString([(15, 1), (25, 1)])
+        cbaoi = ia.LineStringsOnImage([item1, item2, item3],
+                                      shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction(0.6)
+
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
 
     def test_clip_out_of_image_with_two_simple_line_strings(self):
         ls1 = LineString([(0, 0), (1, 0), (2, 1)])

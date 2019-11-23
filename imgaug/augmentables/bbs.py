@@ -7,7 +7,8 @@ import skimage.draw
 import skimage.measure
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords
+from .utils import (normalize_shape, project_coords,
+                    _remove_out_of_image_fraction)
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -367,6 +368,66 @@ class BoundingBox(object):
             return 0.0
         area_union = self.area + other.area - inters.area
         return inters.area / area_union if area_union > 0 else 0.0
+
+    def compute_out_of_image_area(self, image):
+        """Compute the area of the BB that is outside of the image plane.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Total area of the bounding box that is outside of the image plane.
+            Can be ``0.0``.
+
+        """
+        shape = normalize_shape(image)
+        height, width = shape[0:2]
+        bb_image = BoundingBox(x1=0, y1=0, x2=width, y2=height)
+        inter = self.intersection(bb_image, default=None)
+        area = self.area
+        return area if inter is None else area - inter.area
+
+    def compute_out_of_image_fraction(self, image):
+        """Compute fraction of BB area outside of the image plane.
+
+        This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
+        bounding box that is outside of the image plane, while ``A`` is the
+        total area of the bounding box.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Fraction of the bounding box area that is outside of the image
+            plane. Returns ``0.0`` if the bounding box is fully inside of
+            the image plane. If the bounding box has an area of zero, the
+            result is ``1.0`` if its coordinates are outside of the image
+            plane, otherwise ``0.0``.
+
+        """
+        area = self.area
+        if area == 0:
+            shape = normalize_shape(image)
+            height, width = shape[0:2]
+            y1_outside = self.y1 < 0 or self.y1 >= height
+            x1_outside = self.x1 < 0 or self.x1 >= width
+            is_outside = (y1_outside or x1_outside)
+            return 1.0 if is_outside else 0.0
+        return self.compute_out_of_image_area(image) / area
 
     def is_fully_within_image(self, image):
         """Estimate whether the bounding box is fully inside the image area.
@@ -1358,6 +1419,27 @@ class BoundingBoxesOnImage(object):
             in self.bounding_boxes
             if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
         return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all BBs with an out of image fraction of at least `fraction`.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a bounding box has to have in
+            order to be removed. A fraction of ``1.0`` removes only bounding
+            boxes that are ``100%`` outside of the image. A fraction of ``0.0``
+            removes all bounding boxes.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Reduced set of bounding boxes, with those that had an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction,
+                                             BoundingBoxesOnImage)
 
     @ia.deprecated(alt_func="BoundingBoxesOnImage.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "

@@ -239,13 +239,15 @@ class TestPolygon_area(unittest.TestCase):
 
     def test_polygon_with_two_points(self):
         poly = ia.Polygon([(0, 0), (1, 1)])
-        got_exception = False
-        try:
-            _ = poly.area
-        except Exception as exc:
-            assert "Cannot compute the polygon's area because" in str(exc)
-            got_exception = True
-        assert got_exception
+        assert np.isclose(poly.area, 0.0)
+
+    def test_polygon_with_one_point(self):
+        poly = ia.Polygon([(0, 0)])
+        assert np.isclose(poly.area, 0.0)
+
+    def test_polygon_with_zero_points(self):
+        poly = ia.Polygon([])
+        assert np.isclose(poly.area, 0.0)
 
 
 class TestPolygon_height(unittest.TestCase):
@@ -384,6 +386,103 @@ class TestPolygon_find_closest_point_idx(unittest.TestCase):
         poly = ia.Polygon([])
         with self.assertRaises(AssertionError):
             _ = poly.find_closest_point_index(x=0, y=0)
+
+
+class TestPolygon_compute_out_of_image_area(unittest.TestCase):
+    def test_fully_inside_image_plane(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        image_shape = (10, 20, 3)
+        area_ooi = poly.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, 0.0)
+
+    def test_partially_outside_of_image_plane(self):
+        poly = ia.Polygon([(-1, 0), (1, 0), (1, 2), (-1, 2)])
+        image_shape = (10, 20, 3)
+        area_ooi = poly.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, 2.0)
+
+    def test_fully_outside_of_image_plane(self):
+        poly = ia.Polygon([(-1, 0), (0, 0), (0, 1), (-1, 1)])
+        image_shape = (10, 20, 3)
+        area_ooi = poly.compute_out_of_image_area(image_shape)
+        assert np.isclose(area_ooi, 1.0)
+
+    def test_multiple_polygons_after_clip(self):
+        # two polygons inside the image area remain after clipping
+        # result is (area - poly1 - poly2) or here the part of the polygon
+        # that is left of the y-axis (x=0.0)
+        poly = ia.Polygon([(-10, 0), (5, 0), (5, 5), (-5, 5),
+                           (-5, 10), (5, 10),
+                           (5, 15), (-10, 15)])
+        image_shape = (15, 10, 3)
+
+        area_ooi = poly.compute_out_of_image_area(image_shape)
+
+        # the part left of the y-axis is not exactly square, but has a hole
+        # on its right (vertically centered), hence we have to subtract 5*5
+        assert np.isclose(area_ooi, 10*15 - 5*5)
+
+
+class TestPolygon_compute_out_of_image_fraction(unittest.TestCase):
+    def test_polygon_with_zero_points(self):
+        poly = ia.Polygon([])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_polygon_with_one_point(self):
+        poly = ia.Polygon([(1.0, 1.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_polygon_with_one_point_ooi(self):
+        poly = ia.Polygon([(-1.0, 1.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 1.0)
+
+    def test_polygon_with_two_points(self):
+        poly = ia.Polygon([(1.0, 1.0), (2.0, 1.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_polygon_with_two_points_one_ooi(self):
+        poly = ia.Polygon([(9.0, 1.0), (11.0, 1.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.5, atol=1e-3)
+
+    def test_polygon_with_three_points_as_line(self):
+        poly = ia.Polygon([(9.0, 1.0), (10.0, 1.0), (11.0, 1.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.5, atol=1e-3)
+
+    def test_standard_polygon_not_ooi(self):
+        poly = ia.Polygon([(1.0, 1.0), (2.0, 1.0), (2.0, 2.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.0)
+
+    def test_standard_polygon_partially_ooi(self):
+        poly = ia.Polygon([(9.0, 1.0), (11.0, 1.0), (11.0, 3.0), (9.0, 3.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 0.5, atol=1e-3)
+
+    def test_standard_polygon_fully_ooi(self):
+        poly = ia.Polygon([(11.0, 1.0), (13.0, 1.0), (13.0, 3.0), (11.0, 3.0)])
+        image_shape = (10, 10, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 1.0)
+
+    def test_zero_sized_image_axes(self):
+        poly = ia.Polygon([(1.0, 1.0), (2.0, 1.0), (2.0, 2.0)])
+        image_shape = (0, 0, 3)
+        factor = poly.compute_out_of_image_fraction(image_shape)
+        assert np.isclose(factor, 1.0)
 
 
 class TestPolygon_is_fully_within_image(unittest.TestCase):
@@ -2307,6 +2406,20 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
         assert len(poly_oi.polygons) == 2
         assert len(poly_oi_rm.polygons) == 0
         assert poly_oi_rm.shape == (10, 10, 3)
+
+
+class TestPolygonsOnImage_remove_out_of_image_fraction(unittest.TestCase):
+    def test_three_polygons(self):
+        item1 = ia.Polygon([(5, 1), (9, 1), (9, 2), (5, 2)])
+        item2 = ia.Polygon([(5, 1), (15, 1), (15, 2), (5, 2)])
+        item3 = ia.Polygon([(15, 1), (25, 1), (25, 2), (15, 2)])
+        cbaoi = ia.PolygonsOnImage([item1, item2, item3],
+                                   shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction(0.6)
+
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
 
 
 class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):

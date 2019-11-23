@@ -8,7 +8,8 @@ import skimage.measure
 import cv2
 
 from .. import imgaug as ia
-from .utils import normalize_shape, project_coords, interpolate_points
+from .utils import (normalize_shape, project_coords, interpolate_points,
+                    _remove_out_of_image_fraction)
 
 
 # TODO Add Line class and make LineString a list of Line elements
@@ -332,6 +333,42 @@ class LineString(object):
         """
         coords_proj = project_coords(self.coords, from_shape, to_shape)
         return self.copy(coords=coords_proj)
+
+    def compute_out_of_image_fraction(self, image):
+        """Compute fraction of polygon area outside of the image plane.
+
+        This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
+        polygon that is outside of the image plane, while ``A`` is the
+        total area of the bounding box.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape
+            and must contain at least two integers.
+
+        Returns
+        -------
+        float
+            Fraction of the polygon area that is outside of the image
+            plane. Returns ``0.0`` if the polygon is fully inside of
+            the image plane. If the polygon has an area of zero, the polygon
+            is treated similarly to a :class:`LineString`, i.e. the fraction
+            of the line that is inside the image plane is returned.
+
+        """
+        length = self.length
+        if length == 0:
+            if len(self.coords) == 0:
+                return 0.0
+            points_ooi = ~self.get_pointwise_inside_image_mask(image)
+            return 1.0 if np.all(points_ooi) else 0.0
+        lss_clipped = self.clip_out_of_image(image)
+        length_after_clip = sum([ls.length for ls in lss_clipped])
+        inside_image_factor = length_after_clip / length
+        return 1.0 - inside_image_factor
 
     def is_fully_within_image(self, image, default=False):
         """Estimate whether the line string is fully inside an image plane.
@@ -1761,6 +1798,26 @@ class LineStringsOnImage(object):
                      if not ls.is_out_of_image(
                          self.shape, fully=fully, partly=partly)]
         return LineStringsOnImage(lss_clean, shape=self.shape)
+
+    def remove_out_of_image_fraction(self, fraction):
+        """Remove all LS with an out of image fraction of at least `fraction`.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a line string has to have in
+            order to be removed. A fraction of ``1.0`` removes only line
+            strings that are ``100%`` outside of the image. A fraction of
+            ``0.0`` removes all line strings.
+
+        Returns
+        -------
+        imgaug.augmentables.lines.LineStringsOnImage
+            Reduced set of line strings, with those that had an out of image
+            fraction greater or equal the given one removed.
+
+        """
+        return _remove_out_of_image_fraction(self, fraction, LineStringsOnImage)
 
     def clip_out_of_image(self):
         """
