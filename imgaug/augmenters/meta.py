@@ -4438,24 +4438,26 @@ class AssertShape(Lambda):
         assert len(shape) == 4, (
             "Expected shape to have length 4, got %d with shape: %s." % (
                 len(shape), str(shape)))
-
         self.shape = shape
-        self.is_checking_images = check_images
-        self.is_checking_heatmaps = check_heatmaps
-        self.is_checking_segmentation_maps = check_segmentation_maps
-        self.is_checking_keypoints = check_keypoints
-        self.is_checking_bounding_boxes = check_bounding_boxes
-        self.is_checking_polygons = check_polygons
-        self.is_checking_line_strings = check_line_strings
+
+        def _default(func, do_use):
+            return func if do_use else None
 
         super(AssertShape, self).__init__(
-            func_images=self._check_images,
-            func_heatmaps=self._check_heatmaps,
-            func_segmentation_maps=self._check_segmentation_maps,
-            func_keypoints=self._check_keypoints,
-            func_bounding_boxes=self._check_bounding_boxes,
-            func_polygons=self._check_polygons,
-            func_line_strings=self._check_line_strings,
+            func_images=_default(_AssertShapeImagesCheck(shape),
+                                 check_images),
+            func_heatmaps=_default(_AssertShapeHeatmapsCheck(shape),
+                                   check_heatmaps),
+            func_segmentation_maps=_default(_AssertShapeSegmapCheck(shape),
+                                            check_segmentation_maps),
+            func_keypoints=_default(_AssertShapeKeypointsCheck(shape),
+                                    check_keypoints),
+            func_bounding_boxes=_default(_AssertShapeBoundingBoxesCheck(shape),
+                                         check_bounding_boxes),
+            func_polygons=_default(_AssertShapePolygonsCheck(shape),
+                                   check_polygons),
+            func_line_strings=_default(_AssertShapeLineStringsCheck(shape),
+                                       check_line_strings),
             name=name,
             deterministic=deterministic,
             random_state=random_state)
@@ -4488,65 +4490,94 @@ class AssertShape(Lambda):
                     "entry to be an integer, a tuple (with two entries) "
                     "or a list, got %s." % (dimension, type(expected),))
 
-    def _check_augmentables(self, augmentables, get_shape_func,
-                            shape_target=None):
-        if shape_target is None:
-            # 0:3 so that we don't check C for most augmentables
-            shape_target = self.shape[0:3]
+    @classmethod
+    def _check_shapes(cls, shapes, shape_target):
+        if shape_target[0] is not None:
+            cls._compare(len(shapes), shape_target[0], 0, "ALL")
 
-        if self.shape[0] is not None:
-            self._compare(len(augmentables), shape_target[0], 0, "ALL")
-
-        for augm_idx, augmentable in enumerate(augmentables):
+        for augm_idx, shape in enumerate(shapes):
             # note that dim_idx is here per object, dim 0 of shape target
             # denotes "number of all objects" and was checked above
             for dim_idx, expected in enumerate(shape_target[1:]):
-                observed = get_shape_func(augmentable)[dim_idx]
-                self._compare(observed, expected, dim_idx, augm_idx)
+                observed = shape[dim_idx]
+                cls._compare(observed, expected, dim_idx, augm_idx)
 
-    def _check_images(self, images, _random_state, _parents, _hooks):
-        if self.is_checking_images:
-            # set shape_target so that we check all target dimensions,
-            # including C, which isn't checked for the other methods
-            self._check_augmentables(images, lambda obj: obj.shape,
-                                     shape_target=self.shape)
+
+# turning these checks below into classmethods of AssertShape breaks pickling
+# in python 2.7
+class _AssertShapeImagesCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, images, _random_state, _parents, _hooks):
+        # set shape_target so that we check all target dimensions,
+        # including C, which isn't checked for the other methods
+        AssertShape._check_shapes([obj.shape for obj in images],
+                                  self.shape)
         return images
 
-    def _check_heatmaps(self, heatmaps, _random_state, _parents, _hooks):
-        if self.is_checking_heatmaps:
-            self._check_augmentables(heatmaps, lambda obj: obj.arr_0to1.shape)
+
+class _AssertShapeHeatmapsCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, heatmaps, _random_state, _parents, _hooks):
+        AssertShape._check_shapes([obj.arr_0to1.shape for obj in heatmaps],
+                                  self.shape[0:3])
         return heatmaps
 
-    def _check_segmentation_maps(self, segmaps, _random_state, _parents,
-                                 _hooks):
-        if self.is_checking_segmentation_maps:
-            self._check_augmentables(segmaps, lambda obj: obj.arr.shape)
+
+class _AssertShapeSegmapCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, segmaps, _random_state, _parents, _hooks):
+        AssertShape._check_shapes([obj.arr.shape for obj in segmaps],
+                                  self.shape[0:3])
         return segmaps
 
-    def _check_keypoints(self, keypoints_on_images, _random_state, _parents,
-                         _hooks):
-        if self.is_checking_keypoints:
-            self._check_augmentables(keypoints_on_images, lambda obj: obj.shape)
+
+class _AssertShapeKeypointsCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, keypoints_on_images, _random_state, _parents, _hooks):
+        AssertShape._check_shapes([obj.shape for obj in keypoints_on_images],
+                                  self.shape[0:3])
         return keypoints_on_images
 
-    def _check_bounding_boxes(self, bounding_boxes_on_images, _random_state,
-                              _parents, _hooks):
-        if self.is_checking_bounding_boxes:
-            self._check_augmentables(bounding_boxes_on_images,
-                                     lambda obj: obj.shape)
+
+class _AssertShapeBoundingBoxesCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, bounding_boxes_on_images, _random_state, _parents,
+                 _hooks):
+        AssertShape._check_shapes([obj.shape for obj
+                                   in bounding_boxes_on_images],
+                                  self.shape[0:3])
         return bounding_boxes_on_images
 
-    def _check_polygons(self, polygons_on_images, _random_state, _parents,
-                        _hooks):
-        if self.is_checking_polygons:
-            self._check_augmentables(polygons_on_images, lambda obj: obj.shape)
+
+class _AssertShapePolygonsCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, polygons_on_images, _random_state, _parents, _hooks):
+        AssertShape._check_shapes([obj.shape for obj in polygons_on_images],
+                                  self.shape[0:3])
         return polygons_on_images
 
-    def _check_line_strings(self, line_strings_on_images, _random_state,
-                            _parents, _hooks):
-        if self.is_checking_line_strings:
-            self._check_augmentables(line_strings_on_images,
-                                     lambda obj: obj.shape)
+
+class _AssertShapeLineStringsCheck(object):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __call__(self, line_strings_on_images, _random_state, _parents,
+                 _hooks):
+        AssertShape._check_shapes([obj.shape for obj
+                                   in line_strings_on_images],
+                                  self.shape[0:3])
         return line_strings_on_images
 
 
