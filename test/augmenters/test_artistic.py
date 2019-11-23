@@ -20,7 +20,7 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 import imgaug.augmenters.color as colorlib
 import imgaug.augmenters.artistic as artisticlib
 
@@ -237,3 +237,7 @@ class TestCartoon(unittest.TestCase):
         assert params[2] is aug.saturation
         assert params[3] is aug.edge_prevalence
         assert params[4] == iaa.CSPACE_RGB
+
+    def test_pickleable(self):
+        aug = iaa.Cartoon(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=6)

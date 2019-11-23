@@ -28,7 +28,7 @@ import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug.augmenters.meta as meta
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 import imgaug.augmenters.color as colorlib
 
 
@@ -590,6 +590,11 @@ class TestWithBrightnessChannels(unittest.TestCase):
             "deterministic=False)" % (str(expected_child),))
         assert aug_str == expected
 
+    def test_pickleable(self):
+        aug = iaa.WithBrightnessChannels(iaa.Add((0, 50), random_state=1),
+                                         random_state=2)
+        runtest_pickleable_uint8_img(aug, iterations=10)
+
 
 # MultiplyBrightness re-used MultiplyAndAddToBrightness, so we don't have
 # to test much here.
@@ -618,6 +623,10 @@ class TestMultiplyBrightness(unittest.TestCase):
 
         assert np.average(image_aug) > np.average(image)
 
+    def test_pickleable(self):
+        aug = iaa.MultiplyBrightness((0.5, 1.5), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
+
 
 # AddToBrightness re-used MultiplyAndAddToBrightness, so we don't have
 # to test much here.
@@ -645,6 +654,10 @@ class TestAddToBrightness(unittest.TestCase):
         image_aug = aug(image=image)
 
         assert np.average(image_aug) > np.average(image)
+
+    def test_pickleable(self):
+        aug = iaa.AddToBrightness((0, 50), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
 
 class TestMultiplyAndAddToBrightness(unittest.TestCase):
@@ -744,6 +757,11 @@ class TestMultiplyAndAddToBrightness(unittest.TestCase):
                     "name=foo, "
                     "deterministic=False)" % (str(exp_mul), str(exp_add),))
                 assert aug_str == expected
+
+    def test_pickleable(self):
+        aug = iaa.MultiplyAndAddToBrightness(mul=(0.5, 1.5), add=(0, 50),
+                                             random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
 
 # TODO add tests for prop hooks
@@ -960,6 +978,11 @@ class TestWithHueAndSaturation(unittest.TestCase):
             ")" % (child.__str__(),)
         )
         assert observed == expected
+
+    def test_pickleable(self):
+        aug = iaa.WithHueAndSaturation(iaa.Add((0, 50), random_state=1),
+                                       random_state=2)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
 
 class TestMultiplyHueAndSaturation(unittest.TestCase):
@@ -1228,8 +1251,14 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
             else:
                 assert not equal
 
+    def test_pickleable(self):
+        aug = iaa.MultiplyHueAndSaturation(mul_hue=(0.5, 1.5),
+                                           mul_saturation=(0.5, 1.5),
+                                           random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
-class TestMultiplyToHue(unittest.TestCase):
+
+class TestMultiplyHue(unittest.TestCase):
     def test_returns_correct_class(self):
         # this test is practically identical to
         # TestMultiplyToHueAndSaturation.test_returns_correct_objects__mul_hue
@@ -1245,8 +1274,12 @@ class TestMultiplyToHue(unittest.TestCase):
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
+    def test_pickleable(self):
+        aug = iaa.MultiplyHue((0.5, 1.5), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(50, 50, 3))
 
-class TestMultiplyToSaturation(unittest.TestCase):
+
+class TestMultiplySaturation(unittest.TestCase):
     def test_returns_correct_class(self):
         # this test is practically identical to
         # TestMultiplyToHueAndSaturation
@@ -1262,6 +1295,10 @@ class TestMultiplyToSaturation(unittest.TestCase):
         assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
+
+    def test_pickleable(self):
+        aug = iaa.MultiplySaturation((0.5, 1.5), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(50, 50, 3))
 
 
 class TestRemoveSaturation(unittest.TestCase):
@@ -1314,6 +1351,10 @@ class TestRemoveSaturation(unittest.TestCase):
         # we add 0.02 here due to integer-float rounding effects
         assert np.all(np.float32(saturations) <= (0.8 + 0.02) * image_sat)
         assert np.any(np.float32(saturations) <= 0.5 * image_sat)
+
+    def test_pickleable(self):
+        aug = iaa.RemoveSaturation((0.1, 0.9), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
 
 
 class TestAddToHueAndSaturation(unittest.TestCase):
@@ -1689,6 +1730,12 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert isinstance(params[3], iap.Deterministic)
         assert params[3].value == 0
 
+    def test_pickleable(self):
+        aug = iaa.AddToHueAndSaturation(value_hue=(-50, 50),
+                                        value_saturation=(-50, 50),
+                                        random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(50, 50, 3))
+
 
 class TestAddToHue(unittest.TestCase):
     def test_returns_correct_class(self):
@@ -1698,6 +1745,10 @@ class TestAddToHue(unittest.TestCase):
         assert aug.value_hue.a.value == -20
         assert aug.value_hue.b.value == 20
 
+    def test_pickleable(self):
+        aug = iaa.AddToHue((-50, 50), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(50, 50, 3))
+
 
 class TestAddToSaturation(unittest.TestCase):
     def test_returns_correct_class(self):
@@ -1706,6 +1757,10 @@ class TestAddToSaturation(unittest.TestCase):
         assert isinstance(aug.value_saturation, iap.DiscreteUniform)
         assert aug.value_saturation.a.value == -20
         assert aug.value_saturation.b.value == 20
+
+    def test_pickleable(self):
+        aug = iaa.AddToSaturation((-50, 50), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(50, 50, 3))
 
 
 class TestGrayscale(unittest.TestCase):
@@ -1774,6 +1829,10 @@ class TestGrayscale(unittest.TestCase):
             density = nb_samples / nb_iterations
             assert np.isclose(density, density_expected,
                               rtol=0, atol=density_tolerance)
+
+    def test_pickleable(self):
+        aug = iaa.Grayscale((0.1, 0.9), random_state=1)
+        runtest_pickleable_uint8_img(aug)
 
 
 class TestGrayscaleColorwise(unittest.TestCase):
@@ -2059,6 +2118,10 @@ class TestGrayscaleColorwise(unittest.TestCase):
 
         assert np.allclose(hms_aug.arr_0to1, hms.arr_0to1)
 
+    def test_pickleable(self):
+        aug = iaa.GrayscaleColorwise(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
+
 
 class TestRemoveSaturationColorwise(unittest.TestCase):
     def setUp(self):
@@ -2164,6 +2227,10 @@ class TestRemoveSaturationColorwise(unittest.TestCase):
 
         assert np.array_equal(image_aug, image_gray)
 
+    def test_pickleable(self):
+        aug = iaa.RemoveSaturationColorwise(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
+
 
 class TestChangeColorTemperature(unittest.TestCase):
     def setUp(self):
@@ -2234,6 +2301,10 @@ class TestChangeColorTemperature(unittest.TestCase):
         params = aug.get_parameters()
         assert params[0].value == 1111
         assert params[1] == iaa.CSPACE_HLS
+
+    def test_pickleable(self):
+        aug = iaa.ChangeColorTemperature(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10)
 
 
 # Note that TestUniformColorQuantization inherits from this class,
@@ -2536,6 +2607,10 @@ class TestKMeansColorQuantization(unittest.TestCase):
         assert params[3] is None
         assert params[4] == "cubic"
 
+    def test_pickleable(self):
+        aug = self.augmenter(n_colors=(2, 16), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(100, 100, 3))
+
 
 class Test_quantize_colors_kmeans(unittest.TestCase):
     @mock.patch("imgaug.imgaug.warn_deprecated")
@@ -2806,6 +2881,10 @@ class TestUniformColorQuantization(TestKMeansColorQuantization):
             mock_change_colorspace.call_args_list[1][1]["from_colorspace"]
             == "foo")
 
+    def test_pickleable(self):
+        aug = self.augmenter(n_colors=(2, 32), random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
+
 
 # Not that many tests here as it is basically identical to e.g.
 # UniformColorQuantization
@@ -2891,6 +2970,10 @@ class TestUniformColorQuantizationToNBits(unittest.TestCase):
         observed = aug(image=image)
 
         assert np.array_equal(observed, expected)
+
+    def test_pickleable(self):
+        aug = iaa.UniformColorQuantizationToNBits(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(100, 100, 3))
 
 
 class TestPosterize(TestUniformColorQuantizationToNBits):

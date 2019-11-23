@@ -23,7 +23,8 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import blend
 from imgaug.testutils import (
-    keypoints_equal, reseed, assert_cbaois_equal, shift_cbaoi)
+    keypoints_equal, reseed, assert_cbaois_equal, shift_cbaoi,
+    runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
@@ -1001,6 +1002,15 @@ class TestAlpha(unittest.TestCase):
         assert first in children_lsts[0]
         assert second == children_lsts[1]
 
+    def test_pickleable(self):
+        aug = iaa.Alpha(
+            (0.1, 0.9),
+            iaa.Add((1, 10), random_state=1),
+            iaa.Add((11, 20), random_state=2),
+            per_channel=True,
+            random_state=3)
+        runtest_pickleable_uint8_img(aug, iterations=10)
+
 
 class _DummyMaskParameter(iap.StochasticParameter):
     def __init__(self, inverted=False):
@@ -1640,3 +1650,12 @@ class TestAlphaElementwise(unittest.TestCase):
                 assert np.all(image_aug == 1)
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+    def test_pickleable(self):
+        aug = iaa.AlphaElementwise(
+            (0.1, 0.9),
+            iaa.Add((1, 10), random_state=1),
+            iaa.Add((11, 20), random_state=2),
+            per_channel=True,
+            random_state=3)
+        runtest_pickleable_uint8_img(aug, iterations=3)

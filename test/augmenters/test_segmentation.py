@@ -22,7 +22,7 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 
 
 class TestSuperpixels(unittest.TestCase):
@@ -281,6 +281,10 @@ class TestSuperpixels(unittest.TestCase):
                 img_aug = aug.augment_image(img)
                 assert img_aug.dtype == np.dtype(dtype)
                 assert _allclose(img_aug, (7/8)*v2 + (1/8)*v1)
+
+    def test_pickleable(self):
+        aug = iaa.Superpixels(p_replace=0.5, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(25, 25, 1))
 
 
 class Test_segment_voronoi(unittest.TestCase):
@@ -749,6 +753,11 @@ class TestVoronoi(unittest.TestCase):
         assert params[2] is None
         assert params[3] == "cubic"
 
+    def test_pickleable(self):
+        sampler = iaa.RegularGridPointsSampler(5, 5)
+        aug = iaa.Voronoi(sampler, p_replace=0.5, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=10, shape=(25, 25, 1))
+
 
 def _all_arrays_identical(arrs):
     if len(arrs) == 1:
@@ -810,6 +819,10 @@ class TestUniformVoronoi(unittest.TestCase):
         assert aug.name == "UnnamedUniformVoronoi"
         assert aug.deterministic is True
         assert aug.random_state.equals(rs)
+
+    def test_pickleable(self):
+        aug = iaa.UniformVoronoi((10, 50), p_replace=0.5, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
 
 
 class TestRegularGridVoronoi(unittest.TestCase):
@@ -873,6 +886,11 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert aug.deterministic is True
         assert aug.random_state.equals(rs)
 
+    def test_pickleable(self):
+        aug = iaa.RegularGridVoronoi((5, 10), (5, 10), p_replace=0.5,
+                                     random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
+
 
 class TestRelativeRegularGridVoronoi(unittest.TestCase):
     def test___init___(self):
@@ -935,6 +953,11 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert aug.name == "UnnamedRelativeRegularGridVoronoi"
         assert aug.deterministic is True
         assert aug.random_state.equals(rs)
+
+    def test_pickleable(self):
+        aug = iaa.RelativeRegularGridVoronoi((0.01, 0.2), (0.01, 0.2),
+                                             p_replace=0.5, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
 
 
 # TODO verify behaviours when image height/width is zero

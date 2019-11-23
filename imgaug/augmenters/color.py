@@ -1741,7 +1741,7 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
         if random_state is None:
             rss = [None] * 5
         else:
-            rss = random_state.derive_rngs_(5)
+            rss = iarandom.RNG(random_state).derive_rngs_(5)
 
         children = []
         if mul is not None:

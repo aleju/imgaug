@@ -12,6 +12,10 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -21,7 +25,7 @@ import cv2
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 
 
 class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
@@ -153,6 +157,21 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         assert np.all(image_color[~image_binary, 0:3] == 10)
         # alpha channel must have been kept untouched
         assert np.all(image_color[:, :, 3:4] == image[:, :, 3:4])
+
+    def test_pickleable(self):
+        colorizer = iaa.RandomColorsBinaryImageColorizer(
+            color_true=(50, 100),
+            color_false=(10, 50))
+        colorizer_pkl = pickle.loads(pickle.dumps(colorizer))
+        random_state = iarandom.RNG(1)
+
+        color_true, color_false = colorizer._draw_samples(
+            random_state.copy())
+        color_true_pkl, color_false_pkl = colorizer_pkl._draw_samples(
+            random_state.copy())
+
+        assert np.array_equal(color_true, color_true_pkl)
+        assert np.array_equal(color_false, color_false_pkl)
 
 
 class TestCanny(unittest.TestCase):
@@ -661,3 +680,7 @@ class TestCanny(unittest.TestCase):
                         hysteresis_thresholds[0], hysteresis_thresholds[1],
                         sobel_kernel_size, colorizer)
         assert observed == expected
+
+    def test_pickleable(self):
+        aug = iaa.Canny(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=20)

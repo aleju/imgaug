@@ -1,1 +1,7 @@
-skips: ['B101']
+skips: [
+  'B101',
+  'B301',  # "Pickle and modules that wrap it can be unsafe when used to
+           #  deserialize untrusted data, possible security issue."
+  'B403'   # "Consider possible security implications associated with pickle
+           #  module."
+]

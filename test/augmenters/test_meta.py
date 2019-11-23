@@ -28,7 +28,8 @@ from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 from imgaug.testutils import (create_random_images, create_random_keypoints,
                               array_equal_lists, keypoints_equal, reseed,
-                              assert_cbaois_equal, shift_cbaoi)
+                              assert_cbaois_equal, shift_cbaoi,
+                              runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
@@ -247,6 +248,10 @@ class TestIdentity(unittest.TestCase):
 
                 assert image_aug.dtype.name == dtype
                 assert np.all(image_aug == image)
+
+    def test_pickleable(self):
+        aug = iaa.Noop()
+        runtest_pickleable_uint8_img(aug, iterations=2)
 
 
 class TestNoop(unittest.TestCase):
@@ -744,6 +749,17 @@ class TestLambda(unittest.TestCase):
                 assert image_aug.dtype.name == dtype
                 assert np.all(image_aug == expected)
 
+    def test_pickleable(self):
+        aug = iaa.Lambda(
+            func_images=_lambda_pickleable_callback_images,
+            random_state=1)
+        runtest_pickleable_uint8_img(aug)
+
+
+def _lambda_pickleable_callback_images(images, random_state, parents, hooks):
+    aug = iaa.Flipud(0.5, random_state=random_state)
+    return aug.augment_images(images)
+
 
 class TestAssertLambda(unittest.TestCase):
     DTYPES_UINT = ["uint8", "uint16", "uint32", "uint64"]
@@ -1105,6 +1121,19 @@ class TestAssertLambda(unittest.TestCase):
                 image[0, 0] = 1
                 with self.assertRaises(AssertionError):
                     _ = aug.augment_image(image)
+
+    def test_pickleable(self):
+        aug = iaa.AssertLambda(
+            func_images=_assertlambda_pickleable_callback_images,
+            random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=2)
+
+
+# in py3+, this could be a classmethod of TestAssertLambda,
+# but in py2.7 such classmethods are not pickle-able and would cause an error
+def _assertlambda_pickleable_callback_images(images, random_state,
+                                             parents, hooks):
+    return np.any(images[0] > 0)
 
 
 class TestAssertShape(unittest.TestCase):
@@ -1764,6 +1793,12 @@ class TestAssertShape(unittest.TestCase):
             image[0, 0, 0] = value
             with self.assertRaises(AssertionError):
                 _ = aug.augment_image(image)
+
+    def test_pickleable(self):
+        aug = iaa.AssertShape(
+            shape=(None, 15, 15, None), check_images=True,
+            random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=2, shape=(15, 15, 1))
 
 
 def test_clip_augmented_image_():
@@ -5660,6 +5695,14 @@ class TestSequential(unittest.TestCase):
                     assert image_aug.dtype.name == dtype
                     assert np.all(image_aug == expected)
 
+    def test_pickleable(self):
+        aug = iaa.Sequential(
+            [iaa.Add(1, random_state=1),
+             iaa.Multiply(3, random_state=2)],
+            random_order=True,
+            random_state=3)
+        runtest_pickleable_uint8_img(aug, iterations=5)
+
 
 class TestSomeOf(unittest.TestCase):
     def setUp(self):
@@ -6259,6 +6302,16 @@ class TestSomeOf(unittest.TestCase):
                         assert any([np.all(image_aug == expected_i)
                                     for expected_i in expected])
 
+    def test_pickleable(self):
+        aug = iaa.SomeOf((0, 3),
+            [iaa.Add(1, random_state=1),
+             iaa.Add(2, random_state=2),
+             iaa.Multiply(1.5, random_state=3),
+             iaa.Multiply(2.0, random_state=4)],
+            random_order=True,
+            random_state=5)
+        runtest_pickleable_uint8_img(aug, iterations=5)
+
 
 class TestOneOf(unittest.TestCase):
     def setUp(self):
@@ -6306,6 +6359,14 @@ class TestOneOf(unittest.TestCase):
         for key, val in results.items():
             assert np.isclose(val, expected, rtol=0, atol=tolerance)
         assert len(list(results.keys())) == 3
+
+    def test_pickleable(self):
+        aug = iaa.OneOf(
+            [iaa.Add(1, random_state=1),
+             iaa.Add(10, random_state=2),
+             iaa.Multiply(2.0, random_state=3)],
+            random_state=4)
+        runtest_pickleable_uint8_img(aug, iterations=5)
 
 
 class TestSometimes(unittest.TestCase):
@@ -7327,6 +7388,11 @@ class TestSometimes(unittest.TestCase):
                         break
                 assert np.all(seen)
 
+    def test_pickleable(self):
+        aug = iaa.Sometimes(0.5, iaa.Add(10), [iaa.Add(1), iaa.Multiply(2.0)],
+                            random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5)
+
 
 class TestWithChannels(unittest.TestCase):
     def setUp(self):
@@ -7792,6 +7858,11 @@ class TestWithChannels(unittest.TestCase):
                 assert image_aug.dtype.name == dtype
                 assert np.all(image_aug == expected)
 
+    def test_pickleable(self):
+        aug = iaa.WithChannels([0], iaa.Add((1, 10), random_state=2),
+                               random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5)
+
 
 class TestChannelShuffle(unittest.TestCase):
     def setUp(self):
@@ -8032,6 +8103,10 @@ class TestChannelShuffle(unittest.TestCase):
                     if np.all(seen):
                         break
                 assert np.all(seen)
+
+    def test_pickleable(self):
+        aug = iaa.ChannelShuffle(0.5, random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=5, shape=(2, 2, 10))
 
 
 class TestRemoveCBAsByOutOfImageFraction(unittest.TestCase):
