@@ -14,6 +14,13 @@ and then e.g. ::
 
 List of augmenters:
     * Affine
+    * ScaleX
+    * ScaleY
+    * TranslateX
+    * TranslateY
+    * Rotate
+    * ShearX
+    * ShearY
     * AffineCv2
     * PiecewiseAffine
     * PerspectiveTransform
@@ -899,7 +906,7 @@ class Affine(meta.Augmenter):
             * If a ``StochasticParameter``, then this parameter will be used to
               sample the rotation value per image.
 
-    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
+    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
         Shear in degrees (**NOT** radians), i.e. expected value range is
         around ``[-360, 360]``, with reasonable values being in the range
         of ``[-45, 45]``.
@@ -915,7 +922,7 @@ class Affine(meta.Augmenter):
               to sample the x- and y-shear values per image.
             * If a dictionary, then similar to `translate_percent`, i.e. one
               ``x`` key and/or one ``y`` key are expected, denoting the
-              shearing om the x- and y-axis respectively. The allowed datatypes
+              shearing on the x- and y-axis respectively. The allowed datatypes
               are again ``number``, ``tuple`` ``(a, b)``, ``list`` or
               ``StochasticParameter``.
 
@@ -1453,6 +1460,431 @@ class Affine(meta.Augmenter):
         return [
             self.scale, self.translate, self.rotate, self.shear, self.order,
             self.cval, self.mode, self.backend, self.fit_output]
+
+
+class ScaleX(Affine):
+    """Apply affine scaling on the x-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``scale`` in :class:`Affine`, except that this scale
+        value only affects the x-axis. No dictionary input is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, scale, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(ScaleX, self).__init__(
+            scale={"x": scale},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+# TODO make Affine more efficient for translation-only transformations
+class TranslateX(Affine):
+    """Apply affine translation on the x-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``translate_percent`` in :class:`Affine`, except that
+        this translation value only affects the x-axis. No dictionary input
+        is allowed.
+
+    px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
+        Analogous to ``translate_px`` in :class:`Affine`, except that
+        this translation value only affects the x-axis. No dictionary input
+        is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, percent=None, px=None, order=1,
+                 cval=0, mode="constant", fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        # we don't test here if both are not-None at the same time, because
+        # that is already checked in Affine
+        assert percent is not None or px is not None, (
+            "Expected either `percent` to be not-None or "
+            "`px` to be not-None, but both were None.")
+        super(TranslateX, self).__init__(
+            translate_percent=({"x": percent} if percent is not None else None),
+            translate_px=({"x": px} if px is not None else None),
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+# TODO make Affine more efficient for translation-only transformations
+class TranslateY(Affine):
+    """Apply affine translation on the y-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``translate_percent`` in :class:`Affine`, except that
+        this translation value only affects the y-axis. No dictionary input
+        is allowed.
+
+    px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
+        Analogous to ``translate_px`` in :class:`Affine`, except that
+        this translation value only affects the y-axis. No dictionary input
+        is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, percent=None, px=None, order=1,
+                 cval=0, mode="constant", fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        # we don't test here if both are not-None at the same time, because
+        # that is already checked in Affine
+        assert percent is not None or px is not None, (
+            "Expected either `percent` to be not-None or "
+            "`px` to be not-None, but both were None.")
+        super(TranslateY, self).__init__(
+            translate_percent=({"y": percent} if percent is not None else None),
+            translate_px=({"y": px} if px is not None else None),
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class ScaleY(Affine):
+    """Apply affine scaling on the y-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``scale`` in :class:`Affine`, except that this scale
+        value only affects the y-axis. No dictionary input is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, scale, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(ScaleY, self).__init__(
+            scale={"y": scale},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class Rotate(Affine):
+    """Apply affine rotation on the y-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+    It is the same as ``Affine(rotate=<value>)``.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, rotate, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(Rotate, self).__init__(
+            rotate=rotate,
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class ShearX(Affine):
+    """Apply affine shear on the x-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``shear`` in :class:`Affine`, except that this shear
+        value only affects the x-axis. No dictionary input is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, shear, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(ShearX, self).__init__(
+            shear={"x": shear},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class ShearY(Affine):
+    """Apply affine shear on the y-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``shear`` in :class:`Affine`, except that this shear
+        value only affects the y-axis. No dictionary input is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, shear, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 name=None, deterministic=False, random_state=None):
+        super(ShearY, self).__init__(
+            shear={"y": shear},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 class AffineCv2(meta.Augmenter):

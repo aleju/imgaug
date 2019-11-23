@@ -3015,6 +3015,286 @@ class TestAffine_other(unittest.TestCase):
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
+class TestScaleX(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.ScaleX(1.5)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.scale[0].value, 1.5)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        image = np.zeros((10, 10), dtype=np.uint8)
+        image[5, 5] = 255
+        aug = iaa.ScaleX(4.0, order=0)
+
+        image_aug = aug(image=image)
+
+        xx = np.nonzero(np.max(image_aug, axis=0) > 200)[0]
+        yy = np.nonzero(np.max(image_aug, axis=1) > 200)[0]
+        x1, x2 = xx[0], xx[-1]
+        y1, y2 = yy[0], yy[-1]
+        # not >=3, because if e.g. index 1 is spread to 0 to 3 after scaling,
+        # it covers four cells (0, 1, 2, 3), but 3-0 is 3
+        assert x2 - x1 >= 3
+        assert y2 - y1 < 1
+
+
+class TestScaleY(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.ScaleY(1.5)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.scale[1].value, 1.5)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        image = np.zeros((10, 10), dtype=np.uint8)
+        image[5, 5] = 255
+        aug = iaa.ScaleY(4.0, order=0)
+
+        image_aug = aug(image=image)
+
+        xx = np.nonzero(np.max(image_aug, axis=0) > 200)[0]
+        yy = np.nonzero(np.max(image_aug, axis=1) > 200)[0]
+        x1, x2 = xx[0], xx[-1]
+        y1, y2 = yy[0], yy[-1]
+        # not >=3, because if e.g. index 1 is spread to 0 to 3 after scaling,
+        # it covers four cells (0, 1, 2, 3), but 3-0 is 3
+        assert y2 - y1 >= 3
+        assert x2 - x1 < 1
+
+
+class TestTranslateX(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___translate_percent(self):
+        aug = iaa.TranslateX(percent=0.5)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.translate[0].value, 0.5)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test___init___translate_px(self):
+        aug = iaa.TranslateX(px=2)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.translate[0].value, 2)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test___init___both_none(self):
+        with self.assertRaises(AssertionError) as ctx:
+            _aug = iaa.TranslateX()
+        assert "but both were None" in str(ctx.exception)
+
+    def test_integrationtest_translate_percent(self):
+        image = np.full((50, 50), 255, dtype=np.uint8)
+        aug = iaa.TranslateX(percent=0.5, order=1, cval=0)
+
+        image_aug = aug(image=image)
+
+        expected = np.copy(image)
+        expected[:, 0:25] = 0
+        overlap = np.average(np.isclose(image_aug, expected, atol=1.01))
+        assert overlap > (1.0 - (1/50) - 1e-4)
+
+    def test_integrationtest_translate_px(self):
+        image = np.full((50, 50), 255, dtype=np.uint8)
+        aug = iaa.TranslateX(percent=25, order=1, cval=0)
+
+        image_aug = aug(image=image)
+
+        expected = np.copy(image)
+        expected[:, 0:25] = 0
+        overlap = np.average(np.isclose(image_aug, expected, atol=1.01))
+        assert overlap > (1.0 - (1/50) - 1e-4)
+
+
+class TestTranslateY(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___translate_percent(self):
+        aug = iaa.TranslateY(percent=0.5)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.translate[1].value, 0.5)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test___init___translate_px(self):
+        aug = iaa.TranslateY(px=2)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.translate[1].value, 2)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test___init___both_none(self):
+        with self.assertRaises(AssertionError) as ctx:
+            _aug = iaa.TranslateY()
+        assert "but both were None" in str(ctx.exception)
+
+    def test_integrationtest_translate_percent(self):
+        image = np.full((50, 50), 255, dtype=np.uint8)
+        aug = iaa.TranslateY(percent=0.5, order=1, cval=0)
+
+        image_aug = aug(image=image)
+
+        expected = np.copy(image)
+        expected[0:25, :] = 0
+        overlap = np.average(np.isclose(image_aug, expected, atol=1.01))
+        assert overlap > (1.0 - (1/50) - 1e-4)
+
+    def test_integrationtest_translate_px(self):
+        image = np.full((50, 50), 255, dtype=np.uint8)
+        aug = iaa.TranslateY(percent=25, order=1, cval=0)
+
+        image_aug = aug(image=image)
+
+        expected = np.copy(image)
+        expected[0:25, :] = 0
+        overlap = np.average(np.isclose(image_aug, expected, atol=1.01))
+        assert overlap > (1.0 - (1/50) - 1e-4)
+
+
+class TestRotate(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___(self):
+        aug = iaa.Rotate(rotate=45)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.rotate.value, 45)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        image = np.zeros((40, 20), dtype=np.uint8)
+        image[:, 10:10+1] = 255
+        aug = iaa.Rotate(90, order=0)
+
+        image_aug = aug(image=image)
+
+        assert image_aug.shape == (40, 20)
+        assert np.isclose(np.sum(image_aug[20-1:20+2, :]), 255*20, atol=1)
+
+
+class TestShearX(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.ShearX(40)
+        assert isinstance(aug, iaa.Affine)
+        assert aug.shear[0].value == 40
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        def _find_coords(arr):
+            xx = np.nonzero(np.max(arr, axis=0) > 200)[0]
+            yy = np.nonzero(np.max(arr, axis=1) > 200)[0]
+            x1 = xx[0]
+            x2 = xx[-1]
+            y1 = yy[0]
+            y2 = yy[-1]
+            return x1+(x2-x1)/2, y1+(y2-y1)/2
+
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[10:10+1, 20:20+1, 0] = 255
+        image[10:10+1, 30:30+1, 1] = 255
+        image[40:40+1, 30:30+1, 2] = 255
+        image[40:40+1, 20:20+1, 3] = 255
+        aug = iaa.ShearX(30, order=0)
+
+        image_aug = aug(image=image)
+
+        x1, y1 = _find_coords(image_aug[..., 0])
+        x2, y2 = _find_coords(image_aug[..., 1])
+        x3, y3 = _find_coords(image_aug[..., 2])
+        x4, y4 = _find_coords(image_aug[..., 3])
+        assert x1 > 20
+        assert y1 > 10
+        assert y2 > 10
+        assert np.isclose(y1, y2)
+        assert x3 < 30
+        assert y3 < 40
+        assert y4 < 40
+        assert np.isclose(y3, y4)
+        assert not np.isclose(x1, x4)
+        assert not np.isclose(x2, x3)
+
+
+class TestShearY(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init__(self):
+        aug = iaa.ShearY(40)
+        assert isinstance(aug, iaa.Affine)
+        assert aug.shear[1].value == 40
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        def _find_coords(arr):
+            xx = np.nonzero(np.max(arr, axis=0) > 200)[0]
+            yy = np.nonzero(np.max(arr, axis=1) > 200)[0]
+            x1 = xx[0]
+            x2 = xx[-1]
+            y1 = yy[0]
+            y2 = yy[-1]
+            return x1+(x2-x1)/2, y1+(y2-y1)/2
+
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[20:20+1, 10:10+1, 0] = 255
+        image[20:20+1, 40:40+1, 1] = 255
+        image[30:30+1, 40:40+1, 2] = 255
+        image[30:30+1, 10:10+1, 3] = 255
+        aug = iaa.ShearY(30, order=0)
+
+        image_aug = aug(image=image)
+
+        x1, y1 = _find_coords(image_aug[..., 0])
+        x2, y2 = _find_coords(image_aug[..., 1])
+        x3, y3 = _find_coords(image_aug[..., 2])
+        x4, y4 = _find_coords(image_aug[..., 3])
+        assert y1 < 20
+        assert x1 > 10
+        assert x4 > 10
+        assert np.isclose(x1, x4)
+        assert y2 > 20
+        assert x2 < 40
+        assert x3 < 40
+        assert np.isclose(x2, x3)
+        assert not np.isclose(y1, y2)
+        assert not np.isclose(y3, y4)
+
+
 # TODO migrate to unittest and split up tests or remove AffineCv2
 def test_AffineCv2():
     reseed()
