@@ -73,16 +73,20 @@ class _ContrastFuncWrapper(meta.Augmenter):
         gen = enumerate(zip(images, per_channel, rss[1:]))
         for i, (image, per_channel_i, rs) in gen:
             nb_channels = 1 if per_channel_i <= 0.5 else image.shape[2]
+            # TODO improve efficiency by sampling once
             samples_i = [
                 param.draw_samples((nb_channels,), random_state=rs)
                 for param in self.params1d]
             if per_channel_i > 0.5:
                 input_dtype = image.dtype
-                image_aug = image.astype(np.float64)
+                # TODO This was previously a cast of image to float64. Do the
+                #      adjust_* functions return float64?
+                result = []
                 for c in sm.xrange(nb_channels):
                     samples_i_c = [sample_i[c] for sample_i in samples_i]
                     args = tuple([image[..., c]] + samples_i_c)
-                    image_aug[..., c] = self.func(*args)
+                    result.append(self.func(*args))
+                image_aug = np.stack(result, axis=-1)
                 image_aug = image_aug.astype(input_dtype)
             else:
                 # don't use something like samples_i[...][0] here, because
@@ -585,6 +589,168 @@ def _equalize_pil(image, mask=None):
     )
 
 
+def autocontrast(image, cutoff=0, ignore=None):
+    """Maximize (normalize) image contrast.
+
+    This function calculates a histogram of the input image, removes
+    **cutoff** percent of the lightest and darkest pixels from the histogram,
+    and remaps the image so that the darkest pixel becomes black (``0``), and
+    the lightest becomes white (``255``).
+
+    This function has identical inputs and outputs to
+    :func:`PIL.ImageOps.autocontrast`. The speed almost identical.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    image : ndarray
+        The image for which to enhance the contrast.
+
+    cutoff : number
+        How many percent to cut off at the low and high end of the
+        histogram. E.g. ``20`` will cut off the lowest and highest ``20%``
+        of values. Expected value range is ``[0, 100]``.
+
+    ignore : None or int or iterable of int
+        Intensity values to ignore, i.e. to treat as background. If ``None``,
+        no pixels will be ignored. Otherwise exactly the given intensity
+        value(s) will be ignored.
+
+    Returns
+    -------
+    ndarray
+        Contrast-enhanced image.
+
+    """
+    assert image.dtype.name == "uint8", (
+        "Can only apply autocontrast to uint8 images, got dtype %s." % (
+            image.dtype.name,))
+
+    if 0 in image.shape:
+        return np.copy(image)
+
+    standard_channels = (image.ndim == 2 or image.shape[2] == 3)
+
+    if cutoff and standard_channels:
+        return _autocontrast_pil(image, cutoff, ignore)
+    return _autocontrast(image, cutoff, ignore)
+
+
+def _autocontrast_pil(image, cutoff, ignore):
+    import PIL.Image
+    import PIL.ImageOps
+    return np.asarray(
+        PIL.ImageOps.autocontrast(
+            PIL.Image.fromarray(image),
+            cutoff=cutoff, ignore=ignore
+        )
+    )
+
+
+# This function is only faster than the corresponding PIL function if no
+# cutoff is used.
+# C901 is "<functionname> is too complex"
+def _autocontrast(image, cutoff, ignore):  # noqa: C901
+    if ignore is not None and not ia.is_iterable(ignore):
+        ignore = [ignore]
+
+    result = np.empty_like(image)
+    if result.ndim == 2:
+        result = result[..., np.newaxis]
+    nb_channels = image.shape[2] if image.ndim >= 3 else 1
+    for c_idx in sm.xrange(nb_channels):
+        # using [0] instead of [int(c_idx)] allows this to work with >4
+        # channels
+        if image.ndim == 2:
+            image_c = image
+        else:
+            image_c = image[:, :, c_idx:c_idx+1]
+        h = cv2.calcHist([image_c], [0], None, [256], [0, 256])
+        if ignore is not None:
+            h[ignore] = 0
+
+        if cutoff:
+            cs = np.cumsum(h)
+            n = cs[-1]
+            cut = n * cutoff // 100
+
+            # remove cutoff% pixels from the low end
+            lo_cut = cut - cs
+            lo_cut_nz = np.nonzero(lo_cut <= 0.0)[0]
+            if len(lo_cut_nz) == 0:
+                lo = 255
+            else:
+                lo = lo_cut_nz[0]
+            if lo > 0:
+                h[:lo] = 0
+            h[lo] = lo_cut[lo]
+
+            # remove cutoff% samples from the hi end
+            cs_rev = np.cumsum(h[::-1])
+            hi_cut = cs_rev - cut
+            hi_cut_nz = np.nonzero(hi_cut > 0.0)[0]
+            if len(hi_cut_nz) == 0:
+                hi = -1
+            else:
+                hi = 255 - hi_cut_nz[0]
+            h[hi+1:] = 0
+            if hi > -1:
+                h[hi] = hi_cut[255-hi]
+
+        # find lowest/highest samples after preprocessing
+        for lo, lo_val in enumerate(h):
+            if lo_val:
+                break
+        for hi in range(255, -1, -1):
+            if h[hi]:
+                break
+        if hi <= lo:
+            # don't bother
+            lut = np.arange(256)
+        else:
+            scale = 255.0 / (hi - lo)
+            offset = -lo * scale
+            ix = np.arange(256).astype(np.float64) * scale + offset
+            ix = np.clip(ix, 0, 255).astype(np.uint8)
+            lut = ix
+        lut = np.array(lut, dtype=np.uint8)
+
+        # Vectorized implementation of above block.
+        # This is overall slower.
+        # h_nz = np.nonzero(h)[0]
+        # if len(h_nz) <= 1:
+        #     lut = np.arange(256).astype(np.uint8)
+        # else:
+        #     lo = h_nz[0]
+        #     hi = h_nz[-1]
+        #
+        #     scale = 255.0 / (hi - lo)
+        #     offset = -lo * scale
+        #     ix = np.arange(256).astype(np.float64) * scale + offset
+        #     ix = np.clip(ix, 0, 255).astype(np.uint8)
+        #     lut = ix
+
+        result[:, :, c_idx] = cv2.LUT(image_c, lut)
+    if image.ndim == 2:
+        return result[..., 0]
+    return result
+
+
 class GammaContrast(_ContrastFuncWrapper):
     """
     Adjust image contrast by scaling pixel values to ``255*((v/255)**gamma)``.
@@ -944,6 +1110,84 @@ class Equalize(meta.Augmenter):
 
     def get_parameters(self):
         return []
+
+
+class Autocontrast(_ContrastFuncWrapper):
+    """Adjust contrast by cutting off ``p%`` of lowest/highest histogram values.
+
+    This augmenter is analogous to :func:`PIL.ImageOps.autocontrast`.
+
+    See :func:`imgaug.augmenters.contrast.autocontrast` for more details.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.contrast.autocontrast`.
+
+    Parameters
+    ----------
+    cutoff : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        Percentage of values to cut off from the low and high end of each
+        image's histogram, before stretching it to ``[0, 255]``.
+
+            * If ``int``: The value will be used for all images.
+            * If ``tuple`` ``(a, b)``: A value will be uniformly sampled from
+              the discrete interval ``[a..b]`` per image.
+            * If ``list``: A random value will be sampled from the list
+              per image.
+            * If ``StochasticParameter``: A value will be sampled from that
+              parameter per image.
+
+    per_channel :  bool or float, optional
+        Whether to use the same value for all channels (``False``) or to
+        sample a new value for each channel (``True``). If this value is a
+        float ``p``, then for ``p`` percent of all images `per_channel` will
+        be treated as ``True``, otherwise as ``False``.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Autocontrast()
+
+    Modify the contrast of images by cutting off the ``0`` to ``20%`` lowest
+    and highest values from the histogram, then stretching it to full length.
+
+    >>> aug = iaa.Autocontrast((10, 20), per_channel=True)
+
+    Modify the contrast of images by cutting off the ``10`` to ``20%`` lowest
+    and highest values from the histogram, then stretching it to full length.
+    The cutoff value is sampled per *channel* instead of per *image*.
+
+    """
+    def __init__(self, cutoff=(0, 20), per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        params1d = [
+            iap.handle_discrete_param(
+                cutoff, "cutoff", value_range=(0, 49), tuple_to_uniform=True,
+                list_to_choice=True)
+        ]
+        func = autocontrast
+
+        super(Autocontrast, self).__init__(
+            func, params1d, per_channel,
+            dtypes_allowed=["uint8"],
+            dtypes_disallowed=["uint16", "uint32", "uint64",
+                               "int8", "int16", "int32", "int64",
+                               "float16", "float32", "float64",
+                               "float16", "float32", "float64", "float96",
+                               "float128", "float256", "bool"],
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar
