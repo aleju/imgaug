@@ -3097,6 +3097,30 @@ class TestTranslateY(unittest.TestCase):
         assert overlap > (1.0 - (1/50) - 1e-4)
 
 
+class TestRotate(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___(self):
+        aug = iaa.Rotate(rotate=45)
+        assert isinstance(aug, iaa.Affine)
+        assert np.isclose(aug.rotate.value, 45)
+        assert aug.order.value == 1
+        assert aug.cval.value == 0
+        assert aug.mode.value == "constant"
+        assert aug.fit_output is False
+
+    def test_integrationtest(self):
+        image = np.zeros((40, 20), dtype=np.uint8)
+        image[:, 10:10+1] = 255
+        aug = iaa.Rotate(90, order=0)
+
+        image_aug = aug(image=image)
+
+        assert image_aug.shape == (40, 20)
+        assert np.isclose(np.sum(image_aug[20-1:20+2, :]), 255*20, atol=1)
+
+
 class TestShearX(unittest.TestCase):
     def setUp(self):
         reseed()
