@@ -40,7 +40,7 @@ class Test_blend_alpha(unittest.TestCase):
 
 class TestAlpha(unittest.TestCase):
     def test_warns_that_it_is_deprecated(self):
-        children_fg = iaa.Noop()
+        children_fg = iaa.Identity()
         factor = 1
 
         with warnings.catch_warnings(record=True) as caught_warnings:
@@ -56,7 +56,7 @@ class TestAlpha(unittest.TestCase):
 
 class TestAlphaElementwise(unittest.TestCase):
     def test_warns_that_it_is_deprecated(self):
-        children_fg = iaa.Noop()
+        children_fg = iaa.Identity()
         factor = 1
 
         with warnings.catch_warnings(record=True) as caught_warnings:
@@ -72,7 +72,7 @@ class TestAlphaElementwise(unittest.TestCase):
 
 class TestSimplexNoiseAlpha(unittest.TestCase):
     def test_warns_that_it_is_deprecated(self):
-        children_fg = iaa.Noop()
+        children_fg = iaa.Identity()
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")
@@ -87,7 +87,7 @@ class TestSimplexNoiseAlpha(unittest.TestCase):
 
 class TestFrequencyNoiseAlpha(unittest.TestCase):
     def test_warns_that_it_is_deprecated(self):
-        children_fg = iaa.Noop()
+        children_fg = iaa.Identity()
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")

@@ -15,7 +15,7 @@ import six.moves as sm
 ---------------------------
 Keypoints
 ---------------------------
-[Augmenter: Noop]
+[Augmenter: Identity]
 (4, 4, 3)            | SUM 0.01990s | PER ITER avg 0.00020s, min 0.00017s, max 0.00043s
 (32, 32, 3)          | SUM 0.01863s | PER ITER avg 0.00019s, min 0.00017s, max 0.00033s
 (256, 256, 3)        | SUM 0.01879s | PER ITER avg 0.00019s, min 0.00017s, max 0.00029s
@@ -86,7 +86,7 @@ Keypoints
 ---------------------------
 Images
 ---------------------------
-[Augmenter: Noop]
+[Augmenter: Identity]
 (16, 4, 4, 3)        | SUM 0.00135s | PER ITER avg 0.00001s, min 0.00001s, max 0.00008s
 (16, 32, 32, 3)      | SUM 0.00203s | PER ITER avg 0.00002s, min 0.00002s, max 0.00005s
 (16, 256, 256, 3)    | SUM 0.05284s | PER ITER avg 0.00053s, min 0.00044s, max 0.00194s
@@ -159,7 +159,7 @@ Images
 
 def main():
     augmenters = [
-        iaa.Noop(name="Noop"),
+        iaa.Identity(name="Identity"),
         iaa.Crop(px=(0, 8), name="Crop-px"),
         iaa.Crop(percent=(0, 0.1), name="Crop-percent"),
         iaa.Fliplr(0.5, name="Fliplr"),

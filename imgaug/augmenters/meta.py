@@ -19,6 +19,7 @@ List of augmenters:
     * OneOf
     * Sometimes
     * WithChannels
+    * Identity
     * Noop
     * Lambda
     * AssertLambda
@@ -2745,7 +2746,8 @@ class Augmenter(object):
 
     # TODO remove copy arg
     # TODO allow first arg to be string name, class type or func
-    def remove_augmenters(self, func, copy=True, noop_if_topmost=True):
+    def remove_augmenters(self, func, copy=True, identity_if_topmost=True,
+                          noop_if_topmost=None):
         """Remove this augmenter or children that match a condition.
 
         Parameters
@@ -2764,7 +2766,7 @@ class Augmenter(object):
             Whether to copy this augmenter and all if its children before
             removing. If ``False``, removal is performed in-place.
 
-        noop_if_topmost : bool, optional
+        identity_if_topmost : bool, optional
             If ``True`` and the condition (lambda function) leads to the
             removal of the topmost augmenter (the one this function is called
             on initially), then that topmost augmenter will be replaced by an
@@ -2772,6 +2774,9 @@ class Augmenter(object):
             augmenter that doesn't change its inputs). If ``False``, ``None``
             will be returned in these cases.
             This can only be ``False`` if copy is set to ``True``.
+
+        noop_if_topmost : bool, optional
+            Deprecated.
 
         Returns
         -------
@@ -2794,14 +2799,19 @@ class Augmenter(object):
         object's children.
 
         """
+        if noop_if_topmost is not None:
+            ia.warn_deprecated("Parameter 'noop_if_topmost' is deprecated. "
+                               "Use 'identity_if_topmost' instead.")
+            identity_if_topmost = noop_if_topmost
+
         if func(self, []):
             if not copy:
                 raise Exception(
                     "Inplace removal of topmost augmenter requested, "
                     "which is currently not possible. Set 'copy' to True.")
 
-            if noop_if_topmost:
-                return Noop()
+            if identity_if_topmost:
+                return Identity()
             else:
                 return None
         else:
@@ -3769,13 +3779,11 @@ class WithChannels(Augmenter):
                           self.children, self.deterministic)
 
 
-class Noop(Augmenter):
-    """Augmenter that never changes input images ("no operation").
+class Identity(Augmenter):
+    """Augmenter that does not change the input data.
 
-    This augmenter is useful when you just want to use a placeholder augmenter
-    in some situation, so that you can continue to call augmentation methods
-    without actually transforming the input data. This allows to use the
-    same code for training and test.
+    This augmenter is useful e.g. during validation/testing as it allows
+    to re-use the training code without actually performing any augmentation.
 
     dtype support::
 
@@ -3807,14 +3815,42 @@ class Noop(Augmenter):
     """
 
     def __init__(self, name=None, deterministic=False, random_state=None):
-        super(Noop, self).__init__(name=name, deterministic=deterministic,
-                                   random_state=random_state)
+        super(Identity, self).__init__(name=name, deterministic=deterministic,
+                                       random_state=random_state)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         return batch
 
     def get_parameters(self):
         return []
+
+
+class Noop(Identity):
+    """Alias for augmenter :class:`Identity`.
+
+    It is recommended to now use :class:`Identity`. :class:`Noop` might be
+    deprecated in the future.
+
+    dtype support::
+
+        See :class:`imgaug.augmenters.meta.Identity`.
+
+    Parameters
+    ----------
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, name=None, deterministic=False, random_state=None):
+        super(Noop, self).__init__(name=name, deterministic=deterministic,
+                                   random_state=random_state)
 
 
 class Lambda(Augmenter):
