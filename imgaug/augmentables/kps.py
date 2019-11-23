@@ -7,6 +7,7 @@ import scipy.spatial.distance
 import six.moves as sm
 
 from .. import imgaug as ia
+from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
                     _remove_out_of_image_fraction)
 
@@ -508,7 +509,7 @@ class Keypoint(object):
         return "Keypoint(x=%.8f, y=%.8f)" % (self.x, self.y)
 
 
-class KeypointsOnImage(object):
+class KeypointsOnImage(IAugmentable):
     """Container for all keypoints on a single image.
 
     Parameters

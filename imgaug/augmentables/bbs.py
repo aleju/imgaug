@@ -7,6 +7,7 @@ import skimage.draw
 import skimage.measure
 
 from .. import imgaug as ia
+from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
                     _remove_out_of_image_fraction)
 
@@ -1050,7 +1051,7 @@ class BoundingBox(object):
             self.x1, self.y1, self.x2, self.y2, self.label)
 
 
-class BoundingBoxesOnImage(object):
+class BoundingBoxesOnImage(IAugmentable):
     """Container for the list of all bounding boxes on a single image.
 
     Parameters

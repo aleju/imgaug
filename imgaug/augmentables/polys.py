@@ -12,6 +12,7 @@ import collections
 
 from .. import imgaug as ia
 from .. import random as iarandom
+from .base import IAugmentable
 from .utils import (normalize_shape, interpolate_points,
                     _remove_out_of_image_fraction)
 
@@ -1295,7 +1296,7 @@ class Polygon(object):
 
 
 # TODO add tests for this
-class PolygonsOnImage(object):
+class PolygonsOnImage(IAugmentable):
     """Container for all polygons on a single image.
 
     Parameters

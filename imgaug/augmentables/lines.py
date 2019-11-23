@@ -8,6 +8,7 @@ import skimage.measure
 import cv2
 
 from .. import imgaug as ia
+from .base import IAugmentable
 from .utils import (normalize_shape, project_coords, interpolate_points,
                     _remove_out_of_image_fraction)
 
@@ -1553,7 +1554,7 @@ class LineString(object):
 # concat(other)
 # is_self_intersecting()
 # remove_self_intersections()
-class LineStringsOnImage(object):
+class LineStringsOnImage(IAugmentable):
     """Object that represents all line strings on a single image.
 
     Parameters

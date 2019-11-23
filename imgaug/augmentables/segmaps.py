@@ -5,6 +5,7 @@ import six.moves as sm
 
 from .. import imgaug as ia
 from ..augmenters import blend as blendlib
+from .base import IAugmentable
 
 
 @ia.deprecated(alt_func="SegmentationMapsOnImage",
@@ -13,7 +14,7 @@ def SegmentationMapOnImage(*args, **kwargs):
     return SegmentationMapsOnImage(*args, **kwargs)
 
 
-class SegmentationMapsOnImage(object):
+class SegmentationMapsOnImage(IAugmentable):
     """
     Object representing a segmentation map associated with an image.
 

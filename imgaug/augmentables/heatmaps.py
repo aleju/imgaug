@@ -4,9 +4,10 @@ import numpy as np
 import six.moves as sm
 
 from .. import imgaug as ia
+from .base import IAugmentable
 
 
-class HeatmapsOnImage(object):
+class HeatmapsOnImage(IAugmentable):
     """Object representing heatmaps on a single image.
 
     Parameters
