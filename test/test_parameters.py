@@ -2255,6 +2255,140 @@ class TestDeterministic(unittest.TestCase):
             in str(context.exception))
 
 
+class TestDeterministicList(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test___init___with_array(self):
+        values = np.arange(1*2*3).reshape((1, 2, 3))
+        param = iap.DeterministicList(values)
+        assert np.array_equal(param.values, values.flatten())
+
+    def test___init___with_list_int(self):
+        values = [[1, 2], [3, 4]]
+        param = iap.DeterministicList(values)
+        assert np.array_equal(param.values, [1, 2, 3, 4])
+        assert param.values.dtype.name == "int32"
+
+    def test___init___with_list_float(self):
+        values = [[1.1, 2.2], [3.3, 4.4]]
+        param = iap.DeterministicList(values)
+        assert np.allclose(param.values, [1.1, 2.2, 3.3, 4.4])
+        assert param.values.dtype.name == "float32"
+
+    def test_samples_same_values_for_same_seeds(self):
+        values = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
+        param = iap.DeterministicList(values)
+
+        rs1 = iarandom.RNG(123456)
+        rs2 = iarandom.RNG(123456)
+
+        samples1 = param.draw_samples(10, random_state=rs1)
+        samples2 = param.draw_samples(10, random_state=rs2)
+
+        assert np.array_equal(samples1, samples2)
+
+    def test_draw_sample_int(self):
+        values = [10, 20, 30, 40, 50]
+        param = iap.DeterministicList(values)
+
+        sample1 = param.draw_sample()
+        sample2 = param.draw_sample()
+
+        assert sample1.shape == tuple()
+        assert sample1 == sample2
+
+    def test_draw_sample_float(self):
+        values = [10.1, 20.2, 30.3, 40.4, 50.5]
+        param = iap.DeterministicList(values)
+
+        sample1 = param.draw_sample()
+        sample2 = param.draw_sample()
+
+        assert sample1.shape == tuple()
+        assert np.isclose(
+            sample1, sample2, rtol=0, atol=_eps(sample1))
+
+    def test_draw_samples_int(self):
+        values = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+        shapes = [3, (2, 3), (2, 3, 1)]
+        expecteds = [
+            [10, 20, 30],
+            [[10, 20, 30], [40, 50, 60]],
+            [[[10], [20], [30]], [[40], [50], [60]]]
+        ]
+        param = iap.DeterministicList(values)
+        for shape, expected in zip(shapes, expecteds):
+            with self.subTest(shape=shape):
+                samples = param.draw_samples(shape)
+
+                shape_expected = (
+                    shape
+                    if isinstance(shape, tuple)
+                    else tuple([shape]))
+
+                assert samples.shape == shape_expected
+                assert np.array_equal(samples, expected)
+
+    def test_draw_samples_float(self):
+        values = [10.1, 20.2, 30.3, 40.4, 50.5, 60.6, 70.7, 80.8, 90.9, 100.10]
+        shapes = [3, (2, 3), (2, 3, 1)]
+        expecteds = [
+            [10.1, 20.2, 30.3],
+            [[10.1, 20.2, 30.3], [40.4, 50.5, 60.6]],
+            [[[10.1], [20.2], [30.3]], [[40.4], [50.5], [60.6]]]
+        ]
+        param = iap.DeterministicList(values)
+        for shape, expected in zip(shapes, expecteds):
+            with self.subTest(shape=shape):
+                samples = param.draw_samples(shape)
+
+                shape_expected = (
+                    shape
+                    if isinstance(shape, tuple)
+                    else tuple([shape]))
+
+                assert samples.shape == shape_expected
+                assert np.allclose(samples, expected, rtol=0, atol=1e-5)
+
+    def test_draw_samples_cycles_when_shape_too_large(self):
+        values = [10, 20, 30]
+        param = iap.DeterministicList(values)
+
+        shapes = [(6,), (7,), (8,), (9,), (3, 3)]
+        expecteds = [
+            [10, 20, 30, 10, 20, 30],
+            [10, 20, 30, 10, 20, 30, 10],
+            [10, 20, 30, 10, 20, 30, 10, 20],
+            [10, 20, 30, 10, 20, 30, 10, 20, 30],
+            [[10, 20, 30],
+             [10, 20, 30],
+             [10, 20, 30]]
+        ]
+
+        for shape, expected in zip(shapes, expecteds):
+            with self.subTest(shape=shape):
+                samples = param.draw_samples(shape)
+
+                assert np.array_equal(samples, expected)
+
+    def test___str___and___repr___float(self):
+        param = iap.DeterministicList([10.1, 20.2, 30.3])
+        assert (
+            param.__str__()
+            == param.__repr__()
+            == "DeterministicList([10.1000, 20.2000, 30.3000])"
+        )
+
+    def test___str___and___repr___intlike(self):
+        param = iap.DeterministicList([10, 20, 30])
+        assert (
+            param.__str__()
+            == param.__repr__()
+            == "DeterministicList([10, 20, 30])"
+        )
+
+
 class TestFromLowerResolution(unittest.TestCase):
     def setUp(self):
         reseed()
