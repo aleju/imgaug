@@ -5,6 +5,7 @@ import numpy as np
 
 from .. import imgaug as ia
 from .. import dtypes as iadt
+from .base import IAugmentable
 
 
 def _preprocess_shapes(shapes):
@@ -1206,6 +1207,15 @@ def restore_dtype_and_merge(arr, input_dtype):
     return arr
 
 
+def _is_iterable(obj):
+    return (
+        ia.is_iterable(obj)
+        and not isinstance(obj, IAugmentable)  # not e.g. KeypointsOnImage
+        and not hasattr(obj, "coords")  # not BBs, Polys, LS
+        and not ia.is_string(obj)
+    )
+
+
 def find_first_nonempty(attr, parents=None):
     if parents is None:
         parents = []
@@ -1214,7 +1224,7 @@ def find_first_nonempty(attr, parents=None):
         return attr, True, parents
     # we exclude strings here, as otherwise we would get the first
     # character, while we want to get the whole string
-    elif ia.is_iterable(attr) and not ia.is_string(attr):
+    elif _is_iterable(attr):
         if len(attr) == 0:
             return None, False, parents
 

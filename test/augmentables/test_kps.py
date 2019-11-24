@@ -60,6 +60,16 @@ class TestKeypoint(unittest.TestCase):
         assert np.isclose(kp.y, 1.7)
         assert kp.y_int == 2
 
+    def test_xy(self):
+        kp = ia.Keypoint(x=2, y=1.7)
+        assert np.allclose(kp.xy, (2, 1.7))
+
+    def test_xy_int(self):
+        kp = ia.Keypoint(x=1.3, y=1.6)
+        xy = kp.xy_int
+        assert np.allclose(xy, (1, 2))
+        assert xy.dtype.name == "int32"
+
     def test_project_same_image_size(self):
         kp = ia.Keypoint(y=1, x=2)
         kp2 = kp.project((10, 10), (10, 10))
@@ -1130,6 +1140,21 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert kpi2.keypoints[0].y == 2
         assert kpi2.keypoints[1].x == 3
         assert kpi2.keypoints[1].y == 4
+
+    def test___iter__(self):
+        cbas = [ia.Keypoint(x=1, y=2),
+                ia.Keypoint(x=3, y=4)]
+        cbasoi = ia.KeypointsOnImage(cbas, shape=(40, 50, 3))
+
+        for i, cba in enumerate(cbasoi):
+            assert cba is cbas[i]
+
+    def test___iter___empty(self):
+        cbasoi = ia.KeypointsOnImage([], shape=(40, 50, 3))
+        i = 0
+        for _cba in cbasoi:
+            i += 1
+        assert i == 0
 
     def test_string_conversion(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]

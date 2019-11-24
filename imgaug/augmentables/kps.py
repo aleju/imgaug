@@ -7,6 +7,7 @@ import scipy.spatial.distance
 import six.moves as sm
 
 from .. import imgaug as ia
+from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
                     _remove_out_of_image_fraction)
 
@@ -121,6 +122,30 @@ class Keypoint(object):
 
         """
         return int(np.round(self.y))
+
+    @property
+    def xy(self):
+        """Get the keypoint's x- and y-coordinate as a single array.
+
+        Returns
+        -------
+        ndarray
+            A ``(2,)`` ``ndarray`` denoting the xy-coordinate pair.
+
+        """
+        return self.coords[0, :]
+
+    @property
+    def xy_int(self):
+        """Get the keypoint's xy-coord, rounded to closest integer.
+
+        Returns
+        -------
+        ndarray
+            A ``(2,)`` ``ndarray`` denoting the xy-coordinate pair.
+
+        """
+        return np.round(self.xy).astype(np.int32)
 
     def project(self, from_shape, to_shape):
         """Project the keypoint onto a new position on a new image.
@@ -508,7 +533,7 @@ class Keypoint(object):
         return "Keypoint(x=%.8f, y=%.8f)" % (self.x, self.y)
 
 
-class KeypointsOnImage(object):
+class KeypointsOnImage(IAugmentable):
     """Container for all keypoints on a single image.
 
     Parameters
@@ -1201,6 +1226,19 @@ class KeypointsOnImage(object):
         if shape is None:
             shape = tuple(self.shape)
         return KeypointsOnImage(keypoints, shape)
+
+    def __iter__(self):
+        """Iterate over the keypoints in this container.
+
+        Yields
+        ------
+        Keypoint
+            A keypoint in this container.
+            The order is identical to the order in the keypoint list
+            provided upon class initialization.
+
+        """
+        return iter(self.items)
 
     def __repr__(self):
         return self.__str__()

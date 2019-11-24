@@ -2140,6 +2140,39 @@ class TestPolygon_almost_equals(unittest.TestCase):
         assert not poly_a.almost_equals(poly_b)
 
 
+class TestPolygon___getitem__(unittest.TestCase):
+    def test_with_three_points(self):
+        cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])
+        assert np.allclose(cba[0], (1, 2))
+        assert np.allclose(cba[1], (3, 4))
+        assert np.allclose(cba[2], (5, 5))
+
+    def test_with_three_points_slice(self):
+        cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])
+        assert np.allclose(cba[1:], [(3, 4), (5, 5)])
+
+
+class TestPolygon___iter__(unittest.TestCase):
+    def test_with_three_points(self):
+        cba = ia.Polygon([(1, 2), (3, 4), (5, 5)])
+        for i, xy in enumerate(cba):
+            assert i in [0, 1, 2]
+            if i == 0:
+                assert np.allclose(xy, (1, 2))
+            elif i == 1:
+                assert np.allclose(xy, (3, 4))
+            elif i == 2:
+                assert np.allclose(xy, (5, 5))
+        assert i == 2
+
+    def test_with_zero_points(self):
+        cba = ia.Polygon([])
+        i = 0
+        for xy in cba:
+            i += 1
+        assert i == 0
+
+
 # TODO add test for _convert_points_to_shapely_line_string
 
 
@@ -2787,6 +2820,23 @@ class TestPolygonsOnImage_deepcopy(unittest.TestCase):
         assert np.allclose(poly_oi_copy.polygons[1].exterior,
                            [(100, 2), (16, 2), (16, 10), (2, 10)],
                            rtol=0, atol=1e-4)
+
+
+class TestPolygonsOnImage___iter__(unittest.TestCase):
+    def test_with_two_polygons(self):
+        cbas = [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+                ia.Polygon([(1, 0), (2, 2), (1.5, 3)])]
+        cbasoi = ia.PolygonsOnImage(cbas, shape=(40, 50, 3))
+
+        for i, cba in enumerate(cbasoi):
+            assert cba is cbas[i]
+
+    def test_with_zero_polygons(self):
+        cbasoi = ia.PolygonsOnImage([], shape=(40, 50, 3))
+        i = 0
+        for _cba in cbasoi:
+            i += 1
+        assert i == 0
 
 
 class TestPolygonsOnImage___repr___and___str__(unittest.TestCase):

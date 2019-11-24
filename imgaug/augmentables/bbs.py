@@ -7,6 +7,7 @@ import skimage.draw
 import skimage.measure
 
 from .. import imgaug as ia
+from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
                     _remove_out_of_image_fraction)
 
@@ -861,6 +862,7 @@ class BoundingBox(object):
             (self.x1, self.y2)
         ], label=self.label)
 
+    # TODO also introduce similar area_almost_equals()
     def coords_almost_equals(self, other, max_distance=1e-4):
         """Estimate if this and another BB have almost identical coordinates.
 
@@ -885,17 +887,18 @@ class BoundingBox(object):
             coordinates.
 
         """
-        if ia.is_np_array(other):
+        if isinstance(other, BoundingBox):
+            coords_b = other.coords.flat
+        elif ia.is_np_array(other):
             # we use flat here in case other is (N,2) instead of (4,)
             coords_b = other.flat
         elif ia.is_iterable(other):
             coords_b = list(ia.flatten(other))
         else:
-            assert isinstance(other, BoundingBox), (
+            raise ValueError(
                 "Expected 'other' to be an iterable containing two "
                 "(x,y)-coordinate pairs or a BoundingBox. "
                 "Got type %s." % (type(other),))
-            coords_b = other.coords.flat
 
         coords_a = self.coords
 
@@ -1042,6 +1045,28 @@ class BoundingBox(object):
         #      the deepcopy from copy()
         return self.copy(x1=x1, y1=y1, x2=x2, y2=y2, label=label)
 
+    def __getitem__(self, indices):
+        """Get the coordinate(s) with given indices.
+
+        Returns
+        -------
+        ndarray
+            xy-coordinate(s) as ``ndarray``.
+
+        """
+        return self.coords[indices]
+
+    def __iter__(self):
+        """Iterate over the coordinates of this instance.
+
+        Yields
+        ------
+        ndarray
+            An ``(2,)`` ``ndarray`` denoting an xy-coordinate pair.
+
+        """
+        return iter(self.coords)
+
     def __repr__(self):
         return self.__str__()
 
@@ -1050,7 +1075,7 @@ class BoundingBox(object):
             self.x1, self.y1, self.x2, self.y2, self.label)
 
 
-class BoundingBoxesOnImage(object):
+class BoundingBoxesOnImage(IAugmentable):
     """Container for the list of all bounding boxes on a single image.
 
     Parameters
@@ -1599,6 +1624,19 @@ class BoundingBoxesOnImage(object):
         # so use manual copy here too
         bbs = [bb.deepcopy() for bb in self.bounding_boxes]
         return BoundingBoxesOnImage(bbs, tuple(self.shape))
+
+    def __iter__(self):
+        """Iterate over the bounding boxes in this container.
+
+        Yields
+        ------
+        Polygon
+            A bounding box in this container.
+            The order is identical to the order in the bounding box list
+            provided upon class initialization.
+
+        """
+        return iter(self.bounding_boxes)
 
     def __repr__(self):
         return self.__str__()

@@ -8,6 +8,7 @@ import skimage.measure
 import cv2
 
 from .. import imgaug as ia
+from .base import IAugmentable
 from .utils import (normalize_shape, project_coords, interpolate_points,
                     _remove_out_of_image_fraction)
 
@@ -1530,6 +1531,28 @@ class LineString(object):
             coords=np.copy(self.coords) if coords is None else coords,
             label=copylib.deepcopy(self.label) if label is None else label)
 
+    def __getitem__(self, indices):
+        """Get the coordinate(s) with given indices.
+
+        Returns
+        -------
+        ndarray
+            xy-coordinate(s) as ``ndarray``.
+
+        """
+        return self.coords[indices]
+
+    def __iter__(self):
+        """Iterate over the coordinates of this instance.
+
+        Yields
+        ------
+        ndarray
+            An ``(2,)`` ``ndarray`` denoting an xy-coordinate pair.
+
+        """
+        return iter(self.coords)
+
     def __repr__(self):
         return self.__str__()
 
@@ -1553,7 +1576,7 @@ class LineString(object):
 # concat(other)
 # is_self_intersecting()
 # remove_self_intersections()
-class LineStringsOnImage(object):
+class LineStringsOnImage(IAugmentable):
     """Object that represents all line strings on a single image.
 
     Parameters
@@ -2054,6 +2077,19 @@ class LineStringsOnImage(object):
         return LineStringsOnImage(
             line_strings=[ls.deepcopy() for ls in lss],
             shape=tuple(shape))
+
+    def __iter__(self):
+        """Iterate over the line strings in this container.
+
+        Yields
+        ------
+        LineString
+            A line string in this container.
+            The order is identical to the order in the line string list
+            provided upon class initialization.
+
+        """
+        return iter(self.line_strings)
 
     def __repr__(self):
         return self.__str__()

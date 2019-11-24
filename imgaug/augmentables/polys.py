@@ -12,6 +12,7 @@ import collections
 
 from .. import imgaug as ia
 from .. import random as iarandom
+from .base import IAugmentable
 from .utils import (normalize_shape, interpolate_points,
                     _remove_out_of_image_fraction)
 
@@ -1282,6 +1283,28 @@ class Polygon(object):
             exterior=np.copy(self.exterior) if exterior is None else exterior,
             label=self.label if label is None else label)
 
+    def __getitem__(self, indices):
+        """Get the coordinate(s) with given indices.
+
+        Returns
+        -------
+        ndarray
+            xy-coordinate(s) as ``ndarray``.
+
+        """
+        return self.exterior[indices]
+
+    def __iter__(self):
+        """Iterate over the coordinates of this instance.
+
+        Yields
+        ------
+        ndarray
+            An ``(2,)`` ``ndarray`` denoting an xy-coordinate pair.
+
+        """
+        return iter(self.exterior)
+
     def __repr__(self):
         return self.__str__()
 
@@ -1295,7 +1318,7 @@ class Polygon(object):
 
 
 # TODO add tests for this
-class PolygonsOnImage(object):
+class PolygonsOnImage(IAugmentable):
     """Container for all polygons on a single image.
 
     Parameters
@@ -1757,6 +1780,19 @@ class PolygonsOnImage(object):
         # so use manual copy here too
         polys = [poly.deepcopy() for poly in self.polygons]
         return PolygonsOnImage(polys, tuple(self.shape))
+
+    def __iter__(self):
+        """Iterate over the polygons in this container.
+
+        Yields
+        ------
+        Polygon
+            A polygon in this container.
+            The order is identical to the order in the polygon list
+            provided upon class initialization.
+
+        """
+        return iter(self.polygons)
 
     def __repr__(self):
         return self.__str__()
