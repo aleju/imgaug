@@ -41,11 +41,11 @@ from skimage import transform as tf
 import cv2
 import six.moves as sm
 
+import imgaug as ia
+from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from . import meta
 from . import blur as blur_lib
 from . import size as size_lib
-import imgaug as ia
-from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from .. import parameters as iap
 from .. import dtypes as iadt
 from .. import random as iarandom
@@ -99,13 +99,12 @@ def _handle_order_arg(order, backend):
     # on smaller images (seems to grow more like exponentially with image
     # size)
     if order == ia.ALL:
-        if backend == "auto" or backend == "cv2":
+        if backend in ["auto", "cv2"]:
             return iap.Choice([0, 1, 3])
-        else:
-            # dont use order=2 (bi-quadratic) because that is apparently
-            # currently not recommended (and throws a warning)
-            return iap.Choice([0, 1, 3, 4, 5])
-    elif ia.is_single_integer(order):
+        # dont use order=2 (bi-quadratic) because that is apparently
+        # currently not recommended (and throws a warning)
+        return iap.Choice([0, 1, 3, 4, 5])
+    if ia.is_single_integer(order):
         assert 0 <= order <= 5, (
             "Expected order's integer value to be in the interval [0, 5], "
             "got %d." % (order,))
@@ -114,7 +113,7 @@ def _handle_order_arg(order, backend):
                 "Backend \"cv2\" and order=%d was chosen, but cv2 backend "
                 "can only handle order 0, 1 or 3." % (order,))
         return iap.Deterministic(order)
-    elif isinstance(order, list):
+    if isinstance(order, list):
         assert all([ia.is_single_integer(val) for val in order]), (
             "Expected order list to only contain integers, "
             "got types %s." % (str([type(val) for val in order]),))
@@ -126,12 +125,11 @@ def _handle_order_arg(order, backend):
                 "cv2 backend can only handle order 0, 1 or 3. Got order "
                 "list of %s." % (order,))
         return iap.Choice(order)
-    elif isinstance(order, iap.StochasticParameter):
+    if isinstance(order, iap.StochasticParameter):
         return order
-    else:
-        raise Exception(
-            "Expected order to be imgaug.ALL, int, list of int or "
-            "StochasticParameter, got %s." % (type(order),))
+    raise Exception(
+        "Expected order to be imgaug.ALL, int, list of int or "
+        "StochasticParameter, got %s." % (type(order),))
 
 
 def _handle_cval_arg(cval):
@@ -139,10 +137,9 @@ def _handle_cval_arg(cval):
         # TODO change this so that it is dynamically created per image
         #      (or once per dtype)
         return iap.Uniform(0, 255)  # skimage transform expects float
-    else:
-        return iap.handle_continuous_param(
-            cval, "cval", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
+    return iap.handle_continuous_param(
+        cval, "cval", value_range=None, tuple_to_uniform=True,
+        list_to_choice=True)
 
 
 # currently used for Affine and PiecewiseAffine
@@ -151,19 +148,18 @@ def _handle_mode_arg(mode):
     if mode == ia.ALL:
         return iap.Choice(["constant", "edge", "symmetric",
                            "reflect", "wrap"])
-    elif ia.is_string(mode):
+    if ia.is_string(mode):
         return iap.Deterministic(mode)
-    elif isinstance(mode, list):
+    if isinstance(mode, list):
         assert all([ia.is_string(val) for val in mode]), (
             "Expected list of modes to only contain strings, got "
             "types %s" % (", ".join([str(type(v)) for v in mode])))
         return iap.Choice(mode)
-    elif isinstance(mode, iap.StochasticParameter):
+    if isinstance(mode, iap.StochasticParameter):
         return mode
-    else:
-        raise Exception(
-            "Expected mode to be imgaug.ALL, a string, a list of strings "
-            "or StochasticParameter, got %s." % (type(mode),))
+    raise Exception(
+        "Expected mode to be imgaug.ALL, a string, a list of strings "
+        "or StochasticParameter, got %s." % (type(mode),))
 
 
 def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
@@ -405,6 +401,9 @@ def apply_jigsaw(arr, destinations):
         Modified image with cells moved according to `destinations`.
 
     """
+    # pylint complains about unravel_index() here
+    # pylint: disable=unbalanced-tuple-unpacking
+
     nb_rows, nb_cols = destinations.shape[0:2]
 
     assert arr.ndim >= 2, (
@@ -476,6 +475,9 @@ def apply_jigsaw_to_coords(coords, destinations, image_shape):
         Moved coordinates.
 
     """
+    # pylint complains about unravel_index() here
+    # pylint: disable=unbalanced-tuple-unpacking
+
     nb_rows, nb_cols = destinations.shape[0:2]
 
     height, width = image_shape[0:2]
@@ -542,7 +544,7 @@ def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
 
     """
     assert connectivity in (4, 8), (
-            "Expected connectivity of 4 or 8, got %d." % (connectivity,))
+        "Expected connectivity of 4 or 8, got %d." % (connectivity,))
     random_state = iarandom.RNG(random_state)
     steps = random_state.integers(0, max_steps, size=(nb_rows, nb_cols),
                                   endpoint=True)
@@ -1173,13 +1175,13 @@ class Affine(meta.Augmenter):
                     y, "scale['y']", value_range=(0+1e-4, None),
                     tuple_to_uniform=True, list_to_choice=True)
             )
-        else:
-            return iap.handle_continuous_param(
-                scale, "scale", value_range=(0+1e-4, None),
-                tuple_to_uniform=True, list_to_choice=True)
+        return iap.handle_continuous_param(
+            scale, "scale", value_range=(0+1e-4, None),
+            tuple_to_uniform=True, list_to_choice=True)
 
     @classmethod
     def _handle_translate_arg(cls, translate_px, translate_percent):
+        # pylint: disable=no-else-return
         if translate_percent is None and translate_px is None:
             translate_px = 0
 
@@ -1203,10 +1205,9 @@ class Affine(meta.Augmenter):
                         y, "translate_percent['y']", value_range=None,
                         tuple_to_uniform=True, list_to_choice=True)
                 )
-            else:
-                return iap.handle_continuous_param(
-                    translate_percent, "translate_percent", value_range=None,
-                    tuple_to_uniform=True, list_to_choice=True)
+            return iap.handle_continuous_param(
+                translate_percent, "translate_percent", value_range=None,
+                tuple_to_uniform=True, list_to_choice=True)
         else:
             # translate by pixels
             if isinstance(translate_px, dict):
@@ -1225,14 +1226,14 @@ class Affine(meta.Augmenter):
                         tuple_to_uniform=True, list_to_choice=True,
                         allow_floats=False)
                 )
-            else:
-                return iap.handle_discrete_param(
-                    translate_px, "translate_px", value_range=None,
-                    tuple_to_uniform=True, list_to_choice=True,
-                    allow_floats=False)
+            return iap.handle_discrete_param(
+                translate_px, "translate_px", value_range=None,
+                tuple_to_uniform=True, list_to_choice=True,
+                allow_floats=False)
 
     @classmethod
     def _handle_shear_arg(cls, shear):
+        # pylint: disable=no-else-return
         if isinstance(shear, dict):
             assert "x" in shear or "y" in shear, (
                 "Expected shear dictionary to contain at "
@@ -1284,7 +1285,7 @@ class Affine(meta.Augmenter):
 
                     if (not _is_identity_matrix(matrix)
                             and not cbaoi.empty
-                            and not (0 in cbaoi.shape[0:2])):
+                            and not 0 in cbaoi.shape[0:2]):
                         # TODO this is hacky
                         if augm_name == "bounding_boxes":
                             # Ensure that 4 points are used for bbs.
@@ -1346,7 +1347,7 @@ class Affine(meta.Augmenter):
         # the shapes can change due to fit_output, then it may not be possible
         # to return an array, even when the input was an array
         if input_was_array:
-            nb_shapes = len(set([image.shape for image in result]))
+            nb_shapes = len({image.shape for image in result})
             if nb_shapes == 1:
                 result = np.array(result, input_dtype)
 
@@ -1457,6 +1458,7 @@ class Affine(meta.Augmenter):
             order=order_samples)
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [
             self.scale, self.translate, self.rotate, self.shear, self.order,
             self.cval, self.mode, self.backend, self.fit_output]
@@ -2344,10 +2346,10 @@ class AffineCv2(meta.Augmenter):
     def _augment_images(self, images, random_state, parents, hooks):
         nb_images = len(images)
         scale_samples, translate_samples, rotate_samples, shear_samples, \
-            cval_samples,  mode_samples, order_samples = self._draw_samples(
+            cval_samples, mode_samples, order_samples = self._draw_samples(
                 nb_images, random_state)
         result = self._augment_images_by_samples(
-            images, scale_samples, translate_samples,  rotate_samples,
+            images, scale_samples, translate_samples, rotate_samples,
             shear_samples, cval_samples, mode_samples, order_samples)
         return result
 
@@ -2558,6 +2560,7 @@ class AffineCv2(meta.Augmenter):
             bounding_boxes_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.scale, self.translate, self.rotate, self.shear,
                 self.order, self.cval, self.mode]
 
@@ -2923,6 +2926,7 @@ class PiecewiseAffine(meta.Augmenter):
         return result
 
     def _augment_keypoints_by_samples(self, kpsois, samples):
+        # pylint: disable=pointless-string-statement
         result = []
 
         for i, kpsoi in enumerate(kpsois):
@@ -3015,7 +3019,7 @@ class PiecewiseAffine(meta.Augmenter):
 
         jitter_by_image = []
         counter = 0
-        for i, nb_cells_i in enumerate(nb_cells):
+        for nb_cells_i in nb_cells:
             jitter_img = jitter[counter:counter+nb_cells_i, :]
             jitter_by_image.append(jitter_img)
             counter += nb_cells_i
@@ -3033,6 +3037,9 @@ class PiecewiseAffine(meta.Augmenter):
         # be moved around before leaving the image),
         # so we use here (half cell height/width to H/W minus half
         # height/width) instead of (0, H/W)
+
+        # pylint: disable=no-else-return
+
         y = np.linspace(0, augmentable_shape[0], nb_rows)
         x = np.linspace(0, augmentable_shape[1], nb_cols)
 
@@ -3103,6 +3110,7 @@ class PiecewiseAffine(meta.Augmenter):
                 return matrix
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [
             self.scale, self.nb_rows, self.nb_cols, self.order, self.cval,
             self.mode, self.absolute_scale]
@@ -3329,17 +3337,17 @@ class PerspectiveTransform(meta.Augmenter):
         available_modes_str = ["replicate", "constant"]
         if mode == ia.ALL:
             return iap.Choice(available_modes)
-        elif ia.is_single_integer(mode):
+        if ia.is_single_integer(mode):
             assert mode in available_modes, (
                 "Expected mode to be in %s, got %d." % (
                     str(available_modes), mode))
             return iap.Deterministic(mode)
-        elif ia.is_string(mode):
+        if ia.is_string(mode):
             assert mode in available_modes_str, (
                 "Expected mode to be in %s, got %s." % (
                     str(available_modes_str), mode))
             return iap.Deterministic(mode)
-        elif isinstance(mode, list):
+        if isinstance(mode, list):
             valid_types = all([ia.is_single_integer(val) or ia.is_string(val)
                                for val in mode])
             assert valid_types, (
@@ -3352,13 +3360,12 @@ class PerspectiveTransform(meta.Augmenter):
                 "Expected all mode values to be in %s, got %s." % (
                     str(available_modes + available_modes_str), str(mode)))
             return iap.Choice(mode)
-        elif isinstance(mode, iap.StochasticParameter):
+        if isinstance(mode, iap.StochasticParameter):
             return mode
-        else:
-            raise Exception(
-                "Expected mode to be imgaug.ALL, an int, a string, a list "
-                "of int/strings or StochasticParameter, got %s." % (
-                    type(mode),))
+        raise Exception(
+            "Expected mode to be imgaug.ALL, an int, a string, a list "
+            "of int/strings or StochasticParameter, got %s." % (
+                type(mode),))
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         samples_images = self._draw_samples(batch.get_rowwise_shapes(),
@@ -3574,6 +3581,7 @@ class PerspectiveTransform(meta.Augmenter):
         return result
 
     def _draw_samples(self, shapes, random_state):
+        # pylint: disable=invalid-name
         matrices = []
         max_heights = []
         max_widths = []
@@ -3696,9 +3704,9 @@ class PerspectiveTransform(meta.Augmenter):
 
         # the top-left point will have the smallest sum, whereas
         # the bottom-right point will have the largest sum
-        s = pts.sum(axis=1)
-        pts_ordered[0] = pts[np.argmin(s)]
-        pts_ordered[2] = pts[np.argmax(s)]
+        pointwise_sum = pts.sum(axis=1)
+        pts_ordered[0] = pts[np.argmin(pointwise_sum)]
+        pts_ordered[2] = pts[np.argmax(pointwise_sum)]
 
         # now, compute the difference between the points, the
         # top-right point will have the smallest difference,
@@ -3711,14 +3719,14 @@ class PerspectiveTransform(meta.Augmenter):
         return pts_ordered
 
     @classmethod
-    def _expand_transform(cls, M, shape):
+    def _expand_transform(cls, matrix, shape):
         height, width = shape
         rect = np.array([
             [0, 0],
             [width - 1, 0],
             [width - 1, height - 1],
             [0, height - 1]], dtype=np.float32)
-        dst = cv2.perspectiveTransform(np.array([rect]), M)[0]
+        dst = cv2.perspectiveTransform(np.array([rect]), matrix)[0]
 
         # get min x, y over transformed 4 points
         # then modify target points by subtracting these minima
@@ -3726,11 +3734,12 @@ class PerspectiveTransform(meta.Augmenter):
         dst -= dst.min(axis=0, keepdims=True)
         dst = np.around(dst, decimals=0)
 
-        M_expanded = cv2.getPerspectiveTransform(rect, dst)
+        matrix_expanded = cv2.getPerspectiveTransform(rect, dst)
         max_width, max_height = dst.max(axis=0) + 1
-        return M_expanded, max_width, max_height
+        return matrix_expanded, max_width, max_height
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.jitter, self.keep_size, self.cval, self.mode,
                 self.fit_output]
 
@@ -3980,29 +3989,27 @@ class ElasticTransformation(meta.Augmenter):
     def _handle_order_arg(cls, order):
         if order == ia.ALL:
             return iap.Choice([0, 1, 2, 3, 4, 5])
-        else:
-            return iap.handle_discrete_param(
-                order, "order", value_range=(0, 5), tuple_to_uniform=True,
-                list_to_choice=True, allow_floats=False)
+        return iap.handle_discrete_param(
+            order, "order", value_range=(0, 5), tuple_to_uniform=True,
+            list_to_choice=True, allow_floats=False)
 
     @classmethod
     def _handle_mode_arg(cls, mode):
         if mode == ia.ALL:
             return iap.Choice(["constant", "nearest", "reflect", "wrap"])
-        elif ia.is_string(mode):
+        if ia.is_string(mode):
             return iap.Deterministic(mode)
-        elif ia.is_iterable(mode):
+        if ia.is_iterable(mode):
             assert all([ia.is_string(val) for val in mode]), (
                 "Expected mode list to only contain strings, got "
                 "types %s." % (
                     ", ".join([str(type(val)) for val in mode]),))
             return iap.Choice(mode)
-        elif isinstance(mode, iap.StochasticParameter):
+        if isinstance(mode, iap.StochasticParameter):
             return mode
-        else:
-            raise Exception(
-                "Expected mode to be imgaug.ALL, a string, a list of strings "
-                "or StochasticParameter, got %s." % (type(mode),))
+        raise Exception(
+            "Expected mode to be imgaug.ALL, a string, a list of strings "
+            "or StochasticParameter, got %s." % (type(mode),))
 
     def _draw_samples(self, nb_images, random_state):
         rss = random_state.duplicate(nb_images+5)
@@ -4015,6 +4022,7 @@ class ElasticTransformation(meta.Augmenter):
             rss[0:-5], alphas, sigmas, orders, cvals, modes)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
+        # pylint: disable=invalid-name
         if batch.images is not None:
             iadt.gate_dtypes(
                 batch.images,
@@ -4066,6 +4074,7 @@ class ElasticTransformation(meta.Augmenter):
         return batch
 
     def _augment_image_by_samples(self, image, row_idx, samples, dx, dy):
+        # pylint: disable=invalid-name
         min_value, _center_value, max_value = \
             iadt.get_value_range_of_dtype(image.dtype)
         cval = max(min(samples.cvals[row_idx], max_value), min_value)
@@ -4086,6 +4095,7 @@ class ElasticTransformation(meta.Augmenter):
 
     def _augment_hm_or_sm_by_samples(self, augmentable, row_idx, samples,
                                      dx, dy, arr_attr_name, cval, mode, order):
+        # pylint: disable=invalid-name
         cval = cval if cval is not None else samples.cvals[row_idx]
         mode = mode if mode is not None else samples.modes[row_idx]
         order = order if order is not None else samples.orders[row_idx]
@@ -4137,6 +4147,7 @@ class ElasticTransformation(meta.Augmenter):
         return augmentable
 
     def _augment_kpsoi_by_samples(self, kpsoi, row_idx, samples, dx, dy):
+        # pylint: disable=misplaced-comparison-constant, invalid-name
         height, width = kpsoi.shape[0:2]
         alpha = samples.alphas[row_idx]
         sigma = samples.sigmas[row_idx]
@@ -4198,26 +4209,31 @@ class ElasticTransformation(meta.Augmenter):
         return kpsoi
 
     def _augment_psoi_by_samples(self, psoi, row_idx, samples, dx, dy):
+        # pylint: disable=invalid-name
         func = functools.partial(self._augment_kpsoi_by_samples,
                                  row_idx=row_idx, samples=samples, dx=dx, dy=dy)
         return self._apply_to_polygons_as_keypoints(
             psoi, func, recoverer=self.polygon_recoverer)
 
     def _augment_lsoi_by_samples(self, lsoi, row_idx, samples, dx, dy):
+        # pylint: disable=invalid-name
         func = functools.partial(self._augment_kpsoi_by_samples,
                                  row_idx=row_idx, samples=samples, dx=dx, dy=dy)
         return self._apply_to_cbaois_as_keypoints(lsoi, func)
 
     def _augment_bbsoi_by_samples(self, bbsoi, row_idx, samples, dx, dy):
+        # pylint: disable=invalid-name
         func = functools.partial(self._augment_kpsoi_by_samples,
                                  row_idx=row_idx, samples=samples, dx=dx, dy=dy)
         return self._apply_to_cbaois_as_keypoints(bbsoi, func)
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
     @classmethod
     def _generate_shift_maps(cls, shape, alpha, sigma, random_state):
+        # pylint: disable=protected-access, invalid-name
         assert len(shape) == 2, ("Expected 2d shape, got %s." % (shape,))
 
         ksize = blur_lib._compute_gaussian_blur_ksize(sigma)
@@ -4362,6 +4378,7 @@ class ElasticTransformation(meta.Augmenter):
                 - (4) causes: src data type = 0 is not supported
 
         """
+        # pylint: disable=invalid-name
         if image.size == 0:
             return np.copy(image)
 
@@ -4595,6 +4612,7 @@ class Rot90(meta.Augmenter):
         return self.k.draw_samples((nb_images,), random_state=random_state)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
+        # pylint: disable=invalid-name
         ks = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
@@ -4623,6 +4641,7 @@ class Rot90(meta.Augmenter):
 
     @classmethod
     def _augment_arrays_by_samples(cls, arrs, ks, keep_size, resize_func):
+        # pylint: disable=invalid-name
         input_was_array = ia.is_np_array(arrs)
         input_dtype = arrs.dtype if input_was_array else None
         arrs_aug = []
@@ -4638,12 +4657,13 @@ class Rot90(meta.Augmenter):
                 arr_aug = resize_func(arr_aug, arr.shape[0:2])
             arrs_aug.append(arr_aug)
         if keep_size and input_was_array:
-            n_shapes = len(set([arr.shape for arr in arrs_aug]))
+            n_shapes = len({arr.shape for arr in arrs_aug})
             if n_shapes == 1:
                 arrs_aug = np.array(arrs_aug, dtype=input_dtype)
         return arrs_aug
 
     def _augment_maps_by_samples(self, augmentables, arr_attr_name, ks):
+        # pylint: disable=invalid-name
         arrs = [getattr(map_i, arr_attr_name) for map_i in augmentables]
         arrs_aug = self._augment_arrays_by_samples(
             arrs, ks, self.keep_size, None)
@@ -4667,6 +4687,7 @@ class Rot90(meta.Augmenter):
         return maps_aug
 
     def _augment_keypoints_by_samples(self, keypoints_on_images, ks):
+        # pylint: disable=invalid-name
         result = []
         for kpsoi_i, k_i in zip(keypoints_on_images, ks):
             shape_orig = kpsoi_i.shape
@@ -4703,6 +4724,7 @@ class Rot90(meta.Augmenter):
         return result
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.k, self.keep_size]
 
 
@@ -4903,7 +4925,7 @@ class WithPolarWarping(meta.Augmenter):
         for psoi in batch.polygons:
             polygons = []
             bbs = []
-            for i, polygon in enumerate(psoi.polygons):
+            for polygon in psoi.polygons:
                 is_bb = False
                 if polygon.label is None:
                     is_bb = False
@@ -4967,13 +4989,13 @@ class WithPolarWarping(meta.Augmenter):
         return cls._invert_warp_cbaois_(kpsois_warped, image_shapes_orig)
 
     @classmethod
-    def _warp_bounding_boxes_(cls, bbsois):
+    def _warp_bounding_boxes_(cls, bbsois):  # pylint: disable=useless-return
         assert bbsois is None, ("Expected BBs to have been converted "
                                 "to polygons.")
         return None
 
     @classmethod
-    def _invert_warp_bounding_boxes_(cls, bbsois_warped, image_shapes_orig):
+    def _invert_warp_bounding_boxes_(cls, bbsois_warped, _image_shapes_orig):  # pylint: disable=useless-return
         assert bbsois_warped is None, ("Expected BBs to have been converted "
                                        "to polygons.")
         return None
@@ -5081,9 +5103,10 @@ class WithPolarWarping(meta.Augmenter):
             # remap limitation, see docs for warpPolar()
             assert (arr_warped.shape[0] <= 32767
                     and arr_warped.shape[1] <= 32767), (
-                "WithPolarWarping._warp_arrays() can currently only handle "
-                "arrays with axis sizes below 32767, but got shape %s. This "
-                "is an OpenCV limitation." % (arr_warped.shape,))
+                        "WithPolarWarping._warp_arrays() can currently only "
+                        "handle arrays with axis sizes below 32767, but got "
+                        "shape %s. This is an OpenCV limitation." % (
+                            arr_warped.shape,))
 
             dest_size = (width, height)
             center_xy = (width/2, height/2)
@@ -5258,6 +5281,7 @@ class WithPolarWarping(meta.Augmenter):
 
     @classmethod
     def _warp_shape_tuples(cls, shapes):
+        # pylint: disable=invalid-name
         pi = np.pi
         result = []
         for shape in shapes:
@@ -5288,6 +5312,7 @@ class WithPolarWarping(meta.Augmenter):
         # https://github.com/opencv/opencv/blob/master/modules/imgproc/src/
         # imgwarp.cpp
         #
+        # pylint: disable=invalid-name, no-else-return
         assert dsize[0] > 0
         assert dsize[1] > 0
 
@@ -5331,9 +5356,11 @@ class WithPolarWarping(meta.Augmenter):
             return np.concatenate([rho, phi], axis=1)
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):

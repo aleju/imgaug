@@ -28,8 +28,8 @@ import functools
 import six
 import numpy as np
 
-from . import meta
 import imgaug as ia
+from . import meta
 from .. import parameters as iap
 
 
@@ -189,6 +189,7 @@ class _AbstractPoolingBase(meta.Augmenter):
                                                   func)
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.kernel_size, self.keep_size]
 
 

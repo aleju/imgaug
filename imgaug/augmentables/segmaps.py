@@ -1,3 +1,8 @@
+"""Classes dealing with segmentation maps.
+
+E.g. masks, semantic or instance segmentation maps.
+
+"""
 from __future__ import print_function, division, absolute_import
 
 import numpy as np
@@ -11,6 +16,8 @@ from .base import IAugmentable
 @ia.deprecated(alt_func="SegmentationMapsOnImage",
                comment="(Note the plural 'Maps' instead of old 'Map'.)")
 def SegmentationMapOnImage(*args, **kwargs):
+    """Object representing a segmentation map associated with an image."""
+    # pylint: disable=invalid-name
     return SegmentationMapsOnImage(*args, **kwargs)
 
 
@@ -199,6 +206,8 @@ class SegmentationMapsOnImage(IAugmentable):
 
     @ia.deprecated(alt_func="SegmentationMapsOnImage.get_arr()")
     def get_arr_int(self, *args, **kwargs):
+        """Return the seg.map array, with original dtype and shape ndim."""
+        # pylint: disable=unused-argument
         return self.get_arr()
 
     def draw(self, size=None, colors=None):
@@ -227,13 +236,12 @@ class SegmentationMapsOnImage(IAugmentable):
         def _handle_sizeval(sizeval, arr_axis_size):
             if sizeval is None:
                 return arr_axis_size
-            elif ia.is_single_float(sizeval):
+            if ia.is_single_float(sizeval):
                 return max(int(arr_axis_size * sizeval), 1)
-            elif ia.is_single_integer(sizeval):
+            if ia.is_single_integer(sizeval):
                 return sizeval
-            else:
-                raise ValueError("Expected float or int, got %s." % (
-                    type(sizeval),))
+            raise ValueError("Expected float or int, got %s." % (
+                type(sizeval),))
 
         if size is None:
             size = [size, size]
@@ -314,7 +322,7 @@ class SegmentationMapsOnImage(IAugmentable):
             "instead." % (image.shape[2],))
         assert image.dtype.name == "uint8", (
             "Expected to get image with dtype uint8, got dtype %s." % (
-                image.dtype.name,) )
+                image.dtype.name,))
         assert 0 - 1e-8 <= alpha <= 1.0 + 1e-8, (
             "Expected 'alpha' to be in interval [0.0, 1.0], got %.4f." % (
                 alpha,))
@@ -470,6 +478,7 @@ class SegmentationMapsOnImage(IAugmentable):
     @ia.deprecated(alt_func="SegmentationMapsOnImage.resize()",
                    comment="resize() has the exactly same interface.")
     def scale(self, *args, **kwargs):
+        """Resize the seg.map(s) array given a target size and interpolation."""
         return self.resize(*args, **kwargs)
 
     def resize(self, sizes, interpolation="nearest"):
@@ -523,6 +532,7 @@ class SegmentationMapsOnImage(IAugmentable):
             Shallow copy.
 
         """
+        # pylint: disable=protected-access
         segmap = SegmentationMapsOnImage(
             self.arr if arr is None else arr,
             shape=self.shape if shape is None else shape)
@@ -554,6 +564,7 @@ class SegmentationMapsOnImage(IAugmentable):
             Deep copy.
 
         """
+        # pylint: disable=protected-access
         segmap = SegmentationMapsOnImage(
             np.copy(self.arr if arr is None else arr),
             shape=self.shape if shape is None else shape)

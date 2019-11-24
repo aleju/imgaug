@@ -1,3 +1,4 @@
+"""Classes to represent keypoints, i.e. points given as xy-coordinates."""
 from __future__ import print_function, division, absolute_import
 
 import copy
@@ -34,6 +35,7 @@ def compute_geometric_median(points=None, eps=1e-5, X=None):
         Geometric median as xy-coordinate.
 
     """
+    # pylint: disable=invalid-name
     if X is not None:
         assert points is None
         ia.warn_deprecated("Using 'X' is deprecated, use 'points' instead.")
@@ -42,13 +44,13 @@ def compute_geometric_median(points=None, eps=1e-5, X=None):
     y = np.mean(points, 0)
 
     while True:
-        D = scipy.spatial.distance.cdist(points, [y])
-        nonzeros = (D != 0)[:, 0]
+        dist = scipy.spatial.distance.cdist(points, [y])
+        nonzeros = (dist != 0)[:, 0]
 
-        Dinv = 1 / D[nonzeros]
-        Dinvs = np.sum(Dinv)
-        W = Dinv / Dinvs
-        T = np.sum(W * points[nonzeros], 0)
+        dist_inv = 1 / dist[nonzeros]
+        dist_inv_sum = np.sum(dist_inv)
+        dist_inv_norm = dist_inv / dist_inv_sum
+        T = np.sum(dist_inv_norm * points[nonzeros], 0)
 
         num_zeros = len(points) - np.sum(nonzeros)
         if num_zeros == 0:
@@ -56,7 +58,7 @@ def compute_geometric_median(points=None, eps=1e-5, X=None):
         elif num_zeros == len(points):
             return y
         else:
-            R = (T - y) * Dinvs
+            R = (T - y) * dist_inv_sum
             r = np.linalg.norm(R)
             rinv = 0 if r == 0 else num_zeros/r
             y1 = max(0, 1-rinv)*T + min(1, rinv)*y
@@ -278,6 +280,7 @@ class Keypoint(object):
             Image with drawn keypoint.
 
         """
+        # pylint: disable=redefined-outer-name
         if copy:
             image = np.copy(image)
 
@@ -293,7 +296,8 @@ class Keypoint(object):
         if alpha < 0.01:
             # keypoint invisible, nothing to do
             return image
-        elif alpha > 0.99:
+
+        if alpha > 0.99:
             alpha = 1
         else:
             image = image.astype(np.float32, copy=False)
@@ -324,9 +328,9 @@ class Keypoint(object):
                 image[y1_clipped:y2_clipped, x1_clipped:x2_clipped] = color
             else:
                 image[y1_clipped:y2_clipped, x1_clipped:x2_clipped] = (
-                        (1 - alpha)
-                        * image[y1_clipped:y2_clipped, x1_clipped:x2_clipped]
-                        + alpha_color
+                    (1 - alpha)
+                    * image[y1_clipped:y2_clipped, x1_clipped:x2_clipped]
+                    + alpha_color
                 )
         else:
             if raise_if_out_of_image:
@@ -556,6 +560,7 @@ class KeypointsOnImage(IAugmentable):
     >>> kps_oi = KeypointsOnImage(kps, shape=image.shape)
 
     """
+
     def __init__(self, keypoints, shape):
         self.keypoints = keypoints
         self.shape = normalize_shape(shape)
@@ -574,10 +579,26 @@ class KeypointsOnImage(IAugmentable):
 
     @property
     def height(self):
+        """Get the image height.
+
+        Returns
+        -------
+        int
+            Image height.
+
+        """
         return self.shape[0]
 
     @property
     def width(self):
+        """Get the image width.
+
+        Returns
+        -------
+        int
+            Image width.
+
+        """
         return self.shape[1]
 
     @property
@@ -607,13 +628,14 @@ class KeypointsOnImage(IAugmentable):
             Object containing all projected keypoints.
 
         """
+        # pylint: disable=invalid-name
         shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
-        else:
-            keypoints = [kp.project(self.shape, shape)
-                         for kp in self.keypoints]
-            return self.deepcopy(keypoints, shape)
+
+        keypoints = [kp.project(self.shape, shape)
+                     for kp in self.keypoints]
+        return self.deepcopy(keypoints, shape)
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3,
                       copy=True, raise_if_out_of_image=False):
@@ -653,6 +675,7 @@ class KeypointsOnImage(IAugmentable):
             Image with drawn keypoints.
 
         """
+        # pylint: disable=redefined-outer-name
         image = np.copy(image) if copy else image
         for keypoint in self.keypoints:
             image = keypoint.draw_on_image(
@@ -794,10 +817,10 @@ class KeypointsOnImage(IAugmentable):
         xy = np.array(xy, dtype=np.float32)
 
         # note that np.array([]) is (0,), not (0, 2)
-        if xy.shape[0] == 0:
+        if xy.shape[0] == 0:  # pylint: disable=unsubscriptable-object
             return KeypointsOnImage([], shape)
 
-        assert xy.ndim == 2 and xy.shape[-1] == 2, (
+        assert xy.ndim == 2 and xy.shape[-1] == 2, (  # pylint: disable=unsubscriptable-object
             "Expected input array to have shape (N,2), "
             "got shape %s." % (xy.shape,))
         keypoints = [Keypoint(x=coord[0], y=coord[1]) for coord in xy]
@@ -829,7 +852,7 @@ class KeypointsOnImage(IAugmentable):
         xy = np.array(xy, dtype=np.float32)
 
         # note that np.array([]) is (0,), not (0, 2)
-        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (  # pylint: disable=unsubscriptable-object
             "Expected input array to have shape (N,2), "
             "got shape %s." % (xy.shape,))
 

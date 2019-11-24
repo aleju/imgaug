@@ -1,3 +1,4 @@
+"""Combination of all augmenters, related classes and related functions."""
 from __future__ import absolute_import
 from imgaug.augmenters.arithmetic import *
 from imgaug.augmenters.artistic import *

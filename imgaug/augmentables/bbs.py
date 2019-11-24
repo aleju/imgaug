@@ -1,3 +1,4 @@
+"""Classes representing bounding boxes."""
 from __future__ import print_function, division, absolute_import
 
 import copy
@@ -317,8 +318,7 @@ class BoundingBox(object):
         y2_i = min(self.y2, other.y2)
         if x1_i > x2_i or y1_i > y2_i:
             return default
-        else:
-            return BoundingBox(x1=x1_i, y1=y1_i, x2=x2_i, y2=y2_i)
+        return BoundingBox(x1=x1_i, y1=y1_i, x2=x2_i, y2=y2_i)
 
     def union(self, other):
         """Compute the union BB between this BB and another BB.
@@ -510,7 +510,7 @@ class BoundingBox(object):
         """
         if self.is_fully_within_image(image):
             return False
-        elif self.is_partly_within_image(image):
+        if self.is_partly_within_image(image):
             return partly
         return fully
 
@@ -518,6 +518,7 @@ class BoundingBox(object):
                    comment="clip_out_of_image() has the exactly same "
                            "interface.")
     def cut_out_of_image(self, *args, **kwargs):
+        """Clip off all parts of the BB box that are outside of the image."""
         return self.clip_out_of_image(*args, **kwargs)
 
     def clip_out_of_image(self, image):
@@ -639,6 +640,7 @@ class BoundingBox(object):
             Image with bounding box drawn on it.
 
         """
+        # pylint: disable=invalid-name, redefined-outer-name
         if thickness is not None:
             ia.warn_deprecated(
                 "Usage of argument 'thickness' in BoundingBox.draw_on_image() "
@@ -736,6 +738,7 @@ class BoundingBox(object):
             ``H'>0`` and ``W'>0``, otherwise only ``H'>=0`` and ``W'>=0``.
 
         """
+        # pylint: disable=no-else-return, too-many-statements
         height, width = image.shape[0], image.shape[1]
         x1, x2, y1, y2 = self.x1_int, self.x2_int, self.y1_int, self.y2_int
 
@@ -952,6 +955,7 @@ class BoundingBox(object):
             Bounding box around the points.
 
         """
+        # pylint: disable=unsubscriptable-object
         xy = np.array(xy, dtype=np.float32)
 
         assert len(xy) > 0, (
@@ -1173,6 +1177,7 @@ class BoundingBoxesOnImage(IAugmentable):
             the new image shape.
 
         """
+        # pylint: disable=invalid-name
         shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
@@ -1206,6 +1211,7 @@ class BoundingBoxesOnImage(IAugmentable):
             derived from the provided corner coordinates.
 
         """
+        # pylint: disable=unsubscriptable-object
         xyxy = np.array(xyxy, dtype=np.float32)
 
         # note that np.array([]) is (0,), not (0, 2)
@@ -1215,8 +1221,8 @@ class BoundingBoxesOnImage(IAugmentable):
         assert (
             (xyxy.ndim == 2 and xyxy.shape[-1] == 4)
             or (xyxy.ndim == 3 and xyxy.shape[1:3] == (2, 2))), (
-            "Expected input array of shape (N, 4) or (N, 2, 2), "
-            "got shape %s." % (xyxy.shape,))
+                "Expected input array of shape (N, 4) or (N, 2, 2), "
+                "got shape %s." % (xyxy.shape,))
 
         xyxy = xyxy.reshape((-1, 2, 2))
         boxes = [BoundingBox.from_point_soup(row) for row in xyxy]
@@ -1326,7 +1332,7 @@ class BoundingBoxesOnImage(IAugmentable):
         xyxy = np.array(xyxy, dtype=np.float32)
 
         # note that np.array([]) is (0,), not (0, 4)
-        assert xyxy.shape[0] == 0 or (xyxy.ndim == 2 and xyxy.shape[-1] == 4), (
+        assert xyxy.shape[0] == 0 or (xyxy.ndim == 2 and xyxy.shape[-1] == 4), (  # pylint: disable=unsubscriptable-object
             "Expected input array to have shape (N,4), "
             "got shape %s." % (xyxy.shape,))
 
@@ -1403,6 +1409,7 @@ class BoundingBoxesOnImage(IAugmentable):
             Image with drawn bounding boxes.
 
         """
+        # pylint: disable=redefined-outer-name
         image = np.copy(image) if copy else image
 
         for bb in self.bounding_boxes:
@@ -1470,6 +1477,7 @@ class BoundingBoxesOnImage(IAugmentable):
                    comment="clip_out_of_image() has the exactly same "
                            "interface.")
     def cut_out_of_image(self):
+        """Clip off all parts from all BBs that are outside of the image."""
         return self.clip_out_of_image()
 
     def clip_out_of_image(self):

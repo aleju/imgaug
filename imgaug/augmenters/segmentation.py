@@ -34,8 +34,8 @@ import skimage.measure
 import six
 import six.moves as sm
 
-from . import meta
 import imgaug as ia
+from . import meta
 from .. import random as iarandom
 from .. import parameters as iap
 from .. import dtypes as iadt
@@ -319,6 +319,7 @@ class Superpixels(meta.Augmenter):
         return image_sp
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p_replace, self.n_segments, self.max_size,
                 self.interpolation]
 
@@ -642,6 +643,7 @@ class Voronoi(meta.Augmenter):
         return image_aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.points_sampler, self.p_replace, self.max_size,
                 self.interpolation]
 
@@ -1347,6 +1349,7 @@ class RelativeRegularGridPointsSampler(IPointsSampler):
             tuple_to_uniform=True, list_to_choice=True)
 
     def sample_points(self, images, random_state):
+        # pylint: disable=protected-access
         random_state = iarandom.RNG(random_state)
         _verify_sample_points_images(images)
 
@@ -1355,6 +1358,7 @@ class RelativeRegularGridPointsSampler(IPointsSampler):
                                                               n_rows, n_cols)
 
     def _draw_samples(self, images, random_state):
+        # pylint: disable=protected-access
         n_augmentables = len(images)
         rss = random_state.duplicate(2)
         n_rows_frac = self.n_rows_frac.draw_samples(n_augmentables,

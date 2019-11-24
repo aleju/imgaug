@@ -1,3 +1,4 @@
+"""Classes representing lines."""
 from __future__ import print_function, division, absolute_import
 
 import copy as copylib
@@ -184,6 +185,7 @@ class LineString(object):
             plane (``True``) or not (``False``).
 
         """
+        # pylint: disable=misplaced-comparison-constant
         if len(self.coords) == 0:
             return np.zeros((0,), dtype=bool)
         shape = normalize_shape(image)
@@ -240,7 +242,7 @@ class LineString(object):
         elif isinstance(other, LineString):
             if len(other.coords) == 0:
                 return default
-            elif len(other.coords) == 1:
+            if len(other.coords) == 1:
                 other = shapely.geometry.Point(other.coords[0, :])
             else:
                 other = shapely.geometry.LineString(other.coords)
@@ -460,10 +462,9 @@ class LineString(object):
 
         if self.is_fully_within_image(image):
             return False
-        elif self.is_partly_within_image(image):
+        if self.is_partly_within_image(image):
             return partly
-        else:
-            return fully
+        return fully
 
     def clip_out_of_image(self, image):
         """Clip off all parts of the line string that are outside of the image.
@@ -622,7 +623,7 @@ class LineString(object):
             # to remove duplicate points
             inter_sorted = sorted(
                 intersections_points,
-                key=lambda p: np.linalg.norm(np.float32(p) - p_start)
+                key=lambda p, ps=p_start: np.linalg.norm(np.float32(p) - ps)
             )
 
             result.append(inter_sorted)
@@ -733,8 +734,8 @@ class LineString(object):
         """
         assert len(image_shape) == 2 or (
             len(image_shape) == 3 and image_shape[-1] == 1), (
-            "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
-                image_shape,))
+                "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
+                    image_shape,))
 
         arr = self.draw_lines_on_image(
             np.zeros(image_shape, dtype=np.uint8),
@@ -775,8 +776,8 @@ class LineString(object):
         """
         assert len(image_shape) == 2 or (
             len(image_shape) == 3 and image_shape[-1] == 1), (
-            "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
-                image_shape,))
+                "Expected (H,W) or (H,W,1) as image_shape, got %s." % (
+                    image_shape,))
 
         arr = self.draw_points_on_image(
             np.zeros(image_shape, dtype=np.uint8),
@@ -885,6 +886,7 @@ class LineString(object):
             `image` with line drawn on it.
 
         """
+        # pylint: disable=invalid-name, misplaced-comparison-constant
         from .. import dtypes as iadt
         from ..augmenters import blend as blendlib
 
@@ -1447,7 +1449,7 @@ class LineString(object):
 
         if len(self.coords) == 0 and len(other.coords) == 0:
             return True
-        elif 0 in [len(self.coords), len(other.coords)]:
+        if 0 in [len(self.coords), len(other.coords)]:
             # only one of the two line strings has no coords
             return False
 
@@ -1654,6 +1656,7 @@ class LineStringsOnImage(IAugmentable):
             Object containing all projected line strings.
 
         """
+        # pylint: disable=invalid-name
         shape = normalize_shape(image)
         if shape[0:2] == self.shape[0:2]:
             return self.deepcopy()
@@ -1941,7 +1944,7 @@ class LineStringsOnImage(IAugmentable):
         xy = np.array(xy, dtype=np.float32)
 
         # note that np.array([]) is (0,), not (0, 2)
-        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (
+        assert xy.shape[0] == 0 or (xy.ndim == 2 and xy.shape[-1] == 2), (  # pylint: disable=unsubscriptable-object
             "Expected input array to have shape (N,2), "
             "got shape %s." % (xy.shape,))
 
@@ -2112,17 +2115,17 @@ def _flatten_shapely_collection(collection):
     import shapely.geometry
     if not isinstance(collection, list):
         collection = [collection]
-    for el in collection:
-        if hasattr(el, "geoms"):
-            for subel in _flatten_shapely_collection(el.geoms):
+    for item in collection:
+        if hasattr(item, "geoms"):
+            for subitem in _flatten_shapely_collection(item.geoms):
                 # MultiPoint.geoms actually returns a GeometrySequence
-                if isinstance(subel, shapely.geometry.base.GeometrySequence):
-                    for subsubel in subel:
+                if isinstance(subitem, shapely.geometry.base.GeometrySequence):
+                    for subsubel in subitem:
                         yield subsubel
                 else:
-                    yield _flatten_shapely_collection(subel)
+                    yield _flatten_shapely_collection(subitem)
         else:
-            yield el
+            yield item
 
 
 def _convert_var_to_shapely_geometry(var):

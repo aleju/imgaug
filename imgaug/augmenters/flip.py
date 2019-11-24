@@ -804,11 +804,13 @@ def flipud(arr):
 
 def HorizontalFlip(*args, **kwargs):
     """Alias for Fliplr."""
+    # pylint: disable=invalid-name
     return Fliplr(*args, **kwargs)
 
 
 def VerticalFlip(*args, **kwargs):
     """Alias for Flipud."""
+    # pylint: disable=invalid-name
     return Flipud(*args, **kwargs)
 
 
@@ -908,6 +910,7 @@ class Fliplr(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p]
 
 
@@ -1009,4 +1012,5 @@ class Flipud(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p]

@@ -1,3 +1,4 @@
+"""Functions dealing with normalization of user input data to imgaug classes."""
 from __future__ import print_function, division, absolute_import
 import functools
 
@@ -11,25 +12,25 @@ from .base import IAugmentable
 def _preprocess_shapes(shapes):
     if shapes is None:
         return None
-    elif ia.is_np_array(shapes):
+    if ia.is_np_array(shapes):
         assert shapes.ndim in [3, 4], (
             "Expected array 'shapes' to be 3- or 4-dimensional, got %d "
             "dimensions and shape %s instead." % (shapes.ndim, shapes.shape))
         return [image.shape for image in shapes]
-    else:
-        assert isinstance(shapes, list), (
-            "Expected 'shapes' to be None or ndarray or list, got type %s "
-            "instead." % (type(shapes),))
-        result = []
-        for shape_i in shapes:
-            if isinstance(shape_i, tuple):
-                result.append(shape_i)
-            else:
-                assert ia.is_np_array(shape_i), (
-                    "Expected each entry in list 'shapes' to be either a "
-                    "tuple or an ndarray, got type %s." % (type(shape_i),))
-                result.append(shape_i.shape)
-        return result
+
+    assert isinstance(shapes, list), (
+        "Expected 'shapes' to be None or ndarray or list, got type %s "
+        "instead." % (type(shapes),))
+    result = []
+    for shape_i in shapes:
+        if isinstance(shape_i, tuple):
+            result.append(shape_i)
+        else:
+            assert ia.is_np_array(shape_i), (
+                "Expected each entry in list 'shapes' to be either a "
+                "tuple or an ndarray, got type %s." % (type(shape_i),))
+            result.append(shape_i.shape)
+    return result
 
 
 def _assert_exactly_n_shapes(shapes, n, from_ntype, to_ntype):
@@ -40,7 +41,8 @@ def _assert_exactly_n_shapes(shapes, n, from_ntype, to_ntype):
             "None. This can happen e.g. if no images were provided in a "
             "Batch, as these would usually be used to automatically derive "
             "image shapes." % (from_ntype, to_ntype, n))
-    elif len(shapes) != n:
+
+    if len(shapes) != n:
         raise ValueError(
             "Tried to convert data of form '%s' to '%s'. This required "
             "exactly %d corresponding image shapes, but instead %d were "
@@ -98,7 +100,7 @@ def _assert_single_array_last_dim_exactly(arr, size, to_ntype):
             "Tried to convert an array to a list of %s. Expected the array's "
             "last dimension to have size %d, but got %d instead (array "
             "shape: %s)." % (
-                 to_ntype, size, arr.shape[-1], str(arr.shape)))
+                to_ntype, size, arr.shape[-1], str(arr.shape)))
 
 
 def _assert_many_arrays_last_dim_exactly(arrs, size, to_ntype):
@@ -120,22 +122,21 @@ def _assert_many_arrays_last_dim_exactly(arrs, size, to_ntype):
             "Tried to convert an %s of array to a list of %s. Expected the "
             "arrays' last dimensions to have size %d, but got %s instead "
             "(array shapes: %s)." % (
-                 iterable_type_str, to_ntype, size,
-                 ", ".join([str(arr.shape[-1]) for arr in arrs_flat]),
-                 ", ".join([str(arr.shape) for arr in arrs_flat])))
+                iterable_type_str, to_ntype, size,
+                ", ".join([str(arr.shape[-1]) for arr in arrs_flat]),
+                ", ".join([str(arr.shape) for arr in arrs_flat])))
 
 
 def normalize_images(images):
     if images is None:
         return None
-    elif ia.is_np_array(images):
+    if ia.is_np_array(images):
         if images.ndim == 2:
             return images[np.newaxis, ..., np.newaxis]
-        elif images.ndim == 3:
+        if images.ndim == 3:
             return images[..., np.newaxis]
-        else:
-            return images
-    elif ia.is_iterable(images):
+        return images
+    if ia.is_iterable(images):
         result = []
         for image in images:
             assert image.ndim in [2, 3], (
@@ -167,24 +168,23 @@ def normalize_heatmaps(inputs, shapes=None):
 
     if ntype == "None":
         return None
-    elif ntype == "array[float]":
+    if ntype == "array[float]":
         _assert_single_array_ndim(inputs, 4, "(N,H,W,C)", "HeatmapsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
-    elif ntype == "HeatmapsOnImage":
+    if ntype == "HeatmapsOnImage":
         return [inputs]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         return None
-    elif ntype == "iterable-array[float]":
+    if ntype == "iterable-array[float]":
         _assert_many_arrays_ndim(inputs, 3, "(H,W,C)", "HeatmapsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [HeatmapsOnImage(attr_i, shape=shape_i)
                 for attr_i, shape_i in zip(inputs, shapes)]
-    else:
-        assert ntype == "iterable-HeatmapsOnImage", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return inputs  # len allowed to differ from len of images
+    assert ntype == "iterable-HeatmapsOnImage", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return inputs  # len allowed to differ from len of images
 
 
 def normalize_segmentation_maps(inputs, shapes=None):
@@ -200,7 +200,7 @@ def normalize_segmentation_maps(inputs, shapes=None):
 
     if ntype == "None":
         return None
-    elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
+    if ntype in ["array[int]", "array[uint]", "array[bool]"]:
         _assert_single_array_ndim(inputs, 4, "(N,H,W,#SegmapsPerImage)",
                                   "SegmentationMapsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
@@ -209,13 +209,13 @@ def normalize_segmentation_maps(inputs, shapes=None):
                     for attr_i, shape in zip(inputs, shapes)]
         return [SegmentationMapsOnImage(attr_i, shape=shape)
                 for attr_i, shape in zip(inputs, shapes)]
-    elif ntype == "SegmentationMapsOnImage":
+    if ntype == "SegmentationMapsOnImage":
         return [inputs]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         return None
-    elif ntype in ["iterable-array[int]",
-                   "iterable-array[uint]",
-                   "iterable-array[bool]"]:
+    if ntype in ["iterable-array[int]",
+                 "iterable-array[uint]",
+                 "iterable-array[bool]"]:
         _assert_many_arrays_ndim(inputs, 3, "(H,W,#SegmapsPerImage)",
                                  "SegmentationMapsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
@@ -224,10 +224,10 @@ def normalize_segmentation_maps(inputs, shapes=None):
                     for attr_i, shape in zip(inputs, shapes)]
         return [SegmentationMapsOnImage(attr_i, shape=shape)
                 for attr_i, shape in zip(inputs, shapes)]
-    else:
-        assert ntype == "iterable-SegmentationMapsOnImage", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return inputs  # len allowed to differ from len of images
+
+    assert ntype == "iterable-SegmentationMapsOnImage", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return inputs  # len allowed to differ from len of images
 
 
 def normalize_keypoints(inputs, shapes=None):
@@ -243,7 +243,7 @@ def normalize_keypoints(inputs, shapes=None):
 
     if ntype == "None":
         return inputs
-    elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+    if ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_single_array_ndim(inputs, 3, "(N,K,2)", "KeypointsOnImage")
         _assert_single_array_last_dim_exactly(inputs, 2, "KeypointsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
@@ -252,20 +252,20 @@ def normalize_keypoints(inputs, shapes=None):
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "tuple[number,size=2]":
+    if ntype == "tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage([Keypoint(x=inputs[0], y=inputs[1])],
                                  shape=shapes[0])]
-    elif ntype == "Keypoint":
+    if ntype == "Keypoint":
         _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage([inputs], shape=shapes[0])]
-    elif ntype == "KeypointsOnImage":
+    if ntype == "KeypointsOnImage":
         return [inputs]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         return None
-    elif ntype in ["iterable-array[float]",
-                   "iterable-array[int]",
-                   "iterable-array[uint]"]:
+    if ntype in ["iterable-array[float]",
+                 "iterable-array[int]",
+                 "iterable-array[uint]"]:
         _assert_many_arrays_ndim(inputs, 2, "(K,2)", "KeypointsOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 2, "KeypointsOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
@@ -274,18 +274,18 @@ def normalize_keypoints(inputs, shapes=None):
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "iterable-tuple[number,size=2]":
+    if ntype == "iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage([Keypoint(x=x, y=y) for x, y in inputs],
                                  shape=shapes[0])]
-    elif ntype == "iterable-Keypoint":
+    if ntype == "iterable-Keypoint":
         _assert_exactly_n_shapes_partial(n=1)
         return [KeypointsOnImage(inputs, shape=shapes[0])]
-    elif ntype == "iterable-KeypointsOnImage":
+    if ntype == "iterable-KeypointsOnImage":
         return inputs
-    elif ntype == "iterable-iterable[empty]":
+    if ntype == "iterable-iterable[empty]":
         return None
-    elif ntype == "iterable-iterable-tuple[number,size=2]":
+    if ntype == "iterable-iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             KeypointsOnImage.from_xy_array(
@@ -294,13 +294,13 @@ def normalize_keypoints(inputs, shapes=None):
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    else:
-        assert ntype == "iterable-iterable-Keypoint", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        _assert_exactly_n_shapes_partial(n=len(inputs))
-        return [KeypointsOnImage(attr_i, shape=shape)
-                for attr_i, shape
-                in zip(inputs, shapes)]
+
+    assert ntype == "iterable-iterable-Keypoint", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    _assert_exactly_n_shapes_partial(n=len(inputs))
+    return [KeypointsOnImage(attr_i, shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)]
 
 
 def normalize_bounding_boxes(inputs, shapes=None):
@@ -316,7 +316,7 @@ def normalize_bounding_boxes(inputs, shapes=None):
 
     if ntype == "None":
         return None
-    elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+    if ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_single_array_ndim(inputs, 3, "(N,B,4)", "BoundingBoxesOnImage")
         _assert_single_array_last_dim_exactly(
             inputs, 4, "BoundingBoxesOnImage")
@@ -326,7 +326,7 @@ def normalize_bounding_boxes(inputs, shapes=None):
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "tuple[number,size=4]":
+    if ntype == "tuple[number,size=4]":
         _assert_exactly_n_shapes_partial(n=1)
         return [
             BoundingBoxesOnImage(
@@ -335,16 +335,16 @@ def normalize_bounding_boxes(inputs, shapes=None):
                     x2=inputs[2], y2=inputs[3])],
                 shape=shapes[0])
         ]
-    elif ntype == "BoundingBox":
+    if ntype == "BoundingBox":
         _assert_exactly_n_shapes_partial(n=1)
         return [BoundingBoxesOnImage([inputs], shape=shapes[0])]
-    elif ntype == "BoundingBoxesOnImage":
+    if ntype == "BoundingBoxesOnImage":
         return [inputs]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         return None
-    elif ntype in ["iterable-array[float]",
-                   "iterable-array[int]",
-                   "iterable-array[uint]"]:
+    if ntype in ["iterable-array[float]",
+                 "iterable-array[int]",
+                 "iterable-array[uint]"]:
         _assert_many_arrays_ndim(inputs, 2, "(B,4)", "BoundingBoxesOnImage")
         _assert_many_arrays_last_dim_exactly(inputs, 4, "BoundingBoxesOnImage")
         _assert_exactly_n_shapes_partial(n=len(inputs))
@@ -353,7 +353,7 @@ def normalize_bounding_boxes(inputs, shapes=None):
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "iterable-tuple[number,size=4]":
+    if ntype == "iterable-tuple[number,size=4]":
         _assert_exactly_n_shapes_partial(n=1)
         return [
             BoundingBoxesOnImage(
@@ -361,14 +361,14 @@ def normalize_bounding_boxes(inputs, shapes=None):
                  for x1, y1, x2, y2 in inputs],
                 shape=shapes[0])
         ]
-    elif ntype == "iterable-BoundingBox":
+    if ntype == "iterable-BoundingBox":
         _assert_exactly_n_shapes_partial(n=1)
         return [BoundingBoxesOnImage(inputs, shape=shapes[0])]
-    elif ntype == "iterable-BoundingBoxesOnImage":
+    if ntype == "iterable-BoundingBoxesOnImage":
         return inputs
-    elif ntype == "iterable-iterable[empty]":
+    if ntype == "iterable-iterable[empty]":
         return None
-    elif ntype == "iterable-iterable-tuple[number,size=4]":
+    if ntype == "iterable-iterable-tuple[number,size=4]":
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             BoundingBoxesOnImage.from_xyxy_array(
@@ -377,13 +377,13 @@ def normalize_bounding_boxes(inputs, shapes=None):
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    else:
-        assert ntype == "iterable-iterable-BoundingBox", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        _assert_exactly_n_shapes_partial(n=len(inputs))
-        return [BoundingBoxesOnImage(attr_i, shape=shape)
-                for attr_i, shape
-                in zip(inputs, shapes)]
+
+    assert ntype == "iterable-iterable-BoundingBox", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    _assert_exactly_n_shapes_partial(n=len(inputs))
+    return [BoundingBoxesOnImage(attr_i, shape=shape)
+            for attr_i, shape
+            in zip(inputs, shapes)]
 
 
 def normalize_polygons(inputs, shapes=None):
@@ -430,7 +430,7 @@ def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
 
     if ntype == "None":
         return None
-    elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+    if ntype in ["array[float]", "array[int]", "array[uint]"]:
         _assert_single_array_ndim(inputs, 4, axis_names_4_str,
                                   cls_oi_name)
         _assert_single_array_last_dim_exactly(inputs, 2, cls_oi_name)
@@ -442,16 +442,16 @@ def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == cls_single_name:
+    if ntype == cls_single_name:
         _assert_exactly_n_shapes_partial(n=1)
         return [cls_oi([inputs], shape=shapes[0])]
-    elif ntype == cls_oi_name:
+    if ntype == cls_oi_name:
         return [inputs]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         return None
-    elif ntype in ["iterable-array[float]",
-                   "iterable-array[int]",
-                   "iterable-array[uint]"]:
+    if ntype in ["iterable-array[float]",
+                 "iterable-array[int]",
+                 "iterable-array[uint]"]:
         _assert_many_arrays_ndim(inputs, 3, axis_names_3_str,
                                  cls_oi_name)
         _assert_many_arrays_last_dim_exactly(inputs, 2, cls_oi_name)
@@ -461,22 +461,22 @@ def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "iterable-tuple[number,size=2]":
+    if ntype == "iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=1)
         return [cls_oi([cls_single(inputs)], shape=shapes[0])]
-    elif ntype == "iterable-Keypoint":
+    if ntype == "iterable-Keypoint":
         _assert_exactly_n_shapes_partial(n=1)
         return [cls_oi([cls_single(inputs)], shape=shapes[0])]
-    elif ntype == ("iterable-%s" % (cls_single_name,)):
+    if ntype == ("iterable-%s" % (cls_single_name,)):
         _assert_exactly_n_shapes_partial(n=1)
         return [cls_oi(inputs, shape=shapes[0])]
-    elif ntype == ("iterable-%s" % (cls_oi_name,)):
+    if ntype == ("iterable-%s" % (cls_oi_name,)):
         return inputs
-    elif ntype == "iterable-iterable[empty]":
+    if ntype == "iterable-iterable[empty]":
         return None
-    elif ntype in ["iterable-iterable-array[float]",
-                   "iterable-iterable-array[int]",
-                   "iterable-iterable-array[uint]"]:
+    if ntype in ["iterable-iterable-array[float]",
+                 "iterable-iterable-array[int]",
+                 "iterable-iterable-array[uint]"]:
         _assert_many_arrays_ndim(inputs, 2, axis_names_2_str, cls_oi_name)
         _assert_many_arrays_last_dim_exactly(inputs, 2, cls_oi_name)
         _assert_exactly_n_shapes_partial(n=len(inputs))
@@ -487,39 +487,39 @@ def _normalize_polygons_and_line_strings(cls_single, cls_oi, axis_names,
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "iterable-iterable-tuple[number,size=2]":
+    if ntype == "iterable-iterable-tuple[number,size=2]":
         _assert_exactly_n_shapes_partial(n=1)
         return [
             cls_oi([cls_single(attr_i) for attr_i in inputs],
                    shape=shapes[0])
         ]
-    elif ntype == "iterable-iterable-Keypoint":
+    if ntype == "iterable-iterable-Keypoint":
         _assert_exactly_n_shapes_partial(n=1)
         return [
             cls_oi([cls_single(attr_i) for attr_i in inputs],
                    shape=shapes[0])
         ]
-    elif ntype == ("iterable-iterable-%s" % (cls_single_name,)):
+    if ntype == ("iterable-iterable-%s" % (cls_single_name,)):
         _assert_exactly_n_shapes_partial(n=len(inputs))
         return [
             cls_oi(attr_i, shape=shape)
             for attr_i, shape
             in zip(inputs, shapes)
         ]
-    elif ntype == "iterable-iterable-iterable[empty]":
+    if ntype == "iterable-iterable-iterable[empty]":
         return None
-    else:
-        assert ntype in ["iterable-iterable-iterable-tuple[number,size=2]",
-                         "iterable-iterable-iterable-Keypoint"], (
-            "Got unknown normalization type '%s'." % (ntype,))
-        _assert_exactly_n_shapes_partial(n=len(inputs))
-        return [
-            cls_oi(
-                [cls_single(points) for points in attr_i],
-                shape=shape)
-            for attr_i, shape
-            in zip(inputs, shapes)
-        ]
+
+    assert ntype in ["iterable-iterable-iterable-tuple[number,size=2]",
+                     "iterable-iterable-iterable-Keypoint"], (
+                         "Got unknown normalization type '%s'." % (ntype,))
+    _assert_exactly_n_shapes_partial(n=len(inputs))
+    return [
+        cls_oi(
+            [cls_single(points) for points in attr_i],
+            shape=shape)
+        for attr_i, shape
+        in zip(inputs, shapes)
+    ]
 
 
 def invert_normalize_images(images, images_old):
@@ -528,7 +528,7 @@ def invert_normalize_images(images, images_old):
             "Expected (normalized) 'images' to be None due to (unnormalized) "
             "'images_old' being None. Got type %s instead." % (type(images),))
         return None
-    elif ia.is_np_array(images_old):
+    if ia.is_np_array(images_old):
         if not ia.is_np_array(images):
             # Images were turned from array to list during augmentation.
             # This can happen for e.g. crop operations.
@@ -542,29 +542,28 @@ def invert_normalize_images(images, images_old):
                 # image
                 return invert_normalize_images(images, [images_old])
             return invert_normalize_images(images, list(images_old))
-        else:
-            if images_old.ndim == 2:
-                assert images.shape[0] == 1, (
-                    "Expected normalized images of shape (N,H,W,C) to have "
-                    "N=1 due to the unnormalized images being a single 2D "
-                    "image. Got instead N=%d and shape %s." % (
-                        images.shape[0], images.shape))
-                assert images.shape[3] == 1, (
-                    "Expected normalized images of shape (N,H,W,C) to have "
-                    "C=1 due to the unnormalized images being a single 2D "
-                    "image. Got instead C=%d and shape %s." % (
-                        images.shape[3], images.shape))
-                return images[0, ..., 0]
-            elif images_old.ndim == 3:
-                assert images.shape[3] == 1, (
-                    "Expected normalized images of shape (N,H,W,C) to have "
-                    "C=1 due to unnormalized images being a single 3D image. "
-                    "Got instead C=%d and shape %s" % (
-                        images.shape[3], images.shape))
-                return images[..., 0]
-            else:
-                return images
-    elif ia.is_iterable(images_old):
+
+        if images_old.ndim == 2:
+            assert images.shape[0] == 1, (
+                "Expected normalized images of shape (N,H,W,C) to have "
+                "N=1 due to the unnormalized images being a single 2D "
+                "image. Got instead N=%d and shape %s." % (
+                    images.shape[0], images.shape))
+            assert images.shape[3] == 1, (
+                "Expected normalized images of shape (N,H,W,C) to have "
+                "C=1 due to the unnormalized images being a single 2D "
+                "image. Got instead C=%d and shape %s." % (
+                    images.shape[3], images.shape))
+            return images[0, ..., 0]
+        if images_old.ndim == 3:
+            assert images.shape[3] == 1, (
+                "Expected normalized images of shape (N,H,W,C) to have "
+                "C=1 due to unnormalized images being a single 3D image. "
+                "Got instead C=%d and shape %s" % (
+                    images.shape[3], images.shape))
+            return images[..., 0]
+        return images
+    if ia.is_iterable(images_old):
         result = []
         for image, image_old in zip(images, images_old):
             if image_old.ndim == 2:
@@ -595,7 +594,7 @@ def invert_normalize_heatmaps(heatmaps, heatmaps_old):
             "'heatmaps_old' being None. Got type %s instead." % (
                 type(heatmaps),))
         return heatmaps
-    elif ntype == "array[float]":
+    if ntype == "array[float]":
         assert len(heatmaps) == heatmaps_old.shape[0], (
             "Expected as many heatmaps after normalization as before "
             "normalization. Got %d (after) and %d (before)." % (
@@ -604,27 +603,27 @@ def invert_normalize_heatmaps(heatmaps, heatmaps_old):
         return restore_dtype_and_merge(
             [hm_i.arr_0to1 for hm_i in heatmaps],
             input_dtype)
-    elif ntype == "HeatmapsOnImage":
+    if ntype == "HeatmapsOnImage":
         assert len(heatmaps) == 1, (
             "Expected as many heatmaps after normalization as before "
             "normalization. Got %d (after) and %d (before)." % (
                 len(heatmaps), 1))
         return heatmaps[0]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         assert heatmaps is None, (
             "Expected heatmaps after normalization to be None, due to the "
             "heatmaps before normalization being an empty iterable. "
             "Got type %s instead." % (type(heatmaps),))
         return []
-    elif ntype == "iterable-array[float]":
+    if ntype == "iterable-array[float]":
         nonempty, _, _ = find_first_nonempty(heatmaps_old)
         input_dtype = nonempty.dtype
         return [restore_dtype_and_merge(hm_i.arr_0to1, input_dtype)
                 for hm_i in heatmaps]
-    else:
-        assert ntype == "iterable-HeatmapsOnImage", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return heatmaps
+
+    assert ntype == "iterable-HeatmapsOnImage", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return heatmaps
 
 
 def invert_normalize_segmentation_maps(segmentation_maps,
@@ -636,7 +635,7 @@ def invert_normalize_segmentation_maps(segmentation_maps,
             "(unnormalized) 'segmentation_maps_old' being None. Got type %s "
             "instead." % (type(segmentation_maps),))
         return segmentation_maps
-    elif ntype in ["array[int]", "array[uint]", "array[bool]"]:
+    if ntype in ["array[int]", "array[uint]", "array[bool]"]:
         assert len(segmentation_maps) == segmentation_maps_old.shape[0], (
             "Expected as many segmentation maps after normalization as before "
             "normalization. Got %d (after) and %d (before)." % (
@@ -645,29 +644,29 @@ def invert_normalize_segmentation_maps(segmentation_maps,
         return restore_dtype_and_merge(
             [segmap_i.get_arr() for segmap_i in segmentation_maps],
             input_dtype)
-    elif ntype == "SegmentationMapsOnImage":
+    if ntype == "SegmentationMapsOnImage":
         assert len(segmentation_maps) == 1, (
             "Expected as many segmentation maps after normalization as before "
             "normalization. Got %d (after) and %d (before)." % (
                 len(segmentation_maps), 1))
         return segmentation_maps[0]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         assert segmentation_maps is None, (
             "Expected segmentation maps after normalization to be None, due "
             "to the segmentation maps before normalization being an empty "
             "iterable. Got type %s instead." % (type(segmentation_maps),))
         return []
-    elif ntype in ["iterable-array[int]",
-                   "iterable-array[uint]",
-                   "iterable-array[bool]"]:
+    if ntype in ["iterable-array[int]",
+                 "iterable-array[uint]",
+                 "iterable-array[bool]"]:
         nonempty, _, _ = find_first_nonempty(segmentation_maps_old)
         input_dtype = nonempty.dtype
         return [restore_dtype_and_merge(segmap_i.get_arr(), input_dtype)
                 for segmap_i in segmentation_maps]
-    else:
-        assert ntype == "iterable-SegmentationMapsOnImage", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return segmentation_maps
+
+    assert ntype == "iterable-SegmentationMapsOnImage", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return segmentation_maps
 
 
 def invert_normalize_keypoints(keypoints, keypoints_old):
@@ -678,7 +677,7 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
             "'keypoints_old' being None. Got type %s instead." % (
                 type(keypoints),))
         return keypoints
-    elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+    if ntype in ["array[float]", "array[int]", "array[uint]"]:
         assert len(keypoints) == 1, (
             "Expected a single KeypointsOnImage instance after normalization "
             "due to getting a single ndarray before normalization. "
@@ -687,7 +686,7 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
         return restore_dtype_and_merge(
             [kpsoi.to_xy_array() for kpsoi in keypoints],
             input_dtype)
-    elif ntype == "tuple[number,size=2]":
+    if ntype == "tuple[number,size=2]":
         assert len(keypoints) == 1, (
             "Expected a single KeypointsOnImage instance after normalization "
             "due to getting a single (x,y) tuple before normalization. "
@@ -700,7 +699,7 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
             ))
         return (keypoints[0].keypoints[0].x,
                 keypoints[0].keypoints[0].y)
-    elif ntype == "Keypoint":
+    if ntype == "Keypoint":
         assert len(keypoints) == 1, (
             "Expected a single KeypointsOnImage instance after normalization "
             "due to getting a single Keypoint before normalization. "
@@ -712,57 +711,55 @@ def invert_normalize_keypoints(keypoints, keypoints_old):
                 len(keypoints[0].keypoints)
             ))
         return keypoints[0].keypoints[0]
-    elif ntype == "KeypointsOnImage":
+    if ntype == "KeypointsOnImage":
         assert len(keypoints) == 1, (
             "Expected a single KeypointsOnImage instance after normalization "
             "due to getting a single KeypointsOnImage before normalization. "
             "Got %d instances instead." % (len(keypoints),))
         return keypoints[0]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         assert keypoints is None, (
             "Expected keypoints after normalization to be None, due "
             "to the keypoints before normalization being an empty "
             "iterable. Got type %s instead." % (type(keypoints),))
         return []
-    elif ntype in ["iterable-array[float]",
-                   "iterable-array[int]",
-                   "iterable-array[uint]"]:
+    if ntype in ["iterable-array[float]",
+                 "iterable-array[int]",
+                 "iterable-array[uint]"]:
         nonempty, _, _ = find_first_nonempty(keypoints_old)
         input_dtype = nonempty.dtype
         return [
             restore_dtype_and_merge(kps_i.to_xy_array(), input_dtype)
             for kps_i in keypoints]
-    elif ntype == "iterable-tuple[number,size=2]":
+    if ntype == "iterable-tuple[number,size=2]":
         assert len(keypoints) == 1, (
             "Expected a single KeypointsOnImage instance after normalization "
             "due to getting an iterable of (x,y) tuples before "
             "normalization. Got %d instances instead." % (len(keypoints),))
         return [
             (kp.x, kp.y) for kp in keypoints[0].keypoints]
-    elif ntype == "iterable-Keypoint":
+    if ntype == "iterable-Keypoint":
         assert len(keypoints) == 1, (
             "Expected a single KeypointsOnImage instance after normalization "
             "due to getting an iterable of Keypoint before "
             "normalization. Got %d instances instead." % (len(keypoints),))
         return keypoints[0].keypoints
-    elif ntype == "iterable-KeypointsOnImage":
+    if ntype == "iterable-KeypointsOnImage":
         return keypoints
-    elif ntype == "iterable-iterable[empty]":
+    if ntype == "iterable-iterable[empty]":
         assert keypoints is None, (
             "Expected keypoints after normalization to be None, due "
             "to the keypoints before normalization being an empty "
             "iterable of iterables. Got type %s instead." % (type(keypoints),))
         return keypoints_old[:]
-    elif ntype == "iterable-iterable-tuple[number,size=2]":
+    if ntype == "iterable-iterable-tuple[number,size=2]":
         return [
             [(kp.x, kp.y) for kp in kpsoi.keypoints]
             for kpsoi in keypoints]
-    else:
-        assert ntype == "iterable-iterable-Keypoint", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return [
-            [kp for kp in kpsoi.keypoints]
-            for kpsoi in keypoints]
+
+    assert ntype == "iterable-iterable-Keypoint", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return [kpsoi.keypoints[:] for kpsoi in keypoints]
 
 
 def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
@@ -773,7 +770,7 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
             "(unnormalized) 'bounding_boxes_old' being None. Got type %s "
             "instead." % (type(bounding_boxes),))
         return bounding_boxes
-    elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+    if ntype in ["array[float]", "array[int]", "array[uint]"]:
         assert len(bounding_boxes) == 1, (
             "Expected a single BoundingBoxesOnImage instance after "
             "normalization due to getting a single ndarray before "
@@ -783,7 +780,7 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
         return restore_dtype_and_merge([
             bbsoi.to_xyxy_array() for bbsoi in bounding_boxes
         ], input_dtype)
-    elif ntype == "tuple[number,size=4]":
+    if ntype == "tuple[number,size=4]":
         assert len(bounding_boxes) == 1, (
             "Expected a single BoundingBoxesOnImage instance after "
             "normalization due to getting a single (x1,y1,x2,y2) tuple before "
@@ -796,7 +793,7 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
             "instead." % (len(bounding_boxes[0].bounding_boxes)))
         bb = bounding_boxes[0].bounding_boxes[0]
         return bb.x1, bb.y1, bb.x2, bb.y2
-    elif ntype == "BoundingBox":
+    if ntype == "BoundingBox":
         assert len(bounding_boxes) == 1, (
             "Expected a single BoundingBoxesOnImage instance after "
             "normalization due to getting a single BoundingBox before "
@@ -808,28 +805,28 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
             "BoundingBox before normalization. Got %d bounding boxes "
             "instead." % (len(bounding_boxes[0].bounding_boxes)))
         return bounding_boxes[0].bounding_boxes[0]
-    elif ntype == "BoundingBoxesOnImage":
+    if ntype == "BoundingBoxesOnImage":
         assert len(bounding_boxes) == 1, (
             "Expected a single BoundingBoxesOnImage instance after "
             "normalization due to getting a single BoundingBoxesOnImage "
             "before normalization. Got %d instances instead." % (
                 len(bounding_boxes),))
         return bounding_boxes[0]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         assert bounding_boxes is None, (
             "Expected bounding boxes after normalization to be None, due "
             "to the bounding boxes before normalization being an empty "
             "iterable. Got type %s instead." % (type(bounding_boxes),))
         return []
-    elif ntype in ["iterable-array[float]",
-                   "iterable-array[int]",
-                   "iterable-array[uint]"]:
+    if ntype in ["iterable-array[float]",
+                 "iterable-array[int]",
+                 "iterable-array[uint]"]:
         nonempty, _, _ = find_first_nonempty(bounding_boxes_old)
         input_dtype = nonempty.dtype
         return [
             restore_dtype_and_merge(bbsoi.to_xyxy_array(), input_dtype)
             for bbsoi in bounding_boxes]
-    elif ntype == "iterable-tuple[number,size=4]":
+    if ntype == "iterable-tuple[number,size=4]":
         assert len(bounding_boxes) == 1, (
             "Expected a single BoundingBoxesOnImage instance after "
             "normalization due to getting a an iterable of (x1,y1,x2,y2) "
@@ -838,32 +835,30 @@ def invert_normalize_bounding_boxes(bounding_boxes, bounding_boxes_old):
         return [
             (bb.x1, bb.y1, bb.x2, bb.y2)
             for bb in bounding_boxes[0].bounding_boxes]
-    elif ntype == "iterable-BoundingBox":
+    if ntype == "iterable-BoundingBox":
         assert len(bounding_boxes) == 1, (
             "Expected a single BoundingBoxesOnImage instance after "
             "normalization due to getting an iterable of BoundingBox before "
             "normalization. Got %d instances instead." % (
                 len(bounding_boxes),))
         return bounding_boxes[0].bounding_boxes
-    elif ntype == "iterable-BoundingBoxesOnImage":
+    if ntype == "iterable-BoundingBoxesOnImage":
         return bounding_boxes
-    elif ntype == "iterable-iterable[empty]":
+    if ntype == "iterable-iterable[empty]":
         assert bounding_boxes is None, (
             "Expected bounding boxes after normalization to be None, due "
             "to the bounding boxes before normalization being an empty "
             "iterable of iterables. Got type %s instead." % (
                 type(bounding_boxes),))
         return bounding_boxes_old[:]
-    elif ntype == "iterable-iterable-tuple[number,size=4]":
+    if ntype == "iterable-iterable-tuple[number,size=4]":
         return [
             [(bb.x1, bb.y1, bb.x2, bb.y2) for bb in bbsoi.bounding_boxes]
             for bbsoi in bounding_boxes]
-    else:
-        assert ntype == "iterable-iterable-BoundingBox", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return [
-            [bb for bb in bbsoi.bounding_boxes]
-            for bbsoi in bounding_boxes]
+
+    assert ntype == "iterable-iterable-BoundingBox", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return [bbsoi.bounding_boxes[:] for bbsoi in bounding_boxes]
 
 
 def invert_normalize_polygons(polygons, polygons_old):
@@ -900,13 +895,13 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
             "(unnormalized) polygons/line strings being None. Got type %s "
             "instead." % (type(inputs),))
         return inputs
-    elif ntype in ["array[float]", "array[int]", "array[uint]"]:
+    if ntype in ["array[float]", "array[int]", "array[uint]"]:
         input_dtype = inputs_old.dtype
         return restore_dtype_and_merge([
             [get_points_func(entity) for entity in get_entities_func(oi)]
             for oi in inputs
         ], input_dtype)
-    elif ntype == cls_single_name:
+    if ntype == cls_single_name:
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting a single %s before normalization. "
@@ -919,22 +914,22 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
                 cls_oi_name, cls_single_name, cls_single_name,
                 len(get_entities_func(inputs[0]))))
         return get_entities_func(inputs[0])[0]
-    elif ntype == cls_oi_name:
+    if ntype == cls_oi_name:
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting a single %s before normalization. "
             "Got %d instances instead." % (
                 cls_oi_name, cls_oi_name, len(inputs),))
         return inputs[0]
-    elif ntype == "iterable[empty]":
+    if ntype == "iterable[empty]":
         assert inputs is None, (
             "Expected polygons/line strings after normalization to be None, "
             "due to the polygons/line strings before normalization being an "
             "empty iterable. Got type %s instead." % (type(inputs),))
         return []
-    elif ntype in ["iterable-array[float]",
-                   "iterable-array[int]",
-                   "iterable-array[uint]"]:
+    if ntype in ["iterable-array[float]",
+                 "iterable-array[int]",
+                 "iterable-array[uint]"]:
         nonempty, _, _ = find_first_nonempty(inputs_old)
         input_dtype = nonempty.dtype
         return [
@@ -943,7 +938,7 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
                 input_dtype)
             for oi in inputs
         ]
-    elif ntype == "iterable-tuple[number,size=2]":
+    if ntype == "iterable-tuple[number,size=2]":
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting an iterable of (x,y) tuples before "
@@ -958,7 +953,7 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
                 len(inputs),))
         return [(point[0], point[1])
                 for point in get_points_func(get_entities_func(inputs[0])[0])]
-    elif ntype == "iterable-Keypoint":
+    if ntype == "iterable-Keypoint":
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting an iterable of Keypoint before "
@@ -973,7 +968,7 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
                 len(inputs),))
         return [Keypoint(x=point[0], y=point[1])
                 for point in get_points_func(get_entities_func(inputs[0])[0])]
-    elif ntype == ("iterable-%s" % (cls_single_name,)):
+    if ntype == ("iterable-%s" % (cls_single_name,)):
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting an iterable of %s before "
@@ -987,18 +982,18 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
                 cls_oi_name, cls_single_name, cls_single_name, cls_oi_name,
                 cls_single_name, len(inputs),))
         return get_entities_func(inputs[0])
-    elif ntype == ("iterable-%s" % (cls_oi_name,)):
+    if ntype == ("iterable-%s" % (cls_oi_name,)):
         return inputs
-    elif ntype == "iterable-iterable[empty]":
+    if ntype == "iterable-iterable[empty]":
         assert inputs is None, (
             "Expected polygons/line strings after normalization to be None, "
             "due to the polygons/line strings before normalization being an "
             "empty iterable of iterables. Got type %s instead." % (
                 type(inputs),))
         return inputs_old[:]
-    elif ntype in ["iterable-iterable-array[float]",
-                   "iterable-iterable-array[int]",
-                   "iterable-iterable-array[uint]"]:
+    if ntype in ["iterable-iterable-array[float]",
+                 "iterable-iterable-array[int]",
+                 "iterable-iterable-array[uint]"]:
         nonempty, _, _ = find_first_nonempty(inputs_old)
         input_dtype = nonempty.dtype
         return [
@@ -1006,7 +1001,7 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
              for entity in get_entities_func(oi)]
             for oi in inputs
         ]
-    elif ntype == "iterable-iterable-tuple[number,size=2]":
+    if ntype == "iterable-iterable-tuple[number,size=2]":
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting an iterable of iterables of (x,y) tuples before "
@@ -1015,7 +1010,7 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
         return [
             [(point[0], point[1]) for point in get_points_func(entity)]
             for entity in get_entities_func(inputs[0])]
-    elif ntype == "iterable-iterable-Keypoint":
+    if ntype == "iterable-iterable-Keypoint":
         assert len(inputs) == 1, (
             "Expected a single %s instance after normalization "
             "due to getting an iterable of iterables of Keypoint before "
@@ -1025,11 +1020,11 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
             [Keypoint(x=point[0], y=point[1])
              for point in get_points_func(entity)]
             for entity in get_entities_func(inputs[0])]
-    elif ntype == ("iterable-iterable-%s" % (cls_single_name,)):
+    if ntype == ("iterable-iterable-%s" % (cls_single_name,)):
         return [get_entities_func(oi) for oi in inputs]
-    elif ntype == "iterable-iterable-iterable[empty]":
+    if ntype == "iterable-iterable-iterable[empty]":
         return inputs_old[:]
-    elif ntype == "iterable-iterable-iterable-tuple[number,size=2]":
+    if ntype == "iterable-iterable-iterable-tuple[number,size=2]":
         return [
             [
                 [
@@ -1039,18 +1034,18 @@ def _invert_normalize_polygons_and_line_strings(inputs, inputs_old,
                 for entity in get_entities_func(oi)
             ]
             for oi in inputs]
-    else:
-        assert ntype == "iterable-iterable-iterable-Keypoint", (
-            "Got unknown normalization type '%s'." % (ntype,))
-        return [
+
+    assert ntype == "iterable-iterable-iterable-Keypoint", (
+        "Got unknown normalization type '%s'." % (ntype,))
+    return [
+        [
             [
-                [
-                    Keypoint(x=point[0], y=point[1])
-                    for point in get_points_func(entity)
-                ]
-                for entity in get_entities_func(oi)
+                Keypoint(x=point[0], y=point[1])
+                for point in get_points_func(entity)
             ]
-            for oi in inputs]
+            for entity in get_entities_func(oi)
+        ]
+        for oi in inputs]
 
 
 def _assert_is_of_norm_type(type_str, valid_type_strs, arg_name):
@@ -1224,7 +1219,7 @@ def find_first_nonempty(attr, parents=None):
         return attr, True, parents
     # we exclude strings here, as otherwise we would get the first
     # character, while we want to get the whole string
-    elif _is_iterable(attr):
+    if _is_iterable(attr):
         if len(attr) == 0:
             return None, False, parents
 
@@ -1249,7 +1244,7 @@ def find_first_nonempty(attr, parents=None):
                 # on any nonempty hit we return immediately as we assume
                 # that the datatypes do not change between child branches
                 return nonempty, success, parents_found
-            elif len(parents_found) > len(parents_deepest):
+            if len(parents_found) > len(parents_deepest):
                 nonempty_deepest = nonempty
                 success_deepest = success
                 parents_deepest = parents_found
@@ -1287,7 +1282,7 @@ def _nonempty_info_to_type_str(nonempty, success, parents):
 
     if nonempty is None:
         return "None"
-    elif ia.is_np_array(nonempty):
+    if ia.is_np_array(nonempty):
         kind = nonempty.dtype.kind
         kind_map = {"f": "float", "u": "uint", "i": "int", "b": "bool"}
         return "%sarray[%s]" % (

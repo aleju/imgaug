@@ -1,3 +1,4 @@
+"""Functions to interact/analyze with numpy dtypes."""
 from __future__ import print_function, division
 
 import numpy as np
@@ -30,6 +31,7 @@ def normalize_dtype(dtype):
 
 
 def change_dtype_(arr, dtype, clip=True, round=True):
+    # pylint: disable=redefined-builtin
     assert ia.is_np_array(arr), (
         "Expected array as input, got type %s." % (type(arr),))
     dtype = normalize_dtype(dtype)
@@ -48,10 +50,11 @@ def change_dtype_(arr, dtype, clip=True, round=True):
 
 
 def change_dtypes_(images, dtypes, clip=True, round=True):
+    # pylint: disable=redefined-builtin
     if ia.is_np_array(images):
         if ia.is_iterable(dtypes):
             dtypes = normalize_dtypes(dtypes)
-            n_distinct_dtypes = len(set([dt.name for dt in dtypes]))
+            n_distinct_dtypes = len({dt.name for dt in dtypes})
             assert len(dtypes) == len(images), (
                 "If an iterable of dtypes is provided to "
                 "change_dtypes_(), it must contain as many dtypes as "
@@ -97,6 +100,7 @@ def change_dtypes_(images, dtypes, clip=True, round=True):
 # TODO replace this everywhere in the library with change_dtypes_
 # TODO mark as deprecated
 def restore_dtypes_(images, dtypes, clip=True, round=True):
+    # pylint: disable=redefined-builtin
     return change_dtypes_(images, dtypes, clip=clip, round=round)
 
 
@@ -174,9 +178,9 @@ def promote_array_dtypes_(arrays, dtypes=None, increase_itemsize_factor=1):
         dtypes = normalize_dtypes(arrays)
     elif not isinstance(dtypes, list):
         dtypes = [dtypes]
-    dt = get_minimal_dtype(dtypes,
-                           increase_itemsize_factor=increase_itemsize_factor)
-    return change_dtypes_(arrays, dt, clip=False, round=False)
+    dtype = get_minimal_dtype(dtypes,
+                              increase_itemsize_factor=increase_itemsize_factor)
+    return change_dtypes_(arrays, dtype, clip=False, round=False)
 
 
 def increase_array_resolutions_(arrays, factor):
@@ -191,17 +195,17 @@ def get_value_range_of_dtype(dtype):
     if dtype.kind == "f":
         finfo = np.finfo(dtype)
         return finfo.min, 0.0, finfo.max
-    elif dtype.kind == "u":
+    if dtype.kind == "u":
         iinfo = np.iinfo(dtype)
         return iinfo.min, iinfo.min + 0.5 * iinfo.max, iinfo.max
-    elif dtype.kind == "i":
+    if dtype.kind == "i":
         iinfo = np.iinfo(dtype)
         return iinfo.min, -0.5, iinfo.max
-    elif dtype.kind == "b":
+    if dtype.kind == "b":
         return 0, None, 1
-    else:
-        raise Exception("Cannot estimate value range of dtype '%s' "
-                        "(type: %s)" % (str(dtype), type(dtype)))
+
+    raise Exception("Cannot estimate value range of dtype '%s' "
+                    "(type: %s)" % (str(dtype), type(dtype)))
 
 
 # TODO call this function wherever data is clipped
@@ -318,25 +322,25 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
                     "Got dtype '%s', which is a forbidden dtype (%s)." % (
                         dtype.name, ", ".join(disallowed)
                     ))
-            else:
-                raise ValueError(
-                    "Got dtype '%s' in augmenter '%s' (class '%s'), which "
-                    "is a forbidden dtype (%s)." % (
-                        dtype.name,
-                        augmenter.name,
-                        augmenter.__class__.__name__,
-                        ", ".join(disallowed)
-                    ))
+
+            raise ValueError(
+                "Got dtype '%s' in augmenter '%s' (class '%s'), which "
+                "is a forbidden dtype (%s)." % (
+                    dtype.name,
+                    augmenter.name,
+                    augmenter.__class__.__name__,
+                    ", ".join(disallowed)
+                ))
         else:
             if augmenter is None:
                 ia.warn(
-                        "Got dtype '%s', which was neither explicitly allowed "
-                        "(%s), nor explicitly disallowed (%s). Generated "
-                        "outputs may contain errors." % (
-                            dtype.name,
-                            ", ".join(allowed),
-                            ", ".join(disallowed)
-                        ))
+                    "Got dtype '%s', which was neither explicitly allowed "
+                    "(%s), nor explicitly disallowed (%s). Generated "
+                    "outputs may contain errors." % (
+                        dtype.name,
+                        ", ".join(allowed),
+                        ", ".join(disallowed)
+                    ))
             else:
                 ia.warn(
                     "Got dtype '%s' in augmenter '%s' (class '%s'), which was "
@@ -349,4 +353,3 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
                         ", ".join(allowed),
                         ", ".join(disallowed)
                     ))
-

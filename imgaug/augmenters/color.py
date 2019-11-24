@@ -45,15 +45,16 @@ import cv2
 import six
 import six.moves as sm
 
+import imgaug as ia
 from . import meta
 from . import blend
 from . import arithmetic
-import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 from .. import random as iarandom
 
 
+# pylint: disable=invalid-name
 CSPACE_RGB = "RGB"
 CSPACE_BGR = "BGR"
 CSPACE_GRAY = "GRAY"
@@ -68,6 +69,7 @@ CSPACE_CIE = "CIE"  # aka CIE 1931, aka XYZ in OpenCV
 CSPACE_ALL = {CSPACE_RGB, CSPACE_BGR, CSPACE_GRAY, CSPACE_YCrCb,
               CSPACE_HSV, CSPACE_HLS, CSPACE_Lab, CSPACE_Luv,
               CSPACE_YUV, CSPACE_CIE}
+# pylint: enable=invalid-name
 
 
 def _get_opencv_attr(attr_names):
@@ -910,7 +912,7 @@ def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
     from_colorspaces = _validate(from_colorspaces, "from_colorspaces", "str")
 
     # list `kelvins` inputs are not yet converted to ndarray by _validate()
-    kelvins = np.float32(kelvins)
+    kelvins = np.array(kelvins, dtype=np.float32)
 
     # Validate only one kelvin value for performance reasons.
     # If values are outside that range, the kelvin table simply clips them.
@@ -959,6 +961,7 @@ def change_color_temperature(image, kelvin, from_colorspace=CSPACE_RGB):
 def InColorspace(to_colorspace, from_colorspace="RGB", children=None,
                  name=None, deterministic=False, random_state=None):
     """Convert images to another colorspace."""
+    # pylint: disable=invalid-name
     return WithColorspace(to_colorspace, from_colorspace, children, name,
                           deterministic, random_state)
 
@@ -1055,9 +1058,11 @@ class WithColorspace(meta.Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.channels]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -1170,7 +1175,7 @@ class WithBrightnessChannels(meta.Augmenter):
                 batch.images = brightness_channels
 
             batch = self.children.augment_batch(
-                    batch, parents=parents + [self], hooks=hooks)
+                batch, parents=parents + [self], hooks=hooks)
 
             if batch.images is not None:
                 batch.images = self._invert_extract_brightness_channels(
@@ -1208,9 +1213,11 @@ class WithBrightnessChannels(meta.Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.to_colorspace, self.from_colorspace]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -1589,9 +1596,11 @@ class WithHueAndSaturation(meta.Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.from_colorspace]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -2000,6 +2009,7 @@ class RemoveSaturation(MultiplySaturation):
 #      and are supposed to be angular representations, i.e. if values go below
 #      0 or above 180 they are supposed to overflow
 #      to 180 and 0
+# pylint: disable=pointless-string-statement
 """
 def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB",
                           channels=[0, 1], name=None):  # pylint: disable=locally-disabled, dangerous-default-value, line-too-long
@@ -2046,6 +2056,7 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB",
         name=name
     )
 """
+# pylint: enable=pointless-string-statement
 
 
 class AddToHueAndSaturation(meta.Augmenter):
@@ -2164,8 +2175,8 @@ class AddToHueAndSaturation(meta.Augmenter):
         self.backend = "cv2"
 
         # precompute tables for cv2.LUT
-        if self.backend == "cv2" and self._LUT_CACHE is None:
-            self._LUT_CACHE = self._generate_lut_table()
+        if self.backend == "cv2" and AddToHueAndSaturation._LUT_CACHE is None:
+            AddToHueAndSaturation._LUT_CACHE = self._generate_lut_table()
 
     def _draw_samples(self, augmentables, random_state):
         nb_images = len(augmentables)
@@ -2251,7 +2262,8 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         return batch
 
-    def _transform_image_cv2(self, image_hsv, hue, saturation):
+    @classmethod
+    def _transform_image_cv2(cls, image_hsv, hue, saturation):
         # this has roughly the same speed as the numpy backend
         # for 64x64 and is about 25% faster for 224x224
 
@@ -2266,8 +2278,8 @@ class AddToHueAndSaturation(meta.Augmenter):
         # image_hsv[..., 1] = cv2.LUT(image_hsv[..., 1], table_saturation)
 
         # code with using cache (at best maybe 10% faster for 64x64):
-        table_hue = self._LUT_CACHE[0]
-        table_saturation = self._LUT_CACHE[1]
+        table_hue = cls._LUT_CACHE[0]
+        table_saturation = cls._LUT_CACHE[1]
 
         image_hsv[..., 0] = cv2.LUT(
             image_hsv[..., 0], table_hue[255+int(hue)])
@@ -2287,6 +2299,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         return image_hsv
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.value, self.value_hue, self.value_saturation,
                 self.per_channel, self.from_colorspace]
 
@@ -2334,9 +2347,9 @@ class AddToHueAndSaturation(meta.Augmenter):
         #      fail, but all other tests still succeed. How can this be?
         #      The dtype was verified to remain int8, having min & max at
         #      -128 & 127.
-        dt = np.uint8
-        table = (np.zeros((256*2, 256), dtype=dt),
-                 np.zeros((256*2, 256), dtype=dt))
+        dtype = np.uint8
+        table = (np.zeros((256*2, 256), dtype=dtype),
+                 np.zeros((256*2, 256), dtype=dtype))
         value_range = np.arange(0, 256, dtype=np.int16)
         # this could be done slightly faster by vectorizing the loop
         for i in sm.xrange(-255, 255+1):
@@ -2677,6 +2690,7 @@ class ChangeColorspace(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.to_colorspace, self.alpha]
 
 
@@ -3041,6 +3055,7 @@ class GrayscaleColorwise(meta.Augmenter):
         return mask.astype(np.float32) / 255.0
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.nb_bins, self.smoothness, self.alpha, self.offset,
                 self.from_colorspace]
 
@@ -3205,6 +3220,7 @@ class ChangeColorTemperature(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.kelvin, self.from_colorspace]
 
 
@@ -3258,6 +3274,7 @@ class _AbstractColorQuantization(meta.Augmenter):
         return batch
 
     def _augment_single_image(self, image, counts, random_state):
+        # pylint: disable=protected-access, invalid-name
         assert image.shape[-1] in [1, 3, 4], (
             "Expected image with 1, 3 or 4 channels, "
             "got %d (shape: %s)." % (image.shape[-1], image.shape))
@@ -3316,6 +3333,7 @@ class _AbstractColorQuantization(meta.Augmenter):
         """Apply the augmenter-specific quantization function to an image."""
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.counts,
                 self.from_colorspace,
                 self.to_colorspace,
@@ -3891,7 +3909,6 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
 
 class Posterize(UniformColorQuantizationToNBits):
     """Alias for :class:`UniformColorQuantizationToNBits`."""
-    pass
 
 
 @ia.deprecated("imgaug.augmenters.colors.quantize_uniform")
@@ -4056,6 +4073,7 @@ class _QuantizeUniformLUTTable(object):
         self.table = self._generate_quantize_uniform_table(centerize)
 
     def get_for_nb_bins(self, nb_bins):
+        """Get LUT ndarray for a provided number of bins."""
         return self.table[nb_bins, :]
 
     @classmethod
@@ -4070,10 +4088,10 @@ class _QuantizeUniformLUTTable(object):
         # It is expected to be run exactly once per run of a whole script,
         # making the difference negligible.
         for nb_bins in np.arange(1, 255).astype(np.uint8):
-            q = 256 / nb_bins
-            table_q_f32 = np.floor(table / q) * q
+            binsize = 256 / nb_bins
+            table_q_f32 = np.floor(table / binsize) * binsize
             if centerize:
-                table_q_f32 = table_q_f32 + q/2
+                table_q_f32 = table_q_f32 + binsize/2
             table_all_nb_bins[nb_bins] = table_q_f32
         table_all_nb_bins = np.clip(
             np.round(table_all_nb_bins), 0, 255).astype(np.uint8)

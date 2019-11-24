@@ -13,4 +13,3 @@ class IAugmentable(object):
     Batches are not yet marked as augmentable, but might be in the future.
 
     """
-    pass
