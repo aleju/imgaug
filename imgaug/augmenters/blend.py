@@ -25,8 +25,8 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 import six.moves as sm
 
-from . import meta
 import imgaug as ia
+from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
 from ..augmentables import utils as augm_utils
@@ -138,10 +138,10 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
             assert (
                 alpha.shape == image_fg.shape
                 or alpha.shape == image_fg.shape[0:2] + (1,)), (
-                "'alpha' given as an array must match the height and width "
-                "of the foreground and background image. Got shape %s vs "
-                "foreground/background shape %s." % (
-                    alpha.shape, image_fg.shape))
+                    "'alpha' given as an array must match the height and "
+                    "width of the foreground and background image. Got "
+                    "shape %s vs foreground/background shape %s." % (
+                        alpha.shape, image_fg.shape))
         else:
             alpha = alpha.reshape((1, 1, -1))
         if alpha.shape[2] != image_fg.shape[2]:
@@ -152,7 +152,7 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
             if input_was_2d:
                 image_fg = image_fg[..., 0]
             return np.copy(image_fg)
-        elif np.all(alpha <= eps):
+        if np.all(alpha <= eps):
             if input_was_2d:
                 image_bg = image_bg[..., 0]
             return np.copy(image_bg)
@@ -437,9 +437,11 @@ class Alpha(meta.Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.factor, self.per_channel]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [lst for lst in [self.first, self.second] if lst is not None]
 
     def __str__(self):

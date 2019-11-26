@@ -43,33 +43,36 @@ import six
 import six.moves as sm
 
 import imgaug as ia
-from .. import parameters as iap
-from .. import random as iarandom
 from imgaug.augmentables.batches import (Batch, UnnormalizedBatch,
                                          BatchInAugmentation)
+from .. import parameters as iap
+from .. import random as iarandom
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_image_(image, min_value, max_value):
+    """Clip image in-place."""
     return clip_augmented_images_(image, min_value, max_value)
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_image(image, min_value, max_value):
+    """Clip image."""
     return clip_augmented_images(image, min_value, max_value)
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_images_(images, min_value, max_value):
+    """Clip images in-place."""
     if ia.is_np_array(images):
         return np.clip(images, min_value, max_value, out=images)
-    else:
-        return [np.clip(image, min_value, max_value, out=image)
-                for image in images]
+    return [np.clip(image, min_value, max_value, out=image)
+            for image in images]
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
 def clip_augmented_images(images, min_value, max_value):
+    """Clip images."""
     if ia.is_np_array(images):
         images = np.copy(images)
     else:
@@ -78,12 +81,12 @@ def clip_augmented_images(images, min_value, max_value):
 
 
 def handle_children_list(lst, augmenter_name, lst_name, default="sequential"):
+    """Normalize an augmenter list provided by a user."""
     if lst is None:
         if default == "sequential":
             return Sequential([], name="%s-%s" % (augmenter_name, lst_name))
-        else:
-            return default
-    elif isinstance(lst, Augmenter):
+        return default
+    if isinstance(lst, Augmenter):
         if ia.is_iterable(lst):
             # TODO why was this assert added here? seems to make no sense
             only_augmenters = all([isinstance(child, Augmenter)
@@ -92,9 +95,8 @@ def handle_children_list(lst, augmenter_name, lst_name, default="sequential"):
                 "Expected all children to be augmenters, got types %s." % (
                     ", ".join([str(type(v)) for v in lst])))
             return lst
-        else:
-            return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
-    elif ia.is_iterable(lst):
+        return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
+    if ia.is_iterable(lst):
         if len(lst) == 0 and default != "sequential":
             return default
         only_augmenters = all([isinstance(child, Augmenter)
@@ -103,14 +105,14 @@ def handle_children_list(lst, augmenter_name, lst_name, default="sequential"):
             "Expected all children to be augmenters, got types %s." % (
                 ", ".join([str(type(v)) for v in lst])))
         return Sequential(lst, name="%s-%s" % (augmenter_name, lst_name))
-    else:
-        raise Exception(
-            "Expected None, Augmenter or list/tuple as children list %s "
-            "for augmenter with name %s, got %s." % (
-                lst_name, augmenter_name, type(lst),))
+    raise Exception(
+        "Expected None, Augmenter or list/tuple as children list %s "
+        "for augmenter with name %s, got %s." % (
+            lst_name, augmenter_name, type(lst),))
 
 
 def reduce_to_nonempty(objs):
+    """Remove from a list all objects that don't follow ``obj.empty==True``."""
     objs_reduced = []
     ids = []
     for i, obj in enumerate(objs):
@@ -124,6 +126,7 @@ def reduce_to_nonempty(objs):
 
 
 def invert_reduce_to_nonempty(objs, ids, objs_reduced):
+    """Inverse of :func:`reduce_to_nonempty`."""
     objs_inv = list(objs)
     for idx, obj_from_reduced in zip(ids, objs_reduced):
         objs_inv[idx] = obj_from_reduced
@@ -131,22 +134,24 @@ def invert_reduce_to_nonempty(objs, ids, objs_reduced):
 
 
 def estimate_max_number_of_channels(images):
+    """Compute the maximum number of image channels among a list of images."""
     if ia.is_np_array(images):
         assert images.ndim == 4, (
             "Expected 'images' to be 4-dimensional if provided as array. "
             "Got %d dimensions." % (images.ndim,))
         return images.shape[3]
-    else:
-        assert ia.is_iterable(images), (
-            "Expected 'images' to be an array or iterable, got %s." % (
-                type(images),))
-        if len(images) == 0:
-            return None
-        channels = [el.shape[2] if len(el.shape) >= 3 else 1 for el in images]
-        return max(channels)
+
+    assert ia.is_iterable(images), (
+        "Expected 'images' to be an array or iterable, got %s." % (
+            type(images),))
+    if len(images) == 0:
+        return None
+    channels = [el.shape[2] if len(el.shape) >= 3 else 1 for el in images]
+    return max(channels)
 
 
 def copy_arrays(arrays):
+    """Copy the arrays of a single input array or list of input arrays."""
     if ia.is_np_array(arrays):
         return np.copy(arrays)
     return [np.copy(array) for array in arrays]
@@ -182,7 +187,7 @@ def _remove_added_channel_axis(arrs_added, arrs_orig):
     ]
 
 
-class _maybe_deterministic_ctx(object):
+class _maybe_deterministic_ctx(object):  # pylint: disable=invalid-name
     """Context that resets an RNG to its initial state upon exit.
 
     This allows to execute some sampling functions and leave the code block
@@ -383,7 +388,7 @@ class Augmenter(object):
                 batch_normalized = batch_copy
                 batch_orig_dt = "imgaug.UnnormalizedBatch"
             elif ia.is_np_array(batch):
-                assert batch.ndim in (3, 4),(
+                assert batch.ndim in (3, 4), (
                     "Expected numpy array to have shape (N, H, W) or "
                     "(N, H, W, C), got %s." % (batch.shape,))
                 batch_normalized = Batch(images=batch, data=(idx,))
@@ -621,12 +626,11 @@ class Augmenter(object):
             batch_unnorm = batch_unnorm.fill_from_augmented_normalized_batch(
                 batch_norm)
             return batch_unnorm
-        elif batch_norm is not None:
+        if batch_norm is not None:
             batch_norm = batch_norm.fill_from_batch_in_augmentation_(
                 batch_inaug)
             return batch_norm
-        else:
-            return batch_inaug
+        return batch_inaug
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         """Augment a batch in-place.
@@ -1861,8 +1865,7 @@ class Augmenter(object):
                 ", ".join(expected_keys_call),))
 
         # all keys in kwargs actually known?
-        unknown_args = [key for key in kwargs.keys()
-                        if key not in expected_keys_call]
+        unknown_args = [key for key in kwargs if key not in expected_keys_call]
         assert len(unknown_args) == 0, (
             "Got the following unknown keyword argument(s) in augment(): %s" % (
                 ", ".join(unknown_args)
@@ -2099,7 +2102,7 @@ class Augmenter(object):
             for i, image in enumerate(images):
                 if len(image.shape) == 3:
                     continue
-                elif len(image.shape) == 2:
+                if len(image.shape) == 2:
                     images[i] = image[:, :, np.newaxis]
                 else:
                     raise Exception(
@@ -2198,8 +2201,7 @@ class Augmenter(object):
             "Expected 'n' to be None or >=1, got %s." % (n,))
         if n is None:
             return self.to_deterministic(1)[0]
-        else:
-            return [self._to_deterministic() for _ in sm.xrange(n)]
+        return [self._to_deterministic() for _ in sm.xrange(n)]
 
     def _to_deterministic(self):
         """Convert this augmenter from a stochastic to a deterministic one.
@@ -2554,6 +2556,16 @@ class Augmenter(object):
 
     @abstractmethod
     def get_parameters(self):
+        """Get the parameters of this augmenter.
+
+        Returns
+        -------
+        list
+            List of parameters of arbitrary types (usually child class
+            of :class:`imgaug.parameters.StochasticParameter`, but not
+            guaranteed to be).
+
+        """
         raise NotImplementedError()
 
     def get_children_lists(self):
@@ -2733,16 +2745,15 @@ class Augmenter(object):
 
         """
         if regex:
-            def comparer(aug, parents):
+            def comparer(aug, _parents):
                 for pattern in names:
                     if re.match(pattern, aug.name):
                         return True
                 return False
 
             return self.find_augmenters(comparer, flat=flat)
-        else:
-            return self.find_augmenters(
-                lambda aug, parents: aug.name in names, flat=flat)
+        return self.find_augmenters(
+            lambda aug, parents: aug.name in names, flat=flat)
 
     # TODO remove copy arg
     # TODO allow first arg to be string name, class type or func
@@ -2812,12 +2823,11 @@ class Augmenter(object):
 
             if identity_if_topmost:
                 return Identity()
-            else:
-                return None
-        else:
-            aug = self if not copy else self.deepcopy()
-            aug.remove_augmenters_(func, parents=[])
-            return aug
+            return None
+
+        aug = self if not copy else self.deepcopy()
+        aug.remove_augmenters_(func, parents=[])
+        return aug
 
     @ia.deprecated("remove_augmenters_")
     def remove_augmenters_inplace(self, func, parents=None):
@@ -3051,6 +3061,7 @@ class Sequential(Augmenter, list):
         return seq
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.random_order]
 
     def add(self, augmenter):
@@ -3065,6 +3076,7 @@ class Sequential(Augmenter, list):
         self.append(augmenter)
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self]
 
     def __str__(self):
@@ -3237,7 +3249,6 @@ class SomeOf(Augmenter, list):
                 raise Exception("Expected tuple of (int, None) or (int, int), "
                                 "got %s" % ([type(el) for el in n],))
         elif isinstance(n, iap.StochasticParameter):
-            n = n
             n_mode = "stochastic"
         else:
             raise Exception("Expected int, (int, None), (int, int) or "
@@ -3247,15 +3258,14 @@ class SomeOf(Augmenter, list):
     def _get_n(self, nb_images, random_state):
         if self.n_mode == "deterministic":
             return [self.n] * nb_images
-        elif self.n_mode == "None":
+        if self.n_mode == "None":
             return [len(self)] * nb_images
-        elif self.n_mode == "(int,None)":
+        if self.n_mode == "(int,None)":
             param = iap.DiscreteUniform(self.n[0], len(self))
             return param.draw_samples((nb_images,), random_state=random_state)
-        elif self.n_mode == "stochastic":
+        if self.n_mode == "stochastic":
             return self.n.draw_samples((nb_images,), random_state=random_state)
-        else:
-            raise Exception("Invalid n_mode: %s" % (self.n_mode,))
+        raise Exception("Invalid n_mode: %s" % (self.n_mode,))
 
     def _get_augmenter_order(self, random_state):
         if not self.random_order:
@@ -3265,6 +3275,7 @@ class SomeOf(Augmenter, list):
         return augmenter_order
 
     def _get_augmenter_active(self, nb_rows, random_state):
+        # pylint: disable=invalid-name
         nn = self._get_n(nb_rows, random_state)
         nn = [min(n, len(self)) for n in nn]
         augmenter_active = np.zeros((nb_rows, len(self)), dtype=np.bool)
@@ -3320,6 +3331,7 @@ class SomeOf(Augmenter, list):
         return seq
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.n]
 
     def add(self, augmenter):
@@ -3334,6 +3346,7 @@ class SomeOf(Augmenter, list):
         self.append(augmenter)
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self]
 
     def __str__(self):
@@ -3533,9 +3546,11 @@ class Sometimes(Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         result = []
         if self.then_list is not None:
             result.append(self.then_list)
@@ -3765,9 +3780,11 @@ class WithChannels(Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.channels]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -3822,6 +3839,7 @@ class Identity(Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
 
@@ -4096,7 +4114,7 @@ class Lambda(Augmenter):
             return self._augment_polygons_as_keypoints(
                 polygons_on_images, random_state, parents, hooks,
                 recoverer=_ConcavePolygonRecoverer())
-        elif self.func_polygons is not None:
+        if self.func_polygons is not None:
             result = self.func_polygons(polygons_on_images, random_state,
                                         parents, hooks)
             assert ia.is_iterable(result), (
@@ -4117,7 +4135,7 @@ class Lambda(Augmenter):
         if self.func_line_strings == "keypoints":
             return self._augment_line_strings_as_keypoints(
                 line_strings_on_images, random_state, parents, hooks)
-        elif self.func_line_strings is not None:
+        if self.func_line_strings is not None:
             result = self.func_line_strings(line_strings_on_images,
                                             random_state, parents, hooks)
             assert ia.is_iterable(result), (
@@ -4138,7 +4156,7 @@ class Lambda(Augmenter):
         if self.func_bounding_boxes == "keypoints":
             return self._augment_bounding_boxes_as_keypoints(
                 bounding_boxes_on_images, random_state, parents, hooks)
-        elif self.func_bounding_boxes is not None:
+        if self.func_bounding_boxes is not None:
             result = self.func_bounding_boxes(
                 bounding_boxes_on_images, random_state, parents, hooks)
             assert ia.is_iterable(result), (
@@ -4163,6 +4181,7 @@ class Lambda(Augmenter):
         return bounding_boxes_on_images
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
 
@@ -4306,8 +4325,8 @@ class _AssertLambdaCallback(object):
 
     def __call__(self, augmentables, random_state, parents, hooks):
         assert self.func(augmentables, random_state, parents, hooks), (
-                "Input %s did not fulfill user-defined assertion in "
-                "AssertLambda." % (self.augmentable_name,))
+            "Input %s did not fulfill user-defined assertion in "
+            "AssertLambda." % (self.augmentable_name,))
         return augmentables
 
 
@@ -4674,6 +4693,7 @@ class ChannelShuffle(Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p, self.channels]
 
 
@@ -4735,12 +4755,12 @@ def shuffle_channels(image, random_state, channels=None):
         # if/else
         channels_perm = random_state.permutation(all_channels)
         return image[..., channels_perm]
-    else:
-        channels_perm = random_state.permutation(channels)
-        channels_perm_full = all_channels
-        for channel_source, channel_target in zip(channels, channels_perm):
-            channels_perm_full[channel_source] = channel_target
-        return image[..., channels_perm_full]
+
+    channels_perm = random_state.permutation(channels)
+    channels_perm_full = all_channels
+    for channel_source, channel_target in zip(channels, channels_perm):
+        channels_perm_full[channel_source] = channel_target
+    return image[..., channels_perm_full]
 
 
 class RemoveCBAsByOutOfImageFraction(Augmenter):
@@ -4813,6 +4833,7 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.fraction]
 
 
@@ -4877,4 +4898,5 @@ class ClipCBAsToImagePlanes(Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []

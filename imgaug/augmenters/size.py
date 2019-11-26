@@ -50,8 +50,8 @@ import functools
 import numpy as np
 import cv2
 
-from . import meta
 import imgaug as ia
+from . import meta
 from .. import parameters as iap
 
 
@@ -170,7 +170,7 @@ def _crop_and_pad_kpsoi(kpsoi, croppings_img, paddings_img, keep_size):
         x=-crop_left+paddings_img[3],
         y=-crop_top+paddings_img[0])
     shifted.shape = _compute_shape_after_crop_and_pad(
-            kpsoi.shape, croppings_img, paddings_img)
+        kpsoi.shape, croppings_img, paddings_img)
     if keep_size:
         shifted = shifted.on(kpsoi.shape)
     return shifted
@@ -274,17 +274,17 @@ def _handle_pad_mode_param(pad_mode):
         "minimum", "reflect", "symmetric", "wrap"}
     if pad_mode == ia.ALL:
         return iap.Choice(list(pad_modes_available))
-    elif ia.is_string(pad_mode):
+    if ia.is_string(pad_mode):
         assert pad_mode in pad_modes_available, (
             "Value '%s' is not a valid pad mode. Valid pad modes are: %s." % (
                 pad_mode, ", ".join(pad_modes_available)))
         return iap.Deterministic(pad_mode)
-    elif isinstance(pad_mode, list):
+    if isinstance(pad_mode, list):
         assert all([v in pad_modes_available for v in pad_mode]), (
             "At least one in list %s is not a valid pad mode. Valid pad "
             "modes are: %s." % (str(pad_mode), ", ".join(pad_modes_available)))
         return iap.Choice(pad_mode)
-    elif isinstance(pad_mode, iap.StochasticParameter):
+    if isinstance(pad_mode, iap.StochasticParameter):
         return pad_mode
     raise Exception(
         "Expected pad_mode to be ia.ALL or string or list of strings or "
@@ -294,62 +294,62 @@ def _handle_pad_mode_param(pad_mode):
 def _handle_position_parameter(position):
     if position == "uniform":
         return iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0)
-    elif position == "normal":
+    if position == "normal":
         return (
             iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2),
                      minval=0.0, maxval=1.0),
             iap.Clip(iap.Normal(loc=0.5, scale=0.35 / 2),
                      minval=0.0, maxval=1.0)
         )
-    elif position == "center":
+    if position == "center":
         return iap.Deterministic(0.5), iap.Deterministic(0.5)
-    elif (ia.is_string(position)
-          and re.match(r"^(left|center|right)-(top|center|bottom)$", position)):
+    if (ia.is_string(position)
+            and re.match(r"^(left|center|right)-(top|center|bottom)$",
+                         position)):
         mapping = {"top": 0.0, "center": 0.5, "bottom": 1.0, "left": 0.0,
                    "right": 1.0}
         return (
             iap.Deterministic(mapping[position.split("-")[0]]),
             iap.Deterministic(mapping[position.split("-")[1]])
         )
-    elif isinstance(position, iap.StochasticParameter):
+    if isinstance(position, iap.StochasticParameter):
         return position
-    elif isinstance(position, tuple):
+    if isinstance(position, tuple):
         assert len(position) == 2, (
             "Expected tuple with two entries as position parameter. "
             "Got %d entries with types %s.." % (
-                len(position), str([type(el) for el in position])))
-        for el in position:
-            if ia.is_single_number(el) and (el < 0 or el > 1.0):
+                len(position), str([type(item) for item in position])))
+        for item in position:
+            if ia.is_single_number(item) and (item < 0 or item > 1.0):
                 raise Exception(
                     "Both position values must be within the value range "
                     "[0.0, 1.0]. Got type %s with value %.8f." % (
-                        type(el), el,))
-        position = [iap.Deterministic(el)
-                    if ia.is_single_number(el)
-                    else el for el in position]
+                        type(item), item,))
+        position = [iap.Deterministic(item)
+                    if ia.is_single_number(item)
+                    else item for item in position]
 
-        only_sparams = all([isinstance(el, iap.StochasticParameter)
-                            for el in position])
+        only_sparams = all([isinstance(item, iap.StochasticParameter)
+                            for item in position])
         assert only_sparams, (
             "Expected tuple with two entries that are both either "
             "StochasticParameter or float/int. Got types %s." % (
-                str([type(el) for el in position])
+                str([type(item) for item in position])
             ))
         return tuple(position)
-    else:
-        raise Exception(
-            "Expected one of the following as position parameter: string "
-            "'uniform', string 'normal', string 'center', a string matching "
-            "regex ^(left|center|right)-(top|center|bottom)$, a single "
-            "StochasticParameter or a tuple of two entries, both being either "
-            "StochasticParameter or floats or int. Got instead type %s with "
-            "content '%s'." % (
-                type(position),
-                (str(position)
-                 if len(str(position)) < 20
-                 else str(position)[0:20] + "...")
-            )
+    raise Exception(
+        "Expected one of the following as position parameter: string "
+        "'uniform', string 'normal', string 'center', a string matching "
+        "regex ^(left|center|right)-(top|center|bottom)$, a single "
+        "StochasticParameter or a tuple of two entries, both being either "
+        "StochasticParameter or floats or int. Got instead type %s with "
+        "content '%s'." % (
+            type(position),
+            (str(position)
+             if len(str(position)) < 20
+             else str(position)[0:20] + "...")
         )
+    )
 
 
 # TODO this is the same as in imgaug.py, make DRY
@@ -441,7 +441,7 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         # cval is an int (just using float(cval) seems to not be accurate
         # enough)
         if arr.dtype.name == "float128":
-            cval = np.float128(cval)
+            cval = np.float128(cval)  # pylint: disable=no-member
 
         cval = max(min(cval, max_value), min_value)
 
@@ -1079,6 +1079,8 @@ def compute_croppings_to_reach_powers_of(arr, height_base, width_base,
 @ia.deprecated(alt_func="Resize",
                comment="Resize has the exactly same interface as Scale.")
 def Scale(*args, **kwargs):
+    """Augmenter that resizes images to specified heights and widths."""
+    # pylint: disable=invalid-name
     return Resize(*args, **kwargs)
 
 
@@ -1222,15 +1224,15 @@ class Resize(meta.Augmenter):
 
     @classmethod
     def _handle_size_arg(cls, size, subcall):
-        def _dict_to_size_tuple(v1, v2):
+        def _dict_to_size_tuple(val1, val2):
             kaa = "keep-aspect-ratio"
-            not_both_kaa = (v1 != kaa or v2 != kaa)
+            not_both_kaa = (val1 != kaa or val2 != kaa)
             assert not_both_kaa, (
                 "Expected at least one value to not be \"keep-aspect-ratio\", "
                 "but got it two times.")
 
             size_tuple = []
-            for k in [v1, v2]:
+            for k in [val1, val2]:
                 if k in ["keep-aspect-ratio", "keep"]:
                     entry = iap.Deterministic(k)
                 else:
@@ -1319,7 +1321,7 @@ class Resize(meta.Augmenter):
         elif ia.is_iterable(interpolation):
             interpolation = iap.Choice(interpolation)
         elif isinstance(interpolation, iap.StochasticParameter):
-            interpolation = interpolation
+            pass
         else:
             raise Exception(
                 "Expected int or string or iterable or StochasticParameter, "
@@ -1374,7 +1376,7 @@ class Resize(meta.Augmenter):
             result.append(image_rs)
 
         if input_was_array:
-            all_same_size = (len(set([image.shape for image in result])) == 1)
+            all_same_size = (len({image.shape for image in result}) == 1)
             if all_same_size:
                 result = np.array(result, dtype=input_dtype)
 
@@ -1475,6 +1477,7 @@ class Resize(meta.Augmenter):
         return h, w
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.size, self.interpolation, self.size_order]
 
 
@@ -1494,10 +1497,12 @@ class _CropAndPadSamplingResult(object):
 
     @property
     def croppings(self):
+        """Get absolute pixel amounts of croppings as a TRBL tuple."""
         return self.crop_top, self.crop_right, self.crop_bottom, self.crop_left
 
     @property
     def paddings(self):
+        """Get absolute pixel amounts of paddings as a TRBL tuple."""
         return self.pad_top, self.pad_right, self.pad_bottom, self.pad_left
 
 
@@ -1734,6 +1739,7 @@ class CropAndPad(meta.Augmenter):
     def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0,
                  keep_size=True, sample_independently=True,
                  name=None, deterministic=False, random_state=None):
+        # pylint: disable=invalid-name
         super(CropAndPad, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
@@ -1758,6 +1764,7 @@ class CropAndPad(meta.Augmenter):
 
     @classmethod
     def _handle_px_and_percent_args(cls, px, percent):
+        # pylint: disable=invalid-name
         all_sides = None
         top, right, bottom, left = None, None, None, None
 
@@ -1776,6 +1783,7 @@ class CropAndPad(meta.Augmenter):
 
     @classmethod
     def _handle_px_arg(cls, px):
+        # pylint: disable=invalid-name
         all_sides = None
         top, right, bottom, left = None, None, None, None
 
@@ -1789,7 +1797,7 @@ class CropAndPad(meta.Augmenter):
             def handle_param(p):
                 if ia.is_single_integer(p):
                     return iap.Deterministic(p)
-                elif isinstance(p, tuple):
+                if isinstance(p, tuple):
                     assert len(p) == 2, (
                         "Expected tuple of 2 values, got %d." % (len(p)))
                     only_ints = (
@@ -1799,19 +1807,18 @@ class CropAndPad(meta.Augmenter):
                         "Expected tuple of integers, got %s and %s." % (
                             type(p[0]), type(p[1])))
                     return iap.DiscreteUniform(p[0], p[1])
-                elif isinstance(p, list):
+                if isinstance(p, list):
                     assert len(p) > 0, (
                         "Expected non-empty list, but got empty one.")
                     assert all([ia.is_single_integer(val) for val in p]), (
                         "Expected list of ints, got types %s." % (
                             ", ".join([str(type(v)) for v in p])))
                     return iap.Choice(p)
-                elif isinstance(p, iap.StochasticParameter):
+                if isinstance(p, iap.StochasticParameter):
                     return p
-                else:
-                    raise Exception(
-                        "Expected int, tuple of two ints, list of ints or "
-                        "StochasticParameter, got type %s." % (type(p),))
+                raise Exception(
+                    "Expected int, tuple of two ints, list of ints or "
+                    "StochasticParameter, got type %s." % (type(p),))
 
             if len(px) == 2:
                 all_sides = handle_param(px)
@@ -1846,7 +1853,7 @@ class CropAndPad(meta.Augmenter):
             def handle_param(p):
                 if ia.is_single_number(p):
                     return iap.Deterministic(p)
-                elif isinstance(p, tuple):
+                if isinstance(p, tuple):
                     assert len(p) == 2, (
                         "Expected tuple of 2 values, got %d." % (len(p),))
                     only_numbers = (
@@ -1859,7 +1866,7 @@ class CropAndPad(meta.Augmenter):
                         "Expected tuple of values >-1.0, got %.4f and "
                         "%.4f." % (p[0], p[1]))
                     return iap.Uniform(p[0], p[1])
-                elif isinstance(p, list):
+                if isinstance(p, list):
                     assert len(p) > 0, (
                         "Expected non-empty list, but got empty one.")
                     assert all([ia.is_single_number(val) for val in p]), (
@@ -1869,12 +1876,11 @@ class CropAndPad(meta.Augmenter):
                         "Expected list of values >-1.0, got values %s." % (
                             ", ".join(["%.4f" % (v,) for v in p])))
                     return iap.Choice(p)
-                elif isinstance(p, iap.StochasticParameter):
+                if isinstance(p, iap.StochasticParameter):
                     return p
-                else:
-                    raise Exception(
-                        "Expected int, tuple of two ints, list of ints or "
-                        "StochasticParameter, got type %s." % (type(p),))
+                raise Exception(
+                    "Expected int, tuple of two ints, list of ints or "
+                    "StochasticParameter, got type %s." % (type(p),))
 
             if len(percent) == 2:
                 all_sides = handle_param(percent)
@@ -1939,7 +1945,7 @@ class CropAndPad(meta.Augmenter):
             if self.keep_size:
                 result = np.array(result, dtype=images.dtype)
             else:
-                nb_shapes = len(set([image.shape for image in result]))
+                nb_shapes = len({image.shape for image in result})
                 if nb_shapes == 1:
                     result = np.array(result, dtype=images.dtype)
 
@@ -2094,6 +2100,7 @@ class CropAndPad(meta.Augmenter):
         return result
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.all_sides, self.top, self.right, self.bottom, self.left,
                 self.pad_mode, self.pad_cval]
 
@@ -2289,22 +2296,21 @@ class Pad(CropAndPad):
     def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0,
                  keep_size=True, sample_independently=True,
                  name=None, deterministic=False, random_state=None):
-        def recursive_validate(v):
-            if v is None:
-                return v
-            elif ia.is_single_number(v):
-                assert v >= 0, "Expected value >0, got %.4f" % (v,)
-                return v
-            elif isinstance(v, iap.StochasticParameter):
-                return v
-            elif isinstance(v, tuple):
-                return tuple([recursive_validate(v_) for v_ in v])
-            elif isinstance(v, list):
-                return [recursive_validate(v_) for v_ in v]
-            else:
-                raise Exception(
-                    "Expected None or int or float or StochasticParameter or "
-                    "list or tuple, got %s." % (type(v),))
+        def recursive_validate(value):
+            if value is None:
+                return value
+            if ia.is_single_number(value):
+                assert value >= 0, "Expected value >0, got %.4f" % (value,)
+                return value
+            if isinstance(value, iap.StochasticParameter):
+                return value
+            if isinstance(value, tuple):
+                return tuple([recursive_validate(v_) for v_ in value])
+            if isinstance(value, list):
+                return [recursive_validate(v_) for v_ in value]
+            raise Exception(
+                "Expected None or int or float or StochasticParameter or "
+                "list or tuple, got %s." % (type(value),))
 
         px = recursive_validate(px)
         percent = recursive_validate(percent)
@@ -2466,22 +2472,21 @@ class Crop(CropAndPad):
     def __init__(self, px=None, percent=None, keep_size=True,
                  sample_independently=True,
                  name=None, deterministic=False, random_state=None):
-        def recursive_negate(v):
-            if v is None:
-                return v
-            elif ia.is_single_number(v):
-                assert v >= 0, "Expected value >0, got %.4f." % (v,)
-                return -v
-            elif isinstance(v, iap.StochasticParameter):
-                return iap.Multiply(v, -1)
-            elif isinstance(v, tuple):
-                return tuple([recursive_negate(v_) for v_ in v])
-            elif isinstance(v, list):
-                return [recursive_negate(v_) for v_ in v]
-            else:
-                raise Exception(
-                    "Expected None or int or float or StochasticParameter or "
-                    "list or tuple, got %s." % (type(v),))
+        def recursive_negate(value):
+            if value is None:
+                return value
+            if ia.is_single_number(value):
+                assert value >= 0, "Expected value >0, got %.4f." % (value,)
+                return -value
+            if isinstance(value, iap.StochasticParameter):
+                return iap.Multiply(value, -1)
+            if isinstance(value, tuple):
+                return tuple([recursive_negate(v_) for v_ in value])
+            if isinstance(value, list):
+                return [recursive_negate(v_) for v_ in value]
+            raise Exception(
+                "Expected None or int or float or StochasticParameter or "
+                "list or tuple, got %s." % (type(value),))
 
         px = recursive_negate(px)
         percent = recursive_negate(percent)
@@ -2796,6 +2801,7 @@ class PadToFixedSize(meta.Augmenter):
         return pad_top, pad_right, pad_bottom, pad_left
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.size[0], self.size[1], self.pad_mode, self.pad_cval,
                 self.position]
 
@@ -3109,6 +3115,7 @@ class CropToFixedSize(meta.Augmenter):
         return [self.size] * nb_images, offset_xs, offset_ys
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.size[0], self.size[1], self.position]
 
 
@@ -3249,6 +3256,7 @@ class CropToMultiplesOf(CropToFixedSize):
         return sizes, offset_xs, offset_ys
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_multiple, self.height_multiple, self.position]
 
 
@@ -3390,6 +3398,7 @@ class PadToMultiplesOf(PadToFixedSize):
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_multiple, self.height_multiple,
                 self.pad_mode, self.pad_cval,
                 self.position]
@@ -3547,6 +3556,7 @@ class CropToPowersOf(CropToFixedSize):
         return sizes, offset_xs, offset_ys
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_base, self.height_base, self.position]
 
 
@@ -3693,6 +3703,7 @@ class PadToPowersOf(PadToFixedSize):
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_base, self.height_base,
                 self.pad_mode, self.pad_cval,
                 self.position]
@@ -3836,6 +3847,7 @@ class CropToAspectRatio(CropToFixedSize):
         return sizes, offset_xs, offset_ys
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.aspect_ratio, self.position]
 
 
@@ -3967,6 +3979,7 @@ class PadToAspectRatio(PadToFixedSize):
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.aspect_ratio, self.pad_mode, self.pad_cval,
                 self.position]
 
@@ -4332,9 +4345,9 @@ class KeepSizeByResize(meta.Augmenter):
                                   + [KeepSizeByResize.NO_RESIZE]
             if allow_same_as_images and val == self.SAME_AS_IMAGES:
                 return self.SAME_AS_IMAGES
-            elif val in valid_ips_and_resize:
+            if val in valid_ips_and_resize:
                 return iap.Deterministic(val)
-            elif isinstance(val, list):
+            if isinstance(val, list):
                 assert len(val) > 0, (
                     "Expected a list of at least one interpolation method. "
                     "Got an empty list.")
@@ -4347,13 +4360,12 @@ class KeepSizeByResize(meta.Augmenter):
                     "Expected each interpolations to be one of '%s', got "
                     "'%s'." % (str(valid_ips_here), str(val)))
                 return iap.Choice(val)
-            elif isinstance(val, iap.StochasticParameter):
+            if isinstance(val, iap.StochasticParameter):
                 return val
-            else:
-                raise Exception(
-                    "Expected interpolation to be one of '%s' or a list of "
-                    "these values or a StochasticParameter. Got type %s." % (
-                        str(ia.IMRESIZE_VALID_INTERPOLATIONS), type(val)))
+            raise Exception(
+                "Expected interpolation to be one of '%s' or a list of "
+                "these values or a StochasticParameter. Got type %s." % (
+                    str(ia.IMRESIZE_VALID_INTERPOLATIONS), type(val)))
 
         self.children = meta.handle_children_list(children, self.name, "then")
         self.interpolation = _validate_param(interpolation, False)
@@ -4367,7 +4379,7 @@ class KeepSizeByResize(meta.Augmenter):
             images_were_array = None
             if batch.images is not None:
                 images_were_array = ia.is_np_array(batch.images)
-            shapes_orig = self.get_shapes(batch)
+            shapes_orig = self._get_shapes(batch)
 
             samples = self._draw_samples(batch.nb_rows, random_state)
 
@@ -4421,7 +4433,7 @@ class KeepSizeByResize(meta.Augmenter):
 
         if images_were_array:
             # note here that NO_RESIZE can have led to different shapes
-            nb_shapes = len(set([image.shape for image in result]))
+            nb_shapes = len({image.shape for image in result})
             if nb_shapes == 1:
                 result = np.array(result, dtype=images.dtype)
 
@@ -4445,19 +4457,19 @@ class KeepSizeByResize(meta.Augmenter):
         return result
 
     @classmethod
-    def _keep_size_keypoints(cls, kps_aug, shapes_orig, interpolations):
+    def _keep_size_keypoints(cls, kpsois_aug, shapes_orig, interpolations):
         result = []
-        gen = zip(kps_aug, interpolations, shapes_orig)
-        for kps_aug, interpolation, input_shape in gen:
+        gen = zip(kpsois_aug, interpolations, shapes_orig)
+        for kpsoi_aug, interpolation, input_shape in gen:
             if interpolation == KeepSizeByResize.NO_RESIZE:
-                result.append(kps_aug)
+                result.append(kpsoi_aug)
             else:
-                result.append(kps_aug.on(input_shape))
+                result.append(kpsoi_aug.on(input_shape))
 
         return result
 
     @classmethod
-    def get_shapes(cls, batch):
+    def _get_shapes(cls, batch):
         result = dict()
         for column in batch.columns:
             result[column.name] = [cell.shape for cell in column.value]
@@ -4526,9 +4538,11 @@ class KeepSizeByResize(meta.Augmenter):
         return aug
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.interpolation, self.interpolation_heatmaps]
 
     def get_children_lists(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):

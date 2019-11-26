@@ -53,10 +53,10 @@ import six.moves as sm
 # only pick the first two components.
 SUPPORTS_NEW_NP_RNG_STYLE = False
 BIT_GENERATOR = None
-np_version = list(map(int, np.__version__.split(".")[0:2]))
-if np_version[0] > 1 or np_version[1] >= 17:
+_NP_VERSION = list(map(int, np.__version__.split(".")[0:2]))
+if _NP_VERSION[0] > 1 or _NP_VERSION[1] >= 17:
     SUPPORTS_NEW_NP_RNG_STYLE = True
-    BIT_GENERATOR = np.random.SFC64
+    BIT_GENERATOR = np.random.SFC64  # pylint: disable=invalid-name
 
 # We instantiate a current/global random state here once.
 GLOBAL_RNG = None
@@ -481,6 +481,7 @@ class RNG(object):
     # TODO add support for Generator's 'axis' argument
     def choice(self, a, size=None, replace=True, p=None):
         """Call :func:`numpy.random.Generator.choice`."""
+        # pylint: disable=invalid-name
         return self.generator.choice(a=a, size=size, replace=replace, p=p)
 
     def bytes(self, length):
@@ -501,6 +502,7 @@ class RNG(object):
 
     def beta(self, a, b, size=None):
         """Call :func:`numpy.random.Generator.beta`."""
+        # pylint: disable=invalid-name
         return self.generator.beta(a=a, b=b, size=size)
 
     def binomial(self, n, p, size=None):
@@ -509,6 +511,7 @@ class RNG(object):
 
     def chisquare(self, df, size=None):
         """Call :func:`numpy.random.Generator.chisquare`."""
+        # pylint: disable=invalid-name
         return self.generator.chisquare(df=df, size=size)
 
     def dirichlet(self, alpha, size=None):
@@ -572,6 +575,7 @@ class RNG(object):
 
     def noncentral_chisquare(self, df, nonc, size=None):
         """Call :func:`numpy.random.Generator.noncentral_chisquare`."""
+        # pylint: disable=invalid-name
         return self.generator.noncentral_chisquare(df=df, nonc=nonc, size=size)
 
     def noncentral_f(self, dfnum, dfden, nonc, size=None):
@@ -585,6 +589,7 @@ class RNG(object):
 
     def pareto(self, a, size=None):
         """Call :func:`numpy.random.Generator.pareto`."""
+        # pylint: disable=invalid-name
         return self.generator.pareto(a=a, size=size)
 
     def poisson(self, lam=1.0, size=None):
@@ -593,6 +598,7 @@ class RNG(object):
 
     def power(self, a, size=None):
         """Call :func:`numpy.random.Generator.power`."""
+        # pylint: disable=invalid-name
         return self.generator.power(a=a, size=size)
 
     def rayleigh(self, scale=1.0, size=None):
@@ -670,6 +676,7 @@ class RNG(object):
 
     def standard_t(self, df, size=None):
         """Call :func:`numpy.random.Generator.standard_t`."""
+        # pylint: disable=invalid-name
         return self.generator.standard_t(df=df, size=size)
 
     def triangular(self, left, mode, right, size=None):
@@ -683,6 +690,7 @@ class RNG(object):
 
     def vonmises(self, mu, kappa, size=None):
         """Call :func:`numpy.random.Generator.vonmises`."""
+        # pylint: disable=invalid-name
         return self.generator.vonmises(mu=mu, kappa=kappa, size=size)
 
     def wald(self, mean, scale, size=None):
@@ -691,10 +699,12 @@ class RNG(object):
 
     def weibull(self, a, size=None):
         """Call :func:`numpy.random.Generator.weibull`."""
+        # pylint: disable=invalid-name
         return self.generator.weibull(a=a, size=size)
 
     def zipf(self, a, size=None):
         """Call :func:`numpy.random.Generator.zipf`."""
+        # pylint: disable=invalid-name
         return self.generator.zipf(a=a, size=size)
 
     ##################################################################
@@ -810,6 +820,8 @@ def get_global_rng():
         The global RNG to use.
 
     """
+    # TODO change global_rng to singleton
+    # pylint: disable=global-statement, redefined-outer-name
     global GLOBAL_RNG
     if GLOBAL_RNG is None:
         # This uses numpy's random state to sample a seed.
@@ -849,6 +861,7 @@ def seed(entropy):
 
 
 def _seed_np117_(entropy):
+    # pylint: disable=global-statement
     global GLOBAL_RNG
     # TODO any way to seed the Generator object instead of creating a new one?
     GLOBAL_RNG = RNG(entropy)
@@ -928,23 +941,28 @@ def normalize_generator_(generator):
 def _normalize_generator_np117_(generator):
     if generator is None:
         return get_global_rng().generator
-    elif isinstance(generator, np.random.SeedSequence):
+
+    if isinstance(generator, np.random.SeedSequence):
         return np.random.Generator(
             BIT_GENERATOR(generator)
         )
-    elif isinstance(generator, np.random.bit_generator.BitGenerator):
+
+    if isinstance(generator, np.random.bit_generator.BitGenerator):
         generator = np.random.Generator(generator)
         # TODO is it necessary/sensible here to reset the cache?
         reset_generator_cache_(generator)
         return generator
-    elif isinstance(generator, np.random.Generator):
+
+    if isinstance(generator, np.random.Generator):
         # TODO is it necessary/sensible here to reset the cache?
         reset_generator_cache_(generator)
         return generator
-    elif isinstance(generator, np.random.RandomState):
+
+    if isinstance(generator, np.random.RandomState):
         # TODO warn
         # TODO reset the cache here too?
         return convert_seed_to_generator(generate_seed_(generator))
+
     # seed given
     seed_ = generator
     return convert_seed_to_generator(seed_)
@@ -953,7 +971,7 @@ def _normalize_generator_np117_(generator):
 def _normalize_generator_np116_(random_state):
     if random_state is None:
         return get_global_rng().generator
-    elif isinstance(random_state, np.random.RandomState):
+    if isinstance(random_state, np.random.RandomState):
         # TODO reset the cache here, like in np117?
         return random_state
     # seed given
@@ -1381,7 +1399,8 @@ def _is_generator_equal_to_np117(generator, other_generator):
 
     if state1["has_uint32"] != state2["has_uint32"]:
         return False
-    elif state1["has_uint32"] == state2["has_uint32"] == 1:
+
+    if state1["has_uint32"] == state2["has_uint32"] == 1:
         if state1["uinteger"] != state2["uinteger"]:
             return False
 

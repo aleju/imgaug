@@ -362,5 +362,6 @@ class Cartoon(meta.Augmenter):
         )
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.blur_ksize, self.segmentation_size, self.saturation,
                 self.edge_prevalence, self.from_colorspace]

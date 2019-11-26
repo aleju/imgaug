@@ -26,15 +26,14 @@ For MotionBlur, see ``blur.py``.
 """
 from __future__ import print_function, division, absolute_import
 
-import types
 import itertools
 
 import numpy as np
 import cv2
 import six.moves as sm
 
-from . import meta
 import imgaug as ia
+from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
 
@@ -235,6 +234,7 @@ class Convolve(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.matrix, self.matrix_type]
 
 

@@ -29,9 +29,9 @@ import six.moves as sm
 import skimage.exposure as ski_exposure
 import cv2
 
+import imgaug as ia
 from . import meta
 from . import color as color_lib
-import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 from ..augmentables import batches as iabatches
@@ -98,6 +98,7 @@ class _ContrastFuncWrapper(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return self.params1d
 
 
@@ -178,8 +179,7 @@ def adjust_contrast_gamma(arr, gamma):
         if arr.ndim == 3 and arr_aug.ndim == 2:
             return arr_aug[..., np.newaxis]
         return arr_aug
-    else:
-        return ski_exposure.adjust_gamma(arr, gamma)
+    return ski_exposure.adjust_gamma(arr, gamma)
 
 
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
@@ -267,8 +267,7 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         if arr.ndim == 3 and arr_aug.ndim == 2:
             return arr_aug[..., np.newaxis]
         return arr_aug
-    else:
-        return ski_exposure.adjust_sigmoid(arr, cutoff=cutoff, gain=gain)
+    return ski_exposure.adjust_sigmoid(arr, cutoff=cutoff, gain=gain)
 
 
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
@@ -352,8 +351,7 @@ def adjust_contrast_log(arr, gain):
         if arr.ndim == 3 and arr_aug.ndim == 2:
             return arr_aug[..., np.newaxis]
         return arr_aug
-    else:
-        return ski_exposure.adjust_log(arr, gain=gain)
+    return ski_exposure.adjust_log(arr, gain=gain)
 
 
 # TODO quite similar to the other adjust_contrast_*() functions, make DRY
@@ -400,6 +398,7 @@ def adjust_contrast_linear(arr, alpha):
         Array with adjusted contrast.
 
     """
+    # pylint: disable=no-else-return
     if arr.size == 0:
         return np.copy(arr)
 
@@ -469,7 +468,7 @@ def equalize(image, mask=None):
     size = image.size
     if size == 0:
         return np.copy(image)
-    elif size >= _EQUALIZE_USE_PIL_BELOW:
+    if size >= _EQUALIZE_USE_PIL_BELOW:
         image = np.copy(image)
     return equalize_(image, mask)
 
@@ -531,7 +530,7 @@ def equalize_(image, mask=None):
     size = image.size
     if size == 0:
         return image
-    elif nb_channels == 3 and size < _EQUALIZE_USE_PIL_BELOW:
+    if nb_channels == 3 and size < _EQUALIZE_USE_PIL_BELOW:
         return _equalize_pil(image, mask)
     return _equalize_no_pil_(image, mask)
 
@@ -564,9 +563,9 @@ def _equalize_no_pil_(image, mask=None):
             continue
 
         n = step // 2
-        cs = np.cumsum(histo)
+        cumsum = np.cumsum(histo)
         lut[0, 0, c_idx] = n
-        lut[0, 1:, c_idx] = n + cs[0:-1]
+        lut[0, 1:, c_idx] = n + cumsum[0:-1]
         lut[0, :, c_idx] //= int(step)
     lut = np.clip(lut, None, 255, out=lut).astype(np.uint8)
     image = cv2.LUT(image, lut, dst=image)
@@ -666,6 +665,7 @@ def _autocontrast_pil(image, cutoff, ignore):
 # cutoff is used.
 # C901 is "<functionname> is too complex"
 def _autocontrast(image, cutoff, ignore):  # noqa: C901
+    # pylint: disable=invalid-name
     if ignore is not None and not ia.is_iterable(ignore):
         ignore = [ignore]
 
@@ -1319,6 +1319,7 @@ class _IntensityChannelBasedApplier(object):
         return result
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.from_colorspace, self.to_colorspace]
 
 
@@ -1489,6 +1490,7 @@ class AllChannelsCLAHE(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.clip_limit, self.tile_grid_size_px,
                 self.tile_grid_size_px_min, self.per_channel]
 
@@ -1688,6 +1690,8 @@ class CLAHE(meta.Augmenter):
 
         def _augment_all_channels_clahe(images_normalized,
                                         random_state_derived):
+            # pylint: disable=protected-access
+            # TODO would .augment_batch() be sufficient here?
             batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
             return self.all_channel_clahe._augment_batch(
                 batch_imgs, random_state_derived, parents + [self],
@@ -1700,6 +1704,7 @@ class CLAHE(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         ac_clahe = self.all_channel_clahe
         intb_applier = self.intensity_channel_based_applier
         return [
@@ -1798,6 +1803,7 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
 
@@ -1902,7 +1908,7 @@ class HistogramEqualization(meta.Augmenter):
     HLS = color_lib.CSPACE_HLS
     Lab = color_lib.CSPACE_Lab
 
-    def __init__(self,  from_colorspace=color_lib.CSPACE_RGB,
+    def __init__(self, from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,
                  name=None, deterministic=False, random_state=None):
         super(HistogramEqualization, self).__init__(
@@ -1933,6 +1939,8 @@ class HistogramEqualization(meta.Augmenter):
 
         def _augment_all_channels_histogram_equalization(images_normalized,
                                                          random_state_derived):
+            # pylint: disable=protected-access
+            # TODO would .augment_batch() be sufficient here
             batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
             return self.all_channel_histogram_equalization._augment_batch(
                 batch_imgs, random_state_derived, parents + [self],
@@ -1945,26 +1953,6 @@ class HistogramEqualization(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         icb_applier = self.intensity_channel_based_applier
         return icb_applier.get_parameters()
-
-
-# TODO delete this or maybe move it somewhere else
-"""
-class _PreserveDtype(object):
-    def __init__(self, func, adjust_value_range=False):
-        self.func = func
-        self.adjust_value_range = adjust_value_range
-
-    def __call__(self, *args, **kwargs):
-        image = args[0]
-        input_dtype = image.dtype
-        image_aug = self.func(image, *args[1:], **kwargs)
-        if input_dtype.type == np.uint8:
-            if self.adjust_value_range:
-                image_aug = image_aug * 255
-            image_aug = meta.clip_augmented_image_(image_aug, 0, 255)
-        image_aug = meta.restore_augmented_image_dtype_(image_aug, input_dtype)
-
-        return image_aug
-"""

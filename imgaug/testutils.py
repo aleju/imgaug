@@ -43,6 +43,7 @@ class ArgCopyingMagicMock(mock.MagicMock):
 
 
 def assert_cbaois_equal(observed, expected, max_distance=1e-4):
+    # pylint: disable=unidiomatic-typecheck
     if isinstance(observed, list) or isinstance(expected, list):
         assert isinstance(observed, list)
         assert isinstance(expected, list)
@@ -95,31 +96,35 @@ def array_equal_lists(list1, list2):
     if len(list1) != len(list2):
         return False
 
-    for a, b in zip(list1, list2):
-        if not np.array_equal(a, b):
+    for arr1, arr2 in zip(list1, list2):
+        if not np.array_equal(arr1, arr2):
             return False
 
     return True
 
 
-def keypoints_equal(kps1, kps2, eps=0.001):
-    if isinstance(kps1, KeypointsOnImage):
-        assert isinstance(kps2, KeypointsOnImage)
-        kps1 = [kps1]
-        kps2 = [kps2]
+def keypoints_equal(kpsois1, kpsois2, eps=0.001):
+    if isinstance(kpsois1, KeypointsOnImage):
+        assert isinstance(kpsois2, KeypointsOnImage)
+        kpsois1 = [kpsois1]
+        kpsois2 = [kpsois2]
 
-    if len(kps1) != len(kps2):
+    if len(kpsois1) != len(kpsois2):
         return False
 
-    for i in sm.xrange(len(kps1)):
-        a = kps1[i].keypoints
-        b = kps2[i].keypoints
-        if len(a) != len(b):
+    for kpsoi1, kpsoi2 in zip(kpsois1, kpsois2):
+        kps1 = kpsoi1.keypoints
+        kps2 = kpsoi2.keypoints
+        if len(kps1) != len(kps2):
             return False
 
-        for j in sm.xrange(len(a)):
-            x_equal = float(b[j].x) - eps <= float(a[j].x) <= float(b[j].x) + eps
-            y_equal = float(b[j].y) - eps <= float(a[j].y) <= float(b[j].y) + eps
+        for kp1, kp2 in zip(kps1, kps2):
+            x_equal = (float(kp2.x) - eps
+                       <= float(kp1.x)
+                       <= float(kp2.x) + eps)
+            y_equal = (float(kp2.y) - eps
+                       <= float(kp1.y)
+                       <= float(kp2.y) + eps)
             if not x_equal or not y_equal:
                 return False
 

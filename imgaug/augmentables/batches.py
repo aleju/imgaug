@@ -1,13 +1,13 @@
+"""Classes representing batches of normalized or unnormalized data."""
 from __future__ import print_function, division, absolute_import
 
-import copy
 import collections
 
 import numpy as np
 
 from .. import imgaug as ia
 from . import normalization as nlib
-from . import utils as utils
+from . import utils
 
 DEFAULT = "DEFAULT"
 
@@ -327,26 +327,31 @@ class Batch(object):
     @property
     @ia.deprecated("Batch.images_unaug")
     def images(self):
+        """Get unaugmented images."""
         return self.images_unaug
 
     @property
     @ia.deprecated("Batch.heatmaps_unaug")
     def heatmaps(self):
+        """Get unaugmented heatmaps."""
         return self.heatmaps_unaug
 
     @property
     @ia.deprecated("Batch.segmentation_maps_unaug")
     def segmentation_maps(self):
+        """Get unaugmented segmentation maps."""
         return self.segmentation_maps_unaug
 
     @property
     @ia.deprecated("Batch.keypoints_unaug")
     def keypoints(self):
+        """Get unaugmented keypoints."""
         return self.keypoints_unaug
 
     @property
     @ia.deprecated("Batch.bounding_boxes_unaug")
     def bounding_boxes(self):
+        """Get unaugmented bounding boxes."""
         return self.bounding_boxes_unaug
 
     def get_column_names(self):
@@ -733,7 +738,7 @@ class BatchInAugmentation(object):
             rows = getattr(self, augm_name)
             if rows is not None:
                 if augm_name == "images" and ia.is_np_array(rows):
-                    rows = rows[indices]
+                    rows = rows[indices]  # pylint: disable=unsubscriptable-object
                 else:
                     rows = [rows[index] for index in indices]
 
@@ -802,14 +807,14 @@ class BatchInAugmentation(object):
                             + [image.dtype.name for image in column_sub])
 
                     if len(shapes) == 1 and len(dtypes) == 1:
-                        column[indices] = column_sub
+                        column[indices] = column_sub  # pylint: disable=unsupported-assignment-operation
                     else:
                         self.images = list(column)
                         for ith_index, index in enumerate(indices):
                             self.images[index] = column_sub[ith_index]
                 else:
                     for ith_index, index in enumerate(indices):
-                        column[index] = column_sub[ith_index]
+                        column[index] = column_sub[ith_index]  # pylint: disable=unsupported-assignment-operation
 
         return self
 
@@ -998,5 +1003,3 @@ class BatchInAugmentation(object):
                 setattr(batch, augm_name, utils.copy_augmentables(value))
 
         return batch
-
-

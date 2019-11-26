@@ -1,3 +1,4 @@
+"""Collection of basic functions used throughout imgaug."""
 from __future__ import print_function, division, absolute_import
 
 import math
@@ -7,6 +8,7 @@ import os
 import json
 import types
 import functools
+import collections
 
 import numpy as np
 import cv2
@@ -15,12 +17,6 @@ import six
 import six.moves as sm
 import skimage.draw
 import skimage.measure
-import collections
-from PIL import (
-    Image as PIL_Image,
-    ImageDraw as PIL_ImageDraw,
-    ImageFont as PIL_ImageFont
-)
 
 
 ALL = "ALL"
@@ -64,7 +60,6 @@ class DeprecationWarning(Warning):  # pylint: disable=redefined-builtin
     our own DeprecatedWarning here so that it is not silent by default.
 
     """
-    pass
 
 
 def warn(msg, category=UserWarning, stacklevel=2):
@@ -107,7 +102,7 @@ def warn_deprecated(msg, stacklevel=2):
     warn(msg, category=DeprecationWarning, stacklevel=stacklevel)
 
 
-class deprecated(object):
+class deprecated(object):  # pylint: disable=invalid-name
     """Decorator to mark deprecated functions with warning.
 
     Adapted from
@@ -159,6 +154,9 @@ class deprecated(object):
 
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
+            # getargpec() is deprecated
+            # pylint: disable=deprecated-method
+
             # TODO add class name if class method
             import inspect
             # arg_names = func.__code__.co_varnames
@@ -342,6 +340,7 @@ def is_single_bool(val):
         ``True`` if the variable is a ``bool``. Otherwise ``False``.
 
     """
+    # pylint: disable=unidiomatic-typecheck
     return type(val) == type(True)
 
 
@@ -455,6 +454,7 @@ def caller_name():
         The name of the caller as a string
 
     """
+    # pylint: disable=protected-access
     return sys._getframe(1).f_code.co_name
 
 
@@ -559,12 +559,12 @@ def new_random_state(seed=None, fully_random=False):
         Both are initialized with the provided seed.
 
     """
+    # pylint: disable=redefined-outer-name
     import imgaug.random
     if seed is None:
         if fully_random:
             return imgaug.random.RNG.create_fully_random()
-        else:
-            return imgaug.random.RNG.create_pseudo_random_()
+        return imgaug.random.RNG.create_pseudo_random_()
     return imgaug.random.RNG(seed)
 
 
@@ -919,6 +919,7 @@ def quokka_segmentation_map(size=None, extract=None):
         Segmentation map object.
 
     """
+    # pylint: disable=invalid-name
     # TODO get rid of this deferred import
     from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
@@ -1088,7 +1089,7 @@ def quokka_polygons(size=None, extract=None):
     for poly_json in json_dict["polygons"]:
         polygons.append(
             Polygon([(point["x"] - left, point["y"] - top)
-                    for point in poly_json["keypoints"]])
+                     for point in poly_json["keypoints"]])
         )
     if extract is not None:
         shape = (bb_extract.height, bb_extract.width, 3)
@@ -1133,11 +1134,12 @@ def angle_between_vectors(v1, v2):
     3.141592...
 
     """
-    l1 = np.linalg.norm(v1)
-    l2 = np.linalg.norm(v2)
-    v1_u = (v1 / l1) if l1 > 0 else np.float32(v1) * 0
-    v2_u = (v2 / l2) if l2 > 0 else np.float32(v2) * 0
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+    # pylint: disable=invalid-name
+    length1 = np.linalg.norm(v1)
+    length2 = np.linalg.norm(v2)
+    v1_unit = (v1 / length1) if length1 > 0 else np.float32(v1) * 0
+    v2_unit = (v2 / length2) if length2 > 0 else np.float32(v2) * 0
+    return np.arccos(np.clip(np.dot(v1_unit, v2_unit), -1.0, 1.0))
 
 
 # TODO is this used anywhere?
@@ -1190,24 +1192,24 @@ def compute_line_intersection_point(x1, y1, x2, y2, x3, y3, x4, y4):
         of them), the result is ``False``.
 
     """
-    def _make_line(p1, p2):
-        A = (p1[1] - p2[1])
-        B = (p2[0] - p1[0])
-        C = (p1[0]*p2[1] - p2[0]*p1[1])
-        return A, B, -C
+    # pylint: disable=invalid-name
+    def _make_line(point1, point2):
+        line_y = (point1[1] - point2[1])
+        line_x = (point2[0] - point1[0])
+        slope = (point1[0] * point2[1] - point2[0] * point1[1])
+        return line_y, line_x, -slope
 
-    L1 = _make_line((x1, y1), (x2, y2))
-    L2 = _make_line((x3, y3), (x4, y4))
+    line1 = _make_line((x1, y1), (x2, y2))
+    line2 = _make_line((x3, y3), (x4, y4))
 
-    D = L1[0] * L2[1] - L1[1] * L2[0]
-    Dx = L1[2] * L2[1] - L1[1] * L2[2]
-    Dy = L1[0] * L2[2] - L1[2] * L2[0]
+    D = line1[0] * line2[1] - line1[1] * line2[0]
+    Dx = line1[2] * line2[1] - line1[1] * line2[2]
+    Dy = line1[0] * line2[2] - line1[2] * line2[0]
     if D != 0:
         x = Dx / D
         y = Dy / D
         return x, y
-    else:
-        return False
+    return False
 
 
 # TODO replace by cv2.putText()?
@@ -1264,6 +1266,12 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
         Input image with text drawn on it.
 
     """
+    from PIL import (
+        Image as PIL_Image,
+        ImageDraw as PIL_ImageDraw,
+        ImageFont as PIL_ImageFont
+    )
+
     assert img.dtype.name in ["uint8", "float32"], (
         "Can currently draw text only on images of dtype 'uint8' or "
         "'float32'. Got dtype %s." % (img.dtype.name,))
@@ -1384,6 +1392,8 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     height ``16`` and width ``32``.
 
     """
+    # pylint: disable=too-many-statements
+
     # we just do nothing if the input contains zero images
     # one could also argue that an exception would be appropriate here
     if len(images) == 0:
@@ -1412,17 +1422,17 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     # but check beforehand if all images have the same shape, then just
     # convert to a single array and de-convert afterwards
     if isinstance(images, list):
-        nb_shapes = len(set([image.shape for image in images]))
+        nb_shapes = len({image.shape for image in images})
         if nb_shapes == 1:
             return list(imresize_many_images(
                 np.array(images), sizes=sizes, interpolation=interpolation))
-        else:
-            return [
-                imresize_many_images(
-                    image[np.newaxis, ...],
-                    sizes=sizes,
-                    interpolation=interpolation)[0, ...]
-                for image in images]
+
+        return [
+            imresize_many_images(
+                image[np.newaxis, ...],
+                sizes=sizes,
+                interpolation=interpolation)[0, ...]
+            for image in images]
 
     shape = images.shape
     assert images.ndim in [3, 4], "Expected array of shape (N, H, W, [C]), " \
@@ -1459,32 +1469,32 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         "Observed shapes were: %s." % (
             str([image.shape for image in images]),))
 
-    ip = interpolation
-    assert ip is None or ip in IMRESIZE_VALID_INTERPOLATIONS, (
+    inter = interpolation
+    assert inter is None or inter in IMRESIZE_VALID_INTERPOLATIONS, (
         "Expected 'interpolation' to be None or one of %s. Got %s." % (
             ", ".join(
                 [str(valid_ip) for valid_ip in IMRESIZE_VALID_INTERPOLATIONS]
             ),
-            str(ip)
+            str(inter)
         )
     )
-    if ip is None:
+    if inter is None:
         if height_target > height_image or width_target > width_image:
-            ip = cv2.INTER_AREA
+            inter = cv2.INTER_AREA
         else:
-            ip = cv2.INTER_LINEAR
-    elif ip in ["nearest", cv2.INTER_NEAREST]:
-        ip = cv2.INTER_NEAREST
-    elif ip in ["linear", cv2.INTER_LINEAR]:
-        ip = cv2.INTER_LINEAR
-    elif ip in ["area", cv2.INTER_AREA]:
-        ip = cv2.INTER_AREA
+            inter = cv2.INTER_LINEAR
+    elif inter in ["nearest", cv2.INTER_NEAREST]:
+        inter = cv2.INTER_NEAREST
+    elif inter in ["linear", cv2.INTER_LINEAR]:
+        inter = cv2.INTER_LINEAR
+    elif inter in ["area", cv2.INTER_AREA]:
+        inter = cv2.INTER_AREA
     else:  # if ip in ["cubic", cv2.INTER_CUBIC]:
-        ip = cv2.INTER_CUBIC
+        inter = cv2.INTER_CUBIC
 
     # TODO find more beautiful way to avoid circular imports
     from . import dtypes as iadt
-    if ip == cv2.INTER_NEAREST:
+    if inter == cv2.INTER_NEAREST:
         iadt.gate_dtypes(
             images,
             allowed=["bool",
@@ -1517,7 +1527,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
         if input_dtype_name == "bool":
             image = image.astype(np.uint8) * 255
-        elif input_dtype_name == "int8" and ip != cv2.INTER_NEAREST:
+        elif input_dtype_name == "int8" and inter != cv2.INTER_NEAREST:
             image = image.astype(np.int16)
         elif input_dtype_name == "float16":
             image = image.astype(np.float32)
@@ -1525,11 +1535,11 @@ def imresize_many_images(images, sizes=None, interpolation=None):
         if nb_channels is not None and nb_channels > 512:
             channels = [
                 cv2.resize(image[..., c], (width_target, height_target),
-                           interpolation=ip) for c in sm.xrange(nb_channels)]
+                           interpolation=inter) for c in sm.xrange(nb_channels)]
             result_img = np.stack(channels, axis=-1)
         else:
             result_img = cv2.resize(
-                image, (width_target, height_target), interpolation=ip)
+                image, (width_target, height_target), interpolation=inter)
 
         assert result_img.dtype.name == image.dtype.name, (
             "Expected cv2.resize() to keep the input dtype '%s', but got "
@@ -1546,7 +1556,7 @@ def imresize_many_images(images, sizes=None, interpolation=None):
 
         if input_dtype_name == "bool":
             result_img = result_img > 127
-        elif input_dtype_name == "int8" and ip != cv2.INTER_NEAREST:
+        elif input_dtype_name == "int8" and inter != cv2.INTER_NEAREST:
             # TODO somehow better avoid circular imports here
             from . import dtypes as iadt
             result_img = iadt.restore_dtypes_(result_img, np.int8)
@@ -1978,10 +1988,10 @@ def draw_grid(images, rows=None, cols=None):
         assert all([image.ndim == 3 for image in images]), (
             "Expected to get images with three dimensions. Got shapes %s." % (
                 ", ".join([str(image.shape) for image in images])))
-        assert len(set([image.dtype.name for image in images])) == 1, (
+        assert len({image.dtype.name for image in images}) == 1, (
             "Expected to get images with the same dtypes, got dtypes %s." % (
                 ", ".join([image.dtype.name for image in images])))
-        assert len(set([image.shape[-1] for image in images])) == 1, (
+        assert len({image.shape[-1] for image in images}) == 1, (
             "Expected to get images with the same number of channels, "
             "got shapes %s." % (
                 ", ".join([str(image.shape) for image in images])))
@@ -2003,8 +2013,8 @@ def draw_grid(images, rows=None, cols=None):
 
     width = cell_width * cols
     height = cell_height * rows
-    dt = images.dtype if is_np_array(images) else images[0].dtype
-    grid = np.zeros((height, width, nb_channels), dtype=dt)
+    dtype = images.dtype if is_np_array(images) else images[0].dtype
+    grid = np.zeros((height, width, nb_channels), dtype=dtype)
     cell_idx = 0
     for row_idx in sm.xrange(rows):
         for col_idx in sm.xrange(cols):
@@ -2282,7 +2292,6 @@ class HooksHeatmaps(HooksImages):
     not change in the future.
 
     """
-    pass
 
 
 class HooksKeypoints(HooksImages):
@@ -2294,7 +2303,6 @@ class HooksKeypoints(HooksImages):
     not change in the future.
 
     """
-    pass
 
 
 #####################################################################
@@ -2304,6 +2312,7 @@ class HooksKeypoints(HooksImages):
 
 def _mark_moved_class_or_function(class_name_old, module_name_new,
                                   class_name_new):
+    # pylint: disable=redefined-outer-name
     class_name_new = (class_name_new
                       if class_name_new is not None
                       else class_name_old)

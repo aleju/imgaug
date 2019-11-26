@@ -1,3 +1,4 @@
+"""Utility functions used in augmentable modules."""
 from __future__ import print_function, absolute_import, division
 import copy as copylib
 import numpy as np
@@ -22,18 +23,17 @@ def copy_augmentables(augmentables):
 def deepcopy_fast(obj):
     if obj is None:
         return None
-    elif ia.is_single_number(obj) or ia.is_string(obj):
+    if ia.is_single_number(obj) or ia.is_string(obj):
         return obj
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return [deepcopy_fast(el) for el in obj]
-    elif isinstance(obj, tuple):
+    if isinstance(obj, tuple):
         return tuple([deepcopy_fast(el) for el in obj])
-    elif ia.is_np_array(obj):
+    if ia.is_np_array(obj):
         return np.copy(obj)
-    elif hasattr(obj, "deepcopy"):
+    if hasattr(obj, "deepcopy"):
         return obj.deepcopy()
-    else:
-        return copylib.deepcopy(obj)
+    return copylib.deepcopy(obj)
 
 
 # TODO integrate into keypoints

@@ -30,9 +30,9 @@ from scipy import ndimage
 import cv2
 import six.moves as sm
 
+import imgaug as ia
 from . import meta
 from . import convolutional as iaa_convolutional
-import imgaug as ia
 from .. import parameters as iap
 from .. import dtypes as iadt
 
@@ -467,6 +467,7 @@ class GaussianBlur(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.sigma]
 
 
@@ -632,9 +633,9 @@ class AverageBlur(meta.Augmenter):
             )
 
         gen = enumerate(zip(images, samples[0], samples[1]))
-        for i, (image, kh, kw) in gen:
-            kernel_impossible = (kh == 0 or kw == 0)
-            kernel_does_nothing = (kh == 1 and kw == 1)
+        for i, (image, ksize_h, ksize_w) in gen:
+            kernel_impossible = (ksize_h == 0 or ksize_w == 0)
+            kernel_does_nothing = (ksize_h == 1 and ksize_w == 1)
             has_zero_sized_axes = (image.size == 0)
             if (not kernel_impossible and not kernel_does_nothing
                     and not has_zero_sized_axes):
@@ -645,7 +646,7 @@ class AverageBlur(meta.Augmenter):
                     image = image.astype(np.int16, copy=False)
 
                 if image.ndim == 2 or image.shape[-1] <= 512:
-                    image_aug = cv2.blur(image, (kh, kw))
+                    image_aug = cv2.blur(image, (ksize_h, ksize_w))
                     # cv2.blur() removes channel axis for single-channel images
                     if image_aug.ndim == 2:
                         image_aug = image_aug[..., np.newaxis]
@@ -653,7 +654,7 @@ class AverageBlur(meta.Augmenter):
                     # TODO this is quite inefficient
                     # handling more than 512 channels in cv2.blur()
                     channels = [
-                        cv2.blur(image[..., c], (kh, kw))
+                        cv2.blur(image[..., c], (ksize_h, ksize_w))
                         for c in sm.xrange(image.shape[-1])
                     ]
                     image_aug = np.stack(channels, axis=-1)
@@ -667,6 +668,7 @@ class AverageBlur(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.k]
 
 
@@ -758,12 +760,12 @@ class MedianBlur(meta.Augmenter):
         images = batch.images
         nb_images = len(images)
         samples = self.k.draw_samples((nb_images,), random_state=random_state)
-        for i, (image, ki) in enumerate(zip(images, samples)):
+        for i, (image, ksize) in enumerate(zip(images, samples)):
             has_zero_sized_axes = (image.size == 0)
-            if ki > 1 and not has_zero_sized_axes:
-                ki = ki + 1 if ki % 2 == 0 else ki
+            if ksize > 1 and not has_zero_sized_axes:
+                ksize = ksize + 1 if ksize % 2 == 0 else ksize
                 if image.ndim == 2 or image.shape[-1] <= 512:
-                    image_aug = cv2.medianBlur(image, ki)
+                    image_aug = cv2.medianBlur(image, ksize)
                     # cv2.medianBlur() removes channel axis for single-channel
                     # images
                     if image_aug.ndim == 2:
@@ -772,7 +774,7 @@ class MedianBlur(meta.Augmenter):
                     # TODO this is quite inefficient
                     # handling more than 512 channels in cv2.medainBlur()
                     channels = [
-                        cv2.medianBlur(image[..., c], ki)
+                        cv2.medianBlur(image[..., c], ksize)
                         for c in sm.xrange(image.shape[-1])
                     ]
                     image_aug = np.stack(channels, axis=-1)
@@ -781,6 +783,7 @@ class MedianBlur(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.k]
 
 
@@ -884,6 +887,7 @@ class BilateralBlur(meta.Augmenter):
 
     def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250),
                  name=None, deterministic=False, random_state=None):
+        # pylint: disable=invalid-name
         super(BilateralBlur, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
@@ -898,6 +902,7 @@ class BilateralBlur(meta.Augmenter):
             tuple_to_uniform=True, list_to_choice=True)
 
     def _augment_batch(self, batch, random_state, parents, hooks):
+        # pylint: disable=invalid-name
         if batch is None:
             return batch
 
@@ -926,6 +931,7 @@ class BilateralBlur(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.d, self.sigma_color, self.sigma_space]
 
 
@@ -1171,4 +1177,5 @@ class MeanShiftBlur(meta.Augmenter):
         )
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.spatial_window_radius, self.color_window_radius]

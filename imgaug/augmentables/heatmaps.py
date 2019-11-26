@@ -1,3 +1,4 @@
+"""Classes to represent heatmaps, i.e. float arrays of ``[0.0, 1.0]``."""
 from __future__ import print_function, division, absolute_import
 
 import numpy as np
@@ -119,9 +120,9 @@ class HeatmapsOnImage(IAugmentable):
         max_is_one = 1.0 - eps < self.max_value < 1.0 + eps
         if min_is_zero and max_is_one:
             return np.copy(arr)
-        else:
-            diff = self.max_value - self.min_value
-            return self.min_value + diff * arr
+
+        diff = self.max_value - self.min_value
+        return self.min_value + diff * arr
 
     # TODO
     # def find_global_maxima(self):
@@ -441,6 +442,7 @@ class HeatmapsOnImage(IAugmentable):
     @ia.deprecated(alt_func="HeatmapsOnImage.resize()",
                    comment="resize() has the exactly same interface.")
     def scale(self, *args, **kwargs):
+        """Resize the heatmap(s) array given a target size and interpolation."""
         return self.resize(*args, **kwargs)
 
     def resize(self, sizes, interpolation="cubic"):

@@ -24,8 +24,8 @@ from __future__ import print_function, division, absolute_import
 
 import numpy as np
 
-from . import meta, arithmetic, blur, contrast, color as colorlib
 import imgaug as ia
+from . import meta, arithmetic, blur, contrast, color as colorlib
 from .. import parameters as iap
 from .. import dtypes as iadt
 
@@ -182,6 +182,7 @@ class FastSnowyLandscape(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.lightness_threshold, self.lightness_multiplier]
 
 
@@ -363,6 +364,7 @@ class CloudLayer(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.intensity_mean,
                 self.alpha_min,
                 self.alpha_multiplier,
@@ -387,18 +389,19 @@ class CloudLayer(meta.Augmenter):
         alpha, intensity = self.generate_maps(image, random_state)
         alpha = alpha[..., np.newaxis]
         intensity = intensity[..., np.newaxis]
+
         if image.dtype.kind == "f":
             intensity = intensity.astype(image.dtype)
-            return (1 - alpha) * image + alpha * intensity,
-        else:
-            intensity = np.clip(intensity, 0, 255)
-            # TODO use blend_alpha_() here
-            return np.clip(
-                (1 - alpha) * image.astype(alpha.dtype)
-                + alpha * intensity.astype(alpha.dtype),
-                0,
-                255
-            ).astype(np.uint8)
+            return (1 - alpha) * image + alpha * intensity
+
+        intensity = np.clip(intensity, 0, 255)
+        # TODO use blend_alpha_() here
+        return np.clip(
+            (1 - alpha) * image.astype(alpha.dtype)
+            + alpha * intensity.astype(alpha.dtype),
+            0,
+            255
+        ).astype(np.uint8)
 
     def generate_maps(self, image, random_state):
         intensity_mean_sample = self.intensity_mean.draw_sample(random_state)
@@ -835,6 +838,7 @@ class SnowflakesLayer(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.density,
                 self.density_uniformity,
                 self.flake_size,

@@ -14,6 +14,7 @@ import imgaug.random as iarandom
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
 if sys.version_info[0] == 2:
+    # pylint: disable=redefined-builtin, import-error
     import cPickle as pickle
     from Queue import Empty as QueueEmpty, Full as QueueFull
     import socket
@@ -401,6 +402,7 @@ def _create_output_buffer_left(output_buffer_size):
 # This could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that
 # leads to pickle errors.
 def _Pool_initialize_worker(augseq, seed_start):
+    # pylint: disable=invalid-name, protected-access
     if seed_start is None:
         # pylint falsely thinks in older versions that
         # multiprocessing.current_process() was not callable, see
@@ -425,6 +427,7 @@ def _Pool_initialize_worker(augseq, seed_start):
 # This could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that
 # leads to pickle errors.
 def _Pool_worker(batch_idx, batch):
+    # pylint: disable=invalid-name, protected-access
     assert ia.is_single_integer(batch_idx), (
         "Expected `batch_idx` to be an integer. Got type %s instead." % (
             type(batch_idx)
@@ -452,6 +455,7 @@ def _Pool_worker(batch_idx, batch):
 # to pickle errors starworker is here necessary, because starmap does not exist
 # in 2.7
 def _Pool_starworker(inputs):
+    # pylint: disable=invalid-name
     return _Pool_worker(*inputs)
 
 
@@ -588,6 +592,7 @@ class BatchLoader(object):
     @classmethod
     def _load_batches(cls, load_batch_func, queue_internal, join_signal,
                       seedval):
+        # pylint: disable=broad-except
         if seedval is not None:
             random.seed(seedval)
             np.random.seed(seedval)
@@ -621,6 +626,7 @@ class BatchLoader(object):
 
     def terminate(self):
         """Stop all workers."""
+        # pylint: disable=protected-access
         if not self.join_signal.is_set():
             self.join_signal.set()
         # give minimal time to put generated batches in queue and gracefully
@@ -767,17 +773,16 @@ class BackgroundAugmenter(object):
         batch = pickle.loads(batch_str)
         if batch is not None:
             return batch
-        else:
-            self.nb_workers_finished += 1
-            if self.nb_workers_finished >= self.nb_workers:
-                try:
-                    # remove `None` from the source queue
-                    self.queue_source.get(timeout=0.001)
-                except QueueEmpty:
-                    pass
-                return None
-            else:
-                return self.get_batch()
+
+        self.nb_workers_finished += 1
+        if self.nb_workers_finished >= self.nb_workers:
+            try:
+                # remove `None` from the source queue
+                self.queue_source.get(timeout=0.001)
+            except QueueEmpty:
+                pass
+            return None
+        return self.get_batch()
 
     @classmethod
     def _augment_images_worker(cls, augseq, queue_source, queue_result,
@@ -826,6 +831,7 @@ class BackgroundAugmenter(object):
         This will also free their RAM.
 
         """
+        # pylint: disable=protected-access
         for worker in self.workers:
             if worker.is_alive():
                 worker.terminate()

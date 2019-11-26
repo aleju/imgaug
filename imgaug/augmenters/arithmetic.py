@@ -38,14 +38,14 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
-from PIL import Image as PIL_Image
-import imageio
 import tempfile
+
+import imageio
 import numpy as np
 import cv2
 
-from . import meta
 import imgaug as ia
+from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
 
@@ -117,6 +117,9 @@ def _add_scalar_to_uint8(image, value):
     # still faster than the simple numpy image+sample approach without LUT
     # (about 10% at 64x64 and about 2x at 224x224 -- maybe dependent on
     # installed BLAS libraries?)
+
+    # pylint: disable=no-else-return
+
     is_single_value = (
         ia.is_single_number(value)
         or ia.is_np_scalar(value)
@@ -404,6 +407,9 @@ def _multiply_scalar_to_uint8(image, multiplier):
     # else-block code (more than 10x speedup) and is still faster
     # than the simpler image*sample approach without LUT (1.5-3x
     # speedup, maybe dependent on installed BLAS libraries?)
+
+    # pylint: disable=no-else-return
+
     is_single_value = (
         ia.is_single_number(multiplier)
         or ia.is_np_scalar(multiplier)
@@ -565,7 +571,7 @@ def multiply_elementwise(image, multipliers):
         # TODO extend this with some shape checks
         image *= multipliers
         return image
-    elif image.dtype.name == "uint8":
+    if image.dtype.name == "uint8":
         return _multiply_elementwise_to_uint8(image, multipliers)
     return _multiply_elementwise_to_non_uint8(image, multipliers)
 
@@ -888,9 +894,9 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
             str(max_value), str(max_value_dt), image.dtype.name)
     )
     assert min_value < max_value, (
-            "Expected min_value to be below max_value, got %s "
-            "and %s" % (
-                str(min_value), str(max_value))
+        "Expected min_value to be below max_value, got %s "
+        "and %s" % (
+            str(min_value), str(max_value))
     )
 
     if min_value != min_value_dt or max_value != max_value_dt:
@@ -991,11 +997,11 @@ def _invert_int_(arr, min_value, max_value):
         arr_inv[~mask] = (-1) * arr_inv[~mask] - 1
 
         return arr_inv
-    else:
-        return _invert_by_distance(
-            np.clip(arr, min_value, max_value),
-            min_value, max_value
-        )
+
+    return _invert_by_distance(
+        np.clip(arr, min_value, max_value),
+        min_value, max_value
+    )
 
 
 def _invert_float(arr, min_value, max_value):
@@ -1141,6 +1147,8 @@ def compress_jpeg(image, compression):
         the result into a new array. Same shape and dtype as the input.
 
     """
+    import PIL.Image
+
     if image.size == 0:
         return np.copy(image)
 
@@ -1187,7 +1195,7 @@ def compress_jpeg(image, compression):
         )
     )
 
-    image_pil = PIL_Image.fromarray(image)
+    image_pil = PIL.Image.fromarray(image)
     with tempfile.NamedTemporaryFile(mode="wb+", suffix=".jpg") as f:
         image_pil.save(f, quality=quality)
 
@@ -1331,6 +1339,7 @@ class Add(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.value, self.per_channel]
 
 
@@ -1441,6 +1450,7 @@ class AddElementwise(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.value, self.per_channel]
 
 
@@ -1893,6 +1903,7 @@ class Multiply(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mul, self.per_channel]
 
 
@@ -2013,6 +2024,7 @@ class MultiplyElementwise(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mul, self.per_channel]
 
 
@@ -2090,10 +2102,10 @@ class Dropout(MultiplyElementwise):
     """
     def __init__(self, p=0, per_channel=False,
                  name=None, deterministic=False, random_state=None):
-        p2 = _handle_dropout_probability_param(p, "p")
+        p_param = _handle_dropout_probability_param(p, "p")
 
         super(Dropout, self).__init__(
-            p2,
+            p_param,
             per_channel=per_channel,
             name=name,
             deterministic=deterministic,
@@ -2103,7 +2115,7 @@ class Dropout(MultiplyElementwise):
 # TODO add list as an option
 def _handle_dropout_probability_param(p, name):
     if ia.is_single_number(p):
-        p2 = iap.Binomial(1 - p)
+        p_param = iap.Binomial(1 - p)
     elif isinstance(p, tuple):
         assert len(p) == 2, (
             "Expected `%s` to be given as a tuple containing exactly 2 values, "
@@ -2115,16 +2127,16 @@ def _handle_dropout_probability_param(p, name):
             "Expected `%s` given as tuple to only contain values in the "
             "interval [0.0, 1.0], got %.4f and %.4f." % (name, p[0], p[1]))
 
-        p2 = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+        p_param = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
     elif isinstance(p, iap.StochasticParameter):
-        p2 = p
+        p_param = p
     else:
         raise Exception(
             "Expected `%s` to be float or int or tuple (<number>, <number>) "
             "or StochasticParameter, got type '%s'." % (
                 name, type(p).__name__,))
 
-    return p2
+    return p_param
 
 
 # TODO add similar cutout augmenter
@@ -2273,19 +2285,21 @@ class CoarseDropout(MultiplyElementwise):
     def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
                  min_size=4,
                  name=None, deterministic=False, random_state=None):
-        p2 = _handle_dropout_probability_param(p, "p")
+        p_param = _handle_dropout_probability_param(p, "p")
 
         if size_px is not None:
-            p3 = iap.FromLowerResolution(other_param=p2, size_px=size_px,
-                                         min_size=min_size)
+            p_param = iap.FromLowerResolution(other_param=p_param,
+                                              size_px=size_px,
+                                              min_size=min_size)
         elif size_percent is not None:
-            p3 = iap.FromLowerResolution(other_param=p2, size_percent=size_percent,
-                                         min_size=min_size)
+            p_param = iap.FromLowerResolution(other_param=p_param,
+                                              size_percent=size_percent,
+                                              min_size=min_size)
         else:
             raise Exception("Either size_px or size_percent must be set.")
 
         super(CoarseDropout, self).__init__(
-            p3,
+            p_param,
             per_channel=per_channel,
             name=name,
             deterministic=deterministic,
@@ -2435,7 +2449,7 @@ class Dropout2d(meta.Augmenter):
                   else tuple(list(shape) + [1])
                   for shape in shapes]
         imagewise_channels = np.array([
-             shape[2] for shape in shapes
+            shape[2] for shape in shapes
         ], dtype=np.int32)
 
         # channelwise drop value over all images (float <0.5 = drop channel)
@@ -2470,6 +2484,7 @@ class Dropout2d(meta.Augmenter):
         return imagewise_channels_to_drop, all_dropped_ids
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p, self.nb_keep_channels]
 
 
@@ -2606,6 +2621,7 @@ class TotalDropout(meta.Augmenter):
         return drop_ids
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p]
 
 
@@ -2764,6 +2780,7 @@ class ReplaceElementwise(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mask, self.replacement, self.per_channel]
 
 
@@ -3648,6 +3665,7 @@ class Invert(meta.Augmenter):
         )
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p, self.per_channel, self.min_value, self.max_value,
                 self.threshold, self.invert_above_threshold]
 
@@ -3779,6 +3797,7 @@ def ContrastNormalization(alpha=1.0, per_channel=False,
     all channels.
 
     """
+    # pylint: disable=invalid-name
     # placed here to avoid cyclic dependency
     from . import contrast as contrast_lib
     return contrast_lib.LinearContrast(
@@ -3872,4 +3891,5 @@ class JpegCompression(meta.Augmenter):
         return batch
 
     def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.compression]
