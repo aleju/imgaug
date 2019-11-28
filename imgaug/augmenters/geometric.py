@@ -5379,6 +5379,13 @@ class WithPolarWarping(meta.Augmenter):
         """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
+    def _to_deterministic(self):
+        aug = self.copy()
+        aug.children = aug.children.to_deterministic()
+        aug.deterministic = True
+        aug.random_state = self.random_state.derive_rng_()
+        return aug
+
     def __str__(self):
         pattern = (
             "%s("
