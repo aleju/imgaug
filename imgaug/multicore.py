@@ -6,6 +6,7 @@ import threading
 import traceback
 import time
 import random
+import platform
 
 import numpy as np
 
@@ -22,6 +23,29 @@ if sys.version_info[0] == 2:
 elif sys.version_info[0] == 3:
     import pickle
     from queue import Empty as QueueEmpty, Full as QueueFull
+
+
+# Fix random hanging code in NixOS by switching to spawn method, see #414
+# We use a function call here so that we can test the code block.
+# We could also place this e.g. in Pool.pool, possibly combined with
+# get_start_method() to reset it again at the end, but for now we use this
+# simple approach.
+# TODO This is only a workaround and doesn't really fix the underlying issue.
+#      The cause of the underlying issue is currently unknown.
+# TODO this might break the semaphore used to prevent out of memory errors
+def _switch_to_spawn_if_nixos():
+    if "NixOS" in platform.version():
+        if sys.version_info[0] == 2:
+            ia.warn("Detected usage of python 2 in NixOS. This can "
+                    "potentially lead to endlessly hanging programs when "
+                    "also making use of multicore augmentation (aka "
+                    "background augmentation). Use python 3 to prevent "
+                    "this.")
+        else:
+            multiprocessing.set_start_method("spawn")
+
+
+_switch_to_spawn_if_nixos()
 
 
 class Pool(object):
