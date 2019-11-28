@@ -6901,3 +6901,21 @@ class TestKeepSizeByResize(unittest.TestCase):
             iaa.CropToFixedSize(10, 10, position="uniform", random_state=1)
         ], interpolation=["nearest", "linear"], random_state=1)
         runtest_pickleable_uint8_img(aug, iterations=5, shape=(15, 15, 1))
+
+    def test_get_children_lists(self):
+        child = iaa.Identity()
+        aug = iaa.KeepSizeByResize([child])
+        children_lsts = aug.get_children_lists()
+        assert len(children_lsts) == 1
+        assert len(children_lsts[0]) == 1
+        assert children_lsts[0][0] is child
+
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.KeepSizeByResize([child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.deterministic
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.children[0].deterministic

@@ -9391,6 +9391,17 @@ class TestWithPolarWarping(unittest.TestCase):
         aug = iaa.WithPolarWarping(children)
         assert aug.get_children_lists() == [children]
 
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.WithPolarWarping([child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.deterministic
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.children.deterministic
+        assert aug_det.children[0].deterministic
+
     def test___repr___and___str__(self):
         children = iaa.Sequential([iaa.Noop()])
         aug = iaa.WithPolarWarping(children, name="WithPolarWarpingTest")

@@ -1002,6 +1002,29 @@ class TestAlpha(unittest.TestCase):
         assert first in children_lsts[0]
         assert second == children_lsts[1]
 
+    def test_to_deterministic(self):
+        class _DummyAugmenter(iaa.Identity):
+            def __init__(self, *args, **kwargs):
+                super(_DummyAugmenter, self).__init__(*args, **kwargs)
+                self.deterministic_called = False
+
+            def _to_deterministic(self):
+                self.deterministic_called = True
+                return self
+
+        identity1 = _DummyAugmenter()
+        identity2 = _DummyAugmenter()
+        aug = iaa.Alpha(0.5, identity1, identity2)
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.deterministic
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.first.deterministic
+        assert aug_det.second.deterministic
+        assert identity1.deterministic_called is True
+        assert identity2.deterministic_called is True
+
     def test_pickleable(self):
         aug = iaa.Alpha(
             (0.1, 0.9),
