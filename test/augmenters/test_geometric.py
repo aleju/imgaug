@@ -54,11 +54,11 @@ class TestAffine(unittest.TestCase):
         params = aug.get_parameters()
 
         assert isinstance(params[0], iap.Deterministic)  # scale
-        assert isinstance(params[1], iap.Deterministic)  # translate
+        assert isinstance(params[1], tuple)  # translate
         assert isinstance(params[2], iap.Deterministic)  # rotate
         assert isinstance(params[3], iap.Deterministic)  # shear
         assert params[0].value == 1  # scale
-        assert params[1].value == 2  # translate
+        assert params[1][0].value == 2  # translate
         assert params[2].value == 3  # rotate
         assert params[3].value == 4  # shear
         assert params[4].value == 1  # order
@@ -81,20 +81,26 @@ class TestAffine___init__(unittest.TestCase):
     def test___init___translate_percent_is_stochastic_parameter(self):
         aug = iaa.Affine(translate_percent=iap.Uniform(0.7, 0.9))
 
-        assert isinstance(aug.translate, iap.Uniform)
-        assert isinstance(aug.translate.a, iap.Deterministic)
-        assert isinstance(aug.translate.b, iap.Deterministic)
-        assert 0.7 - 1e-8 < aug.translate.a.value < 0.7 + 1e-8
-        assert 0.9 - 1e-8 < aug.translate.b.value < 0.9 + 1e-8
+        assert isinstance(aug.translate, tuple)
+        assert isinstance(aug.translate[0], iap.Uniform)
+        assert isinstance(aug.translate[0].a, iap.Deterministic)
+        assert isinstance(aug.translate[0].b, iap.Deterministic)
+        assert 0.7 - 1e-8 < aug.translate[0].a.value < 0.7 + 1e-8
+        assert 0.9 - 1e-8 < aug.translate[0].b.value < 0.9 + 1e-8
+        assert aug.translate[1] is None
+        assert aug.translate[2] == "percent"
 
     def test___init___translate_px_is_stochastic_parameter(self):
         aug = iaa.Affine(translate_px=iap.DiscreteUniform(1, 10))
 
-        assert isinstance(aug.translate, iap.DiscreteUniform)
-        assert isinstance(aug.translate.a, iap.Deterministic)
-        assert isinstance(aug.translate.b, iap.Deterministic)
-        assert aug.translate.a.value == 1
-        assert aug.translate.b.value == 10
+        assert isinstance(aug.translate, tuple)
+        assert isinstance(aug.translate[0], iap.DiscreteUniform)
+        assert isinstance(aug.translate[0].a, iap.Deterministic)
+        assert isinstance(aug.translate[0].b, iap.Deterministic)
+        assert aug.translate[0].a.value == 1
+        assert aug.translate[0].b.value == 10
+        assert aug.translate[1] is None
+        assert aug.translate[2] == "px"
 
     def test___init___rotate_is_stochastic_parameter(self):
         aug = iaa.Affine(scale=1.0, translate_px=0, rotate=iap.Uniform(10, 20),
@@ -1346,6 +1352,23 @@ class TestAffine_translate(unittest.TestCase):
         self._test_cba_translate_percent(
             "augment_bounding_boxes", {"x": 0.3333, "y": 0},
             self.bbsoi, self.bbsoi_1px_right, True)
+
+    def test_keypoints_with_continuous_param_results_in_absolute_shift(self):
+        # This test ensures that t ~ uniform(a, b) results in a translation
+        # by t pixels and not t%
+        # see issue #505
+        # use iap.Uniform() here to ensure that is really a float value that
+        # is sampled and not accidentally DisceteUniform
+        aug = iaa.Affine(translate_px=iap.Uniform(10, 20))
+        kps = [ia.Keypoint(x=10, y=10)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(1000, 1000))
+
+        for _ in np.arange(5):
+            kpsoi_aug = aug.augment_keypoints(kpsoi)
+
+            kp_aug = kpsoi_aug.keypoints[0]
+            assert 10+10 <= kp_aug.x <= 10+20
+            assert 10+10 <= kp_aug.y <= 10+20
 
     @classmethod
     def _test_cba_translate_percent(cls, augf_name, percent, cbaoi,
@@ -3115,7 +3138,7 @@ class TestTranslateX(unittest.TestCase):
 
     def test_integrationtest_translate_px(self):
         image = np.full((50, 50), 255, dtype=np.uint8)
-        aug = iaa.TranslateX(percent=25, order=1, cval=0)
+        aug = iaa.TranslateX(px=25, order=1, cval=0)
 
         image_aug = aug(image=image)
 
@@ -3165,7 +3188,7 @@ class TestTranslateY(unittest.TestCase):
 
     def test_integrationtest_translate_px(self):
         image = np.full((50, 50), 255, dtype=np.uint8)
-        aug = iaa.TranslateY(percent=25, order=1, cval=0)
+        aug = iaa.TranslateY(px=25, order=1, cval=0)
 
         image_aug = aug(image=image)
 

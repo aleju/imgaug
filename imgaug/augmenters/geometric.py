@@ -586,10 +586,11 @@ def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
 
 
 class _AffineSamplingResult(object):
-    def __init__(self, scale=None, translate=None, rotate=None, shear=None,
-                 cval=None, mode=None, order=None):
+    def __init__(self, scale=None, translate=None, translate_mode="px",
+                 rotate=None, shear=None, cval=None, mode=None, order=None):
         self.scale = scale
         self.translate = translate
+        self.translate_mode = translate_mode
         self.rotate = rotate
         self.shear = shear
         self.cval = cval
@@ -613,11 +614,13 @@ class _AffineSamplingResult(object):
 
         translate_y = self.translate[1][idx]  # TODO same as above
         translate_x = self.translate[0][idx]
-        if ia.is_single_float(translate_y):
+        assert self.translate_mode in ["px", "percent"], (
+            "Expected 'px' or 'percent', got '%s'." % (self.translate_mode,))
+        if self.translate_mode == "percent":
             translate_y_px = translate_y * arr_shape[0]
         else:
             translate_y_px = (translate_y / image_shape[0]) * arr_shape[0]
-        if ia.is_single_float(translate_x):
+        if self.translate_mode == "percent":
             translate_x_px = translate_x * arr_shape[1]
         else:
             translate_x_px = (translate_x / image_shape[1]) * arr_shape[1]
@@ -656,6 +659,7 @@ class _AffineSamplingResult(object):
         return _AffineSamplingResult(
             scale=self.scale,
             translate=self.translate,
+            translate_mode=self.translate_mode,
             rotate=self.rotate,
             shear=self.shear,
             cval=self.cval,
@@ -1203,11 +1207,17 @@ class Affine(meta.Augmenter):
                         tuple_to_uniform=True, list_to_choice=True),
                     iap.handle_continuous_param(
                         y, "translate_percent['y']", value_range=None,
-                        tuple_to_uniform=True, list_to_choice=True)
+                        tuple_to_uniform=True, list_to_choice=True),
+                    "percent"
                 )
-            return iap.handle_continuous_param(
-                translate_percent, "translate_percent", value_range=None,
-                tuple_to_uniform=True, list_to_choice=True)
+            return (
+                iap.handle_continuous_param(
+                    translate_percent, "translate_percent",
+                    value_range=None, tuple_to_uniform=True,
+                    list_to_choice=True),
+                None,
+                "percent"
+            )
         else:
             # translate by pixels
             if isinstance(translate_px, dict):
@@ -1224,12 +1234,17 @@ class Affine(meta.Augmenter):
                     iap.handle_discrete_param(
                         y, "translate_px['y']", value_range=None,
                         tuple_to_uniform=True, list_to_choice=True,
-                        allow_floats=False)
+                        allow_floats=False),
+                    "px"
                 )
-            return iap.handle_discrete_param(
-                translate_px, "translate_px", value_range=None,
-                tuple_to_uniform=True, list_to_choice=True,
-                allow_floats=False)
+            return (
+                iap.handle_discrete_param(
+                    translate_px, "translate_px", value_range=None,
+                    tuple_to_uniform=True, list_to_choice=True,
+                    allow_floats=False),
+                None,
+                "px"
+            )
 
     @classmethod
     def _handle_shear_arg(cls, shear):
@@ -1412,7 +1427,7 @@ class Affine(meta.Augmenter):
                                                     random_state=rngs[2])
             scale_samples = (scale_samples, scale_samples)
 
-        if isinstance(self.translate, tuple):
+        if self.translate[1] is not None:
             translate_samples = (
                 self.translate[0].draw_samples((nb_samples,),
                                                random_state=rngs[3]),
@@ -1420,7 +1435,7 @@ class Affine(meta.Augmenter):
                                                random_state=rngs[4]),
             )
         else:
-            translate_samples = self.translate.draw_samples(
+            translate_samples = self.translate[0].draw_samples(
                 (nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
@@ -1451,6 +1466,7 @@ class Affine(meta.Augmenter):
         return _AffineSamplingResult(
             scale=scale_samples,
             translate=translate_samples,
+            translate_mode=self.translate[2],
             rotate=rotate_samples,
             shear=shear_samples,
             cval=cval_samples,
