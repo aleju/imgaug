@@ -682,7 +682,7 @@ class Affine(meta.Augmenter):
     Augmenter to apply affine transformations to images.
 
     This is mostly a wrapper around the corresponding classes and functions
-    in OpenCV and skimage..
+    in OpenCV and skimage.
 
     Affine transformations involve:
 
@@ -700,6 +700,18 @@ class Affine(meta.Augmenter):
     Some transformations involve interpolations between several pixels
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
+
+    .. note ::
+
+        While this augmenter supports segmentation maps and heatmaps that
+        have a different size than the corresponding image, it is strongly
+        recommended to use the same aspect ratios. E.g. for an image of
+        shape ``(200, 100, 3)``, good segmap/heatmap array shapes also follow
+        a ``2:1`` ratio and ideally are ``(200, 100, C)``, ``(100, 50, C)`` or
+        ``(50, 25, C)``. Otherwise, transformations involving rotations or
+        shearing will produce unaligned outputs.
+        For performance reasons, there is no explicit validation of whether
+        the aspect ratios are similar.
 
     dtype support::
 
