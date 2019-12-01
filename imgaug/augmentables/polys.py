@@ -1085,7 +1085,7 @@ class Polygon(object):
     def from_shapely(polygon_shapely, label=None):
         """Create a polygon from a ``Shapely`` ``Polygon``.
 
-        .. note ::
+        .. note::
 
             This will remove any holes in the shapely polygon.
 
@@ -1157,7 +1157,7 @@ class Polygon(object):
         randomly sampled on the exterior of one polygon should be close to the
         closest point on the exterior of the other polygon.
 
-        .. note ::
+        .. note::
 
             This method works in an approximative way. One can come up with
             polygons with fairly different shapes that will still be estimated
@@ -1555,12 +1555,12 @@ class PolygonsOnImage(IAugmentable):
     def clip_out_of_image(self):
         """Clip off all parts from all polygons that are outside of an image.
 
-        .. note ::
+        .. note::
 
             The result can contain fewer polygons than the input did. That
             happens when a polygon is fully outside of the image plane.
 
-        .. note ::
+        .. note::
 
             The result can also contain *more* polygons than the input
             did. That happens when distinct parts of a polygon are only
@@ -1653,13 +1653,13 @@ class PolygonsOnImage(IAugmentable):
     def fill_from_xy_array_(self, xy):
         """Modify the corner coordinates of all polygons in-place.
 
-        .. note ::
+        .. note::
 
             This currently expects that `xy` contains exactly as many
             coordinates as the polygons within this instance have corner
             points. Otherwise, an ``AssertionError`` will be raised.
 
-        .. warning ::
+        .. warning::
 
             This does not validate the new coordinates or repair the resulting
             polygons. If bad coordinates are provided, the result will be

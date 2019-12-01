@@ -211,7 +211,7 @@ class AveragePooling(_AbstractPoolingBase):
     to the kernel size, with optional upscaling afterwards. The upscaling
     is configured to create "pixelated"/"blocky" images by default.
 
-    .. note ::
+    .. note::
 
         During heatmap or segmentation map augmentation, the respective
         arrays are not changed, only the shapes of the underlying images
@@ -322,7 +322,7 @@ class MaxPooling(_AbstractPoolingBase):
 
     The maximum within each pixel window is always taken channelwise..
 
-    .. note ::
+    .. note::
 
         During heatmap or segmentation map augmentation, the respective
         arrays are not changed, only the shapes of the underlying images
@@ -435,7 +435,7 @@ class MinPooling(_AbstractPoolingBase):
 
     The minimum within each pixel window is always taken channelwise.
 
-    .. note ::
+    .. note::
 
         During heatmap or segmentation map augmentation, the respective
         arrays are not changed, only the shapes of the underlying images
@@ -548,7 +548,7 @@ class MedianPooling(_AbstractPoolingBase):
 
     The median within each pixel window is always taken channelwise.
 
-    .. note ::
+    .. note::
 
         During heatmap or segmentation map augmentation, the respective
         arrays are not changed, only the shapes of the underlying images

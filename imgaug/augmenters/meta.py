@@ -797,7 +797,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -873,7 +873,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -941,7 +941,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1046,7 +1046,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1291,7 +1291,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1333,7 +1333,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1376,7 +1376,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1442,7 +1442,7 @@ class Augmenter(object):
         """
         Augment polygons by applying keypoint augmentation to their vertices.
 
-        .. warning ::
+        .. warning::
 
             This method calls
             :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints` and
@@ -2432,7 +2432,7 @@ class Augmenter(object):
                            matching_tolerant=True, copy_determinism=False):
         """Copy the RNGs from a source augmenter sequence (in-place).
 
-        .. note ::
+        .. note::
 
             The source augmenters are not allowed to use the global RNG.
             Call
@@ -2933,7 +2933,7 @@ class Sequential(Augmenter, list):
     using the `random_order` parameter. This should often be activated as
     it greatly increases the space of possible augmentations.
 
-    .. note ::
+    .. note::
 
         You are *not* forced to use :class:`imgaug.augmenters.meta.Sequential`
         in order to use other augmenters. Each augmenter can be used on its
@@ -4808,10 +4808,37 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.RemoveCBAsByOutOfImageFraction(0.5)
+    >>> aug = iaa.Sequential([
+    >>>     iaa.Affine(translate_px={"x": (-100, 100)}),
+    >>>     iaa.RemoveCBAsByOutOfImageFraction(0.5)
+    >>> ])
 
-    Removes any coordinate-based augmentable (e.g. bounding boxes) which has
+    Translate all inputs by ``-100`` to ``100`` pixels on the x-axis, then
+    remove any coordinate-based augmentable (e.g. bounding boxes) which has
     at least ``50%`` of its area outside of the image plane.
+
+    >>> import imgaug as ia
+    >>> import imgaug.augmenters as iaa
+    >>> image = ia.quokka_square((100, 100))
+    >>> bb = ia.BoundingBox(x1=50-25, y1=0, x2=50+25, y2=100)
+    >>> bbsoi = ia.BoundingBoxesOnImage([bb], shape=image.shape)
+    >>> aug_without = iaa.Affine(translate_px={"x": 51})
+    >>> aug_with = iaa.Sequential([
+    >>>     iaa.Affine(translate_px={"x": 51}),
+    >>>     iaa.RemoveCBAsByOutOfImageFraction(0.5)
+    >>> ])
+    >>>
+    >>> image_without, bbsoi_without = aug_without(
+    >>>     image=image, bounding_boxes=bbsoi)
+    >>> image_with, bbsoi_with = aug_with(
+    >>>     image=image, bounding_boxes=bbsoi)
+    >>>
+    >>> assert len(bbsoi_without.bounding_boxes) == 1
+    >>> assert len(bbsoi_with.bounding_boxes) == 0
+
+    Create a bounding box on an example image, then translate the image so that
+    ``50%`` of the bounding box's area is outside of the image and compare
+    the effects and using ``RemoveCBAsByOutOfImageFraction`` with not using it.
 
     """
 
@@ -4877,10 +4904,14 @@ class ClipCBAsToImagePlanes(Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.ClipCBAsToImagePlanes()
+    >>> aug = iaa.Sequential([
+    >>>     iaa.Affine(translate_px={"x": (-100, 100)}),
+    >>>     iaa.ClipCBAsToImagePlanes()
+    >>> ])
 
-    Cut all coordinate-based augmentables (e.g. bounding boxes) down to areas
-    that are within the image planes of their corresponding images.
+    Translate input data on the x-axis by ``-100`` to ``100`` pixels,
+    then cut all coordinate-based augmentables (e.g. bounding boxes) down
+    to areas that are within the image planes of their corresponding images.
 
     """
 

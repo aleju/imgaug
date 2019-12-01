@@ -47,10 +47,10 @@ def main():
     urls_large = [
         "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/"
         "Physicist_Stephen_Hawking_in_Zero_Gravity_NASA.jpg/"
+        "1024px-Physicist_Stephen_Hawking_in_Zero_Gravity_NASA.jpg",
         "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/"
         "Barack_Obama_family_portrait_2011.jpg/1024px-Barack_Obama_"
         "family_portrait_2011.jpg",
-        "1024px-Physicist_Stephen_Hawking_in_Zero_Gravity_NASA.jpg",
         "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/"
         "Pahalgam_Valley.jpg/1024px-Pahalgam_Valley.jpg",
         "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/"

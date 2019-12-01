@@ -187,12 +187,12 @@ _CHANGE_COLORSPACE_INPLACE = {
 def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     """Change the colorspace of an image inplace.
 
-    .. note ::
+    .. note::
 
         All outputs of this function are `uint8`. For some colorspaces this
         may not be optimal.
 
-    .. note ::
+    .. note::
 
         Output grayscale images will still have three channels.
 
@@ -326,12 +326,12 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
 def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
     """Change the colorspaces of a batch of images inplace.
 
-    .. note ::
+    .. note::
 
         All outputs of this function are `uint8`. For some colorspaces this
         may not be optimal.
 
-    .. note ::
+    .. note::
 
         Output grayscale images will still have three channels.
 
@@ -1078,7 +1078,7 @@ class WithBrightnessChannels(meta.Augmenter):
     """Augmenter to apply child augmenters to brightness-related image channels.
 
     This augmenter first converts an image to a random colorspace containing a
-    brightness-related channel (e.g. `V` in `HSV`), then extracts that
+    brightness-related channel (e.g. ``V`` in ``HSV``), then extracts that
     channel and applies its child augmenters to this one channel. Afterwards,
     it reintegrates the augmented channel into the full image and converts
     back to the input colorspace.
@@ -1120,6 +1120,27 @@ class WithBrightnessChannels(meta.Augmenter):
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.WithBrightnessChannels(iaa.Add((-50, 50)))
+
+    Add ``-50`` to ``50`` to the brightness-related channels of each image.
+
+    >>> aug = iaa.WithBrightnessChannels(
+    >>>     iaa.Add((-50, 50)), to_colorspace=[iaa.CSPACE_Lab, iaa.CSPACE_HSV])
+
+    Add ``-50`` to ``50`` to the brightness-related channels of each image,
+    but pick those brightness-related channels only from ``Lab`` (``L``) and
+    ``HSV`` (``V``) colorspaces.
+
+    >>> aug = iaa.WithBrightnessChannels(
+    >>>     iaa.Add((-50, 50)), from_colorspace=iaa.CSPACE_BGR)
+
+    Add ``-50`` to ``50`` to the brightness-related channels of each image,
+    where the images are provided in ``BGR`` colorspace instead of the
+    standard ``RGB``.
 
     """
 
@@ -1262,8 +1283,8 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
 
     random_order : bool, optional
         Whether to apply the add and multiply operations in random
-        order (``True``). If ``False``, this will always first multiply and
-        then add.
+        order (``True``). If ``False``, this augmenter will always first
+        multiply and then add.
 
     name : None or str, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
@@ -1273,6 +1294,16 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplyAndAddToBrightness(mul=(0.5, 1.5), add=(-30, 30))
+
+    Convert each image to a colorspace with a brightness-related channel,
+    extract that channel, multiply it by a factor between ``0.5`` and ``1.5``,
+    add a value between ``-30`` and ``30`` and convert back to the original
+    colorspace.
 
     """
 
@@ -1356,6 +1387,15 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.MultiplyBrightness((0.5, 1.5))
+
+    Convert each image to a colorspace with a brightness-related channel,
+    extract that channel, multiply it by a factor between ``0.5`` and ``1.5``,
+    and convert back to the original colorspace.
+
     """
 
     def __init__(self, mul=(0.7, 1.3),
@@ -1410,6 +1450,15 @@ class AddToBrightness(MultiplyAndAddToBrightness):
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.AddToBrightness((-30, 30))
+
+    Convert each image to a colorspace with a brightness-related channel,
+    extract that channel, add between ``-30`` and ``30`` and convert back
+    to the original colorspace.
 
     """
 
@@ -1966,13 +2015,10 @@ class RemoveSaturation(MultiplySaturation):
 
     Examples
     --------
-    >>> import imgaug as ia
     >>> import imgaug.augmenters as iaa
-    >>> image = ia.quokka()  # uint8 (H, W, 3) RGB array
     >>> aug = iaa.RemoveSaturation()
-    >>> image_grayish = aug(image=image)
 
-    Create and apply an augmenter that decreases saturation by varying degrees.
+    Create an augmenter that decreases saturation by varying degrees.
 
     >>> aug = iaa.RemoveSaturation(1.0)
 
@@ -2499,7 +2545,7 @@ class ChangeColorspace(meta.Augmenter):
     """
     Augmenter to change the colorspace of images.
 
-    .. note ::
+    .. note::
 
         This augmenter is not tested. Some colorspaces might work, others
         might not.
@@ -2701,7 +2747,7 @@ class ChangeColorspace(meta.Augmenter):
 class Grayscale(ChangeColorspace):
     """Augmenter to convert images to their grayscale versions.
 
-    .. note ::
+    .. note::
 
         Number of output channels is still ``3``, i.e. this augmenter just
         "removes" color.
@@ -2875,19 +2921,17 @@ class GrayscaleColorwise(meta.Augmenter):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange(5*5*3).astype(np.uint8).reshape((5, 5, 3))
     >>> aug = iaa.GrayscaleColorwise()
-    >>> image_aug = aug(image=image)
 
-    Create a colorwise grayscaling augmenter and apply it to a ``5x5`` example
-    image.
+    Create a colorwise grayscaling augmenter.
 
     >>> aug = iaa.GrayscaleColorwise(nb_bins=200, smoothness=0.5)
 
     Create a colorwise grayscaling augmenter with a large number of bins
-    and stronger smoothing between them.
+    and stronger smoothing between them. The binning allows to have more
+    color-specific desaturation effects, while the smoothing ensures that
+    neighbouring colors are desaturated in similar ways.
 
     >>> aug = iaa.GrayscaleColorwise(nb_bins=2, smoothness=0.0)
 
@@ -3098,14 +3142,10 @@ class RemoveSaturationColorwise(GrayscaleColorwise):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange(5*5*3).astype(np.uint8).reshape((5, 5, 3))
-    >>> aug = iaa.GrayscaleColorwise()
-    >>> image_aug = aug(image=image)
+    >>> aug = iaa.RemoveSaturationColorwise()
 
     Create an augmenter that decreases the saturation on a per-color basis.
-    The augmenter is then applied to a ``5x5`` example image.
 
     """
 
@@ -3195,6 +3235,14 @@ class ChangeColorTemperature(meta.Augmenter):
             ``list`` per image.
             * If a ``StochasticParameter``, then a value will be sampled per
               image from that parameter.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ChangeColorTemperature((1100, 10000))
+
+    Create an augmenter that changes the color temperature of images to
+    a random value between ``1100`` and ``10000`` Kelvin.
 
     """
 
@@ -3521,7 +3569,7 @@ def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
     Code similar to https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_ml/
     py_kmeans/py_kmeans_opencv/py_kmeans_opencv.html
 
-    .. warning ::
+    .. warning::
 
         This function currently changes the RNG state of both OpenCV's
         internal RNG and imgaug's global RNG. This is necessary in order
@@ -3778,7 +3826,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
 
     This augmenter behaves for ``B`` similarly to
     ``UniformColorQuantization(2**B)``, but quantizes each bin with interval
-    ``(a, b)`` to ``a`` instead of ``a + (b-a)/2``.
+    ``(a, b)`` to ``a`` instead of to ``a + (b-a)/2``.
 
     This augmenter is comparable to :func:`PIL.ImageOps.posterize`.
 

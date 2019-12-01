@@ -1304,13 +1304,13 @@ class BoundingBoxesOnImage(IAugmentable):
     def fill_from_xyxy_array_(self, xyxy):
         """Modify the BB coordinates of this instance in-place.
 
-        .. note ::
+        .. note::
 
             This currently expects exactly one entry in `xyxy` per bounding
             in this instance. (I.e. two corner coordinates per instance.)
             Otherwise, an ``AssertionError`` will be raised.
 
-        .. note ::
+        .. note::
 
             This method will automatically flip x-coordinates if ``x1>x2``
             for a bounding box. (Analogous for y-coordinates.)

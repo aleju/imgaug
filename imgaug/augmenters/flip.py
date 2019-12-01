@@ -817,7 +817,7 @@ def VerticalFlip(*args, **kwargs):
 class Fliplr(meta.Augmenter):
     """Flip/mirror input images horizontally.
 
-    .. note ::
+    .. note::
 
         The default value for the probability is ``0.0``.
         So, to flip *all* input images use ``Fliplr(1.0)`` and *not* just
@@ -918,7 +918,7 @@ class Fliplr(meta.Augmenter):
 class Flipud(meta.Augmenter):
     """Flip/mirror input images vertically.
 
-    .. note ::
+    .. note::
 
         The default value for the probability is ``0.0``.
         So, to flip *all* input images use ``Flipud(1.0)`` and *not* just
