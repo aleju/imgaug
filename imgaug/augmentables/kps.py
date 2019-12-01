@@ -463,7 +463,7 @@ class Keypoint(object):
     def almost_equals(self, other, max_distance=1e-4):
         """Compare this and another KP's coordinates.
 
-        .. note ::
+        .. note::
 
             This method is currently identical to ``coords_almost_equals``.
             It exists for consistency with ``BoundingBox`` and ``Polygons``.
@@ -829,7 +829,7 @@ class KeypointsOnImage(IAugmentable):
     def fill_from_xy_array_(self, xy):
         """Modify the keypoint coordinates of this instance in-place.
 
-        .. note ::
+        .. note::
 
             This currently expects that `xy` contains exactly as many
             coordinates as there are keypoints in this instance. Otherwise,

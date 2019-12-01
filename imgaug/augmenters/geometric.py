@@ -1910,7 +1910,7 @@ class AffineCv2(meta.Augmenter):
     Augmenter to apply affine transformations to images using cv2 (i.e. opencv)
     backend.
 
-    .. warning ::
+    .. warning::
 
         This augmenter might be removed in the future as ``Affine``
         already offers a cv2 backend (use ``backend="cv2"``).
@@ -4765,7 +4765,7 @@ class WithPolarWarping(meta.Augmenter):
     This augmenter is limited to arrays with a height and/or width of
     ``32767`` or less.
 
-    .. warning ::
+    .. warning::
 
         When augmenting coordinates in polar representation, it is possible
         that these are shifted outside of the polar image, but are inside the
@@ -4775,7 +4775,7 @@ class WithPolarWarping(meta.Augmenter):
         not use very strong child transformations when also augmenting
         coordinate-based augmentables.
 
-    .. warning ::
+    .. warning::
 
         For bounding boxes, this augmenter suffers from the same problem as
         affine rotations applied to bounding boxes, i.e. the resulting
@@ -4786,7 +4786,7 @@ class WithPolarWarping(meta.Augmenter):
         It is recommended to use this augmenter with caution when augmenting
         bounding boxes.
 
-    .. warning ::
+    .. warning::
 
         For polygons, this augmenter should not be combined with
         augmenters that perform automatic polygon recovery for invalid

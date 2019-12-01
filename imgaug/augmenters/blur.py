@@ -284,13 +284,13 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
 
     This function is a thin wrapper around ``cv2.pyrMeanShiftFiltering``.
 
-    .. note ::
+    .. note::
 
         This function does *not* change the image's colorspace to ``RGB``
         before applying the mean shift filter. A non-``RGB`` colorspace will
         hence influence the results.
 
-    .. note ::
+    .. note::
 
         This function is quite slow.
 
@@ -1087,7 +1087,7 @@ class MeanShiftBlur(meta.Augmenter):
     This augmenter expects input images of shape ``(H,W)`` or ``(H,W,1)``
     or ``(H,W,3)``.
 
-    .. note ::
+    .. note::
 
         This augmenter is quite slow.
 

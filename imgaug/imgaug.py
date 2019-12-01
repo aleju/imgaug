@@ -469,7 +469,7 @@ def seed(entropy=None, seedval=None):
     may be dependent on the global RNG's state at the time of creating the
     child RNG.
 
-    .. note ::
+    .. note::
 
         This function is not yet marked as deprecated, but might be in the
         future. The preferred way to seed `imgaug` is via

@@ -1849,12 +1849,12 @@ class LineStringsOnImage(IAugmentable):
         """
         Clip off all parts of the line strings that are outside of an image.
 
-        .. note ::
+        .. note::
 
             The result can contain fewer line strings than the input did. That
             happens when a polygon is fully outside of the image plane.
 
-        .. note ::
+        .. note::
 
             The result can also contain *more* line strings than the input
             did. That happens when distinct parts of a line string are only
@@ -1922,7 +1922,7 @@ class LineStringsOnImage(IAugmentable):
     def fill_from_xy_array_(self, xy):
         """Modify the corner coordinates of all line strings in-place.
 
-        .. note ::
+        .. note::
 
             This currently expects that `xy` contains exactly as many
             coordinates as the line strings within this instance have corner

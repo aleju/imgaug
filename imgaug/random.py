@@ -193,7 +193,7 @@ class RNG(object):
     def use_state_of_(self, other):
         """Copy and use (in-place) the state of another RNG.
 
-        .. note ::
+        .. note::
 
             It is often sensible to first verify that neither this RNG nor
             `other` are identical to the global RNG.
@@ -345,7 +345,7 @@ class RNG(object):
 
         This advances the underlying generator's state.
 
-        .. note ::
+        .. note::
 
             This simply samples one or more random values. This means that
             a call of this method will not completely change the outputs of
@@ -456,7 +456,7 @@ class RNG(object):
                  endpoint=False):
         """Call numpy's ``integers()`` or ``randint()``.
 
-        .. note ::
+        .. note::
 
             Changed `dtype` argument default value from numpy's ``int64`` to
             ``int32``.
@@ -469,7 +469,7 @@ class RNG(object):
     def random(self, size, dtype="float32", out=None):
         """Call numpy's ``random()`` or ``random_sample()``.
 
-        .. note ::
+        .. note::
 
             Changed `dtype` argument default value from numpy's ``d`` to
             ``float32``.
@@ -613,7 +613,7 @@ class RNG(object):
                              out=None):
         """Call :func:`numpy.random.Generator.standard_exponential`.
 
-        .. note ::
+        .. note::
 
             Changed `dtype` argument default value from numpy's ``d`` to
             ``float32``.
@@ -634,7 +634,7 @@ class RNG(object):
     def standard_gamma(self, shape, size=None, dtype="float32", out=None):
         """Call :func:`numpy.random.Generator.standard_gamma`.
 
-        .. note ::
+        .. note::
 
             Changed `dtype` argument default value from numpy's ``d`` to
             ``float32``.
@@ -656,7 +656,7 @@ class RNG(object):
     def standard_normal(self, size=None, dtype="float32", out=None):
         """Call :func:`numpy.random.Generator.standard_normal`.
 
-        .. note ::
+        .. note::
 
             Changed `dtype` argument default value from numpy's ``d`` to
             ``float32``.
@@ -717,7 +717,7 @@ class RNG(object):
     def rand(self, *args):
         """Call :func:`numpy.random.RandomState.rand`.
 
-        .. warning ::
+        .. warning::
 
             This method is outdated in numpy. Use :func:`RNG.random` instead.
 
@@ -727,12 +727,12 @@ class RNG(object):
     def randint(self, low, high=None, size=None, dtype="int32"):
         """Call :func:`numpy.random.RandomState.randint`.
 
-        .. note ::
+        .. note::
 
             Changed `dtype` argument default value from numpy's ``I`` to
             ``int32``.
 
-        .. warning ::
+        .. warning::
 
             This method is outdated in numpy. Use :func:`RNG.integers`
             instead.
@@ -744,7 +744,7 @@ class RNG(object):
     def randn(self, *args):
         """Call :func:`numpy.random.RandomState.randn`.
 
-        .. warning ::
+        .. warning::
 
             This method is outdated in numpy. Use :func:`RNG.standard_normal`
             instead.
@@ -755,7 +755,7 @@ class RNG(object):
     def random_integers(self, low, high=None, size=None):
         """Call :func:`numpy.random.RandomState.random_integers`.
 
-        .. warning ::
+        .. warning::
 
             This method is outdated in numpy. Use :func:`RNG.integers`
             instead.
@@ -768,7 +768,7 @@ class RNG(object):
     def random_sample(self, size):
         """Call :func:`numpy.random.RandomState.random_sample`.
 
-        .. warning ::
+        .. warning::
 
             This method is outdated in numpy. Use :func:`RNG.uniform`
             instead.
@@ -779,7 +779,7 @@ class RNG(object):
     def tomaxint(self, size=None):
         """Call :func:`numpy.random.RandomState.tomaxint`.
 
-        .. warning ::
+        .. warning::
 
             This method is outdated in numpy. Use :func:`RNG.integers`
             instead.
@@ -1425,7 +1425,7 @@ def advance_generator_(generator):
 
     This advances the generator's state.
 
-    .. note ::
+    .. note::
 
         This simply samples one or more random values. This means that
         a call of this method will not completely change the outputs of

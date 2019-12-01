@@ -187,12 +187,12 @@ _CHANGE_COLORSPACE_INPLACE = {
 def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     """Change the colorspace of an image inplace.
 
-    .. note ::
+    .. note::
 
         All outputs of this function are `uint8`. For some colorspaces this
         may not be optimal.
 
-    .. note ::
+    .. note::
 
         Output grayscale images will still have three channels.
 
@@ -326,12 +326,12 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
 def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
     """Change the colorspaces of a batch of images inplace.
 
-    .. note ::
+    .. note::
 
         All outputs of this function are `uint8`. For some colorspaces this
         may not be optimal.
 
-    .. note ::
+    .. note::
 
         Output grayscale images will still have three channels.
 
@@ -2499,7 +2499,7 @@ class ChangeColorspace(meta.Augmenter):
     """
     Augmenter to change the colorspace of images.
 
-    .. note ::
+    .. note::
 
         This augmenter is not tested. Some colorspaces might work, others
         might not.
@@ -2701,7 +2701,7 @@ class ChangeColorspace(meta.Augmenter):
 class Grayscale(ChangeColorspace):
     """Augmenter to convert images to their grayscale versions.
 
-    .. note ::
+    .. note::
 
         Number of output channels is still ``3``, i.e. this augmenter just
         "removes" color.
@@ -3521,7 +3521,7 @@ def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
     Code similar to https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_ml/
     py_kmeans/py_kmeans_opencv/py_kmeans_opencv.html
 
-    .. warning ::
+    .. warning::
 
         This function currently changes the RNG state of both OpenCV's
         internal RNG and imgaug's global RNG. This is necessary in order

@@ -1012,7 +1012,7 @@ def compute_croppings_to_reach_powers_of(arr, height_base, width_base,
     explanation of how the required cropping amounts are distributed per
     image axis.
 
-    .. note ::
+    .. note::
 
         For axes where ``S == 0``, this function alwayws returns zeros as
         croppings.
@@ -1514,7 +1514,7 @@ class CropAndPad(meta.Augmenter):
 
     This augmenter will never crop images below a height or width of ``1``.
 
-    .. note ::
+    .. note::
 
         This augmenter automatically resizes images back to their original size
         after it has augmented them. To deactivate this, add the
@@ -3122,9 +3122,10 @@ class CropToFixedSize(meta.Augmenter):
 class CenterCropToFixedSize(CropToFixedSize):
     """Take a crop from the center of each image.
 
-    This is an alias for :class:`CropToFixedSize` with ``position="center"`.
+    This is an alias for :class:`imgaug.augmenters.size.CropToFixedSize` with
+    ``position="center"``.
 
-    .. note ::
+    .. note::
 
         If images already have a width and/or height below the provided
         width and/or height then this augmenter will do nothing for the
@@ -3173,7 +3174,7 @@ class CenterCropToFixedSize(CropToFixedSize):
 class CropToMultiplesOf(CropToFixedSize):
     """Crop images down until their height/width is a multiple of a value.
 
-    .. note ::
+    .. note::
 
         For a given axis size ``A`` and multiple ``M``, if ``A`` is in the
         interval ``[0 .. M]``, the axis will not be changed.
@@ -3473,7 +3474,7 @@ class CropToPowersOf(CropToFixedSize):
     provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
     interval ``[1 .. inf)``.
 
-    .. note ::
+    .. note::
 
         This augmenter does nothing for axes with size less than ``B^1 = B``.
         If you have images with ``S < B^1``, it is recommended

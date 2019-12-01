@@ -179,7 +179,7 @@ class SegmentationMapsOnImage(IAugmentable):
         Internally, this class may use a different dtype and shape to simplify
         computations.
 
-        .. note ::
+        .. note::
 
             The height and width may have changed compared to the original
             input due to e.g. pooling operations.

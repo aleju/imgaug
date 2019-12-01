@@ -2311,7 +2311,7 @@ class Dropout2d(meta.Augmenter):
 
     For image data, dropped channels will be filled with zeros.
 
-    .. note ::
+    .. note::
 
         This augmenter may also set the arrays of heatmaps and segmentation
         maps to zero and remove all coordinate-based data (e.g. it removes
@@ -2493,7 +2493,7 @@ class TotalDropout(meta.Augmenter):
 
     For image data, all components of dropped images will be filled with zeros.
 
-    .. note ::
+    .. note::
 
         This augmenter also sets the arrays of heatmaps and segmentation
         maps to zero and removes all coordinate-based data (e.g. it removes

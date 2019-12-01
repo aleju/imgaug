@@ -797,7 +797,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -873,7 +873,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -941,7 +941,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1046,7 +1046,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1291,7 +1291,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1333,7 +1333,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1376,7 +1376,7 @@ class Augmenter(object):
         Augmenter instance's ``random_state`` variable. The parameter
         ``random_state`` takes care of both of these.
 
-        .. note ::
+        .. note::
 
             This method exists mostly for legacy-support.
             Overwriting :func:`imgaug.augmenters.meta.Augmenter._augment_batch`
@@ -1442,7 +1442,7 @@ class Augmenter(object):
         """
         Augment polygons by applying keypoint augmentation to their vertices.
 
-        .. warning ::
+        .. warning::
 
             This method calls
             :func:`imgaug.augmenters.meta.Augmenter._augment_keypoints` and
@@ -2432,7 +2432,7 @@ class Augmenter(object):
                            matching_tolerant=True, copy_determinism=False):
         """Copy the RNGs from a source augmenter sequence (in-place).
 
-        .. note ::
+        .. note::
 
             The source augmenters are not allowed to use the global RNG.
             Call
@@ -2933,7 +2933,7 @@ class Sequential(Augmenter, list):
     using the `random_order` parameter. This should often be activated as
     it greatly increases the space of possible augmentations.
 
-    .. note ::
+    .. note::
 
         You are *not* forced to use :class:`imgaug.augmenters.meta.Sequential`
         in order to use other augmenters. Each augmenter can be used on its
