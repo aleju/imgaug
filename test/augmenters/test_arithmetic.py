@@ -1306,6 +1306,27 @@ class TestDropout(unittest.TestCase):
         assert nb_changed_aug >= int(nb_iterations * 0.95)
         assert nb_changed_aug_det == 0
 
+    def test_list_as_p(self):
+        aug = iaa.Dropout(p=[0.0, 0.5, 1.0])
+        images = np.ones((1, 20, 20, 1), dtype=np.uint8) * 255
+        nb_seen = [0, 0, 0, 0]
+        nb_iterations = 1000
+        for i in sm.xrange(nb_iterations):
+            observed_aug = aug.augment_images(images)
+
+            n_dropped = np.sum(observed_aug == 0)
+            p_observed = n_dropped / observed_aug.size
+            if 0 <= p_observed <= 0.01:
+                nb_seen[0] += 1
+            elif 0.5 - 0.05 <= p_observed <= 0.5 + 0.05:
+                nb_seen[1] += 1
+            elif 1.0-0.01 <= p_observed <= 1.0:
+                nb_seen[2] += 1
+            else:
+                nb_seen[3] += 1
+        assert np.allclose(nb_seen[0:3], nb_iterations*0.33, rtol=0, atol=75)
+        assert nb_seen[3] < 30
+
     def test_stochastic_parameter_as_p(self):
         # varying p by stochastic parameter
         aug = iaa.Dropout(p=iap.Binomial(1-iap.Choice([0.0, 0.5])))

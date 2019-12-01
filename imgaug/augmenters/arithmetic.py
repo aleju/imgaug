@@ -2050,6 +2050,8 @@ class Dropout(MultiplyElementwise):
             * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
               the interval ``[a, b]`` per image and be used as the pixel's
               dropout probability.
+            * If a list, then a value will be sampled from that list per
+              batch and used as the probability.
             * If a ``StochasticParameter``, then this parameter will be used to
               determine per pixel whether it should be *kept* (sampled value
               of ``>0.5``) or shouldn't be kept (sampled value of ``<=0.5``).
@@ -2112,7 +2114,6 @@ class Dropout(MultiplyElementwise):
             random_state=random_state)
 
 
-# TODO add list as an option
 def _handle_dropout_probability_param(p, name):
     if ia.is_single_number(p):
         p_param = iap.Binomial(1 - p)
@@ -2128,6 +2129,15 @@ def _handle_dropout_probability_param(p, name):
             "interval [0.0, 1.0], got %.4f and %.4f." % (name, p[0], p[1]))
 
         p_param = iap.Binomial(iap.Uniform(1 - p[1], 1 - p[0]))
+    elif ia.is_iterable(p):
+        assert all([ia.is_single_number(v) for v in p]), (
+            "Expected iterable parameter '%s' to only contain numbers, "
+            "got %s." % (name, [type(v) for v in p],))
+        assert all([0 <= p_i <= 1.0 for p_i in p]), (
+            "Expected iterable parameter '%s' to only contain probabilities "
+            "in the interval [0.0, 1.0], got values %s." % (
+                name, ", ".join(["%.4f" % (p_i,) for p_i in p])))
+        p_param = iap.Binomial(1 - iap.Choice(p))
     elif isinstance(p, iap.StochasticParameter):
         p_param = p
     else:
@@ -2177,6 +2187,8 @@ class CoarseDropout(MultiplyElementwise):
             * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
               the interval ``[a, b]`` per image and be used as the dropout
               probability.
+            * If a list, then a value will be sampled from that list per
+              batch and used as the probability.
             * If a ``StochasticParameter``, then this parameter will be used to
               determine per pixel whether it should be *kept* (sampled value
               of ``>0.5``) or shouldn't be kept (sampled value of ``<=0.5``).
@@ -2346,6 +2358,8 @@ class Dropout2d(meta.Augmenter):
             * If a tuple ``(a, b)``, then a value ``p`` will be sampled from
               the interval ``[a, b)`` per batch and be used as the dropout
               probability.
+            * If a list, then a value will be sampled from that list per
+              batch and used as the probability.
             * If a ``StochasticParameter``, then this parameter will be used to
               determine per channel whether it should be *kept* (sampled value
               of ``>=0.5``) or shouldn't be kept (sampled value of ``<0.5``).
@@ -2526,6 +2540,8 @@ class TotalDropout(meta.Augmenter):
             * If ``tuple`` ``(a, b)``: A value ``p`` will be sampled from
               the interval ``[a, b)`` per batch and be used as the dropout
               probability.
+            * If a list, then a value will be sampled from that list per
+              batch and used as the probability.
             * If ``StochasticParameter``: The parameter will be used to
               determine per image whether it should be *kept* (sampled value
               of ``>=0.5``) or shouldn't be kept (sampled value of ``<0.5``).
