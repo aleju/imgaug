@@ -2809,9 +2809,10 @@ class PadToFixedSize(meta.Augmenter):
 class CenterPadToFixedSize(PadToFixedSize):
     """Pad images equally on all sides up to given minimum heights/widths.
 
-    This is an alias for :class:`PadToFixedSize` with ``position="center"`.
-    It spreads the pad amounts equally over all image sides, while
-    :class:`PadToFixedSize` by defaults spreads them randomly.
+    This is an alias for :class:`imgaug.augmenters.size.PadToFixedSize`
+    with ``position="center"``. It spreads the pad amounts equally over
+    all image sides, while :class:`imgaug.augmenters.size.PadToFixedSize`
+    by defaults spreads them randomly.
 
     dtype support::
 
@@ -2842,13 +2843,12 @@ class CenterPadToFixedSize(PadToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange(7*7*3).astype(np.uint8).reshape((7, 7, 3))
-    >>> image_padded = iaa.CenterPadToFixedSize(height=8, width=9)(image=image)
+    >>> aug = iaa.CenterPadToFixedSize(height=20, width=30)
 
-    Pad an image up to ``8x9``, adding ``0`` rows at the top, ``1`` at the
-    bottom, ``1`` at the right and ``1`` at the left.
+    Create an augmenter that pads images up to ``20x30``, with the padded
+    rows added *equally* on the top and bottom (analogous for the padded
+    columns).
 
     """
 
@@ -3155,12 +3155,11 @@ class CenterCropToFixedSize(CropToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange(7*7*3).astype(np.uint8).reshape((7, 7, 3))
-    >>> crop = iaa.CenterCropToFixedSize(height=3, width=3)(image=image)
+    >>> crop = iaa.CenterCropToFixedSize(height=20, width=10)
 
-    Take a ``3x3`` sized crop from the center of an ``7x7`` sized image.
+    Create an augmenter that takes ``20x10`` sized crops from the center of
+    images.
 
     """
 
@@ -3211,14 +3210,13 @@ class CropToMultiplesOf(CropToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
     >>> aug = iaa.CropToMultiplesOf(height_multiple=10, width_multiple=6)
-    >>> crop = aug(image=image)
 
-    Crop ``image`` down to size ``10x12`` (multiples of ``10`` and ``6``).
-    The rows to be cropped will be randomly spread over the top and bottom
+    Create an augmenter that crops images to multiples of ``10`` along
+    the y-axis (i.e. 10, 20, 30, ...) and to multiples of ``6`` along the
+    x-axis (i.e. 6, 12, 18, ...).
+    The rows to be cropped will be spread *randomly* over the top and bottom
     sides (analogous for the left/right sides).
 
     """
@@ -3264,9 +3262,10 @@ class CropToMultiplesOf(CropToFixedSize):
 class CenterCropToMultiplesOf(CropToMultiplesOf):
     """Crop images equally on all sides until H/W are multiples of given values.
 
-    This is the same as :class`CropToMultiplesOf`, but uses
-    ``position="center"`` by default, which spreads the crop amounts equally
-    over all image sides, while :class`CropToMultiplesOf` by default spreads
+    This is the same as :class:`imgaug.augmenters.size.CropToMultiplesOf`,
+    but uses ``position="center"`` by default, which spreads the crop amounts
+    equally over all image sides, while
+    :class:`imgaug.augmenters.size.CropToMultiplesOf` by default spreads
     them randomly.
 
     dtype support::
@@ -3292,15 +3291,14 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*14)).astype(np.uint8).reshape((13, 14))
     >>> aug = iaa.CenterCropToMultiplesOf(height_multiple=10, width_multiple=6)
-    >>> crop = aug(image=image)
 
-    Crop ``image`` down to size ``10x12`` (multiples of ``10`` and ``6``).
-    The operation will remove ``2`` rows from the bottom, ``1`` from the top,
-    ``1`` column from the left and ``1`` from the right.
+    Create an augmenter that crops images to multiples of ``10`` along
+    the y-axis (i.e. 10, 20, 30, ...) and to multiples of ``6`` along the
+    x-axis (i.e. 6, 12, 18, ...).
+    The rows to be cropped will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3352,13 +3350,14 @@ class PadToMultiplesOf(PadToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*12)).astype(np.uint8).reshape((13, 12))
     >>> aug = iaa.PadToMultiplesOf(height_multiple=10, width_multiple=6)
-    >>> image_padded = aug(image=image)
 
-    Pad ``image`` to size ``20x12`` (multiples of ``10`` and ``6``).
+    Create an augmenter that pads images to multiples of ``10`` along
+    the y-axis (i.e. 10, 20, 30, ...) and to multiples of ``6`` along the
+    x-axis (i.e. 6, 12, 18, ...).
+    The rows to be padded will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3408,10 +3407,11 @@ class PadToMultiplesOf(PadToFixedSize):
 class CenterPadToMultiplesOf(PadToMultiplesOf):
     """Pad images equally on all sides until H/W are multiples of given values.
 
-    This is the same as :class`PadToMultiplesOf`, but uses
-    ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class`PadToMultiplesOf` by default spreads
-    them randomly.
+    This is the same as :class:`imgaug.augmenters.size.PadToMultiplesOf`, but
+    uses ``position="center"`` by default, which spreads the pad amounts
+    equally over all image sides, while
+    :class:`imgaug.augmenters.size.PadToMultiplesOf` by default spreads them
+    randomly.
 
     dtype support::
 
@@ -3442,15 +3442,14 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((13*14)).astype(np.uint8).reshape((13, 14))
     >>> aug = iaa.CenterPadToMultiplesOf(height_multiple=10, width_multiple=6)
-    >>> image_padded = aug(image=image)
 
-    Pad ``image`` to size ``20x12`` (multiples of ``10`` and ``6``).
-    The operation will pad ``4`` rows to the bottom, ``3`` to the top,
-    ``1`` column to the left and ``1`` to the right.
+    Create an augmenter that pads images to multiples of ``10`` along
+    the y-axis (i.e. 10, 20, 30, ...) and to multiples of ``6`` along the
+    x-axis (i.e. 6, 12, 18, ...).
+    The rows to be padded will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3513,13 +3512,14 @@ class CropToPowersOf(CropToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.CropToPowersOf(height_base=3, width_base=2)
-    >>> crop = aug(image=image)
 
-    Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
+    Create an augmenter that crops each image down to powers of ``3`` along
+    the y-axis (i.e. 3, 9, 27, ...) and powers of ``2`` along the x-axis (i.e.
+    2, 4, 8, 16, ...).
+    The rows to be cropped will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3564,10 +3564,11 @@ class CropToPowersOf(CropToFixedSize):
 class CenterCropToPowersOf(CropToPowersOf):
     """Crop images equally on all sides until H/W is a power of a base.
 
-    This is the same as :class`CropToPowersOf`, but uses
-    ``position="center"`` by default, which spreads the crop amounts equally
-    over all image sides, while :class`CropToPowersOf` by default spreads
-    them randomly.
+    This is the same as :class:`imgaug.augmenters.size.CropToPowersOf`, but
+    uses ``position="center"`` by default, which spreads the crop amounts
+    equally over all image sides, while
+    :class:`imgaug.augmenters.size.CropToPowersOf` by default spreads them
+    randomly.
 
     dtype support::
 
@@ -3592,15 +3593,14 @@ class CenterCropToPowersOf(CropToPowersOf):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.CenterCropToPowersOf(height_base=3, width_base=2)
-    >>> crop = aug(image=image)
+    >>> aug = iaa.CropToPowersOf(height_base=3, width_base=2)
 
-    Crop ``image`` down to size ``9x8`` (``3^2`` and ``2^3``).
-    This operation will remove ``2`` rows from the top, ``3`` from the bottom,
-    ``2`` columns from the left and ``2`` from the right.
+    Create an augmenter that crops each image down to powers of ``3`` along
+    the y-axis (i.e. 3, 9, 27, ...) and powers of ``2`` along the x-axis (i.e.
+    2, 4, 8, 16, ...).
+    The rows to be cropped will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3657,13 +3657,14 @@ class PadToPowersOf(PadToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
-    >>> aug = iaa.PadToPowersOf(height_base=5, width_base=2)
-    >>> image_padded = aug(image=image)
+    >>> aug = iaa.PadToPowersOf(height_base=3, width_base=2)
 
-    Pad ``image`` to size ``25x16`` (``5^2`` and ``2^3``).
+    Create an augmenter that pads each image to powers of ``3`` along the
+    y-axis (i.e. 3, 9, 27, ...) and powers of ``2`` along the x-axis (i.e. 2,
+    4, 8, 16, ...).
+    The rows to be padded will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3713,10 +3714,10 @@ class PadToPowersOf(PadToFixedSize):
 class CenterPadToPowersOf(PadToPowersOf):
     """Pad images equally on all sides until H/W is a power of a base.
 
-    This is the same as :class`PadToPowersOf`, but uses
+    This is the same as :class:`imgaug.augmenters.size.PadToPowersOf`, but uses
     ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class`PadToPowersOf` by default spreads
-    them randomly.
+    over all image sides, while :class:`imgaug.augmenters.size.PadToPowersOf`
+    by default spreads them randomly.
 
     dtype support::
 
@@ -3747,15 +3748,14 @@ class CenterPadToPowersOf(PadToPowersOf):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.CenterPadToPowersOf(height_base=5, width_base=2)
-    >>> image_padded = aug(image=image)
 
-    Pad ``image`` to size ``25x16`` (``5^2`` and ``2^3``).
-    This operation will add ``5`` rows at the top, ``6`` at the bottom,
-    ``2`` columns at the left and ``2`` at the right.
+    Create an augmenter that pads each image to powers of ``3`` along the
+    y-axis (i.e. 3, 9, 27, ...) and powers of ``2`` along the x-axis (i.e. 2,
+    4, 8, 16, ...).
+    The rows to be padded will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3802,13 +3802,14 @@ class CropToAspectRatio(CropToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.CropToAspectRatio(2.0)
-    >>> crop = aug(image=image)
 
-    Crop ``image`` down to size ``6x12``.
+    Create an augmenter that crops each image until its aspect ratio is as
+    close as possible to ``2.0`` (i.e. two times as many pixels along the
+    x-axis than the y-axis).
+    The rows to be cropped will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3855,9 +3856,10 @@ class CropToAspectRatio(CropToFixedSize):
 class CenterCropToAspectRatio(CropToAspectRatio):
     """Crop images equally on all sides until they reach an aspect ratio.
 
-    This is the same as :class`CropToAspectRatio`, but uses
-    ``position="center"`` by default, which spreads the crop amounts equally
-    over all image sides, while :class`CropToAspectRatio` by default spreads
+    This is the same as :class:`imgaug.augmenters.size.CropToAspectRatio`, but
+    uses ``position="center"`` by default, which spreads the crop amounts
+    equally over all image sides, while
+    :class:`imgaug.augmenters.size.CropToAspectRatio` by default spreads
     them randomly.
 
     dtype support::
@@ -3880,15 +3882,14 @@ class CenterCropToAspectRatio(CropToAspectRatio):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
-    >>> aug = iaa.CenterCropToAspectRatio(1.0)
-    >>> crop = aug(image=image)
+    >>> aug = iaa.CenterCropToAspectRatio(2.0)
 
-    Crop ``image`` down to size ``12x12``.
-    This operation will remove ``1`` row from the top and ``2`` rows from the
-    bottom.
+    Create an augmenter that crops each image until its aspect ratio is as
+    close as possible to ``2.0`` (i.e. two times as many pixels along the
+    x-axis than the y-axis).
+    The rows to be cropped will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3935,13 +3936,14 @@ class PadToAspectRatio(PadToFixedSize):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.PadToAspectRatio(2.0)
-    >>> crop = aug(image=image)
 
-    Pad ``image`` to size ``14x28``.
+    Create an augmenter that pads each image until its aspect ratio is as
+    close as possible to ``2.0`` (i.e. two times as many pixels along the
+    x-axis than the y-axis).
+    The rows to be padded will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -3988,10 +3990,11 @@ class PadToAspectRatio(PadToFixedSize):
 class CenterPadToAspectRatio(PadToAspectRatio):
     """Pad images equally on all sides until H/W matches an aspect ratio.
 
-    This is the same as :class`PadToAspectRatio`, but uses
-    ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class`PadToAspectRatio` by default spreads
-    them randomly.
+    This is the same as :class:`imgaug.augmenters.size.PadToAspectRatio`, but
+    uses ``position="center"`` by default, which spreads the pad amounts
+    equally over all image sides, while
+    :class:`imgaug.augmenters.size.PadToAspectRatio` by default spreads them
+    randomly.
 
     dtype support::
 
@@ -4019,14 +4022,14 @@ class CenterPadToAspectRatio(PadToAspectRatio):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
-    >>> aug = iaa.CenterPadToAspectRatio(1.0)
-    >>> image_padded = aug(image=image)
+    >>> aug = iaa.PadToAspectRatio(2.0)
 
-    Pad ``image`` to size ``15x12`. This operation will add ``1`` row at the
-    top and ``2`` rows at the bottom.
+    Create am augmenter that pads each image until its aspect ratio is as
+    close as possible to ``2.0`` (i.e. two times as many pixels along the
+    x-axis than the y-axis).
+    The rows to be padded will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -4041,7 +4044,8 @@ class CenterPadToAspectRatio(PadToAspectRatio):
 class CropToSquare(CropToAspectRatio):
     """Crop images until their width and height are identical.
 
-    This is identical to :class:`CropToAspectRatio` with ``aspect_ratio=1.0``.
+    This is identical to :class:`imgaug.augmenters.size.CropToAspectRatio`
+    with ``aspect_ratio=1.0``.
 
     Images with axis sizes of ``0`` will not be altered.
 
@@ -4065,13 +4069,13 @@ class CropToSquare(CropToAspectRatio):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.CropToSquare()
-    >>> crop = aug(image=image)
 
-    Crop ``image`` down to size ``12x12``.
+    Create an augmenter that crops each image until its square, i.e. height
+    and width match.
+    The rows to be cropped will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -4085,14 +4089,16 @@ class CropToSquare(CropToAspectRatio):
 class CenterCropToSquare(CropToSquare):
     """Crop images equally on all sides until their height/width are identical.
 
-    In contrast to :class:`CropToSquare`, this augmenter always tries to
-    spread the columns/rows to remove equally over both sides of the respective
-    axis to be cropped. :class:`CropToAspectRatio` by default spreads the
+    In contrast to :class:`imgaug.augmenters.size.CropToSquare`, this
+    augmenter always tries to spread the columns/rows to remove equally over
+    both sides of the respective axis to be cropped.
+    :class:`imgaug.augmenters.size.CropToAspectRatio` by default spreads the
     croppings randomly.
 
-    This augmenter is identical to :class:`CropToSquare` with
-    ``position="center"``, and thereby the same as :class:`CropToAspectRatio`
-    with ``aspect_ratio=1.0, position="center"``.
+    This augmenter is identical to :class:`imgaug.augmenters.size.CropToSquare`
+    with ``position="center"``, and thereby the same as
+    :class:`imgaug.augmenters.size.CropToAspectRatio` with
+    ``aspect_ratio=1.0, position="center"``.
 
     Images with axis sizes of ``0`` will not be altered.
 
@@ -4113,14 +4119,13 @@ class CenterCropToSquare(CropToSquare):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
     >>> aug = iaa.CenterCropToSquare()
-    >>> crop = aug(image=image)
 
-    Crop ``image`` down to size ``12x12`` by removing ``1`` row at the top
-    and ``2`` rows at the bottom.
+    Create an augmenter that crops each image until its square, i.e. height
+    and width match.
+    The rows to be cropped will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -4133,8 +4138,8 @@ class CenterCropToSquare(CropToSquare):
 class PadToSquare(PadToAspectRatio):
     """Pad images until their height and width are identical.
 
-    This augmenter is identical to :class:`PadToAspectRatio` with
-    ``aspect_ratio=1.0``.
+    This augmenter is identical to
+    :class:`imgaug.augmenters.size.PadToAspectRatio` with ``aspect_ratio=1.0``.
 
     dtype support::
 
@@ -4162,13 +4167,13 @@ class PadToSquare(PadToAspectRatio):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((14*12)).astype(np.uint8).reshape((14, 12))
     >>> aug = iaa.PadToSquare()
-    >>> crop = aug(image=image)
 
-    Pad ``image`` to size ``14x14``.
+    Create an augmenter that pads each image until its square, i.e. height
+    and width match.
+    The rows to be padded will be spread *randomly* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 
@@ -4183,11 +4188,12 @@ class PadToSquare(PadToAspectRatio):
 class CenterPadToSquare(PadToSquare):
     """Pad images equally on all sides until their height & width are identical.
 
-    This is the same as :class`PadToSquare`, but uses
+    This is the same as :class:`imgaug.augmenters.size.PadToSquare`, but uses
     ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class`PadToSquare` by default spreads
-    them randomly. This augmenter is thus also identical to
-    :class:`PadToAspectRatio` with ``aspect_ratio=1.0, position="center"``.
+    over all image sides, while :class:`imgaug.augmenters.size.PadToSquare`
+    by default spreads them randomly. This augmenter is thus also identical to
+    :class:`imgaug.augmenters.size.PadToAspectRatio` with
+    ``aspect_ratio=1.0, position="center"``.
 
     dtype support::
 
@@ -4212,14 +4218,13 @@ class CenterPadToSquare(PadToSquare):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange((15*12)).astype(np.uint8).reshape((15, 12))
     >>> aug = iaa.CenterPadToSquare()
-    >>> image_padded = aug(image=image)
 
-    Pad ``image`` to size ``15x12`. This operation will add ``1`` row at the
-    top and ``2`` rows at the bottom.
+    Create an augmenter that pads each image until its square, i.e. height
+    and width match.
+    The rows to be padded will be spread *equally* over the top and bottom
+    sides (analogous for the left/right sides).
 
     """
 

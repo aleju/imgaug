@@ -1519,6 +1519,16 @@ class ScaleX(Affine):
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ScaleX((0.5, 1.5))
+
+    Create an augmenter that scales images along the width to sizes between
+    ``50%`` and ``150%``. This does not change the image shape (i.e. height
+    and width), only the pixels within the image are remapped and potentially
+    new ones are filled in.
+
     """
 
     def __init__(self, scale, order=1, cval=0, mode="constant",
@@ -1582,6 +1592,19 @@ class TranslateX(Affine):
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.TranslateX(px=(-20, 20))
+
+    Create an augmenter that translates images along the x-axis by
+    ``-20`` to ``20`` pixels.
+
+    >>> aug = iaa.TranslateX(percent=(-0.1, 0.1))
+
+    Create an augmenter that translates images along the x-axis by
+    ``-10%`` to ``10%`` (relative to the x-axis size).
 
     """
 
@@ -1653,6 +1676,19 @@ class TranslateY(Affine):
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.TranslateY(px=(-20, 20))
+
+    Create an augmenter that translates images along the y-axis by
+    ``-20`` to ``20`` pixels.
+
+    >>> aug = iaa.TranslateY(percent=(-0.1, 0.1))
+
+    Create an augmenter that translates images along the y-axis by
+    ``-10%`` to ``10%`` (relative to the y-axis size).
+
     """
 
     def __init__(self, percent=None, px=None, order=1,
@@ -1716,6 +1752,16 @@ class ScaleY(Affine):
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ScaleY((0.5, 1.5))
+
+    Create an augmenter that scales images along the height to sizes between
+    ``50%`` and ``150%``. This does not change the image shape (i.e. height
+    and width), only the pixels within the image are remapped and potentially
+    new ones are filled in.
+
     """
 
     def __init__(self, scale, order=1, cval=0, mode="constant",
@@ -1772,6 +1818,14 @@ class Rotate(Affine):
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Rotate((-45, 45))
+
+    Create an augmenter that rotates images by a random value between ``-45``
+    and ``45`` degress.
 
     """
 
@@ -5409,8 +5463,8 @@ class Jigsaw(meta.Augmenter):
     .. warning::
 
         This augmenter currently only supports augmentation of images,
-        heatmaps, segmentation maps and keypoints. Other augmentables will
-        produce errors.
+        heatmaps, segmentation maps and keypoints. Other augmentables,
+        i.e. bounding boxes, polygons and line strings, will result in errors.
 
     dtype support::
 
@@ -5466,22 +5520,16 @@ class Jigsaw(meta.Augmenter):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.mod(np.arange(100*100*3), 255).astype(np.uint8)
-    >>> image = image.reshape((100, 100, 3))
-    >>> images = [image] * 16
     >>> aug = iaa.Jigsaw(nb_rows=10, nb_cols=10)
-    >>> images_aug = aug(images=images)
 
-    Create a jigsaw augmenter and use it to augment a simple example batch
-    of ``16`` ``100x100x3`` images. Each image will be split into ``10x10``
-    cells, i.e. each cell will be ``10px`` high and ``10px`` wide.
+    Create a jigsaw augmenter that splits images into ``10x10`` cells
+    and shifts them around by ``0`` to ``2`` steps (default setting).
 
     >>> aug = iaa.Jigsaw(nb_rows=(1, 4), nb_cols=(1, 4))
 
-    Create a jigsaw augmenter that splits each image into a maximum of ``4x4``
-    cells.
+    Create a jigsaw augmenter that splits each image into ``1`` to ``4``
+    cells along each axis.
 
     >>> aug = iaa.Jigsaw(nb_rows=10, nb_cols=10, max_steps=(1, 5))
 

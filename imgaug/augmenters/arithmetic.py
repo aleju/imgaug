@@ -3682,7 +3682,7 @@ class _InvertSamples(object):
 
 
 class Solarize(Invert):
-    """Invert all values above a threshold in images.
+    """Invert all pixel values above a threshold.
 
     This is the same as :class:`Invert`, but sets a default threshold around
     ``128`` (+/- 64, decided per image) and default `invert_above_threshold`
@@ -3722,6 +3722,15 @@ class Solarize(Invert):
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Solarize(0.5, threshold=(32, 128))
+
+    Invert the colors in ``50`` percent of all images for pixels with a
+    value between ``32`` and ``128`` or more. The threshold is sampled once
+    per image. The thresholding operation happens per channel.
 
     """
     def __init__(self, p, per_channel=False, min_value=None, max_value=None,

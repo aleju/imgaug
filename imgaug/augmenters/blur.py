@@ -1133,13 +1133,9 @@ class MeanShiftBlur(meta.Augmenter):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> import numpy as np
-    >>> image = np.arange(5*5*3).astype(np.uint8).reshape((5, 5, 3))
     >>> aug = iaa.MeanShiftBlur()
-    >>> image_aug = aug(image=image)
 
-    Create a mean shift blur augmenter and apply it to a simple ``5x5x3``
-    example image.
+    Create a mean shift blur augmenter.
 
     """
     def __init__(self, spatial_radius=(5.0, 40.0), color_radius=(5.0, 40.0),

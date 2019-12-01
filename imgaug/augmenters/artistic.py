@@ -300,11 +300,8 @@ class Cartoon(meta.Augmenter):
 
     Examples
     --------
-    >>> import numpy as np
     >>> import imgaug.augmenters as iaa
-    >>> image = np.arange(5*5*3).astype(np.uint8).reshape((5, 5, 3))
     >>> aug = iaa.Cartoon()
-    >>> image_aug = aug(image=image)
 
     Create an example image, then apply a cartoon filter to it.
 
