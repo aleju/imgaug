@@ -273,6 +273,16 @@ def test_pad():
                 assert np.all(arr_pad[0, :, :] == 0)
                 assert np.all(arr_pad[1:, :, :] == arr)
 
+        # multi-channel cval
+        value = int(center_value + 0.25 * max_value)
+        arr = np.full((3, 3, 5), value, dtype=dtype)
+        arr_pad = iaa.pad(arr, top=1, mode="constant", cval=(0, 1, 2, 3, 4))
+        assert np.all(arr_pad[0, :, 0] == 0)
+        assert np.all(arr_pad[0, :, 1] == 1)
+        assert np.all(arr_pad[0, :, 2] == 2)
+        assert np.all(arr_pad[0, :, 3] == 3)
+        assert np.all(arr_pad[0, :, 4] == 4)
+
     # -------
     # float
     # -------
@@ -398,6 +408,16 @@ def test_pad():
                 assert arr_pad.shape == (4, 3, nb_channels)
                 assert _allclose(arr_pad[0, :, :], 0)
                 assert _allclose(arr_pad[1:, :, :], arr)
+
+        # multi-channel cval
+        value = int(center_value + 0.25 * max_value)
+        arr = np.full((3, 3, 5), value, dtype=dtype)
+        arr_pad = iaa.pad(arr, top=1, mode="constant", cval=(0, 1, 2, 3, 4))
+        assert _allclose(arr_pad[0, :, 0], 0)
+        assert _allclose(arr_pad[0, :, 1], 1)
+        assert _allclose(arr_pad[0, :, 2], 2)
+        assert _allclose(arr_pad[0, :, 3], 3)
+        assert _allclose(arr_pad[0, :, 4], 4)
 
     # -------
     # bool
