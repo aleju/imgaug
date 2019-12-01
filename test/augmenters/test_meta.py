@@ -5571,6 +5571,16 @@ class TestSequential(unittest.TestCase):
         aug = iaa.Sequential(flip)
         assert aug.get_children_lists() == [aug]
 
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.Sequential([child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.deterministic
+        assert aug_det[0].deterministic
+
     def test___str___and___repr__(self):
         flip = iaa.Fliplr(1.0)
         aug = iaa.Sequential(flip, random_order=True)
@@ -6312,6 +6322,24 @@ class TestSomeOf(unittest.TestCase):
             random_state=5)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
+    def test_get_children_lists(self):
+        child = iaa.Identity()
+        aug = iaa.SomeOf(1, [child])
+        children_lsts = aug.get_children_lists()
+        assert len(children_lsts) == 1
+        assert len(children_lsts[0]) == 1
+        assert children_lsts[0][0] is child
+
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.SomeOf(1, [child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.deterministic
+        assert aug_det[0].deterministic
+
 
 class TestOneOf(unittest.TestCase):
     def setUp(self):
@@ -6367,6 +6395,24 @@ class TestOneOf(unittest.TestCase):
              iaa.Multiply(2.0, random_state=3)],
             random_state=4)
         runtest_pickleable_uint8_img(aug, iterations=5)
+
+    def test_get_children_lists(self):
+        child = iaa.Identity()
+        aug = iaa.OneOf([child])
+        children_lsts = aug.get_children_lists()
+        assert len(children_lsts) == 1
+        assert len(children_lsts[0]) == 1
+        assert children_lsts[0][0] is child
+
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.OneOf([child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.deterministic
+        assert aug_det[0].deterministic
 
 
 class TestSometimes(unittest.TestCase):
@@ -7393,6 +7439,37 @@ class TestSometimes(unittest.TestCase):
                             random_state=1)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
+    def test_get_children_lists(self):
+        child = iaa.Identity()
+        aug = iaa.Sometimes(0.5, [child])
+        children_lsts = aug.get_children_lists()
+        assert len(children_lsts) == 1
+        assert len(children_lsts[0]) == 1
+        assert children_lsts[0][0] is child
+
+    def test_get_children_lists_both_lists(self):
+        child = iaa.Identity()
+        child2 = iaa.Identity()
+        aug = iaa.Sometimes(0.5, [child], [child2])
+        children_lsts = aug.get_children_lists()
+        assert len(children_lsts) == 2
+        assert len(children_lsts[0]) == 1
+        assert len(children_lsts[1]) == 1
+        assert children_lsts[0][0] is child
+        assert children_lsts[1][0] is child2
+
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        child2 = iaa.Identity()
+        aug = iaa.Sometimes(0.5, [child], [child2])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.deterministic
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.then_list[0].deterministic
+        assert aug_det.else_list[0].deterministic
+
 
 class TestWithChannels(unittest.TestCase):
     def setUp(self):
@@ -7752,6 +7829,16 @@ class TestWithChannels(unittest.TestCase):
         children = iaa.Sequential([iaa.Add(10)])
         aug = iaa.WithChannels(1, children)
         assert aug.get_children_lists() == [children]
+
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.WithChannels(1, [child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.deterministic
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.children[0].deterministic
 
     def test___repr___and___str__(self):
         children = iaa.Sequential([iaa.Identity()])

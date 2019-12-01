@@ -590,6 +590,25 @@ class TestWithBrightnessChannels(unittest.TestCase):
             "deterministic=False)" % (str(expected_child),))
         assert aug_str == expected
 
+    def test_get_children_lists(self):
+        child = iaa.Identity()
+        aug = iaa.WithBrightnessChannels([child])
+        children_lsts = aug.get_children_lists()
+        assert len(children_lsts) == 1
+        assert len(children_lsts[0]) == 1
+        assert children_lsts[0][0] is child
+
+    def test_to_deterministic(self):
+        child = iaa.Identity()
+        aug = iaa.WithBrightnessChannels([child])
+
+        aug_det = aug.to_deterministic()
+
+        assert aug_det.deterministic
+        assert aug_det.random_state is not aug.random_state
+        assert aug_det.children.deterministic
+        assert aug_det.children[0].deterministic
+
     def test_pickleable(self):
         aug = iaa.WithBrightnessChannels(iaa.Add((0, 50), random_state=1),
                                          random_state=2)
