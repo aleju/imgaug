@@ -3915,11 +3915,11 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
     random amount of bits to remove, sampled uniformly from the discrete
     interval ``[1..8]``.
 
-    >>> aug = iaa.UniformColorQuantizationToNBits(nb_bits=(4, 8))
+    >>> aug = iaa.UniformColorQuantizationToNBits(nb_bits=(2, 8))
 
     Create an augmenter that quantizes images by removing ``8-B`` rightmost
     bits from each component, where ``B`` is uniformly sampled from the
-    discrete interval ``[4..8]``.
+    discrete interval ``[2..8]``.
 
     >>> aug = iaa.UniformColorQuantizationToNBits(
     >>>     from_colorspace=iaa.CSPACE_BGR,
