@@ -5097,12 +5097,18 @@ class TestPiecewiseAffine(unittest.TestCase):
     # cval
     # -----
     def test_cval_is_zero(self):
-        # cval as deterministic
-        img = np.zeros((50, 50, 3), dtype=np.uint8) + 255
-        aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10,
-                                  mode="constant", cval=0)
-        observed = aug.augment_image(img)
-        assert np.sum([observed[:, :] == [0, 0, 0]]) > 0
+        # since scikit-image 0.16.2 and scipy 1.4.0(!), this test requires
+        # several iterations to find one image that required filling with cval
+        found = False
+        for _ in np.arange(50):
+            img = np.zeros((16, 16, 3), dtype=np.uint8) + 255
+            aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10,
+                                      mode="constant", cval=0)
+            observed = aug.augment_image(img)
+            if np.sum([observed[:, :] == [0, 0, 0]]) > 0:
+                found = True
+                break
+        assert found
 
     def test_cval_should_be_ignored_by_heatmaps(self):
         # cval as deterministic, heatmaps should always use cval=0
