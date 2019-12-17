@@ -25,27 +25,59 @@ elif sys.version_info[0] == 3:
     from queue import Empty as QueueEmpty, Full as QueueFull
 
 
-# Fix random hanging code in NixOS by switching to spawn method, see #414
-# We use a function call here so that we can test the code block.
-# We could also place this e.g. in Pool.pool, possibly combined with
-# get_start_method() to reset it again at the end, but for now we use this
-# simple approach.
-# TODO This is only a workaround and doesn't really fix the underlying issue.
-#      The cause of the underlying issue is currently unknown.
-# TODO this might break the semaphore used to prevent out of memory errors
-def _switch_to_spawn_if_nixos():
+_CONTEXT = None
+
+
+def _get_context_method():
+    vinfo = sys.version_info
+
+    # get_context() is only supported in 3.5 and later (same for
+    # set_start_method)
+    get_context_unsupported = (
+        vinfo[0] == 2
+        or (vinfo[0] == 3 and vinfo[1] <= 3))
+
+    method = None
+    # Fix random hanging code in NixOS by switching to spawn method,
+    # see issue #414
+    # TODO This is only a workaround and doesn't really fix the underlying
+    #      issue. The cause of the underlying issue is currently unknown.
+    # TODO this might break the semaphore used to prevent out of memory
+    #      errors
     if "NixOS" in platform.version():
-        if sys.version_info[0] == 2:
-            ia.warn("Detected usage of python 2 in NixOS. This can "
-                    "potentially lead to endlessly hanging programs when "
-                    "also making use of multicore augmentation (aka "
-                    "background augmentation). Use python 3 to prevent "
-                    "this.")
-        else:
-            multiprocessing.set_start_method("spawn")
+        method = "spawn"
+        if get_context_unsupported:
+            ia.warn("Detected usage of imgaug.multicore in python <=3.4 "
+                    "and NixOS. This is known to sometimes cause endlessly "
+                    "hanging programs when also making use of multicore "
+                    "augmentation (aka background augmentation). Use "
+                    "python 3.5 or later to prevent this.")
+
+    if get_context_unsupported:
+        return False
+    return method
 
 
-_switch_to_spawn_if_nixos()
+def _set_context(method):
+    # method=False indicates that multiprocessing module (i.e. no context)
+    # should be used, e.g. because get_context() is not supported
+    globals()["_CONTEXT"] = (
+        multiprocessing if method is False
+        else multiprocessing.get_context(method))
+
+
+def _reset_context():
+    globals()["_CONTEXT"] = None
+
+
+def _autoset_context():
+    _set_context(_get_context_method())
+
+
+def _get_context():
+    if _CONTEXT is None:
+        _autoset_context()
+    return _CONTEXT
 
 
 class Pool(object):
@@ -160,7 +192,7 @@ class Pool(object):
                 # TODO make this also check if os.cpu_count exists as a
                 #      fallback
                 try:
-                    processes = multiprocessing.cpu_count() - abs(processes)
+                    processes = _get_context().cpu_count() - abs(processes)
                     processes = max(processes, 1)
                 except (ImportError, NotImplementedError):
                     ia.warn(
@@ -170,7 +202,7 @@ class Pool(object):
                         "intended.")
                     processes = None
 
-            self._pool = multiprocessing.Pool(
+            self._pool = _get_context().Pool(
                 processes,
                 initializer=_Pool_initialize_worker,
                 initargs=(self.augseq, self.seed),
@@ -419,7 +451,7 @@ def _create_output_buffer_left(output_buffer_size):
         assert output_buffer_size > 0, (
             "Expected buffer size to be greater than zero, but got size %d "
             "instead." % (output_buffer_size,))
-        output_buffer_left = multiprocessing.Semaphore(output_buffer_size)
+        output_buffer_left = _get_context().Semaphore(output_buffer_size)
     return output_buffer_left
 
 
@@ -432,7 +464,7 @@ def _Pool_initialize_worker(augseq, seed_start):
         # multiprocessing.current_process() was not callable, see
         # https://github.com/PyCQA/pylint/issues/1699
         # pylint: disable=not-callable
-        process_name = multiprocessing.current_process().name
+        process_name = _get_context().current_process().name
         # pylint: enable=not-callable
 
         # time_ns() exists only in 3.7+
