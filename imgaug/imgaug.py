@@ -8,7 +8,11 @@ import os
 import json
 import types
 import functools
-import collections
+# collections.abc exists since 3.3 and is expected to be used for 3.8+
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import numpy as np
 import cv2
@@ -305,7 +309,7 @@ def is_iterable(val):
         ``True`` if the variable is an iterable. Otherwise ``False``.
 
     """
-    return isinstance(val, collections.Iterable)
+    return isinstance(val, Iterable)
 
 
 # TODO convert to is_single_string() or rename is_single_integer/float/number()
