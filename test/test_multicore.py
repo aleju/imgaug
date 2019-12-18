@@ -29,50 +29,62 @@ from imgaug import augmenters as iaa
 from imgaug.testutils import reseed
 from imgaug.augmentables.batches import Batch, UnnormalizedBatch
 
-IS_PY2 = (sys.version_info[0] == 2)
-IS_PY3 = (sys.version_info[0] == 3)
+IS_SUPPORTING_CONTEXTS = (sys.version_info[0] == 3
+                          and sys.version_info[1] >= 4)
 
 
-class Test__switch_to_spawn_if_nixos(unittest.TestCase):
-    @unittest.skipIf(IS_PY3,
-                     "Behaviour happens only in python 2")
+class clean_context():
+    def __init__(self):
+        self.old_context = None
+
+    def __enter__(self):
+        self.old_context = multicore._CONTEXT
+        multicore._CONTEXT = None
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        multicore._CONTEXT = self.old_context
+
+
+class Test__get_context(unittest.TestCase):
+    @unittest.skipUnless(not IS_SUPPORTING_CONTEXTS,
+                         "Behaviour happens only in python <=3.3")
     @mock.patch("imgaug.imgaug.warn")
     @mock.patch("platform.version")
     def test_mocked_nixos_python2(self, mock_version, mock_warn):
-        from imgaug.multicore import _switch_to_spawn_if_nixos
-        mock_version.return_value = "NixOS"
-        _switch_to_spawn_if_nixos()
-        assert mock_warn.call_count == 1
+        with clean_context():
+            mock_version.return_value = "NixOS"
+            _ctx = multicore._get_context()
+            assert mock_warn.call_count == 1
 
-    @unittest.skipIf(IS_PY2,
-                     "Behaviour is only supported in python 3+")
+    @unittest.skipUnless(IS_SUPPORTING_CONTEXTS,
+                         "Behaviour is only supported in python 3.4+")
     @mock.patch("platform.version")
-    @mock.patch("multiprocessing.set_start_method")
-    def test_mocked_nixos_python3(self, mock_ssm, mock_version):
-        from imgaug.multicore import _switch_to_spawn_if_nixos
-        mock_version.return_value = "NixOS"
-        _switch_to_spawn_if_nixos()
-        mock_ssm.assert_called_once_with("spawn")
+    @mock.patch("multiprocessing.get_context")
+    def test_mocked_nixos_python3(self, mock_gctx, mock_version):
+        with clean_context():
+            mock_version.return_value = "NixOS"
+            _ctx = multicore._get_context()
+            mock_gctx.assert_called_once_with("spawn")
 
-    @unittest.skipIf(IS_PY2,
-                     "set_start_method() is only supported in python 3+ "
-                     "and hence cannot be mocked here.")
+    @unittest.skipUnless(not IS_SUPPORTING_CONTEXTS,
+                         "Behaviour happens only in python <=3.3")
     @mock.patch("platform.version")
-    @mock.patch("multiprocessing.set_start_method")
-    def test_mocked_no_nixos_python2(self, mock_ssm, mock_version):
-        from imgaug.multicore import _switch_to_spawn_if_nixos
-        mock_version.return_value = "foo"
-        _switch_to_spawn_if_nixos()
-        assert mock_ssm.call_count == 0
+    def test_mocked_no_nixos_python2(self, mock_version):
+        with clean_context():
+            mock_version.return_value = "Ubuntu"
+            ctx = multicore._get_context()
+            assert ctx is multiprocessing
 
-    @unittest.skipIf(IS_PY3,
-                     "python 2 uses a simpler and more crude test than "
-                     "python 3")
+    @unittest.skipUnless(IS_SUPPORTING_CONTEXTS,
+                         "Behaviour is only supported in python 3.4+")
+    @mock.patch("multiprocessing.get_context")
     @mock.patch("platform.version")
-    def test_mocked_no_nixos_python3(self, mock_version):
-        from imgaug.multicore import _switch_to_spawn_if_nixos
-        mock_version.return_value = "foo"
-        _switch_to_spawn_if_nixos()
+    def test_mocked_no_nixos_python3(self, mock_version, mock_gctx):
+        with clean_context():
+            mock_version.return_value = "Ubuntu"
+            _ctx = multicore._get_context()
+            assert mock_gctx.call_count == 1
+            assert mock_gctx.call_args_list[0][0][0] is None
 
 
 class TestPool(unittest.TestCase):
@@ -90,7 +102,12 @@ class TestPool(unittest.TestCase):
         mock_Pool.return_value = mock_Pool
         mock_Pool.close.return_value = None
         mock_Pool.join.return_value = None
-        with mock.patch("multiprocessing.Pool", mock_Pool):
+
+        # We cannot just mock multiprocessing.Pool here, because of using
+        # a custom context. We would have to mock each possible context's
+        # Pool() method or overwrite here the Pool() method of the
+        # actually used context.
+        with mock.patch("multiprocessing.pool.Pool", mock_Pool):
             augseq = iaa.Identity()
             pool_config = multicore.Pool(
                 augseq, processes=1, maxtasksperchild=4, seed=123)
@@ -100,18 +117,37 @@ class TestPool(unittest.TestCase):
         assert mock_Pool.call_count == 1
         assert mock_Pool.close.call_count == 1
         assert mock_Pool.join.call_count == 1
+        # see
+        # https://github.com/
+        # python/cpython/blob/master/Lib/multiprocessing/context.py
+        # L119 (method Pool()) for an example of how Pool() is called
+        # internally.
         assert mock_Pool.call_args[0][0] == 1  # processes
-        assert mock_Pool.call_args[1]["initargs"] == (augseq, 123)
-        assert mock_Pool.call_args[1]["maxtasksperchild"] == 4
+        assert mock_Pool.call_args[0][1] is multicore._Pool_initialize_worker
+        assert mock_Pool.call_args[0][2] == (augseq, 123)
+        assert mock_Pool.call_args[0][3] == 4
 
     def test_processes(self):
         augseq = iaa.Identity()
         mock_Pool = mock.MagicMock()
         mock_cpu_count = mock.Mock()
 
-        patch_pool = mock.patch("multiprocessing.Pool", mock_Pool)
-        patch_cpu_count = mock.patch("multiprocessing.cpu_count",
-                                     mock_cpu_count)
+        # We cannot just mock multiprocessing.Pool here, because of using
+        # a custom context. We would have to mock each possible context's
+        # Pool() method or overwrite here the Pool() method of the
+        # actually used context.
+        patch_pool = mock.patch("multiprocessing.pool.Pool", mock_Pool)
+
+        # Multiprocessing seems to always access os.cpu_count to get the
+        # current count of cpu cores.
+        # See
+        # https://github.com/
+        # python/cpython/blob/master/Lib/multiprocessing/context.py
+        # L41.
+        fname = ("os.cpu_count" if IS_SUPPORTING_CONTEXTS
+                 else "multiprocessing.cpu_count")
+        patch_cpu_count = mock.patch(fname, mock_cpu_count)
+
         with patch_pool, patch_cpu_count:
             # (cpu cores available, processes requested, processes started)
             combos = [
@@ -142,13 +178,15 @@ class TestPool(unittest.TestCase):
                     else:
                         assert mock_Pool.call_args[0][0] == expected
 
-    @mock.patch("multiprocessing.cpu_count")
-    @mock.patch("multiprocessing.Pool")
-    def test_cpu_count_does_not_exist(self, mock_pool, mock_cpu_count):
+    @mock.patch("multiprocessing.pool.Pool")
+    def test_cpu_count_does_not_exist(self, mock_pool):
         def _side_effect():
             raise NotImplementedError
 
+        old_method = multicore._get_context().cpu_count
+        mock_cpu_count = mock.Mock()
         mock_cpu_count.side_effect = _side_effect
+        multicore._get_context().cpu_count = mock_cpu_count
 
         augseq = iaa.Identity()
         with warnings.catch_warnings(record=True) as caught_warnings:
@@ -167,6 +205,8 @@ class TestPool(unittest.TestCase):
             "Could not find method multiprocessing.cpu_count(). "
             in str(caught_warnings[-1].message))
 
+        multicore._get_context().cpu_count = old_method
+
     @classmethod
     def _test_map_batches_both(cls, call_async):
         for clazz in [Batch, UnnormalizedBatch]:
@@ -175,7 +215,7 @@ class TestPool(unittest.TestCase):
             mock_Pool.return_value = mock_Pool
             mock_Pool.map.return_value = "X"
             mock_Pool.map_async.return_value = "X"
-            with mock.patch("multiprocessing.Pool", mock_Pool):
+            with mock.patch("multiprocessing.pool.Pool", mock_Pool):
                 batches = [
                     clazz(images=[ia.quokka()]),
                     clazz(images=[ia.quokka()+1])
@@ -237,7 +277,7 @@ class TestPool(unittest.TestCase):
             mock_Pool.return_value = mock_Pool
             mock_Pool.imap.return_value = batches
             mock_Pool.imap_unordered.return_value = batches
-            with mock.patch("multiprocessing.Pool", mock_Pool):
+            with mock.patch("multiprocessing.pool.Pool", mock_Pool):
                 with multicore.Pool(augseq, processes=1) as pool:
                     gen = _generate_batches()
                     if call_unordered:
@@ -579,7 +619,7 @@ class TestPool(unittest.TestCase):
             pool.close()
             pool.join()
 
-    @mock.patch("multiprocessing.Pool")
+    @mock.patch("multiprocessing.pool.Pool")
     def test_join_via_mock(self, mock_pool):
         # According to codecov, the join() does not get beyond its initial
         # if statement in the test_join() test, even though it should be.
@@ -774,24 +814,30 @@ class Test_Pool_starworker(unittest.TestCase):
         mock_worker.assert_called_once_with(batch_idx, batch)
 
 
+# ---------
+# loading function used in TestBatchLoader.test_basic_functionality()
+# it is outside of the test as putting it inside of it caused issues
+# with spawn mode not being able to pickle this method, see issue #414.
+def _batch_loader_load_func():
+    for _ in sm.xrange(20):
+        yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
+# ---------
+
+
 # Note that BatchLoader is deprecated
 class TestBatchLoader(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_basic_functionality(self):
-        def _load_func():
-            for _ in sm.xrange(20):
-                yield ia.Batch(images=np.zeros((2, 4, 4, 3), dtype=np.uint8))
-
         warnings.simplefilter("always")
         with warnings.catch_warnings(record=True) as caught_warnings:
             for nb_workers in [1, 2]:
                 # repeat these tests many times to catch rarer race conditions
                 for _ in sm.xrange(5):
                     loader = multicore.BatchLoader(
-                        _load_func, queue_size=2, nb_workers=nb_workers,
-                        threaded=True)
+                        _batch_loader_load_func, queue_size=2,
+                        nb_workers=nb_workers, threaded=True)
                     loaded = []
                     counter = 0
                     while ((not loader.all_finished()
@@ -810,14 +856,14 @@ class TestBatchLoader(unittest.TestCase):
                         )
 
                     loader = multicore.BatchLoader(
-                        _load_func, queue_size=200, nb_workers=nb_workers,
-                        threaded=True)
+                        _batch_loader_load_func, queue_size=200,
+                        nb_workers=nb_workers, threaded=True)
                     loader.terminate()
                     assert loader.all_finished()
 
                     loader = multicore.BatchLoader(
-                        _load_func, queue_size=2, nb_workers=nb_workers,
-                        threaded=False)
+                        _batch_loader_load_func, queue_size=2,
+                        nb_workers=nb_workers, threaded=False)
                     loaded = []
                     counter = 0
                     while ((not loader.all_finished()
@@ -836,8 +882,8 @@ class TestBatchLoader(unittest.TestCase):
                         )
 
                     loader = multicore.BatchLoader(
-                        _load_func, queue_size=200, nb_workers=nb_workers,
-                        threaded=False)
+                        _batch_loader_load_func, queue_size=200,
+                        nb_workers=nb_workers, threaded=False)
                     loader.terminate()
                     assert loader.all_finished()
 

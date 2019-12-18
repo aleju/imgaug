@@ -2579,6 +2579,34 @@ class TestAugmenter(unittest.TestCase):
         assert aug2.__repr__() == aug2.__str__() == expected2
 
 
+# -----------
+# lambda functions used in Test TestAugmenter_augment_batches
+# in test method test_augment_batches_with_many_different_augmenters().
+# They are here instead of in the test method, because otherwise there were
+# issues with spawn mode not being able to pickle functions,
+# see issue #414.
+
+def _augment_batches__lambda_func_images(
+        images, random_state, parents, hooks):
+    return images
+
+
+def _augment_batches__lambda_func_keypoints(
+        keypoints_on_images, random_state, parents, hooks):
+    return keypoints_on_images
+
+
+def _augment_batches__assertlambda_func_images(
+        images, random_state, parents, hooks):
+    return True
+
+
+def _augment_batches__assertlambda_func_keypoints(
+        keypoints_on_images, random_state, parents, hooks):
+    return True
+# -----------
+
+
 class TestAugmenter_augment_batches(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -2761,19 +2789,6 @@ class TestAugmenter_augment_batches(unittest.TestCase):
         keypoint = ia.Keypoint(x=2, y=1)
         keypoints = [ia.KeypointsOnImage([keypoint], shape=image.shape + (1,))]
 
-        def _lambda_func_images(images, random_state, parents, hooks):
-            return images
-
-        def _lambda_func_keypoints(keypoints_on_images, random_state,
-                                   parents, hooks):
-            return keypoints_on_images
-
-        def _assertlambda_func_images(images, random_state, parents, hooks):
-            return True
-
-        def _assertlambda_func_keypoints(keypoints_on_images, random_state, parents, hooks):
-            return True
-
         augs = [
             iaa.Sequential([iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
             iaa.SomeOf(1, [iaa.Fliplr(1.0), iaa.Flipud(1.0)]),
@@ -2783,13 +2798,13 @@ class TestAugmenter_augment_batches(unittest.TestCase):
             iaa.WithChannels([0], iaa.Add((-50, 50))),
             iaa.Identity(name="Identity-nochange"),
             iaa.Lambda(
-                func_images=_lambda_func_images,
-                func_keypoints=_lambda_func_keypoints,
+                func_images=_augment_batches__lambda_func_images,
+                func_keypoints=_augment_batches__lambda_func_keypoints,
                 name="Lambda-nochange"
             ),
             iaa.AssertLambda(
-                func_images=_assertlambda_func_images,
-                func_keypoints=_assertlambda_func_keypoints,
+                func_images=_augment_batches__assertlambda_func_images,
+                func_keypoints=_augment_batches__assertlambda_func_keypoints,
                 name="AssertLambda-nochange"
             ),
             iaa.AssertShape(
