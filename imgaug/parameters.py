@@ -3146,7 +3146,7 @@ class FrequencyNoise(StochasticParameter):
             wdist = np.minimum(xx, w-xx)
             return np.sqrt(hdist**2 + wdist**2)
 
-        return scipy.fromfunction(_freq, (h, w))
+        return np.fromfunction(_freq, (h, w))
 
     def __repr__(self):
         return self.__str__()
