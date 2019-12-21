@@ -158,7 +158,7 @@ def _crop_and_pad_hms_or_segmaps_(augmentable, croppings_img,
     return augmentable
 
 
-def _crop_and_pad_kpsoi(kpsoi, croppings_img, paddings_img, keep_size):
+def _crop_and_pad_kpsoi_(kpsoi, croppings_img, paddings_img, keep_size):
     # using the trbl function instead of croppings_img has the advantage
     # of incorporating prevent_zero_size, dealing with zero-sized input image
     # axis and dealing the negative crop amounts
@@ -166,13 +166,14 @@ def _crop_and_pad_kpsoi(kpsoi, croppings_img, paddings_img, keep_size):
     crop_left = x1
     crop_top = y1
 
-    shifted = kpsoi.shift(
+    shape_orig = kpsoi.shape
+    shifted = kpsoi.shift_(
         x=-crop_left+paddings_img[3],
         y=-crop_top+paddings_img[0])
     shifted.shape = _compute_shape_after_crop_and_pad(
-        kpsoi.shape, croppings_img, paddings_img)
+        shape_orig, croppings_img, paddings_img)
     if keep_size:
-        shifted = shifted.on(kpsoi.shape)
+        shifted = shifted.on_(shape_orig)
     return shifted
 
 
@@ -1440,7 +1441,7 @@ class Resize(meta.Augmenter):
             h, w = self._compute_height_width(
                 kpsoi.shape, samples_a[i], samples_b[i], self.size_order)
             new_shape = (h, w) + kpsoi.shape[2:]
-            keypoints_on_image_rs = kpsoi.on(new_shape)
+            keypoints_on_image_rs = kpsoi.on_(new_shape)
 
             result.append(keypoints_on_image_rs)
 
@@ -1471,7 +1472,6 @@ class Resize(meta.Augmenter):
                 h, w = sample_a, sample_b
             else:
                 w, h = sample_a, sample_b
-
         else:
             # size order: height, width
             h, w = sample_a, sample_b
@@ -2004,7 +2004,7 @@ class CropAndPad(meta.Augmenter):
         for i, keypoints_on_image in enumerate(keypoints_on_images):
             samples_i = samples[i]
 
-            kpsoi_aug = _crop_and_pad_kpsoi(
+            kpsoi_aug = _crop_and_pad_kpsoi_(
                 keypoints_on_image, croppings_img=samples_i.croppings,
                 paddings_img=samples_i.paddings, keep_size=self.keep_size)
             result.append(kpsoi_aug)
@@ -2745,7 +2745,7 @@ class PadToFixedSize(meta.Augmenter):
                                                     height_min, width_min,
                                                     pad_xs[i], pad_ys[i])
 
-            keypoints_padded = _crop_and_pad_kpsoi(
+            keypoints_padded = _crop_and_pad_kpsoi_(
                 kpsoi, (0, 0, 0, 0), paddings_img,
                 keep_size=False)
 
@@ -3077,7 +3077,7 @@ class CropToFixedSize(meta.Augmenter):
             croppings_img = self._calculate_crop_amounts(
                 height_image, width_image, h, w, offset_ys[i], offset_xs[i])
 
-            kpsoi_cropped = _crop_and_pad_kpsoi(
+            kpsoi_cropped = _crop_and_pad_kpsoi_(
                 kpsoi, croppings_img, (0, 0, 0, 0), keep_size=False)
 
             result.append(kpsoi_cropped)
@@ -4495,7 +4495,7 @@ class KeepSizeByResize(meta.Augmenter):
             if interpolation == KeepSizeByResize.NO_RESIZE:
                 result.append(kpsoi_aug)
             else:
-                result.append(kpsoi_aug.on(input_shape))
+                result.append(kpsoi_aug.on_(input_shape))
 
         return result
 

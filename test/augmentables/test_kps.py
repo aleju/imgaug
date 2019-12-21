@@ -19,6 +19,112 @@ import numpy as np
 import imgaug as ia
 
 
+class TestKeypoint_project_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, kp, from_shape, to_shape):
+        return kp.project_(from_shape, to_shape)
+
+    def test_project_same_image_size(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, (10, 10), (10, 10))
+        assert kp2.y == 1
+        assert kp2.x == 2
+
+    def test_project_onto_higher_image(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, (10, 10), (20, 10))
+        assert kp2.y == 2
+        assert kp2.x == 2
+
+    def test_project_onto_wider_image(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, (10, 10), (10, 20))
+        assert kp2.y == 1
+        assert kp2.x == 4
+
+    def test_project_onto_higher_and_wider_image(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, (10, 10), (20, 20))
+        assert kp2.y == 2
+        assert kp2.x == 4
+
+    def test_inplaceness(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, (10, 10), (10, 10))
+        if self._is_inplace:
+            assert kp is kp2
+        else:
+            assert kp is not kp2
+
+
+class TestKeypoint_project(TestKeypoint_project_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, kp, from_shape, to_shape):
+        return kp.project(from_shape, to_shape)
+
+
+class TestKeypoint_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, kp, *args, **kwargs):
+        return kp.shift_(*args, **kwargs)
+
+    def test_shift_on_y_axis(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, y=1)
+        assert kp2.y == 2
+        assert kp2.x == 2
+
+    def test_shift_on_y_axis_by_negative_amount(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, y=-1)
+        assert kp2.y == 0
+        assert kp2.x == 2
+
+    def test_shift_on_x_axis(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, x=1)
+        assert kp2.y == 1
+        assert kp2.x == 3
+
+    def test_shift_on_x_axis_by_negative_amount(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, x=-1)
+        assert kp2.y == 1
+        assert kp2.x == 1
+
+    def test_shift_on_both_axis(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, y=1, x=2)
+        assert kp2.y == 2
+        assert kp2.x == 4
+
+    def test_inplaceness(self):
+        kp = ia.Keypoint(y=1, x=2)
+        kp2 = self._func(kp, x=1)
+        if self._is_inplace:
+            assert kp is kp2
+        else:
+            assert kp is not kp2
+
+
+class TestKeypoint_shift(TestKeypoint_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, kp, *args, **kwargs):
+        return kp.shift(*args, **kwargs)
+
+
 class TestKeypoint(unittest.TestCase):
     def test___init__(self):
         kp = ia.Keypoint(y=1, x=2)
@@ -70,30 +176,6 @@ class TestKeypoint(unittest.TestCase):
         assert np.allclose(xy, (1, 2))
         assert xy.dtype.name == "int32"
 
-    def test_project_same_image_size(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.project((10, 10), (10, 10))
-        assert kp2.y == 1
-        assert kp2.x == 2
-
-    def test_project_onto_higher_image(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.project((10, 10), (20, 10))
-        assert kp2.y == 2
-        assert kp2.x == 2
-
-    def test_project_onto_wider_image(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.project((10, 10), (10, 20))
-        assert kp2.y == 1
-        assert kp2.x == 4
-
-    def test_project_onto_higher_and_wider_image(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.project((10, 10), (20, 20))
-        assert kp2.y == 2
-        assert kp2.x == 4
-
     def test_is_out_of_image(self):
         kp = ia.Keypoint(y=1, x=2)
         image_shape = (10, 20, 3)
@@ -129,36 +211,6 @@ class TestKeypoint(unittest.TestCase):
         image_shape = (10, 20, 3)
         fraction = kp.compute_out_of_image_fraction(image_shape)
         assert np.isclose(fraction, 1.0)
-
-    def test_shift_on_y_axis(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.shift(y=1)
-        assert kp2.y == 2
-        assert kp2.x == 2
-
-    def test_shift_on_y_axis_by_negative_amount(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.shift(y=-1)
-        assert kp2.y == 0
-        assert kp2.x == 2
-
-    def test_shift_on_x_axis(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.shift(x=1)
-        assert kp2.y == 1
-        assert kp2.x == 3
-
-    def test_shift_on_x_axis_by_negative_amount(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.shift(x=-1)
-        assert kp2.y == 1
-        assert kp2.x == 1
-
-    def test_shift_on_both_axis(self):
-        kp = ia.Keypoint(y=1, x=2)
-        kp2 = kp.shift(y=1, x=2)
-        assert kp2.y == 2
-        assert kp2.x == 4
 
     def test_draw_on_image(self):
         kp = ia.Keypoint(x=0, y=0)
@@ -362,6 +414,177 @@ class TestKeypoint(unittest.TestCase):
         )
 
 
+class TestKeypointsOnImage_items_setter(unittest.TestCase):
+    def test_with_list_of_keypoints(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpsoi = ia.KeypointsOnImage(keypoints=[], shape=(10, 20, 3))
+        kpsoi.items = kps
+        assert np.all([
+            kp_i.x == kp_j.x and kp_i.y == kp_j.y
+            for kp_i, kp_j
+            in zip(kpsoi.keypoints, kps)
+        ])
+
+
+class TestKeypointsOnImage_on_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, kpsoi, *args, **kwargs):
+        return kpsoi.on_(*args, **kwargs)
+
+    def test_same_image_size(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
+
+        kpi2 = self._func(kpi, (10, 20, 3))
+
+        assert np.all([
+            kp_i.x == kp_j.x and kp_i.y == kp_j.y
+            for kp_i, kp_j
+            in zip(kpi.keypoints, kpi2.keypoints)
+        ])
+        assert kpi2.shape == (10, 20, 3)
+
+    def test_wider_image(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
+
+        kpi2 = self._func(kpi, (20, 40, 3))
+
+        assert kpi2.keypoints[0].x == 2
+        assert kpi2.keypoints[0].y == 4
+        assert kpi2.keypoints[1].x == 6
+        assert kpi2.keypoints[1].y == 8
+        assert kpi2.shape == (20, 40, 3)
+
+    def test_wider_image_shape_given_as_array(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
+
+        image = np.zeros((20, 40, 3), dtype=np.uint8)
+        kpi2 = self._func(kpi, image)
+
+        assert kpi2.keypoints[0].x == 2
+        assert kpi2.keypoints[0].y == 4
+        assert kpi2.keypoints[1].x == 6
+        assert kpi2.keypoints[1].y == 8
+        assert kpi2.shape == image.shape
+
+    def test_inplaceness(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
+
+        kpi2 = self._func(kpi, (10, 20, 3))
+
+        if self._is_inplace:
+            assert kpi is kpi2
+        else:
+            assert kpi is not kpi2
+
+
+class TestKeypointsOnImage_on(TestKeypointsOnImage_on_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, kpsoi, *args, **kwargs):
+        return kpsoi.on(*args, **kwargs)
+
+
+class TestKeypointsOnImage_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, kpsoi, *args, **kwargs):
+        return kpsoi.shift_(*args, **kwargs)
+
+    def test_shift_by_zero_on_both_axis(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+        kpi2 = self._func(kpi, x=0, y=0)
+        assert kpi2.keypoints[0].x == 1
+        assert kpi2.keypoints[0].y == 2
+        assert kpi2.keypoints[1].x == 3
+        assert kpi2.keypoints[1].y == 4
+
+    def test_shift_by_1_on_x_axis(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+
+        kpi2 = self._func(kpi, x=1)
+
+        assert kpi2.keypoints[0].x == 1 + 1
+        assert kpi2.keypoints[0].y == 2
+        assert kpi2.keypoints[1].x == 3 + 1
+        assert kpi2.keypoints[1].y == 4
+
+    def test_shift_by_negative_1_on_x_axis(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+
+        kpi2 = self._func(kpi, x=-1)
+
+        assert kpi2.keypoints[0].x == 1 - 1
+        assert kpi2.keypoints[0].y == 2
+        assert kpi2.keypoints[1].x == 3 - 1
+        assert kpi2.keypoints[1].y == 4
+
+    def test_shift_by_1_on_y_axis(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+
+        kpi2 = self._func(kpi, y=1)
+
+        assert kpi2.keypoints[0].x == 1
+        assert kpi2.keypoints[0].y == 2 + 1
+        assert kpi2.keypoints[1].x == 3
+        assert kpi2.keypoints[1].y == 4 + 1
+
+    def test_shift_by_negative_1_on_y_axis(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+
+        kpi2 = self._func(kpi, y=-1)
+
+        assert kpi2.keypoints[0].x == 1
+        assert kpi2.keypoints[0].y == 2 - 1
+        assert kpi2.keypoints[1].x == 3
+        assert kpi2.keypoints[1].y == 4 - 1
+
+    def test_shift_on_both_axis(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+
+        kpi2 = self._func(kpi, x=1, y=2)
+
+        assert kpi2.keypoints[0].x == 1 + 1
+        assert kpi2.keypoints[0].y == 2 + 2
+        assert kpi2.keypoints[1].x == 3 + 1
+        assert kpi2.keypoints[1].y == 4 + 2
+
+    def test_inplaceness(self):
+        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
+        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
+        kpi2 = self._func(kpi, x=0, y=0)
+
+        if self._is_inplace:
+            assert kpi is kpi2
+        else:
+            assert kpi is not kpi2
+
+
+class TestKeypointsOnImage_shift(TestKeypointsOnImage_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, kpsoi, *args, **kwargs):
+        return kpsoi.shift(*args, **kwargs)
+
+
 class TestKeypointsOnImage(unittest.TestCase):
     def test_items(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
@@ -396,41 +619,6 @@ class TestKeypointsOnImage(unittest.TestCase):
             shape=image
         )
         assert kpi.shape == (10, 20, 3)
-
-    def test_on__same_image_size(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
-
-        kpi2 = kpi.on((10, 20, 3))
-
-        assert np.all([
-            kp_i.x == kp_j.x and kp_i.y == kp_j.y
-            for kp_i, kp_j
-            in zip(kpi.keypoints, kpi2.keypoints)
-        ])
-
-    def test_on__wider_image(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
-
-        kpi2 = kpi.on((20, 40, 3))
-
-        assert kpi2.keypoints[0].x == 2
-        assert kpi2.keypoints[0].y == 4
-        assert kpi2.keypoints[1].x == 6
-        assert kpi2.keypoints[1].y == 8
-
-    def test_on__wider_image_shape_given_as_array(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(10, 20, 3))
-
-        image = np.zeros((20, 40, 3), dtype=np.uint8)
-        kpi2 = kpi.on(image)
-
-        assert kpi2.keypoints[0].x == 2
-        assert kpi2.keypoints[0].y == 4
-        assert kpi2.keypoints[1].x == 6
-        assert kpi2.keypoints[1].y == 8
 
     def test_draw_on_image(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
@@ -609,7 +797,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert "Cannot draw keypoint" in str(context.exception)
 
     @classmethod
-    def _test_clip_remove_frac(cls, func):
+    def _test_clip_remove_frac(cls, func, inplace):
         item1 = ia.Keypoint(x=5, y=1)
         item2 = ia.Keypoint(x=15, y=1)
         cbaoi = ia.KeypointsOnImage([item1, item2], shape=(10, 10, 3))
@@ -617,83 +805,36 @@ class TestKeypointsOnImage(unittest.TestCase):
         cbaoi_reduced = func(cbaoi)
 
         assert len(cbaoi_reduced.items) == 1
-        assert cbaoi_reduced.items == [item1]
+        assert np.allclose(cbaoi_reduced.to_xy_array(), [item1.xy])
+        if inplace:
+            assert cbaoi_reduced is cbaoi
+        else:
+            assert cbaoi_reduced is not cbaoi
+            assert len(cbaoi.items) == 2
+
+    def test_remove_out_of_image_fraction_(self):
+        def _func(cbaoi):
+            return cbaoi.remove_out_of_image_fraction_(0.6)
+
+        self._test_clip_remove_frac(_func, True)
 
     def test_remove_out_of_image_fraction(self):
         def _func(cbaoi):
             return cbaoi.remove_out_of_image_fraction(0.6)
 
-        self._test_clip_remove_frac(_func)
+        self._test_clip_remove_frac(_func, False)
+
+    def test_clip_out_of_image_fraction_(self):
+        def _func(cbaoi):
+            return cbaoi.clip_out_of_image_()
+
+        self._test_clip_remove_frac(_func, True)
 
     def test_clip_out_of_image_fraction(self):
         def _func(cbaoi):
             return cbaoi.clip_out_of_image()
 
-        self._test_clip_remove_frac(_func)
-
-    def test_shift_by_zero_on_both_axis(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-        kpi2 = kpi.shift(x=0, y=0)
-        assert kpi2.keypoints[0].x == kpi.keypoints[0].x
-        assert kpi2.keypoints[0].y == kpi.keypoints[0].y
-        assert kpi2.keypoints[1].x == kpi.keypoints[1].x
-        assert kpi2.keypoints[1].y == kpi.keypoints[1].y
-
-    def test_shift_by_1_on_x_axis(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-
-        kpi2 = kpi.shift(x=1)
-
-        assert kpi2.keypoints[0].x == kpi.keypoints[0].x + 1
-        assert kpi2.keypoints[0].y == kpi.keypoints[0].y
-        assert kpi2.keypoints[1].x == kpi.keypoints[1].x + 1
-        assert kpi2.keypoints[1].y == kpi.keypoints[1].y
-
-    def test_shift_by_negative_1_on_x_axis(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-
-        kpi2 = kpi.shift(x=-1)
-
-        assert kpi2.keypoints[0].x == kpi.keypoints[0].x - 1
-        assert kpi2.keypoints[0].y == kpi.keypoints[0].y
-        assert kpi2.keypoints[1].x == kpi.keypoints[1].x - 1
-        assert kpi2.keypoints[1].y == kpi.keypoints[1].y
-
-    def test_shift_by_1_on_y_axis(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-
-        kpi2 = kpi.shift(y=1)
-
-        assert kpi2.keypoints[0].x == kpi.keypoints[0].x
-        assert kpi2.keypoints[0].y == kpi.keypoints[0].y + 1
-        assert kpi2.keypoints[1].x == kpi.keypoints[1].x
-        assert kpi2.keypoints[1].y == kpi.keypoints[1].y + 1
-
-    def test_shift_by_negative_1_on_y_axis(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-
-        kpi2 = kpi.shift(y=-1)
-
-        assert kpi2.keypoints[0].x == kpi.keypoints[0].x
-        assert kpi2.keypoints[0].y == kpi.keypoints[0].y - 1
-        assert kpi2.keypoints[1].x == kpi.keypoints[1].x
-        assert kpi2.keypoints[1].y == kpi.keypoints[1].y - 1
-
-    def test_shift_on_both_axis(self):
-        kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
-
-        kpi2 = kpi.shift(x=1, y=2)
-
-        assert kpi2.keypoints[0].x == kpi.keypoints[0].x + 1
-        assert kpi2.keypoints[0].y == kpi.keypoints[0].y + 2
-        assert kpi2.keypoints[1].x == kpi.keypoints[1].x + 1
-        assert kpi2.keypoints[1].y == kpi.keypoints[1].y + 2
+        self._test_clip_remove_frac(_func, False)
 
     def test_to_xy_array(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
@@ -1123,6 +1264,29 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert kpi2.keypoints[1].x == 3
         assert kpi2.keypoints[1].y == 4
 
+    def test_copy_keypoints_set(self):
+        kp1 = ia.Keypoint(x=1, y=2)
+        kp2 = ia.Keypoint(x=3, y=4)
+        kp3 = ia.Keypoint(x=5, y=6)
+        kpsoi = ia.KeypointsOnImage([kp1, kp2], shape=(40, 50, 3))
+
+        kpsoi_copy = kpsoi.copy(keypoints=[kp3])
+
+        assert kpsoi_copy is not kpsoi
+        assert kpsoi_copy.shape == (40, 50, 3)
+        assert kpsoi_copy.keypoints == [kp3]
+
+    def test_copy_shape_set(self):
+        kp1 = ia.Keypoint(x=1, y=2)
+        kp2 = ia.Keypoint(x=3, y=4)
+        kpsoi = ia.KeypointsOnImage([kp1, kp2], shape=(40, 50, 3))
+
+        kpsoi_copy = kpsoi.copy(shape=(40+1, 50+1, 3))
+
+        assert kpsoi_copy is not kpsoi
+        assert kpsoi_copy.shape == (40+1, 50+1, 3)
+        assert kpsoi_copy.keypoints == [kp1, kp2]
+
     def test_deepcopy(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
@@ -1140,6 +1304,31 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert kpi2.keypoints[0].y == 2
         assert kpi2.keypoints[1].x == 3
         assert kpi2.keypoints[1].y == 4
+
+    def test_deepcopy_keypoints_set(self):
+        kp1 = ia.Keypoint(x=1, y=2)
+        kp2 = ia.Keypoint(x=3, y=4)
+        kp3 = ia.Keypoint(x=5, y=6)
+        kpsoi = ia.KeypointsOnImage([kp1, kp2], shape=(40, 50, 3))
+
+        kpsoi_copy = kpsoi.deepcopy(keypoints=[kp3])
+
+        assert kpsoi_copy is not kpsoi
+        assert kpsoi_copy.shape == (40, 50, 3)
+        assert kpsoi_copy.keypoints == [kp3]
+
+    def test_deepcopy_shape_set(self):
+        kp1 = ia.Keypoint(x=1, y=2)
+        kp2 = ia.Keypoint(x=3, y=4)
+        kpsoi = ia.KeypointsOnImage([kp1, kp2], shape=(40, 50, 3))
+
+        kpsoi_copy = kpsoi.deepcopy(shape=(40+1, 50+1, 3))
+
+        assert kpsoi_copy is not kpsoi
+        assert kpsoi_copy.shape == (40+1, 50+1, 3)
+        assert len(kpsoi_copy.keypoints) == 2
+        assert kpsoi_copy.keypoints[0].coords_almost_equals(kp1)
+        assert kpsoi_copy.keypoints[1].coords_almost_equals(kp2)
 
     def test___iter__(self):
         cbas = [ia.Keypoint(x=1, y=2),

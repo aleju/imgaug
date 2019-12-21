@@ -20,6 +20,372 @@ import imgaug as ia
 import imgaug.random as iarandom
 
 
+class TestBoundingBox_project_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.project_(*args, **kwargs)
+
+    def test_project_same_shape(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (10, 10), (10, 10))
+
+        assert np.isclose(bb2.y1, 10)
+        assert np.isclose(bb2.x1, 20)
+        assert np.isclose(bb2.y2, 30)
+        assert np.isclose(bb2.x2, 40)
+
+    def test_project_upscale_by_2(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (10, 10), (20, 20))
+
+        assert np.isclose(bb2.y1, 10*2)
+        assert np.isclose(bb2.x1, 20*2)
+        assert np.isclose(bb2.y2, 30*2)
+        assert np.isclose(bb2.x2, 40*2)
+
+    def test_project_downscale_by_2(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (10, 10), (5, 5))
+
+        assert np.isclose(bb2.y1, 10*0.5)
+        assert np.isclose(bb2.x1, 20*0.5)
+        assert np.isclose(bb2.y2, 30*0.5)
+        assert np.isclose(bb2.x2, 40*0.5)
+
+    def test_project_onto_wider_image(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (10, 10), (10, 20))
+
+        assert np.isclose(bb2.y1, 10*1)
+        assert np.isclose(bb2.x1, 20*2)
+        assert np.isclose(bb2.y2, 30*1)
+        assert np.isclose(bb2.x2, 40*2)
+
+    def test_project_onto_higher_image(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (10, 10), (20, 10))
+
+        assert np.isclose(bb2.y1, 10*2)
+        assert np.isclose(bb2.x1, 20*1)
+        assert np.isclose(bb2.y2, 30*2)
+        assert np.isclose(bb2.x2, 40*1)
+
+    def test_inplaceness(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (10, 10), (10, 10))
+
+        if self._is_inplace:
+            assert bb2 is bb
+        else:
+            assert bb2 is not bb
+
+
+class TestBoundingBox_project(TestBoundingBox_project_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.project(*args, **kwargs)
+
+
+class TestBoundingBox_extend_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.extend_(*args, **kwargs)
+
+    def test_extend_all_sides_by_1(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, all_sides=1)
+
+        assert bb2.y1 == 10-1
+        assert bb2.y2 == 30+1
+        assert bb2.x1 == 20-1
+        assert bb2.x2 == 40+1
+
+    def test_extend_all_sides_by_minus_1(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, all_sides=-1)
+
+        assert bb2.y1 == 10-(-1)
+        assert bb2.y2 == 30+(-1)
+        assert bb2.x1 == 20-(-1)
+        assert bb2.x2 == 40+(-1)
+
+    def test_extend_top_by_1(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, top=1)
+
+        assert bb2.y1 == 10-1
+        assert bb2.y2 == 30+0
+        assert bb2.x1 == 20-0
+        assert bb2.x2 == 40+0
+
+    def test_extend_right_by_1(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, right=1)
+
+        assert bb2.y1 == 10-0
+        assert bb2.y2 == 30+0
+        assert bb2.x1 == 20-0
+        assert bb2.x2 == 40+1
+
+    def test_extend_bottom_by_1(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, bottom=1)
+
+        assert bb2.y1 == 10-0
+        assert bb2.y2 == 30+1
+        assert bb2.x1 == 20-0
+        assert bb2.x2 == 40+0
+
+    def test_extend_left_by_1(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, left=1)
+
+        assert bb2.y1 == 10-0
+        assert bb2.y2 == 30+0
+        assert bb2.x1 == 20-1
+        assert bb2.x2 == 40+0
+
+    def test_inplaceness(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, all_sides=1)
+
+        if self._is_inplace:
+            assert bb2 is bb
+        else:
+            assert bb2 is not bb
+
+
+class TestBoundingBox_extend(TestBoundingBox_extend_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.extend(*args, **kwargs)
+
+
+class TestBoundingBox_clip_out_of_image_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.clip_out_of_image_(*args, **kwargs)
+
+    def test_clip_out_of_image_with_bb_fully_inside_image(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb_cut = self._func(bb, (100, 100, 3))
+
+        assert bb_cut.y1 == 10
+        assert bb_cut.x1 == 20
+        assert bb_cut.y2 == 30
+        assert bb_cut.x2 == 40
+
+    def test_clip_out_of_image_with_array_as_shape(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        image = np.zeros((100, 100, 3), dtype=np.uint8)
+
+        bb_cut = bb.clip_out_of_image(image)
+
+        assert bb_cut.y1 == 10
+        assert bb_cut.x1 == 20
+        assert bb_cut.y2 == 30
+        assert bb_cut.x2 == 40
+
+    def test_clip_out_of_image_with_bb_too_high(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb_cut = self._func(bb, (20, 100, 3))
+
+        assert bb_cut.y1 == 10
+        assert bb_cut.x1 == 20
+        assert np.isclose(bb_cut.y2, 20)
+        assert bb_cut.x2 == 40
+
+    def test_clip_out_of_image_with_bb_too_wide(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb_cut = self._func(bb, (100, 30, 3))
+
+        assert bb_cut.y1 == 10
+        assert bb_cut.x1 == 20
+        assert bb_cut.y2 == 30
+        assert np.isclose(bb_cut.x2, 30)
+
+    def test_inplaceness(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+
+        bb2 = self._func(bb, (100, 100, 3))
+
+        if self._is_inplace:
+            assert bb2 is bb
+        else:
+            assert bb2 is not bb
+
+
+class TestBoundingBox_clip_out_of_image(TestBoundingBox_clip_out_of_image_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.clip_out_of_image(*args, **kwargs)
+
+
+class TestBoundingBox_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.shift_(*args, **kwargs)
+
+    def test_shift_top_by_zero(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_top = self._func(bb, top=0)
+        assert bb_top.y1 == 10
+        assert bb_top.x1 == 20
+        assert bb_top.y2 == 30
+        assert bb_top.x2 == 40
+
+    def test_shift_right_by_zero(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_right = self._func(bb, right=0)
+        assert bb_right.y1 == 10
+        assert bb_right.x1 == 20
+        assert bb_right.y2 == 30
+        assert bb_right.x2 == 40
+
+    def test_shift_bottom_by_zero(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_bottom = self._func(bb, bottom=0)
+        assert bb_bottom.y1 == 10
+        assert bb_bottom.x1 == 20
+        assert bb_bottom.y2 == 30
+        assert bb_bottom.x2 == 40
+
+    def test_shift_left_by_zero(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_left = self._func(bb, left=0)
+        assert bb_left.y1 == 10
+        assert bb_left.x1 == 20
+        assert bb_left.y2 == 30
+        assert bb_left.x2 == 40
+
+    def test_shift_top_by_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_top = self._func(bb, top=1)
+        assert bb_top.y1 == 10+1
+        assert bb_top.x1 == 20
+        assert bb_top.y2 == 30+1
+        assert bb_top.x2 == 40
+
+    def test_shift_right_by_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_right = self._func(bb, right=1)
+        assert bb_right.y1 == 10
+        assert bb_right.x1 == 20-1
+        assert bb_right.y2 == 30
+        assert bb_right.x2 == 40-1
+
+    def test_shift_bottom_by_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_bottom = self._func(bb, bottom=1)
+        assert bb_bottom.y1 == 10-1
+        assert bb_bottom.x1 == 20
+        assert bb_bottom.y2 == 30-1
+        assert bb_bottom.x2 == 40
+
+    def test_shift_left_by_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_left = self._func(bb, left=1)
+        assert bb_left.y1 == 10
+        assert bb_left.x1 == 20+1
+        assert bb_left.y2 == 30
+        assert bb_left.x2 == 40+1
+
+    def test_shift_top_by_minus_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_top = self._func(bb, top=-1)
+        assert bb_top.y1 == 10-1
+        assert bb_top.x1 == 20
+        assert bb_top.y2 == 30-1
+        assert bb_top.x2 == 40
+
+    def test_shift_right_by_minus_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_right = self._func(bb, right=-1)
+        assert bb_right.y1 == 10
+        assert bb_right.x1 == 20+1
+        assert bb_right.y2 == 30
+        assert bb_right.x2 == 40+1
+
+    def test_shift_bottom_by_minus_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_bottom = self._func(bb, bottom=-1)
+        assert bb_bottom.y1 == 10+1
+        assert bb_bottom.x1 == 20
+        assert bb_bottom.y2 == 30+1
+        assert bb_bottom.x2 == 40
+
+    def test_shift_left_by_minus_one(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_left = self._func(bb, left=-1)
+        assert bb_left.y1 == 10
+        assert bb_left.x1 == 20-1
+        assert bb_left.y2 == 30
+        assert bb_left.x2 == 40-1
+
+    def test_shift_all_sides_by_individual_amounts(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_mix = self._func(bb, top=1, bottom=2, left=3, right=4)
+        assert bb_mix.y1 == 10+1-2
+        assert bb_mix.x1 == 20+3-4
+        assert bb_mix.y2 == 30+3-4
+        assert bb_mix.x2 == 40+1-2
+
+    def test_inplaceness(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = self._func(bb, top=0)
+
+        if self._is_inplace:
+            assert bb2 is bb
+        else:
+            assert bb2 is not bb
+
+
+class TestBoundingBox_shift(TestBoundingBox_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, cba, *args, **kwargs):
+        return cba.shift(*args, **kwargs)
+
+
 class TestBoundingBox(unittest.TestCase):
     def test___init__(self):
         bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
@@ -134,116 +500,6 @@ class TestBoundingBox(unittest.TestCase):
         assert bb.contains(ia.Keypoint(x=2.5, y=1.5)) is True
         assert bb.contains(ia.Keypoint(x=2, y=1)) is True
         assert bb.contains(ia.Keypoint(x=0, y=0)) is False
-
-    def test_project_same_shape(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.project((10, 10), (10, 10))
-
-        assert np.isclose(bb2.y1, 10)
-        assert np.isclose(bb2.x1, 20)
-        assert np.isclose(bb2.y2, 30)
-        assert np.isclose(bb2.x2, 40)
-
-    def test_project_upscale_by_2(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.project((10, 10), (20, 20))
-
-        assert np.isclose(bb2.y1, 10*2)
-        assert np.isclose(bb2.x1, 20*2)
-        assert np.isclose(bb2.y2, 30*2)
-        assert np.isclose(bb2.x2, 40*2)
-
-    def test_project_downscale_by_2(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.project((10, 10), (5, 5))
-
-        assert np.isclose(bb2.y1, 10*0.5)
-        assert np.isclose(bb2.x1, 20*0.5)
-        assert np.isclose(bb2.y2, 30*0.5)
-        assert np.isclose(bb2.x2, 40*0.5)
-
-    def test_project_onto_wider_image(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.project((10, 10), (10, 20))
-
-        assert np.isclose(bb2.y1, 10*1)
-        assert np.isclose(bb2.x1, 20*2)
-        assert np.isclose(bb2.y2, 30*1)
-        assert np.isclose(bb2.x2, 40*2)
-
-    def test_project_onto_higher_image(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.project((10, 10), (20, 10))
-
-        assert np.isclose(bb2.y1, 10*2)
-        assert np.isclose(bb2.x1, 20*1)
-        assert np.isclose(bb2.y2, 30*2)
-        assert np.isclose(bb2.x2, 40*1)
-
-    def test_extend_all_sides_by_1(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.extend(all_sides=1)
-
-        assert bb2.y1 == 10-1
-        assert bb2.y2 == 30+1
-        assert bb2.x1 == 20-1
-        assert bb2.x2 == 40+1
-
-    def test_extend_all_sides_by_minus_1(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.extend(all_sides=-1)
-
-        assert bb2.y1 == 10-(-1)
-        assert bb2.y2 == 30+(-1)
-        assert bb2.x1 == 20-(-1)
-        assert bb2.x2 == 40+(-1)
-
-    def test_extend_top_by_1(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.extend(top=1)
-
-        assert bb2.y1 == 10-1
-        assert bb2.y2 == 30+0
-        assert bb2.x1 == 20-0
-        assert bb2.x2 == 40+0
-
-    def test_extend_right_by_1(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.extend(right=1)
-
-        assert bb2.y1 == 10-0
-        assert bb2.y2 == 30+0
-        assert bb2.x1 == 20-0
-        assert bb2.x2 == 40+1
-
-    def test_extend_bottom_by_1(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.extend(bottom=1)
-
-        assert bb2.y1 == 10-0
-        assert bb2.y2 == 30+1
-        assert bb2.x1 == 20-0
-        assert bb2.x2 == 40+0
-
-    def test_extend_left_by_1(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb2 = bb.extend(left=1)
-
-        assert bb2.y1 == 10-0
-        assert bb2.y2 == 30+0
-        assert bb2.x1 == 20-1
-        assert bb2.x2 == 40+0
 
     def test_intersection(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
@@ -410,151 +666,6 @@ class TestBoundingBox(unittest.TestCase):
                 observed = bb.is_out_of_image(shape,
                                               partly=partly, fully=fully)
                 assert observed is expected
-
-    def test_clip_out_of_image_with_bb_fully_inside_image(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb_cut = bb.clip_out_of_image((100, 100, 3))
-
-        assert bb_cut.y1 == 10
-        assert bb_cut.x1 == 20
-        assert bb_cut.y2 == 30
-        assert bb_cut.x2 == 40
-
-    def test_clip_out_of_image_with_array_as_shape(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        image = np.zeros((100, 100, 3), dtype=np.uint8)
-
-        bb_cut = bb.clip_out_of_image(image)
-
-        assert bb_cut.y1 == 10
-        assert bb_cut.x1 == 20
-        assert bb_cut.y2 == 30
-        assert bb_cut.x2 == 40
-
-    def test_clip_out_of_image_with_bb_too_high(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb_cut = bb.clip_out_of_image((20, 100, 3))
-
-        assert bb_cut.y1 == 10
-        assert bb_cut.x1 == 20
-        assert np.isclose(bb_cut.y2, 20)
-        assert bb_cut.x2 == 40
-
-    def test_clip_out_of_image_with_bb_too_wide(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-
-        bb_cut = bb.clip_out_of_image((100, 30, 3))
-
-        assert bb_cut.y1 == 10
-        assert bb_cut.x1 == 20
-        assert bb_cut.y2 == 30
-        assert np.isclose(bb_cut.x2, 30)
-
-    def test_shift_top_by_zero(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_top = bb.shift(top=0)
-        assert bb_top.y1 == 10
-        assert bb_top.x1 == 20
-        assert bb_top.y2 == 30
-        assert bb_top.x2 == 40
-
-    def test_shift_right_by_zero(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_right = bb.shift(right=0)
-        assert bb_right.y1 == 10
-        assert bb_right.x1 == 20
-        assert bb_right.y2 == 30
-        assert bb_right.x2 == 40
-
-    def test_shift_bottom_by_zero(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_bottom = bb.shift(bottom=0)
-        assert bb_bottom.y1 == 10
-        assert bb_bottom.x1 == 20
-        assert bb_bottom.y2 == 30
-        assert bb_bottom.x2 == 40
-
-    def test_shift_left_by_zero(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_left = bb.shift(left=0)
-        assert bb_left.y1 == 10
-        assert bb_left.x1 == 20
-        assert bb_left.y2 == 30
-        assert bb_left.x2 == 40
-
-    def test_shift_top_by_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_top = bb.shift(top=1)
-        assert bb_top.y1 == 10+1
-        assert bb_top.x1 == 20
-        assert bb_top.y2 == 30+1
-        assert bb_top.x2 == 40
-
-    def test_shift_right_by_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_right = bb.shift(right=1)
-        assert bb_right.y1 == 10
-        assert bb_right.x1 == 20-1
-        assert bb_right.y2 == 30
-        assert bb_right.x2 == 40-1
-
-    def test_shift_bottom_by_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_bottom = bb.shift(bottom=1)
-        assert bb_bottom.y1 == 10-1
-        assert bb_bottom.x1 == 20
-        assert bb_bottom.y2 == 30-1
-        assert bb_bottom.x2 == 40
-
-    def test_shift_left_by_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_left = bb.shift(left=1)
-        assert bb_left.y1 == 10
-        assert bb_left.x1 == 20+1
-        assert bb_left.y2 == 30
-        assert bb_left.x2 == 40+1
-
-    def test_shift_top_by_minus_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_top = bb.shift(top=-1)
-        assert bb_top.y1 == 10-1
-        assert bb_top.x1 == 20
-        assert bb_top.y2 == 30-1
-        assert bb_top.x2 == 40
-
-    def test_shift_right_by_minus_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_right = bb.shift(right=-1)
-        assert bb_right.y1 == 10
-        assert bb_right.x1 == 20+1
-        assert bb_right.y2 == 30
-        assert bb_right.x2 == 40+1
-
-    def test_shift_bottom_by_minus_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_bottom = bb.shift(bottom=-1)
-        assert bb_bottom.y1 == 10+1
-        assert bb_bottom.x1 == 20
-        assert bb_bottom.y2 == 30+1
-        assert bb_bottom.x2 == 40
-
-    def test_shift_left_by_minus_one(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_left = bb.shift(left=-1)
-        assert bb_left.y1 == 10
-        assert bb_left.x1 == 20-1
-        assert bb_left.y2 == 30
-        assert bb_left.x2 == 40-1
-
-    def test_shift_all_sides_by_individual_amounts(self):
-        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb_mix = bb.shift(top=1, bottom=2, left=3, right=4)
-        assert bb_mix.y1 == 10+1-2
-        assert bb_mix.x1 == 20+3-4
-        assert bb_mix.y2 == 30+3-4
-        assert bb_mix.x2 == 40+1-2
 
     @classmethod
     def _get_standard_draw_on_image_vars(cls):
@@ -1072,6 +1183,150 @@ class TestBoundingBox(unittest.TestCase):
         )
 
 
+class TestBoundingBoxesOnImage_items_setter(unittest.TestCase):
+    def test_with_list_of_bounding_boxes(self):
+        bbs = [ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+               ia.BoundingBox(x1=3, y1=4, x2=5, y2=6)]
+        bbsoi = ia.BoundingBoxesOnImage([], shape=(10, 20, 3))
+        bbsoi.items = bbs
+        assert np.all([
+            (bb_i.x1 == bb_j.x1
+             and bb_i.y1 == bb_j.y1
+             and bb_i.x2 == bb_j.x2
+             and bb_i.y2 == bb_j.y2)
+            for bb_i, bb_j
+            in zip(bbsoi.bounding_boxes, bbs)
+        ])
+
+
+class TestBoundingBoxesOnImage_on_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, cbaoi, *args, **kwargs):
+        return cbaoi.on_(*args, **kwargs)
+
+    def test_on_same_height_width(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_projected = self._func(bbsoi, (40, 50))
+
+        assert bbsoi_projected.bounding_boxes[0].y1 == 10
+        assert bbsoi_projected.bounding_boxes[0].x1 == 20
+        assert bbsoi_projected.bounding_boxes[0].y2 == 30
+        assert bbsoi_projected.bounding_boxes[0].x2 == 40
+        assert bbsoi_projected.bounding_boxes[1].y1 == 15
+        assert bbsoi_projected.bounding_boxes[1].x1 == 25
+        assert bbsoi_projected.bounding_boxes[1].y2 == 35
+        assert bbsoi_projected.bounding_boxes[1].x2 == 45
+        assert bbsoi_projected.shape == (40, 50)
+
+    def test_on_upscaled_by_2(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_projected = self._func(bbsoi, (40*2, 50*2, 3))
+
+        assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
+        assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
+        assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
+        assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
+        assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
+        assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
+        assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
+        assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+        assert bbsoi_projected.shape == (40*2, 50*2, 3)
+
+    def test_on_upscaled_by_2_with_shape_given_as_array(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_projected = self._func(bbsoi, np.zeros((40*2, 50*2, 3), dtype=np.uint8))
+
+        assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
+        assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
+        assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
+        assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
+        assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
+        assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
+        assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
+        assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
+        assert bbsoi_projected.shape == (40*2, 50*2, 3)
+
+    def test_inplaceness(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi2 = self._func(bbsoi, (40, 50))
+
+        if self._is_inplace:
+            assert bbsoi2 is bbsoi
+        else:
+            assert bbsoi2 is not bbsoi
+
+
+class TestBoundingBoxesOnImage_on(TestBoundingBoxesOnImage_on_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, cbaoi, *args, **kwargs):
+        return cbaoi.on(*args, **kwargs)
+
+
+class TestBoundingBoxesOnImage_clip_out_of_image_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, cbaoi, *args, **kwargs):
+        return cbaoi.clip_out_of_image_()
+
+    def test_clip_out_of_image(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_clip = self._func(bbsoi)
+
+        assert len(bbsoi_clip.bounding_boxes) == 2
+        assert bbsoi_clip.bounding_boxes[0].y1 == 10
+        assert bbsoi_clip.bounding_boxes[0].x1 == 20
+        assert bbsoi_clip.bounding_boxes[0].y2 == 30
+        assert bbsoi_clip.bounding_boxes[0].x2 == 40
+        assert bbsoi_clip.bounding_boxes[1].y1 == 15
+        assert bbsoi_clip.bounding_boxes[1].x1 == 25
+        assert bbsoi_clip.bounding_boxes[1].y2 == 35
+        assert np.isclose(bbsoi_clip.bounding_boxes[1].x2, 50)
+
+    def test_inplaceness(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi2 = self._func(bbsoi, (40, 50))
+
+        if self._is_inplace:
+            assert bbsoi2 is bbsoi
+        else:
+            assert bbsoi2 is not bbsoi
+
+
+class TestBoundingBoxesOnImage_clip_out_of_image(TestBoundingBoxesOnImage_clip_out_of_image_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, cbaoi, *args, **kwargs):
+        return cbaoi.clip_out_of_image()
+
+
 class TestBoundingBoxesOnImage(unittest.TestCase):
     def test___init__(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
@@ -1124,54 +1379,6 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
     def test_empty_when_bbs_actually_empty(self):
         bbsoi = ia.BoundingBoxesOnImage([], shape=(40, 50, 3))
         assert bbsoi.empty
-
-    def test_on_same_height_width(self):
-        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
-        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
-
-        bbsoi_projected = bbsoi.on((40, 50))
-
-        assert bbsoi_projected.bounding_boxes[0].y1 == 10
-        assert bbsoi_projected.bounding_boxes[0].x1 == 20
-        assert bbsoi_projected.bounding_boxes[0].y2 == 30
-        assert bbsoi_projected.bounding_boxes[0].x2 == 40
-        assert bbsoi_projected.bounding_boxes[1].y1 == 15
-        assert bbsoi_projected.bounding_boxes[1].x1 == 25
-        assert bbsoi_projected.bounding_boxes[1].y2 == 35
-        assert bbsoi_projected.bounding_boxes[1].x2 == 45
-
-    def test_on_upscaled_by_2(self):
-        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
-        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
-
-        bbsoi_projected = bbsoi.on((40*2, 50*2, 3))
-
-        assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
-        assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
-        assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
-        assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
-        assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
-        assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
-        assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
-        assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
-
-    def test_on_upscaled_by_2_with_shape_given_as_array(self):
-        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
-        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
-        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
-
-        bbsoi_projected = bbsoi.on(np.zeros((40*2, 50*2, 3), dtype=np.uint8))
-
-        assert bbsoi_projected.bounding_boxes[0].y1 == 10*2
-        assert bbsoi_projected.bounding_boxes[0].x1 == 20*2
-        assert bbsoi_projected.bounding_boxes[0].y2 == 30*2
-        assert bbsoi_projected.bounding_boxes[0].x2 == 40*2
-        assert bbsoi_projected.bounding_boxes[1].y1 == 15*2
-        assert bbsoi_projected.bounding_boxes[1].x1 == 25*2
-        assert bbsoi_projected.bounding_boxes[1].y2 == 35*2
-        assert bbsoi_projected.bounding_boxes[1].x2 == 45*2
 
     def test_from_xyxy_array_float(self):
         xyxy = np.float32([
@@ -1529,6 +1736,17 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert np.all(image_drawn[35+0, 45+0, :] == [0, 255, 0])
         assert np.all(image_drawn[35+1, 45+1, :] == [0, 0, 0])
 
+    def test_remove_out_of_image_(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_removed = bbsoi.remove_out_of_image_(fully=True, partly=True)
+
+        assert len(bbsoi_removed.bounding_boxes) == 1
+        assert bbsoi_removed.bounding_boxes[0] == bb1
+        assert bbsoi_removed is bbsoi
+
     def test_remove_out_of_image(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
@@ -1538,6 +1756,20 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
 
         assert len(bbsoi_removed.bounding_boxes) == 1
         assert bbsoi_removed.bounding_boxes[0] == bb1
+        assert bbsoi_removed is not bbsoi
+
+    def test_remove_out_of_image_fraction_(self):
+        item1 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=9)
+        item2 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=15)
+        item3 = ia.BoundingBox(y1=1, x1=15, y2=6, x2=25)
+        cbaoi = ia.BoundingBoxesOnImage([item1, item2, item3],
+                                        shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction_(0.6)
+
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
+        assert cbaoi_reduced is cbaoi
 
     def test_remove_out_of_image_fraction(self):
         item1 = ia.BoundingBox(y1=1, x1=5, y2=6, x2=9)
@@ -1550,23 +1782,25 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
 
         assert len(cbaoi_reduced.items) == 2
         assert cbaoi_reduced.items == [item1, item2]
+        assert cbaoi_reduced is not cbaoi
 
-    def test_clip_out_of_image(self):
+    def test_shift_(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
         bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
 
-        bbsoi_clip = bbsoi.clip_out_of_image()
+        bbsoi_shifted = bbsoi.shift_(right=1)
 
-        assert len(bbsoi_clip.bounding_boxes) == 2
-        assert bbsoi_clip.bounding_boxes[0].y1 == 10
-        assert bbsoi_clip.bounding_boxes[0].x1 == 20
-        assert bbsoi_clip.bounding_boxes[0].y2 == 30
-        assert bbsoi_clip.bounding_boxes[0].x2 == 40
-        assert bbsoi_clip.bounding_boxes[1].y1 == 15
-        assert bbsoi_clip.bounding_boxes[1].x1 == 25
-        assert bbsoi_clip.bounding_boxes[1].y2 == 35
-        assert np.isclose(bbsoi_clip.bounding_boxes[1].x2, 50)
+        assert len(bbsoi_shifted.bounding_boxes) == 2
+        assert bbsoi_shifted.bounding_boxes[0].y1 == 10
+        assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
+        assert bbsoi_shifted.bounding_boxes[0].y2 == 30
+        assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
+        assert bbsoi_shifted.bounding_boxes[1].y1 == 15
+        assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
+        assert bbsoi_shifted.bounding_boxes[1].y2 == 35
+        assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+        assert bbsoi_shifted is bbsoi
 
     def test_shift(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
@@ -1584,6 +1818,7 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
         assert bbsoi_shifted.bounding_boxes[1].y2 == 35
         assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+        assert bbsoi_shifted is not bbsoi
 
     def test_to_keypoints_on_image(self):
         bbsoi = ia.BoundingBoxesOnImage(
@@ -1705,6 +1940,29 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert bbsoi.bounding_boxes[0].y1 == 0
         assert bbsoi_copy.bounding_boxes[0].y1 == 0
 
+    def test_copy_bounding_boxes_set(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bb3 = ia.BoundingBox(y1=15+1, x1=25+1, y2=35+1, x2=51+1)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_copy = bbsoi.copy(bounding_boxes=[bb3])
+
+        assert bbsoi_copy is not bbsoi
+        assert bbsoi_copy.shape == (40, 50, 3)
+        assert bbsoi_copy.bounding_boxes == [bb3]
+
+    def test_copy_shape_set(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_copy = bbsoi.copy(shape=(40+1, 50+1, 3))
+
+        assert bbsoi_copy is not bbsoi
+        assert bbsoi_copy.shape == (40+1, 50+1, 3)
+        assert bbsoi_copy.bounding_boxes == [bb1, bb2]
+
     def test_deepcopy(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
@@ -1725,6 +1983,31 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         bbsoi_copy.bounding_boxes[0].y1 = 0
         assert bbsoi.bounding_boxes[0].y1 == 10
         assert bbsoi_copy.bounding_boxes[0].y1 == 0
+
+    def test_deepcopy_bounding_boxes_set(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bb3 = ia.BoundingBox(y1=15+1, x1=25+1, y2=35+1, x2=51+1)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_copy = bbsoi.deepcopy(bounding_boxes=[bb3])
+
+        assert bbsoi_copy is not bbsoi
+        assert bbsoi_copy.shape == (40, 50, 3)
+        assert bbsoi_copy.bounding_boxes == [bb3]
+
+    def test_deepcopy_shape_set(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        bbsoi_copy = bbsoi.deepcopy(shape=(40+1, 50+1, 3))
+
+        assert bbsoi_copy is not bbsoi
+        assert bbsoi_copy.shape == (40+1, 50+1, 3)
+        assert len(bbsoi_copy.bounding_boxes) == 2
+        assert bbsoi_copy.bounding_boxes[0].coords_almost_equals(bb1)
+        assert bbsoi_copy.bounding_boxes[1].coords_almost_equals(bb2)
 
     def test___iter__(self):
         cbas = [ia.BoundingBox(x1=0, y1=0, x2=2, y2=2),

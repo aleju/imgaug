@@ -10,7 +10,7 @@ import skimage.measure
 from .. import imgaug as ia
 from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
-                    _remove_out_of_image_fraction)
+                    _remove_out_of_image_fraction_)
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -214,6 +214,39 @@ class BoundingBox(object):
             x, y = other.x, other.y
         return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
 
+    def project_(self, from_shape, to_shape):
+        """Project the bounding box onto a differently shaped image in-place.
+
+        E.g. if the bounding box is on its original image at
+        ``x1=(10 of 100 pixels)`` and ``y1=(20 of 100 pixels)`` and is
+        projected onto a new image with size ``(width=200, height=200)``,
+        its new position will be ``(x1=20, y1=40)``.
+        (Analogous for ``x2``/``y2``.)
+
+        This is intended for cases where the original image is resized.
+        It cannot be used for more complex changes (e.g. padding, cropping).
+
+        Parameters
+        ----------
+        from_shape : tuple of int or ndarray
+            Shape of the original image. (Before resize.)
+
+        to_shape : tuple of int or ndarray
+            Shape of the new image. (After resize.)
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBox
+            ``BoundingBox`` instance with new coordinates.
+            The object may have been modified in-place.
+
+        """
+        (self.x1, self.y1), (self.x2, self.y2) = project_coords(
+            [(self.x1, self.y1), (self.x2, self.y2)],
+            from_shape,
+            to_shape)
+        return self
+
     # TODO add tests for ndarray inputs
     def project(self, from_shape, to_shape):
         """Project the bounding box onto a differently shaped image.
@@ -241,14 +274,45 @@ class BoundingBox(object):
             ``BoundingBox`` instance with new coordinates.
 
         """
-        coords_proj = project_coords([(self.x1, self.y1), (self.x2, self.y2)],
-                                     from_shape, to_shape)
-        return self.copy(
-            x1=coords_proj[0][0],
-            y1=coords_proj[0][1],
-            x2=coords_proj[1][0],
-            y2=coords_proj[1][1],
-            label=self.label)
+        return self.deepcopy().project_(from_shape, to_shape)
+
+    def extend_(self, all_sides=0, top=0, right=0, bottom=0, left=0):
+        """Extend the size of the bounding box along its sides in-place.
+
+        Parameters
+        ----------
+        all_sides : number, optional
+            Value by which to extend the bounding box size along all
+            sides.
+
+        top : number, optional
+            Value by which to extend the bounding box size along its top
+            side.
+
+        right : number, optional
+            Value by which to extend the bounding box size along its right
+            side.
+
+        bottom : number, optional
+            Value by which to extend the bounding box size along its bottom
+            side.
+
+        left : number, optional
+            Value by which to extend the bounding box size along its left
+            side.
+
+        Returns
+        -------
+        imgaug.BoundingBox
+            Extended bounding box.
+            The object may have been modified in-place.
+
+        """
+        self.x1 = self.x1 - all_sides - left
+        self.x2 = self.x2 + all_sides + right
+        self.y1 = self.y1 - all_sides - top
+        self.y2 = self.y2 + all_sides + bottom
+        return self
 
     def extend(self, all_sides=0, top=0, right=0, bottom=0, left=0):
         """Extend the size of the bounding box along its sides.
@@ -281,12 +345,7 @@ class BoundingBox(object):
             Extended bounding box.
 
         """
-        return BoundingBox(
-            x1=self.x1 - all_sides - left,
-            x2=self.x2 + all_sides + right,
-            y1=self.y1 - all_sides - top,
-            y2=self.y2 + all_sides + bottom
-        )
+        return self.deepcopy().extend_(all_sides, top, right, bottom, left)
 
     def intersection(self, other, default=None):
         """Compute the intersection BB between this BB and another BB.
@@ -521,6 +580,40 @@ class BoundingBox(object):
         """Clip off all parts of the BB box that are outside of the image."""
         return self.clip_out_of_image(*args, **kwargs)
 
+    def clip_out_of_image_(self, image):
+        """Clip off parts of the BB box that are outside of the image in-place.
+
+        Parameters
+        ----------
+        image : (H,W,...) ndarray or tuple of int
+            Image dimensions to use for the clipping of the bounding box.
+            If an ``ndarray``, its shape will be used.
+            If a ``tuple``, it is assumed to represent the image shape and
+            must contain at least two integers.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBox
+            Bounding box, clipped to fall within the image dimensions.
+            The object may have been modified in-place.
+
+        """
+        shape = normalize_shape(image)
+
+        height, width = shape[0:2]
+        assert height > 0, (
+            "Expected image with height>0, got shape %s." % (image.shape,))
+        assert width > 0, (
+            "Expected image with width>0, got shape %s." % (image.shape,))
+
+        eps = np.finfo(np.float32).eps
+        self.x1 = np.clip(self.x1, 0, width - eps)
+        self.x2 = np.clip(self.x2, 0, width - eps)
+        self.y1 = np.clip(self.y1, 0, height - eps)
+        self.y2 = np.clip(self.y2, 0, height - eps)
+
+        return self
+
     def clip_out_of_image(self, image):
         """Clip off all parts of the BB box that are outside of the image.
 
@@ -538,27 +631,46 @@ class BoundingBox(object):
             Bounding box, clipped to fall within the image dimensions.
 
         """
-        shape = normalize_shape(image)
+        return self.deepcopy().clip_out_of_image_(image)
 
-        height, width = shape[0:2]
-        assert height > 0, (
-            "Expected image with height>0, got shape %s." % (image.shape,))
-        assert width > 0, (
-            "Expected image with width>0, got shape %s." % (image.shape,))
+    # TODO convert this to x/y params?
+    def shift_(self, top=None, right=None, bottom=None, left=None):
+        """Move this bounding box along the x/y-axis in-place.
 
-        eps = np.finfo(np.float32).eps
-        x1 = np.clip(self.x1, 0, width - eps)
-        x2 = np.clip(self.x2, 0, width - eps)
-        y1 = np.clip(self.y1, 0, height - eps)
-        y2 = np.clip(self.y2, 0, height - eps)
+        Parameters
+        ----------
+        top : None or int, optional
+            Amount of pixels by which to shift this object *from* the
+            top (towards the bottom).
 
-        return self.copy(
-            x1=x1,
-            y1=y1,
-            x2=x2,
-            y2=y2,
-            label=self.label
-        )
+        right : None or int, optional
+            Amount of pixels by which to shift this object *from* the
+            right (towards the left).
+
+        bottom : None or int, optional
+            Amount of pixels by which to shift this object *from* the
+            bottom (towards the top).
+
+        left : None or int, optional
+            Amount of pixels by which to shift this object *from* the
+            left (towards the right).
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBox
+            Shifted bounding box.
+            The object may have been modified in-place.
+
+        """
+        top = top if top is not None else 0
+        right = right if right is not None else 0
+        bottom = bottom if bottom is not None else 0
+        left = left if left is not None else 0
+        self.x1 = self.x1 + left - right
+        self.x2 = self.x2 + left - right
+        self.y1 = self.y1 + top - bottom
+        self.y2 = self.y2 + top - bottom
+        return self
 
     # TODO convert this to x/y params?
     def shift(self, top=None, right=None, bottom=None, left=None):
@@ -588,16 +700,7 @@ class BoundingBox(object):
             Shifted bounding box.
 
         """
-        top = top if top is not None else 0
-        right = right if right is not None else 0
-        bottom = bottom if bottom is not None else 0
-        left = left if left is not None else 0
-        return self.copy(
-            x1=self.x1+left-right,
-            x2=self.x2+left-right,
-            y1=self.y1+top-bottom,
-            y2=self.y2+top-bottom
-        )
+        return self.deepcopy().shift_(top, right, bottom, left)
 
     # TODO add explicit test for zero-sized BBs (worked when tested by hand)
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
@@ -1121,6 +1224,18 @@ class BoundingBoxesOnImage(IAugmentable):
         """
         return self.bounding_boxes
 
+    @items.setter
+    def items(self, value):
+        """Set the bounding boxes in this container.
+
+        Parameters
+        ----------
+        value : list of BoundingBox
+            Bounding boxes within this container.
+
+        """
+        self.bounding_boxes = value
+
     # TODO remove this? here it is image height, but in BoundingBox it is
     #      bounding box height
     @property
@@ -1161,6 +1276,34 @@ class BoundingBoxesOnImage(IAugmentable):
         """
         return len(self.bounding_boxes) == 0
 
+    def on_(self, image):
+        """Project BBs from one image (shape) to a another one in-place.
+
+        Parameters
+        ----------
+        image : ndarray or tuple of int
+            New image onto which the bounding boxes are to be projected.
+            May also simply be that new image's shape tuple.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Object containing the same bounding boxes after projection to
+            the new image shape.
+            The object and its items may have been modified in-place.
+
+        """
+        # pylint: disable=invalid-name
+        on_shape = normalize_shape(image)
+        if on_shape[0:2] == self.shape[0:2]:
+            self.shape = on_shape  # channels may differ
+            return self
+
+        for i, item in enumerate(self.items):
+            self.bounding_boxes[i] = item.project_(self.shape, on_shape)
+        self.shape = on_shape
+        return self
+
     def on(self, image):
         """Project bounding boxes from one image (shape) to a another one.
 
@@ -1177,13 +1320,7 @@ class BoundingBoxesOnImage(IAugmentable):
             the new image shape.
 
         """
-        # pylint: disable=invalid-name
-        shape = normalize_shape(image)
-        if shape[0:2] == self.shape[0:2]:
-            return self.deepcopy()
-        bounding_boxes = [bb.project(self.shape, shape)
-                          for bb in self.bounding_boxes]
-        return BoundingBoxesOnImage(bounding_boxes, shape)
+        return self.deepcopy().on_(image)
 
     @classmethod
     def from_xyxy_array(cls, xyxy, shape):
@@ -1425,6 +1562,34 @@ class BoundingBoxesOnImage(IAugmentable):
 
         return image
 
+    def remove_out_of_image_(self, fully=True, partly=False):
+        """Remove in-place all BBs that are fully/partially outside of the image.
+
+        Parameters
+        ----------
+        fully : bool, optional
+            Whether to remove bounding boxes that are fully outside of the
+            image.
+
+        partly : bool, optional
+            Whether to remove bounding boxes that are partially outside of
+            the image.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Reduced set of bounding boxes, with those that were
+            fully/partially outside of the image being removed.
+            The object and its items may have been modified in-place.
+
+        """
+        self.bounding_boxes = [
+            bb
+            for bb
+            in self.bounding_boxes
+            if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
+        return self
+
     def remove_out_of_image(self, fully=True, partly=False):
         """Remove all BBs that are fully/partially outside of the image.
 
@@ -1445,12 +1610,30 @@ class BoundingBoxesOnImage(IAugmentable):
             fully/partially outside of the image being removed.
 
         """
-        bbs_clean = [
-            bb
-            for bb
-            in self.bounding_boxes
-            if not bb.is_out_of_image(self.shape, fully=fully, partly=partly)]
-        return BoundingBoxesOnImage(bbs_clean, shape=self.shape)
+        return self.copy().remove_out_of_image_(fully=fully, partly=partly)
+
+    def remove_out_of_image_fraction_(self, fraction):
+        """Remove in-place all BBs with an OOI fraction of at least `fraction`.
+
+        'OOI' is the abbreviation for 'out of image'.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a bounding box has to have in
+            order to be removed. A fraction of ``1.0`` removes only bounding
+            boxes that are ``100%`` outside of the image. A fraction of ``0.0``
+            removes all bounding boxes.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Reduced set of bounding boxes, with those that had an out of image
+            fraction greater or equal the given one removed.
+            The object and its items may have been modified in-place.
+
+        """
+        return _remove_out_of_image_fraction_(self, fraction)
 
     def remove_out_of_image_fraction(self, fraction):
         """Remove all BBs with an out of image fraction of at least `fraction`.
@@ -1470,8 +1653,7 @@ class BoundingBoxesOnImage(IAugmentable):
             fraction greater or equal the given one removed.
 
         """
-        return _remove_out_of_image_fraction(self, fraction,
-                                             BoundingBoxesOnImage)
+        return self.copy().remove_out_of_image_fraction_(fraction)
 
     @ia.deprecated(alt_func="BoundingBoxesOnImage.clip_out_of_image()",
                    comment="clip_out_of_image() has the exactly same "
@@ -1479,6 +1661,26 @@ class BoundingBoxesOnImage(IAugmentable):
     def cut_out_of_image(self):
         """Clip off all parts from all BBs that are outside of the image."""
         return self.clip_out_of_image()
+
+    def clip_out_of_image_(self):
+        """
+        Clip off in-place all parts from all BBs that are outside of the image.
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Bounding boxes, clipped to fall within the image dimensions.
+            The object and its items may have been modified in-place.
+
+        """
+        # remove bbs that are not at least partially inside the image plane
+        self.bounding_boxes = [bb for bb in self.bounding_boxes
+                               if bb.is_partly_within_image(self.shape)]
+
+        for i, bb in enumerate(self.bounding_boxes):
+            self.bounding_boxes[i] = bb.clip_out_of_image(self.shape)
+
+        return self
 
     def clip_out_of_image(self):
         """Clip off all parts from all BBs that are outside of the image.
@@ -1489,15 +1691,43 @@ class BoundingBoxesOnImage(IAugmentable):
             Bounding boxes, clipped to fall within the image dimensions.
 
         """
-        bbs_cut = [
-            bb.clip_out_of_image(self.shape)
-            for bb
-            in self.bounding_boxes
-            if bb.is_partly_within_image(self.shape)]
-        return BoundingBoxesOnImage(bbs_cut, shape=self.shape)
+        return self.deepcopy().clip_out_of_image_()
+
+    def shift_(self, top=None, right=None, bottom=None, left=None):
+        """Move all BBs along the x/y-axis in-place.
+
+        Parameters
+        ----------
+        top : None or int, optional
+            Amount of pixels by which to shift all objects *from* the
+            top (towards the bottom).
+
+        right : None or int, optional
+            Amount of pixels by which to shift all objects *from* the
+            right (towads the left).
+
+        bottom : None or int, optional
+            Amount of pixels by which to shift all objects *from* the
+            bottom (towards the top).
+
+        left : None or int, optional
+            Amount of pixels by which to shift all objects *from* the
+            left (towards the right).
+
+        Returns
+        -------
+        imgaug.augmentables.bbs.BoundingBoxesOnImage
+            Shifted bounding boxes.
+            The object and its items may have been modified in-place.
+
+        """
+        for i, bb in enumerate(self.bounding_boxes):
+            self.bounding_boxes[i] = bb.shift_(top=top, right=right,
+                                               bottom=bottom, left=left)
+        return self
 
     def shift(self, top=None, right=None, bottom=None, left=None):
-        """Move all all BBs along the x/y-axis.
+        """Move all BBs along the x/y-axis.
 
         Parameters
         ----------
@@ -1523,11 +1753,8 @@ class BoundingBoxesOnImage(IAugmentable):
             Shifted bounding boxes.
 
         """
-        bbs_new = [
-            bb.shift(top=top, right=right, bottom=bottom, left=left)
-            for bb
-            in self.bounding_boxes]
-        return BoundingBoxesOnImage(bbs_new, shape=self.shape)
+        return self.deepcopy().shift_(top=top, right=right,
+                                      bottom=bottom, left=left)
 
     def to_keypoints_on_image(self):
         """Convert the bounding boxes to one ``KeypointsOnImage`` instance.
@@ -1608,8 +1835,18 @@ class BoundingBoxesOnImage(IAugmentable):
         polygons = [bb.to_polygon() for bb in self.bounding_boxes]
         return PolygonsOnImage(polygons, shape=self.shape)
 
-    def copy(self):
+    def copy(self, bounding_boxes=None, shape=None):
         """Create a shallow copy of the ``BoundingBoxesOnImage`` instance.
+
+        Parameters
+        ----------
+        bounding_boxes : None or list of imgaug.augmntables.bbs.BoundingBox, optional
+            List of bounding boxes on the image.
+            If ``None``, the instance's bounding boxes will be copied.
+
+        shape : tuple of int, optional
+            The shape of the image on which the bounding boxes are placed.
+            If ``None``, the instance's shape will be copied.
 
         Returns
         -------
@@ -1617,10 +1854,26 @@ class BoundingBoxesOnImage(IAugmentable):
             Shallow copy.
 
         """
-        return copy.copy(self)
+        if bounding_boxes is None:
+            bounding_boxes = self.bounding_boxes[:]
+        if shape is None:
+            # use tuple() here in case the shape was provided as a list
+            shape = tuple(self.shape)
 
-    def deepcopy(self):
+        return BoundingBoxesOnImage(bounding_boxes, shape)
+
+    def deepcopy(self, bounding_boxes=None, shape=None):
         """Create a deep copy of the ``BoundingBoxesOnImage`` object.
+
+        Parameters
+        ----------
+        bounding_boxes : None or list of imgaug.augmntables.bbs.BoundingBox, optional
+            List of bounding boxes on the image.
+            If ``None``, the instance's bounding boxes will be copied.
+
+        shape : tuple of int, optional
+            The shape of the image on which the bounding boxes are placed.
+            If ``None``, the instance's shape will be copied.
 
         Returns
         -------
@@ -1628,10 +1881,14 @@ class BoundingBoxesOnImage(IAugmentable):
             Deep copy.
 
         """
-        # Manual copy is far faster than deepcopy for BoundingBoxesOnImage,
-        # so use manual copy here too
-        bbs = [bb.deepcopy() for bb in self.bounding_boxes]
-        return BoundingBoxesOnImage(bbs, tuple(self.shape))
+        # Manual copy is far faster than deepcopy, so use manual copy here.
+        if bounding_boxes is None:
+            bounding_boxes = [bb.deepcopy() for bb in self.bounding_boxes]
+        if shape is None:
+            # use tuple() here in case the shape was provided as a list
+            shape = tuple(self.shape)
+
+        return BoundingBoxesOnImage(bounding_boxes, shape)
 
     def __iter__(self):
         """Iterate over the bounding boxes in this container.
