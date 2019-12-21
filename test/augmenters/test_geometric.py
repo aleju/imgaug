@@ -9971,14 +9971,17 @@ class TestJigsaw(unittest.TestCase):
         assert nb_changed > 5
 
     def test_images_and_keypoints_aligned(self):
-        rs = iarandom.RNG(0)
-        for _ in np.arange(10):
-            aug = iaa.Jigsaw(nb_rows=(2, 5), nb_cols=(2, 5), max_steps=(0, 3))
-            y = rs.integers(0, 20, size=(1,), endpoint=False)
-            x = rs.integers(0, 30, size=(1,), endpoint=False)
-            kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=x, y=y)], shape=(20, 30))
+        for i in np.arange(20):
+            aug = iaa.Jigsaw(nb_rows=(1, 3), nb_cols=(1, 3), max_steps=(2, 5),
+                             random_state=i)
+            # make sure that these coords are not exactly at a grid cell
+            # border with any possibly sampled height/width in grid cells
+            y = 17.5
+            x = 25.5
+            kpsoi = ia.KeypointsOnImage([ia.Keypoint(x=x, y=y)],
+                                        shape=(20, 30))
             image = np.zeros((20, 30), dtype=np.uint8)
-            image[y, x] = 255
+            image[int(y), int(x)] = 255
 
             images_aug, kpsois_aug = aug(images=[image, image, image],
                                          keypoints=[kpsoi, kpsoi, kpsoi])
@@ -9990,7 +9993,9 @@ class TestJigsaw(unittest.TestCase):
                 y_aug_img, x_aug_img = np.unravel_index(idx,
                                                         image_aug.shape)
                 dist = np.sqrt((x_aug - x_aug_img)**2 + (y_aug - y_aug_img)**2)
-                assert dist < 1.5
+                # best possible distance is about 0.7 as KP coords are in cell
+                # center and sampled coords are at cell top left
+                assert dist < 0.8
 
     def test_no_error_for_1x1_grids(self):
         aug = iaa.Jigsaw(nb_rows=1, nb_cols=1, max_steps=2)
