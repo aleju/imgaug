@@ -367,7 +367,7 @@ class StochasticParameter(object):
 
         Parameters
         ----------
-        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator to use during the sampling
             process. If ``None``, the global RNG will be used.
             See also :func:`imgaug.augmenters.meta.Augmenter.__init__`
@@ -389,7 +389,7 @@ class StochasticParameter(object):
         size : tuple of int or int
             Number of samples by dimension.
 
-        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator to use during the sampling
             process. If ``None``, the global RNG will be used.
             See also :func:`imgaug.augmenters.meta.Augmenter.__init__`

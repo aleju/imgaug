@@ -58,6 +58,14 @@ if _NP_VERSION[0] > 1 or _NP_VERSION[1] >= 17:
     SUPPORTS_NEW_NP_RNG_STYLE = True
     BIT_GENERATOR = np.random.SFC64  # pylint: disable=invalid-name
 
+    # interface of BitGenerator
+    # in 1.17 this was at numpy.random.bit_generator.BitGenerator
+    # in 1.18 this was moved to numpy.random.BitGenerator
+    if _NP_VERSION[1] == 17:
+        _BIT_GENERATOR_INTERFACE = np.random.bit_generator.BitGenerator
+    else:
+        _BIT_GENERATOR_INTERFACE = np.random.BitGenerator
+
 # We instantiate a current/global random state here once.
 GLOBAL_RNG = None
 
@@ -99,7 +107,7 @@ class RNG(object):
 
     Parameters
     ----------
-    generator : None or int or RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+    generator : None or int or RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         The numpy random number generator to use. In case of numpy
         version 1.17 or later, this shouldn't be a ``RandomState`` as that
         class is outdated.
@@ -118,7 +126,7 @@ class RNG(object):
             as the generator for this RNG, i.e. the same as
             ``RNG(other_rng.generator)``.
           * If :class:`numpy.random.Generator`: That generator will be wrapped.
-          * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
+          * If :class:`numpy.random.BitGenerator`: A numpy
             generator will be created (and wrapped by this RNG) that contains
             the bit generator.
           * If :class:`numpy.random.SeedSequence`: A numpy
@@ -879,7 +887,7 @@ def normalize_generator(generator):
 
     Parameters
     ----------
-    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+    generator : None or int or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         The numpy random number generator to normalize. In case of numpy
         version 1.17 or later, this shouldn't be a ``RandomState`` as that
         class is outdated.
@@ -894,7 +902,7 @@ def normalize_generator(generator):
             which will then be returned.
           * If :class:`numpy.random.Generator`: That generator will be
             returned.
-          * If :class:`numpy.random.bit_generator.BitGenerator`: A numpy
+          * If :class:`numpy.random.BitGenerator`: A numpy
             generator will be created and returned that contains the bit
             generator.
           * If :class:`numpy.random.SeedSequence`: A numpy
@@ -923,7 +931,7 @@ def normalize_generator_(generator):
 
     Parameters
     ----------
-    generator : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+    generator : None or int or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         See :func:`imgaug.random.normalize_generator`.
 
     Returns
@@ -947,7 +955,7 @@ def _normalize_generator_np117_(generator):
             BIT_GENERATOR(generator)
         )
 
-    if isinstance(generator, np.random.bit_generator.BitGenerator):
+    if isinstance(generator, _BIT_GENERATOR_INTERFACE):
         generator = np.random.Generator(generator)
         # TODO is it necessary/sensible here to reset the cache?
         reset_generator_cache_(generator)
