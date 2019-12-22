@@ -93,7 +93,7 @@ class FastSnowyLandscape(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -327,7 +327,7 @@ class CloudLayer(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -522,7 +522,7 @@ class Clouds(meta.SomeOf):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -610,7 +610,7 @@ class Fog(CloudLayer):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -796,7 +796,7 @@ class SnowflakesLayer(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -1105,7 +1105,7 @@ class Snowflakes(meta.SomeOf):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples

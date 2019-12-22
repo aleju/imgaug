@@ -512,7 +512,7 @@ def normalize_random_state(random_state):
 
     Parameters
     ----------
-    random_state : None or int or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
+    random_state : None or int or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
         See :func:`imgaug.random.normalize_generator`.
 
     Returns

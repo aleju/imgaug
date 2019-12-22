@@ -34,7 +34,7 @@ def recover_psois_(psois, psois_orig, recoverer, random_state):
     recoverer : imgaug.augmentables.polys._ConcavePolygonRecoverer
         The polygon recoverer used to repair broken input polygons.
 
-    random_state : None or int or RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+    random_state : None or int or RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         An RNG to use during the polygon recovery.
 
     Returns

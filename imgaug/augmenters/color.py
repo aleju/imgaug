@@ -997,7 +997,7 @@ class WithColorspace(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1118,7 +1118,7 @@ class WithBrightnessChannels(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1292,7 +1292,7 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1384,7 +1384,7 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1448,7 +1448,7 @@ class AddToBrightness(MultiplyAndAddToBrightness):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1526,7 +1526,7 @@ class WithHueAndSaturation(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1745,7 +1745,7 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1894,7 +1894,7 @@ class MultiplyHue(MultiplyHueAndSaturation):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1955,7 +1955,7 @@ class MultiplySaturation(MultiplyHueAndSaturation):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2010,7 +2010,7 @@ class RemoveSaturation(MultiplySaturation):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2189,7 +2189,7 @@ class AddToHueAndSaturation(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2449,7 +2449,7 @@ class AddToHue(AddToHueAndSaturation):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2514,7 +2514,7 @@ class AddToSaturation(AddToHueAndSaturation):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2600,7 +2600,7 @@ class ChangeColorspace(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -2784,7 +2784,7 @@ class Grayscale(ChangeColorspace):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2916,7 +2916,7 @@ class GrayscaleColorwise(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3137,7 +3137,7 @@ class RemoveSaturationColorwise(GrayscaleColorwise):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3491,7 +3491,7 @@ class KMeansColorQuantization(_AbstractColorQuantization):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3758,7 +3758,7 @@ class UniformColorQuantization(_AbstractColorQuantization):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3903,7 +3903,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples

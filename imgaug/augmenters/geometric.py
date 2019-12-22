@@ -529,7 +529,7 @@ def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
     max_steps : int
         Maximum number of cells that each cell may be moved.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
         RNG or seed to use. If ``None`` the global RNG will be used.
 
     connectivity : int, optional
@@ -1057,7 +1057,7 @@ class Affine(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1528,7 +1528,7 @@ class ScaleX(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1602,7 +1602,7 @@ class TranslateX(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1685,7 +1685,7 @@ class TranslateY(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1761,7 +1761,7 @@ class ScaleY(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1828,7 +1828,7 @@ class Rotate(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -1893,7 +1893,7 @@ class ShearX(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -1950,7 +1950,7 @@ class ShearY(Affine):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
@@ -2189,7 +2189,7 @@ class AffineCv2(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -2827,7 +2827,7 @@ class PiecewiseAffine(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3345,7 +3345,7 @@ class PerspectiveTransform(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -3991,7 +3991,7 @@ class ElasticTransformation(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -4642,7 +4642,7 @@ class Rot90(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -4896,7 +4896,7 @@ class WithPolarWarping(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
@@ -5534,7 +5534,7 @@ class Jigsaw(meta.Augmenter):
     deterministic : bool, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
