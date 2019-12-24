@@ -206,7 +206,6 @@ class RNG(object):
             It is often sensible to first verify that neither this RNG nor
             `other` are identical to the global RNG.
 
-
         Parameters
         ----------
         other : RNG
