@@ -4241,22 +4241,6 @@ class Test_solarize(unittest.TestCase):
         assert observed.dtype.name == "uint8"
         assert np.array_equal(observed, expected)
 
-    def test_compare_with_pil(self):
-        import PIL.Image
-        import PIL.ImageOps
-
-        def _solarize_pil(image, threshold):
-            img = PIL.Image.fromarray(image)
-            return np.asarray(PIL.ImageOps.solarize(img, threshold))
-
-        image = np.mod(np.arange(20*20*3), 255).astype(np.uint8)\
-            .reshape((20, 20, 3))
-
-        for threshold in np.arange(256):
-            image_pil = _solarize_pil(image, threshold)
-            image_iaa = iaa.solarize(image, threshold)
-            assert np.array_equal(image_pil, image_iaa)
-
 
 class Test_solarize_(unittest.TestCase):
     @mock.patch("imgaug.augmenters.arithmetic.invert_")

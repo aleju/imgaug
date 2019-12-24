@@ -3232,21 +3232,6 @@ class Test_quantize_uniform_to_n_bits(unittest.TestCase):
 # not much testing necessary here as the function is a wrapper around
 # quantize_uniform()
 class Test_quantize_uniform_to_n_bits_(unittest.TestCase):
-    def test_by_comparison_with_pil(self):
-        image = np.arange(64*64*3).reshape((64, 64, 3))
-        image = np.mod(image, 255).astype(np.uint8)
-        for nb_bits in [1, 2, 3, 4, 5, 6, 7, 8]:
-            image_iaa = iaa.quantize_uniform_to_n_bits_(np.copy(image),
-                                                        nb_bits)
-            image_pil = np.asarray(
-                PIL.ImageOps.posterize(
-                    PIL.Image.fromarray(image),
-                    nb_bits
-                )
-            )
-
-            assert np.array_equal(image_iaa, image_pil)
-
     @mock.patch("imgaug.augmenters.color.quantize_uniform_")
     def test_mocked(self, mock_qu):
         mock_qu.return_value = "foo"

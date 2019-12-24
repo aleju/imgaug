@@ -32,6 +32,7 @@ List of augmenters:
     * Pepper
     * CoarsePepper
     * Invert
+    * Solarize
     * ContrastNormalization
     * JpegCompression
 
@@ -3712,7 +3713,7 @@ class Solarize(Invert):
 
     Parameters
     ----------
-    p : float or imgaug.parameters.StochasticParameter, optional
+    p : float or imgaug.parameters.StochasticParameter
         See :class:`Invert`.
 
     per_channel : bool or float or imgaug.parameters.StochasticParameter, optional
