@@ -86,7 +86,7 @@ class Pool(object):
 
     Parameters
     ----------
-    augseq : imgaug.meta.Augmenter
+    augseq : imgaug.augmenters.meta.Augmenter
         The augmentation sequence to apply to batches.
 
     processes : None or int, optional
