@@ -364,7 +364,7 @@ def draw_debug_image(images, heatmaps=None, segmentation_maps=None,
     >>> kpsoi = KeypointsOnImage.from_xy_array([(10.5, 20.5), (30.5, 30.5)],
     >>>                                        shape=image.shape)
     >>> debug_image = iaa.draw_debug_image(images=[image, image],
-    >>>                                    keypoints=[kpsoi, kpsoi)
+    >>>                                    keypoints=[kpsoi, kpsoi])
 
     Generate a debug image for two empty images, each having two keypoints
     drawn on them.
