@@ -153,23 +153,13 @@ def _add_scalar_to_uint8(image, value):
         result = []
         # TODO check if tile() is here actually needed
         tables = np.tile(
-            value_range[np.newaxis, :],
-            (nb_channels, 1)
-        ) + value[:, np.newaxis]
-        tables = np.clip(tables, 0, 255).astype(image.dtype)
-
-        for c, table in enumerate(tables):
-            result.append(cv2.LUT(image[..., c], table))
-
-        return np.stack(result, axis=-1)
+            value_range[:, np.newaxis],
+            (1, nb_channels)
+        ) + value[np.newaxis, :]
     else:
-        table = value_range + value
-        image_aug = cv2.LUT(
-            image,
-            iadt.clip_(table, 0, 255).astype(image.dtype))
-        if image_aug.ndim == 2 and image.ndim == 3:
-            image_aug = image_aug[..., np.newaxis]
-        return image_aug
+        tables = value_range + value
+    tables = np.clip(tables, 0, 255).astype(image.dtype)
+    return ia.apply_lut(image, tables)
 
 
 def _add_scalar_to_non_uint8(image, value):
@@ -443,23 +433,13 @@ def _multiply_scalar_to_uint8(image, multiplier):
         result = []
         # TODO check if tile() is here actually needed
         tables = np.tile(
-            value_range[np.newaxis, :],
-            (nb_channels, 1)
-        ) * multiplier[:, np.newaxis]
-        tables = np.clip(tables, 0, 255).astype(image.dtype)
-
-        for c, table in enumerate(tables):
-            arr_aug = cv2.LUT(image[..., c], table)
-            result.append(arr_aug)
-
-        return np.stack(result, axis=-1)
+            value_range[:, np.newaxis],
+            (1, nb_channels)
+        ) * multiplier[np.newaxis, :]
     else:
-        table = value_range * multiplier
-        image_aug = cv2.LUT(
-            image, np.clip(table, 0, 255).astype(image.dtype))
-        if image_aug.ndim == 2 and image.ndim == 3:
-            image_aug = image_aug[..., np.newaxis]
-        return image_aug
+        tables = value_range * multiplier
+    tables = np.clip(tables, 0, 255).astype(image.dtype)
+    return ia.apply_lut(image, tables)
 
 
 def _multiply_scalar_to_non_uint8(image, multiplier):
@@ -1198,17 +1178,9 @@ def _invert_bool(arr, min_value, max_value):
 
 def _invert_uint8_(arr, min_value, max_value, threshold,
                    invert_above_threshold):
-    if 0 in arr.shape:
-        return np.copy(arr)
-
-    if arr.flags["OWNDATA"] is False:
-        arr = np.copy(arr)
-    if arr.flags["C_CONTIGUOUS"] is False:
-        arr = np.ascontiguousarray(arr)
-
     table = _generate_table_for_invert_uint8(
         min_value, max_value, threshold, invert_above_threshold)
-    arr = cv2.LUT(arr, table, dst=arr)
+    arr = ia.apply_lut_(arr, table)
     return arr
 
 

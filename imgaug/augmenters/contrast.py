@@ -146,8 +146,8 @@ def adjust_contrast_gamma(arr, gamma):
         return np.copy(arr)
 
     # int8 is also possible according to docs
-    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
-    # like `d` was 0 for CV_8S, causing that to fail
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT ,
+    # but here it seemed like `d` was 0 for CV_8S, causing that to fail
     if arr.dtype.name == "uint8":
         min_value, _center_value, max_value = \
             iadt.get_value_range_of_dtype(arr.dtype)
@@ -162,10 +162,8 @@ def adjust_contrast_gamma(arr, gamma):
         table = (min_value
                  + (value_range ** np.float32(gamma))
                  * dynamic_range)
-        arr_aug = cv2.LUT(
-            arr, np.clip(table, min_value, max_value).astype(arr.dtype))
-        if arr.ndim == 3 and arr_aug.ndim == 2:
-            return arr_aug[..., np.newaxis]
+        table = np.clip(table, min_value, max_value).astype(arr.dtype)
+        arr_aug = ia.apply_lut(arr, table)
         return arr_aug
     return ski_exposure.adjust_gamma(arr, gamma)
 
@@ -232,8 +230,8 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         return np.copy(arr)
 
     # int8 is also possible according to docs
-    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
-    # like `d` was 0 for CV_8S, causing that to fail
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT ,
+    # but here it seemed like `d` was 0 for CV_8S, causing that to fail
     if arr.dtype.name == "uint8":
         min_value, _center_value, max_value = \
             iadt.get_value_range_of_dtype(arr.dtype)
@@ -250,10 +248,8 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
         table = (min_value
                  + dynamic_range
                  * 1/(1 + np.exp(gain * (cutoff - value_range))))
-        arr_aug = cv2.LUT(
-            arr, np.clip(table, min_value, max_value).astype(arr.dtype))
-        if arr.ndim == 3 and arr_aug.ndim == 2:
-            return arr_aug[..., np.newaxis]
+        table = np.clip(table, min_value, max_value).astype(arr.dtype)
+        arr_aug = ia.apply_lut(arr, table)
         return arr_aug
     return ski_exposure.adjust_sigmoid(arr, cutoff=cutoff, gain=gain)
 
@@ -319,8 +315,8 @@ def adjust_contrast_log(arr, gain):
         return np.copy(arr)
 
     # int8 is also possible according to docs
-    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
-    # like `d` was 0 for CV_8S, causing that to fail
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT ,
+    # but here it seemed like `d` was 0 for CV_8S, causing that to fail
     if arr.dtype.name == "uint8":
         min_value, _center_value, max_value = \
             iadt.get_value_range_of_dtype(arr.dtype)
@@ -334,10 +330,8 @@ def adjust_contrast_log(arr, gain):
         # of size 1
         gain = np.float32(gain)
         table = min_value + dynamic_range * gain * np.log2(1 + value_range)
-        arr_aug = cv2.LUT(
-            arr, np.clip(table, min_value, max_value).astype(arr.dtype))
-        if arr.ndim == 3 and arr_aug.ndim == 2:
-            return arr_aug[..., np.newaxis]
+        table = np.clip(table, min_value, max_value).astype(arr.dtype)
+        arr_aug = ia.apply_lut(arr, table)
         return arr_aug
     return ski_exposure.adjust_log(arr, gain=gain)
 
@@ -391,8 +385,8 @@ def adjust_contrast_linear(arr, alpha):
         return np.copy(arr)
 
     # int8 is also possible according to docs
-    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT , but here it seemed
-    # like `d` was 0 for CV_8S, causing that to fail
+    # https://docs.opencv.org/3.0-beta/modules/core/doc/operations_on_arrays.html#cv2.LUT ,
+    # but here it seemed like `d` was 0 for CV_8S, causing that to fail
     if arr.dtype.name == "uint8":
         min_value, center_value, max_value = \
             iadt.get_value_range_of_dtype(arr.dtype)
@@ -406,10 +400,8 @@ def adjust_contrast_linear(arr, alpha):
         # of size 1
         alpha = np.float32(alpha)
         table = center_value + alpha * (value_range - center_value)
-        arr_aug = cv2.LUT(
-            arr, np.clip(table, min_value, max_value).astype(arr.dtype))
-        if arr.ndim == 3 and arr_aug.ndim == 2:
-            return arr_aug[..., np.newaxis]
+        table = np.clip(table, min_value, max_value).astype(arr.dtype)
+        arr_aug = ia.apply_lut(arr, table)
         return arr_aug
     else:
         input_dtype = arr.dtype

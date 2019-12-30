@@ -282,13 +282,8 @@ def equalize_(image, mask=None):
 # note that this is supposed to be a non-PIL reimplementation of PIL's
 # equalize, which produces slightly different results from cv2.equalizeHist()
 def _equalize_no_pil_(image, mask=None):
-    flags = image.flags
-    if not flags["OWNDATA"]:
-        image = np.copy(image)
-    if not flags["C_CONTIGUOUS"]:
-        image = np.ascontiguousarray(image)
-
     nb_channels = 1 if image.ndim == 2 else image.shape[-1]
+    # TODO remove the first axis, no longer needed
     lut = np.empty((1, 256, nb_channels), dtype=np.int32)
 
     for c_idx in range(nb_channels):
@@ -312,9 +307,7 @@ def _equalize_no_pil_(image, mask=None):
         lut[0, 1:, c_idx] = n + cumsum[0:-1]
         lut[0, :, c_idx] //= int(step)
     lut = np.clip(lut, None, 255, out=lut).astype(np.uint8)
-    image = cv2.LUT(image, lut, dst=image)
-    if image.ndim == 2 and image.ndim == 3:
-        return image[..., np.newaxis]
+    image = ia.apply_lut_(image, lut)
     return image
 
 
@@ -420,7 +413,7 @@ def _autocontrast_no_pil(image, cutoff, ignore):  # noqa: C901
         # using [0] instead of [int(c_idx)] allows this to work with >4
         # channels
         if image.ndim == 2:
-            image_c = image
+            image_c = image[:, :, np.newaxis]
         else:
             image_c = image[:, :, c_idx:c_idx+1]
         h = cv2.calcHist([image_c], [0], None, [256], [0, 256])
@@ -488,7 +481,9 @@ def _autocontrast_no_pil(image, cutoff, ignore):  # noqa: C901
         #     ix = np.clip(ix, 0, 255).astype(np.uint8)
         #     lut = ix
 
-        result[:, :, c_idx] = cv2.LUT(image_c, lut)
+        # TODO change to a single call instead of one per channel
+        image_c_aug = ia.apply_lut(image_c, lut)
+        result[:, :, c_idx:c_idx+1] = image_c_aug
     if image.ndim == 2:
         return result[..., 0]
     return result
