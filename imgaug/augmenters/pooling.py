@@ -1,17 +1,6 @@
 """
 Augmenters that apply pooling operations to images.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.AveragePooling((1, 3))
-    ])
-
 List of augmenters:
 
     * AveragePooling

@@ -1,17 +1,6 @@
 """
 Augmenters that blend two images with each other.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.Alpha(0.5, iaa.Add((-5, 5)))
-    ])
-
 List of augmenters:
 
     * Alpha

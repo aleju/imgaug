@@ -1,18 +1,6 @@
 """
 Augmenters that affect image colors or image colorspaces.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.Grayscale((0.0, 1.0)),
-        iaa.AddToHueAndSaturation((-10, 10))
-    ])
-
 List of augmenters:
 
     * InColorspace (deprecated)

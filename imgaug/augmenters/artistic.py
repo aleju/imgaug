@@ -1,5 +1,5 @@
 """
-Augmenters that perform apply artistic image filters.
+Augmenters that apply artistic image filters.
 
 List of augmenters:
 

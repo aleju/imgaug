@@ -1,15 +1,6 @@
 """
 Augmenters that perform contrast changes.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([iaa.GammaContrast((0.5, 1.5))])
-
 List of augmenters:
 
     * GammaContrast

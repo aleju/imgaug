@@ -1,18 +1,6 @@
 """
 Augmenters that somehow change the size of the images.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.Resize({"height": 32, "width": 64})
-        iaa.Crop((0, 20))
-    ])
-
 List of augmenters:
 
     * Resize

@@ -1,22 +1,13 @@
 """
 Augmenters that deal with edge detection.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.Canny()
-    ])
-
 List of augmenters:
 
     * Canny
 
-EdgeDetect and DirectedEdgeDetect are currently still in `convolutional.py`.
+:class:`imgaug.augmenters.convolutional.EdgeDetect` and
+:class:`imgaug.augmenters.convolutional.DirectedEdgeDetect` are currently
+still in ``convolutional.py``.
 
 """
 from __future__ import print_function, division, absolute_import

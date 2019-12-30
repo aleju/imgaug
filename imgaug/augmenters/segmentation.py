@@ -1,17 +1,6 @@
 """
 Augmenters that apply changes to images based on segmentation methods.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.Superpixels(...)
-    ])
-
 List of augmenters:
 
     * Superpixels
