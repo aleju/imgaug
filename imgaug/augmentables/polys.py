@@ -1797,6 +1797,17 @@ class PolygonsOnImage(IAugmentable):
         """
         return iter(self.polygons)
 
+    def __len__(self):
+        """Get the number of items in this instance.
+
+        Returns
+        -------
+        int
+            Number of items in this instance.
+
+        """
+        return len(self.items)
+
     def __repr__(self):
         return self.__str__()
 

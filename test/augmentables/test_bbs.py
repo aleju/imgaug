@@ -1741,6 +1741,12 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
             i += 1
         assert i == 0
 
+    def test___len__(self):
+        cbas = [ia.BoundingBox(x1=0, y1=0, x2=2, y2=2),
+                ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]
+        cbasoi = ia.BoundingBoxesOnImage(cbas, shape=(40, 50, 3))
+        assert len(cbasoi) == 2
+
     def test_string_conversion(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
