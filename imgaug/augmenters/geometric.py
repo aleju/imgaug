@@ -1973,13 +1973,13 @@ class ShearY(Affine):
 
 class AffineCv2(meta.Augmenter):
     """
-    Augmenter to apply affine transformations to images using cv2 (i.e. opencv)
-    backend.
+    **Deprecated.** Augmenter to apply affine transformations to images using
+    cv2 (i.e. opencv) backend.
 
     .. warning::
 
-        This augmenter might be removed in the future as ``Affine``
-        already offers a cv2 backend (use ``backend="cv2"``).
+        This augmenter is deprecated since 0.4.0.
+        Use ``Affine(..., backend='cv2')`` instead.
 
     Affine transformations
     involve:
@@ -2265,6 +2265,13 @@ class AffineCv2(meta.Augmenter):
                  name=None, deterministic=False, random_state=None):
         super(AffineCv2, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
+
+        # using a context on __init__ seems to produce no warning,
+        # so warn manually here
+        ia.warn_deprecated(
+            "AffineCv2 is deprecated. "
+            "Use imgaug.augmenters.geometric.Affine(..., backend='cv2') "
+            "instead.", stacklevel=4)
 
         available_orders = [cv2.INTER_NEAREST, cv2.INTER_LINEAR,
                             cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
