@@ -2143,6 +2143,125 @@ def do_assert(condition, message="Assertion failed."):
         raise AssertionError(str(message))
 
 
+def apply_lut(image, table):
+    """Map an input image to a new one using a lookup table.
+
+    dtype support::
+
+        See :func:`imgaug.imgaug.apply_lut_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        See :func:`imgaug.imgaug.apply_lut_`.
+
+    table : ndarray or list of ndarray
+        See :func:`imgaug.imgaug.apply_lut_`.
+
+    Returns
+    -------
+    ndarray
+        Image after mapping via lookup table.
+
+    """
+    return apply_lut_(np.copy(image), table)
+
+
+# TODO make this function compatible with short max sized images, probably
+#      isn't right now
+def apply_lut_(image, table):
+    """Map an input image in-place to a new one using a lookup table.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+    Parameters
+    ----------
+    image : ndarray
+        Image of dtype ``uint8`` and shape ``(H,W)`` or ``(H,W,C)``.
+
+    table : ndarray or list of ndarray
+        Table of dtype ``uint8`` containing the mapping from old to new
+        values. Either a ``list`` of ``C`` ``(256,)`` arrays or a single
+        array of shape ``(256,)`` or ``(256, C)`` or ``(1, 256, C)``.
+        In case of ``(256,)`` the same table is used for all channels,
+        otherwise a channelwise table is used and ``C`` is expected to match
+        the number of channels.
+
+    Returns
+    -------
+    ndarray
+        Image after mapping via lookup table.
+        This *might* be the same array instance as provided via `image`.
+
+    """
+
+    image_shape_orig = image.shape
+    nb_channels = 1 if len(image_shape_orig) == 2 else image_shape_orig[-1]
+
+    if 0 in image_shape_orig:
+        return image
+
+    flags = image.flags
+    if not flags["OWNDATA"]:
+        image = np.copy(image)
+    if not flags["C_CONTIGUOUS"]:
+        image = np.ascontiguousarray(image)
+
+    # [(256,), (256,), ...] => (256, C)
+    if isinstance(table, list):
+        assert len(table) == nb_channels, (
+            "Expected to get %d tables (one per channel), got %d instead." % (
+                nb_channels, len(table)))
+        table = np.stack(table, axis=-1)
+
+    # (256, C) => (1, 256, C)
+    if table.shape == (256, nb_channels):
+        table = table[np.newaxis, :, :]
+
+    assert table.shape == (256,) or table.shape == (1, 256, nb_channels), (
+        "Expected 'table' to be any of the following: "
+        "A list of C (256,) arrays, an array of shape (256,), an array of "
+        "shape (256, C), an array of shape (1, 256, C). Transformed 'table' "
+        "up to shape %s for image with shape %s (C=%d)." % (
+            table.shape, image_shape_orig, nb_channels))
+
+    if nb_channels > 512:
+        if table.shape == (256,):
+            table = np.tile(table[np.newaxis, :, np.newaxis],
+                            (1, 1, nb_channels))
+
+        subluts = []
+        for group_idx in np.arange(int(np.ceil(nb_channels / 512))):
+            c_start = group_idx * 512
+            c_end = c_start + 512
+            subluts.append(apply_lut_(image[:, :, c_start:c_end],
+                                      table[:, :, c_start:c_end]))
+
+        return np.concatenate(subluts, axis=2)
+
+    assert image.dtype.name == "uint8", (
+        "Expected uint8 image, got dtype %s." % (image.dtype.name,))
+    assert table.dtype.name == "uint8", (
+        "Expected uint8 table, got dtype %s." % (table.dtype.name,))
+
+    image = cv2.LUT(image, table, dst=image)
+    return image
+
+
 class HooksImages(object):
     """Class to intervene with image augmentation runs.
 
