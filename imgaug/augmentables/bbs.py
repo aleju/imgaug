@@ -599,15 +599,86 @@ class BoundingBox(object):
             y2=self.y2+top-bottom
         )
 
-    # TODO add explicit test for zero-sized BBs (worked when tested by hand)
-    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
-                      copy=True, raise_if_out_of_image=False, thickness=None):
-        """Draw the bounding box on an image.
+    def draw_label_on_image(self, image, color=(0, 255, 0),
+                            color_text=None, color_bg=None, alpha=1.0, size=1,
+                            size_text=20, height=30,
+                            copy=True, raise_if_out_of_image=False):
+        """Draw a box showing the BB's label.
+
+        The box is placed right above the BB's rectangle.
 
         Parameters
         ----------
         image : (H,W,C) ndarray
-            The image onto which to draw the bounding box.
+            The image onto which to draw the label.
+            Currently expected to be ``uint8``.
+
+        color : None or iterable of int, optional
+            The color to use, corresponding to the channel layout of the
+            image. Usually RGB. Text and background colors will be derived
+            from this.
+
+        color_text : None or iterable of int, optional
+            The text color to use.
+            If ``None``, derived from `color_bg`.
+
+        color_bg : None or iterable of int, optional
+            The background color of the label box.
+            If ``None``, derived from `color`.
+
+        alpha : float, optional
+            The transparency of the drawn bounding box, where ``1.0`` denotes
+            no transparency and ``0.0`` is invisible.
+
+        size : int, optional
+            The thickness of the bounding box in pixels. If the value is
+            larger than ``1``, then additional pixels will be added around
+            the bounding box (i.e. extension towards the outside).
+
+        size_text : int, optional
+            Font size to use.
+
+        height : int, optional
+            Height of the label box in pixels.
+
+        copy : bool, optional
+            Whether to copy the input image or change it in-place.
+
+        raise_if_out_of_image : bool, optional
+            Whether to raise an error if the bounding box is fully outside of
+            the image. If set to ``False``, no error will be raised and only
+            the parts inside the image will be drawn.
+
+        Returns
+        -------
+        (H,W,C) ndarray(uint8)
+            Image with bounding box drawn on it.
+
+        """
+        drawer = _LabelOnImageDrawer(
+            color=color,
+            color_text=color_text,
+            color_bg=color_bg,
+            size=size,
+            alpha=alpha,
+            raise_if_out_of_image=raise_if_out_of_image,
+            height=height,
+            size_text=size_text)
+        if copy:
+            return drawer.draw_on_image(image, self)
+        return drawer.draw_on_image_(image, self)
+
+    def draw_box_on_image(self, image, color=(0, 255, 0), alpha=1.0,
+                          size=1, copy=True, raise_if_out_of_image=False,
+                          thickness=None):
+        """Draw the rectangle of the bounding box on an image.
+
+        This method does not draw the label.
+
+        Parameters
+        ----------
+        image : (H,W,C) ndarray
+            The image onto which to draw the bounding box rectangle.
             Currently expected to be ``uint8``.
 
         color : iterable of int, optional
@@ -694,6 +765,67 @@ class BoundingBox(object):
                     result = np.clip(result, 0, 255).astype(input_dtype)
 
         return result
+
+    # TODO add explicit test for zero-sized BBs (worked when tested by hand)
+    def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=1,
+                      copy=True, raise_if_out_of_image=False, thickness=None):
+        """Draw the bounding box on an image.
+
+        This will automatically also draw the label, unless it is ``None``.
+        To only draw the box rectangle use
+        :func:`imgaug.augmentables.bbs.BoundingBox.draw_box_on_image`.
+        To draw the label even if it is ``None`` or to configure e.g. its
+        color, use
+        :func:`imgaug.augmentables.bbs.BoundingBox.draw_label_on_image`.
+
+        Parameters
+        ----------
+        image : (H,W,C) ndarray
+            The image onto which to draw the bounding box.
+            Currently expected to be ``uint8``.
+
+        color : iterable of int, optional
+            The color to use, corresponding to the channel layout of the
+            image. Usually RGB.
+
+        alpha : float, optional
+            The transparency of the drawn bounding box, where ``1.0`` denotes
+            no transparency and ``0.0`` is invisible.
+
+        size : int, optional
+            The thickness of the bounding box in pixels. If the value is
+            larger than ``1``, then additional pixels will be added around
+            the bounding box (i.e. extension towards the outside).
+
+        copy : bool, optional
+            Whether to copy the input image or change it in-place.
+
+        raise_if_out_of_image : bool, optional
+            Whether to raise an error if the bounding box is fully outside of
+            the image. If set to ``False``, no error will be raised and only
+            the parts inside the image will be drawn.
+
+        thickness : None or int, optional
+            Deprecated.
+
+        Returns
+        -------
+        (H,W,C) ndarray(uint8)
+            Image with bounding box drawn on it.
+
+        """
+        image_drawn = self.draw_box_on_image(
+            image, color=color, alpha=alpha, size=size,
+            copy=copy, raise_if_out_of_image=raise_if_out_of_image,
+            thickness=thickness
+        )
+        if self.label is not None:
+            image_drawn = self.draw_label_on_image(
+                image_drawn, color=color, alpha=alpha,
+                size=size if thickness is None else thickness,
+                copy=False, raise_if_out_of_image=raise_if_out_of_image
+            )
+        return image_drawn
 
     # TODO add tests for pad and pad_max
     def extract_from_image(self, image, pad=True, pad_max=None,
@@ -1638,7 +1770,7 @@ class BoundingBoxesOnImage(IAugmentable):
 
         Yields
         ------
-        Polygon
+        BoundingBox
             A bounding box in this container.
             The order is identical to the order in the bounding box list
             provided upon class initialization.
@@ -1653,3 +1785,125 @@ class BoundingBoxesOnImage(IAugmentable):
         return (
             "BoundingBoxesOnImage(%s, shape=%s)"
             % (str(self.bounding_boxes), self.shape))
+
+
+class _LabelOnImageDrawer(object):
+    # size refers to the thickness of the BB
+    # height is the height of the label rectangle, not the whole BB
+    def __init__(self, color=(0, 255, 0), color_text=None, color_bg=None,
+                 size=1, alpha=1.0, raise_if_out_of_image=False,
+                 height=30, size_text=20):
+        self.color = color
+        self.color_text = color_text
+        self.color_bg = color_bg
+        self.size = size
+        self.alpha = alpha
+        self.raise_if_out_of_image = raise_if_out_of_image
+        self.height = height
+        self.size_text = size_text
+
+    def draw_on_image_(self, image, bounding_box):
+        # pylint: disable=invalid-name, redefined-outer-name
+        if self.raise_if_out_of_image:
+            self._do_raise_if_out_of_image(image, bounding_box)
+        color_text, color_bg = self._preprocess_colors()
+        x1, y1, x2, y2 = self._compute_bg_corner_coords(image, bounding_box)
+
+        # cant draw anything if OOI
+        if x2 <= x1 or y2 <= y1:
+            return image
+
+        # can currently only draw on images with shape (H,W,C), not (H,W)
+        label_arr = self._draw_label_arr(bounding_box.label,
+                                         y2 - y1, x2 - x1, image.shape[-1],
+                                         image.dtype,
+                                         color_text, color_bg,
+                                         self.size_text)
+
+        image = self._blend_label_arr_with_image_(image, label_arr,
+                                                  x1, y1, x2, y2)
+        return image
+
+    def draw_on_image(self, image, bounding_box):
+        return self.draw_on_image_(np.copy(image), bounding_box)
+
+    @classmethod
+    def _do_raise_if_out_of_image(cls, image, bounding_box):
+        if bounding_box.is_out_of_image(image):
+            raise Exception(
+                "Cannot draw bounding box x1=%.8f, y1=%.8f, x2=%.8f, y2=%.8f "
+                "on image with shape %s." % (
+                    bounding_box.x1, bounding_box.y1,
+                    bounding_box.x2, bounding_box.y2,
+                    image.shape))
+
+    def _preprocess_colors(self):
+        color = np.uint8(self.color) if self.color is not None else None
+
+        color_bg = self.color_bg
+        if self.color_bg is not None:
+            color_bg = np.uint8(color_bg)
+        else:
+            assert color is not None, (
+                "Expected `color` to be set when `color_bg` is not set, "
+                "but it was None.")
+            color_bg = color
+
+        color_text = self.color_text
+        if self.color_text is not None:
+            color_text = np.uint8(color_text)
+        else:
+            # we follow the approach from https://stackoverflow.com/a/1855903
+            # here
+            gray = (0.299 * color_bg[0]
+                    + 0.587 * color_bg[1]
+                    + 0.114 * color_bg[2])
+            color_text = np.full((3,),
+                                 0 if gray > 128 else 255,
+                                 dtype=np.uint8)
+
+        return color_text, color_bg
+
+    def _compute_bg_corner_coords(self, image, bounding_box):
+        bb = bounding_box
+        offset = self.size
+        height, width = image.shape[0:2]
+
+        y1, x1, x2 = bb.y1_int, bb.x1_int, bb.x2_int
+
+        # dont use bb.y2 here! we want the label to be above the BB
+        y1 = y1 - 1 - self.height
+        y2 = y1 + self.height
+
+        x1 = x1 - offset + 1
+        x2 = x2 + offset
+
+        y1, y2 = np.clip([y1, y2], 0, height-1)
+        x1, x2 = np.clip([x1, x2], 0, width-1)
+
+        return x1, y1, x2, y2
+
+    @classmethod
+    def _draw_label_arr(cls, label, height, width, nb_channels, dtype,
+                        color_text, color_bg, size_text):
+        label_arr = np.zeros((height, width, nb_channels), dtype=dtype)
+        label_arr[...] = color_bg.reshape((1, 1, -1))
+        label_arr = ia.draw_text(label_arr,
+                                 x=2, y=2,
+                                 text=str(label),
+                                 color=color_text,
+                                 size=size_text)
+        return label_arr
+
+    def _blend_label_arr_with_image_(self, image, label_arr, x1, y1, x2, y2):
+        alpha = self.alpha
+        if alpha >= 0.99:
+            image[y1:y2, x1:x2, :] = label_arr
+        else:
+            input_dtype = image.dtype
+            foreground = label_arr.astype(np.float64)
+            background = image[y1:y2, x1:x2, :].astype(np.float64)
+            blend = (1 - alpha) * background + alpha * foreground
+            blend = np.clip(blend, 0, 255).astype(input_dtype)
+            image[y1:y2, x1:x2, :] = blend
+        return image
