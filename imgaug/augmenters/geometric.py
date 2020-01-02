@@ -4909,11 +4909,14 @@ class WithPolarWarping(meta.Augmenter):
 
     >>> aug = iaa.WithPolarWarping(
     >>>     iaa.Affine(
-    >>>         translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}
+    >>>         translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
+    >>>         rotate=(-35, 35),
+    >>>         scale=(0.8, 1.2),
+    >>>         shear={"x": (-15, 15), "y": (-15, 15)}
     >>>     )
     >>> )
 
-    Apply affine translations in polar representation.
+    Apply affine transformations in polar representation.
 
     >>> aug = iaa.WithPolarWarping(iaa.AveragePooling((2, 8)))
 
