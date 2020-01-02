@@ -903,7 +903,7 @@ class BilateralBlur(meta.Augmenter):
 
     def _augment_batch(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
-        if batch is None:
+        if batch.images is None:
             return batch
 
         images = batch.images
