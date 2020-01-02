@@ -3128,6 +3128,19 @@ class TestPolygonsOnImage_deepcopy(unittest.TestCase):
         assert psoi_copy.polygons[1].coords_almost_equals(poly2)
 
 
+class TestPolygonsOnImage___getitem__(unittest.TestCase):
+    def test_with_two_polygons(self):
+        cbas = [
+            ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+            ia.Polygon([(1, 1), (2, 1), (2, 2)])
+        ]
+        cbasoi = ia.PolygonsOnImage(cbas, shape=(3, 4, 3))
+
+        assert cbasoi[0] is cbas[0]
+        assert cbasoi[1] is cbas[1]
+        assert cbasoi[0:2] == cbas
+
+
 class TestPolygonsOnImage___iter__(unittest.TestCase):
     def test_with_two_polygons(self):
         cbas = [ia.Polygon([(0, 0), (1, 0), (1, 1)]),

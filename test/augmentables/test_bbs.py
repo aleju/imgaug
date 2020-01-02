@@ -2009,6 +2009,17 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         assert bbsoi_copy.bounding_boxes[0].coords_almost_equals(bb1)
         assert bbsoi_copy.bounding_boxes[1].coords_almost_equals(bb2)
 
+    def test___getitem__(self):
+        cbas = [
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4),
+            ia.BoundingBox(x1=2, y1=3, x2=4, y2=5)
+        ]
+        cbasoi = ia.BoundingBoxesOnImage(cbas, shape=(3, 4, 3))
+
+        assert cbasoi[0] is cbas[0]
+        assert cbasoi[1] is cbas[1]
+        assert cbasoi[0:2] == cbas
+
     def test___iter__(self):
         cbas = [ia.BoundingBox(x1=0, y1=0, x2=2, y2=2),
                 ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)]

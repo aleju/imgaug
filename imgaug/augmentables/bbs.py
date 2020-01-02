@@ -1890,6 +1890,17 @@ class BoundingBoxesOnImage(IAugmentable):
 
         return BoundingBoxesOnImage(bounding_boxes, shape)
 
+    def __getitem__(self, indices):
+        """Get the bounding box(es) with given indices.
+
+        Returns
+        -------
+        list of imgaug.augmentables.bbs.BoundingBoxes
+            Bounding box(es) with given indices.
+
+        """
+        return self.bounding_boxes[indices]
+
     def __iter__(self):
         """Iterate over the bounding boxes in this container.
 

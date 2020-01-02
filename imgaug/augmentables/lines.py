@@ -2286,6 +2286,17 @@ class LineStringsOnImage(IAugmentable):
 
         return LineStringsOnImage(line_strings, shape)
 
+    def __getitem__(self, indices):
+        """Get the line string(s) with given indices.
+
+        Returns
+        -------
+        list of imgaug.augmentables.lines.LineString
+            Line string(s) with given indices.
+
+        """
+        return self.line_strings[indices]
+
     def __iter__(self):
         """Iterate over the line strings in this container.
 

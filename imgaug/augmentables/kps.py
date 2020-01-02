@@ -1398,6 +1398,17 @@ class KeypointsOnImage(IAugmentable):
 
         return KeypointsOnImage(keypoints, shape)
 
+    def __getitem__(self, indices):
+        """Get the keypoint(s) with given indices.
+
+        Returns
+        -------
+        list of imgaug.augmentables.kps.Keypoint
+            Keypoint(s) with given indices.
+
+        """
+        return self.keypoints[indices]
+
     def __iter__(self):
         """Iterate over the keypoints in this container.
 

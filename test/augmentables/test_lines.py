@@ -2627,6 +2627,17 @@ class TestLineStringsOnImage(unittest.TestCase):
         assert observed.line_strings == []
         assert observed.shape == (200, 201, 3)
 
+    def test___getitem__(self):
+        cbas = [
+            ia.LineString([(0, 0), (1, 0), (1, 1)]),
+            ia.LineString([(1, 1), (2, 1), (2, 2)])
+        ]
+        cbasoi = ia.LineStringsOnImage(cbas, shape=(3, 4, 3))
+
+        assert cbasoi[0] is cbas[0]
+        assert cbasoi[1] is cbas[1]
+        assert cbasoi[0:2] == cbas
+
     def test___iter__(self):
         cbas = [ia.LineString([(0, 0), (1, 1)]),
                 ia.LineString([(1, 2), (3, 4)])]
