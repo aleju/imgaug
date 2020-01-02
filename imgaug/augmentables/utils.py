@@ -58,7 +58,56 @@ def normalize_shape(shape):
     return shape.shape
 
 
-# TODO integrate into keypoints
+def project_coords_(coords, from_shape, to_shape):
+    """Project coordinates from one image shape to another in-place.
+
+    This performs a relative projection, e.g. a point at ``60%`` of the old
+    image width will be at ``60%`` of the new image width after projection.
+
+    Parameters
+    ----------
+    coords : ndarray or list of tuple of number
+        Coordinates to project.
+        Either an ``(N,2)`` numpy array or a ``list`` containing ``(x,y)``
+        coordinate ``tuple`` s.
+
+    from_shape : tuple of int or ndarray
+        Old image shape.
+
+    to_shape : tuple of int or ndarray
+        New image shape.
+
+    Returns
+    -------
+    ndarray
+        Projected coordinates as ``(N,2)`` ``float32`` numpy array.
+        This function may change the input data in-place.
+
+    """
+    from_shape = normalize_shape(from_shape)
+    to_shape = normalize_shape(to_shape)
+    if from_shape[0:2] == to_shape[0:2]:
+        return coords
+
+    from_height, from_width = from_shape[0:2]
+    to_height, to_width = to_shape[0:2]
+
+    no_zeros_in_shapes = (
+        all([v > 0 for v in [from_height, from_width, to_height, to_width]]))
+    assert no_zeros_in_shapes, (
+        "Expected from_shape and to_shape to not contain zeros. Got shapes "
+        "%s (from_shape) and %s (to_shape)." % (from_shape, to_shape))
+
+    coords_proj = coords
+    if not ia.is_np_array(coords) or coords.dtype.kind != "f":
+        coords_proj = np.array(coords).astype(np.float32)
+
+    coords_proj[:, 0] = (coords_proj[:, 0] / from_width) * to_width
+    coords_proj[:, 1] = (coords_proj[:, 1] / from_height) * to_height
+
+    return coords_proj
+
+
 def project_coords(coords, from_shape, to_shape):
     """Project coordinates from one image shape to another.
 
@@ -84,27 +133,10 @@ def project_coords(coords, from_shape, to_shape):
         Projected coordinates as ``(N,2)`` ``float32`` numpy array.
 
     """
-    from_shape = normalize_shape(from_shape)
-    to_shape = normalize_shape(to_shape)
-    if from_shape[0:2] == to_shape[0:2]:
-        return coords
+    if ia.is_np_array(coords):
+        coords = np.copy(coords)
 
-    from_height, from_width = from_shape[0:2]
-    to_height, to_width = to_shape[0:2]
-
-    no_zeros_in_shapes = (
-        all([v > 0 for v in [from_height, from_width, to_height, to_width]]))
-    assert no_zeros_in_shapes, (
-        "Expected from_shape and to_shape to not contain zeros. Got shapes "
-        "%s (from_shape) and %s (to_shape)." % (from_shape, to_shape))
-
-    # make sure to not just call np.float32(coords) here as the following lines
-    # perform in-place changes and np.float32(.) only copies if the input
-    # was *not* a float32 array
-    coords_proj = np.array(coords).astype(np.float32)
-    coords_proj[:, 0] = (coords_proj[:, 0] / from_width) * to_width
-    coords_proj[:, 1] = (coords_proj[:, 1] / from_height) * to_height
-    return coords_proj
+    return project_coords_(coords, from_shape, to_shape)
 
 
 # TODO does that include point_b in the result?
@@ -295,8 +327,16 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
     return result
 
 
+# TODO remove this once all calls switched to _remove_out_of_image_fraction_()
 def _remove_out_of_image_fraction(cbaoi, fraction, result_class):
     items_clean = [
         item for item in cbaoi.items
         if item.compute_out_of_image_fraction(cbaoi.shape) < fraction]
     return result_class(items_clean, shape=cbaoi.shape)
+
+
+def _remove_out_of_image_fraction_(cbaoi, fraction):
+    cbaoi.items = [
+        item for item in cbaoi.items
+        if item.compute_out_of_image_fraction(cbaoi.shape) < fraction]
+    return cbaoi

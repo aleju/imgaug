@@ -23,6 +23,108 @@ from imgaug.augmentables.kps import Keypoint
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
 
+class TestLineString_project_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, ls, from_shape, to_shape):
+        return ls.project_(from_shape, to_shape)
+
+    def test_project_to_2x_image_size(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        ls_proj = self._func(ls, (10, 10), (20, 20))
+        assert np.allclose(ls_proj.coords, [(0, 0), (2, 0), (4, 2)])
+
+    def test_project_to_2x_image_width(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        ls_proj = self._func(ls, (10, 10), (10, 20))
+        assert np.allclose(ls_proj.coords, [(0, 0), (2, 0), (4, 1)])
+
+    def test_project_to_2x_image_height(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        ls_proj = self._func(ls, (10, 10), (20, 10))
+        assert np.allclose(ls_proj.coords, [(0, 0), (1, 0), (2, 2)])
+
+    def test_inplaceness(self):
+        ls = ia.LineString([(0, 0), (1, 0)])
+        ls2 = self._func(ls, (10, 10), (10, 10))
+        if self._is_inplace:
+            assert ls is ls2
+        else:
+            assert ls is not ls2
+
+
+class TestLineString_project(TestLineString_project_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, ls, from_shape, to_shape):
+        return ls.project(from_shape, to_shape)
+
+
+class TestLineString_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, ls, top=0, right=0, bottom=0, left=0):
+        return ls.shift_(top=top, right=right, bottom=bottom, left=left)
+
+    def test_shift_by_positive_args(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        assert self._func(ls.deepcopy(), top=1).coords_almost_equals(
+            [(0, 1), (1, 1), (2, 2)])
+        assert self._func(ls.deepcopy(), right=1).coords_almost_equals(
+            [(-1, 0), (0, 0), (1, 1)])
+        assert self._func(ls.deepcopy(), bottom=1).coords_almost_equals(
+            [(0, -1), (1, -1), (2, 0)])
+        assert self._func(ls.deepcopy(), left=1).coords_almost_equals(
+            [(1, 0), (2, 0), (3, 1)])
+
+    def test_shift_by_negative_values(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        assert self._func(ls.deepcopy(), top=-1).coords_almost_equals(
+            [(0, -1), (1, -1), (2, 0)])
+        assert self._func(ls.deepcopy(), right=-1).coords_almost_equals(
+            [(1, 0), (2, 0), (3, 1)])
+        assert self._func(ls.deepcopy(), bottom=-1).coords_almost_equals(
+            [(0, 1), (1, 1), (2, 2)])
+        assert self._func(ls.deepcopy(), left=-1).coords_almost_equals(
+            [(-1, 0), (0, 0), (1, 1)])
+
+    def test_shift_by_positive_values_all_arguments_provided(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        assert self._func(
+            ls.deepcopy(), top=1, right=2, bottom=3, left=4
+        ).coords_almost_equals(
+            [(0-2+4, 0+1-3), (1-2+4, 0+1-3), (2-2+4, 1+1-3)])
+
+    def test_shift_of_empty_line_string(self):
+        ls = LineString([])
+        assert self._func(
+            ls.deepcopy(), top=1, right=2, bottom=3, left=4
+        ).coords_almost_equals([])
+
+    def test_inplaceness(self):
+        ls = ia.LineString([(0, 0), (1, 0)])
+        ls2 = self._func(ls, top=0, right=0, bottom=0, left=0)
+        if self._is_inplace:
+            assert ls is ls2
+        else:
+            assert ls is not ls2
+
+
+class TestLineString_shift(TestLineString_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, ls, top=0, right=0, bottom=0, left=0):
+        return ls.shift(top=top, right=right, bottom=bottom, left=left)
+
+
 class TestLineString(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -313,21 +415,6 @@ class TestLineString(unittest.TestCase):
         ls = LineString([])
         assert not ls.contains((0, 0))
         assert not ls.contains((1, 0))
-
-    def test_project_to_2x_image_size(self):
-        ls = LineString([(0, 0), (1, 0), (2, 1)])
-        ls_proj = ls.project((10, 10), (20, 20))
-        assert np.allclose(ls_proj.coords, [(0, 0), (2, 0), (4, 2)])
-
-    def test_project_to_2x_image_width(self):
-        ls = LineString([(0, 0), (1, 0), (2, 1)])
-        ls_proj = ls.project((10, 10), (10, 20))
-        assert np.allclose(ls_proj.coords, [(0, 0), (2, 0), (4, 1)])
-
-    def test_project_to_2x_image_height(self):
-        ls = LineString([(0, 0), (1, 0), (2, 1)])
-        ls_proj = ls.project((10, 10), (20, 10))
-        assert np.allclose(ls_proj.coords, [(0, 0), (1, 0), (2, 2)])
 
     def test_project_empty_line_string_to_2x_image_size(self):
         ls = LineString([])
@@ -779,38 +866,6 @@ class TestLineString(unittest.TestCase):
             assert len(lss_clipped) == 2
             assert lss_clipped[0].is_fully_within_image((h, w))
             assert lss_clipped[1].is_fully_within_image((h, w))
-
-    def test_shift_by_positive_args(self):
-        ls = LineString([(0, 0), (1, 0), (2, 1)])
-        assert ls.shift(top=1).coords_almost_equals(
-            [(0, 1), (1, 1), (2, 2)])
-        assert ls.shift(right=1).coords_almost_equals(
-            [(-1, 0), (0, 0), (1, 1)])
-        assert ls.shift(bottom=1).coords_almost_equals(
-            [(0, -1), (1, -1), (2, 0)])
-        assert ls.shift(left=1).coords_almost_equals(
-            [(1, 0), (2, 0), (3, 1)])
-
-    def test_shift_by_negative_values(self):
-        ls = LineString([(0, 0), (1, 0), (2, 1)])
-        assert ls.shift(top=-1).coords_almost_equals(
-            [(0, -1), (1, -1), (2, 0)])
-        assert ls.shift(right=-1).coords_almost_equals(
-            [(1, 0), (2, 0), (3, 1)])
-        assert ls.shift(bottom=-1).coords_almost_equals(
-            [(0, 1), (1, 1), (2, 2)])
-        assert ls.shift(left=-1).coords_almost_equals(
-            [(-1, 0), (0, 0), (1, 1)])
-
-    def test_shift_by_positive_values_all_arguments_provided(self):
-        ls = LineString([(0, 0), (1, 0), (2, 1)])
-        assert ls.shift(top=1, right=2, bottom=3, left=4).coords_almost_equals(
-            [(0-2+4, 0+1-3), (1-2+4, 0+1-3), (2-2+4, 1+1-3)])
-
-    def test_shift_of_empty_line_string(self):
-        ls = LineString([])
-        assert ls.shift(top=1, right=2, bottom=3, left=4).coords_almost_equals(
-            [])
 
     def test_draw_mask(self):
         ls = LineString([(0, 1), (5, 1), (5, 5)])
@@ -1766,6 +1821,303 @@ class TestLineString(unittest.TestCase):
                 assert observed == expected
 
 
+class TestLineStringsOnImage_items_setter(unittest.TestCase):
+    def test_with_list_of_line_strings(self):
+        ls = [ia.LineString([(0, 0), (1, 0)]),
+              ia.LineString([(1, 1), (10, 0)])]
+        lsoi = ia.LineStringsOnImage([], shape=(10, 20, 3))
+        lsoi.items = ls
+        assert np.all([
+            (np.allclose(ls_i.coords, ls_j.coords))
+            for ls_i, ls_j
+            in zip(lsoi.line_strings, ls)
+        ])
+
+
+class TestLineStringsOnImage_on_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, lsoi, to_shape):
+        return lsoi.on_(to_shape)
+
+    def test_on_image_with_same_shape(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        lsoi_proj = self._func(lsoi, (100, 100, 3))
+
+        assert np.all([ls_a.coords_almost_equals(ls_b)
+                      for ls_a, ls_b
+                      in zip(lsoi.line_strings, lsoi_proj.line_strings)])
+        assert lsoi_proj.shape == (100, 100, 3)
+
+    def test_on_image_with_2x_size(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        lsoi_proj = self._func(lsoi, (200, 200, 3))
+
+        assert lsoi_proj.line_strings[0].coords_almost_equals(
+            [(0, 0), (1*2, 0), (2*2, 1*2)]
+        )
+        assert lsoi_proj.line_strings[1].coords_almost_equals(
+            [(10*2, 10*2)]
+        )
+        assert lsoi_proj.shape == (200, 200, 3)
+
+    def test_on_image_with_2x_size_and_empty_list_of_line_strings(self):
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+
+        lsoi_proj = self._func(lsoi, (200, 200, 3))
+
+        assert len(lsoi_proj.line_strings) == 0
+        assert lsoi_proj.shape == (200, 200, 3)
+
+    def test_inplaceness(self):
+        ls = ia.LineString([(0, 0), (1, 0)])
+        lsoi = LineStringsOnImage([ls], shape=(10, 10, 3))
+        lsoi2 = self._func(lsoi, (10, 10))
+        if self._is_inplace:
+            assert lsoi is lsoi2
+        else:
+            assert lsoi is not lsoi2
+
+
+class TestLineStringsOnImage_on(TestLineStringsOnImage_on_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, lsoi, to_shape):
+        return lsoi.on(to_shape)
+
+
+class TestLineStringsOnImage_remove_out_of_image_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, lsoi, fully=True, partly=False):
+        return lsoi.remove_out_of_image_(fully=fully, partly=partly)
+
+    def test_remove_out_of_image_with_two_line_strings(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 2
+        assert observed.line_strings[0] is ls1
+        assert observed.line_strings[1] is ls2
+
+    def test_remove_out_of_image_with_empty_list_of_line_strings(self):
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_remove_out_of_image_with_one_empty_line_string(self):
+        ls1 = LineString([])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_remove_out_of_image_with_one_line_string(self):
+        ls1 = LineString([(-10, -10), (5, 5)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 1
+        assert observed.line_strings[0] is ls1
+        assert observed.shape == (100, 100, 3)
+
+    def test_remove_out_of_image_remove_even_partial_oois(self):
+        ls1 = LineString([(-10, -10), (5, 5)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi, partly=True, fully=True)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_remove_out_of_image_with_one_single_point_line_strings(self):
+        ls1 = LineString([(-10, -10)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_remove_out_of_image_partly_false_and_fully_false(self):
+        ls1 = LineString([(-10, -10)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi, partly=False, fully=False)
+
+        assert len(observed.line_strings) == 1
+        assert observed.line_strings[0] is ls1
+        assert observed.shape == (100, 100, 3)
+
+    def test_inplaceness(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        lsoi2 = self._func(lsoi)
+
+        if self._is_inplace:
+            assert lsoi is lsoi2
+        else:
+            assert lsoi is not lsoi2
+
+
+class TestLineStringsOnImage_remove_out_of_image(
+        TestLineStringsOnImage_remove_out_of_image_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, lsoi, fully=True, partly=False):
+        return lsoi.remove_out_of_image(fully=fully, partly=partly)
+
+
+class TestLineStringsOnImage_clip_out_of_image_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, lsoi):
+        return lsoi.clip_out_of_image_()
+
+    def test_clip_out_of_image_with_two_simple_line_strings(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        expected = []
+        expected.extend(ls1.clip_out_of_image((100, 100, 3)))
+        expected.extend(ls2.clip_out_of_image((100, 100, 3)))
+        assert len(lsoi.line_strings) == len(expected)
+        for ls_obs, ls_exp in zip(observed.line_strings, expected):
+            assert ls_obs.coords_almost_equals(ls_exp)
+        assert observed.shape == (100, 100, 3)
+
+    def test_clip_out_of_image_with_empty_list_of_line_strings(self):
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_clip_out_of_image_with_one_empty_line_string(self):
+        ls1 = LineString([])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_clip_out_of_image_with_single_point_ls_and_negative_coords(self):
+        ls1 = LineString([(-10, -10)])
+        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
+
+        observed = self._func(lsoi)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_inplaceness(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        lsoi2 = self._func(lsoi)
+
+        if self._is_inplace:
+            assert lsoi is lsoi2
+        else:
+            assert lsoi is not lsoi2
+
+
+class TestLineStringsOnImage_clip_out_of_image(
+        TestLineStringsOnImage_clip_out_of_image_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, lsoi):
+        return lsoi.clip_out_of_image()
+
+
+class TestLineStringsOnImage_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, lsoi, top=0, right=0, bottom=0, left=0):
+        return lsoi.shift_(top=top, right=right, bottom=bottom, left=left)
+
+    def test_shift_with_two_simple_line_strings(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        observed = self._func(lsoi.deepcopy(), top=1, right=2, bottom=3, left=4)
+
+        assert observed.line_strings[0].coords_almost_equals(
+            ls1.shift(top=1, right=2, bottom=3, left=4)
+        )
+        assert observed.line_strings[1].coords_almost_equals(
+            ls2.shift(top=1, right=2, bottom=3, left=4)
+        )
+        assert observed.shape == (100, 100, 3)
+
+    def test_shift_with_empty_list_of_line_strings(self):
+        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
+
+        observed = self._func(lsoi, top=1, right=2, bottom=3, left=4)
+
+        assert len(observed.line_strings) == 0
+        assert observed.shape == (100, 100, 3)
+
+    def test_inplaceness(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        lsoi2 = self._func(lsoi, top=1, right=2, bottom=3, left=4)
+
+        if self._is_inplace:
+            assert lsoi is lsoi2
+        else:
+            assert lsoi is not lsoi2
+
+
+class TestLineStringsOnImage_shift(TestLineStringsOnImage_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, lsoi, top=0, right=0, bottom=0, left=0):
+        return lsoi.shift(top=top, right=right, bottom=bottom, left=left)
+
+
 # TODO test to_keypoints_on_image()
 #      test invert_to_keypoints_on_image()
 #      test to_xy_array()
@@ -1814,41 +2166,6 @@ class TestLineStringsOnImage(unittest.TestCase):
     def test_empty_with_list_of_single_point_line_string(self):
         lsoi = LineStringsOnImage([LineString([(0, 0)])], shape=(10, 10, 3))
         assert not lsoi.empty
-
-    def test_on_image_with_same_shape(self):
-        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
-        ls2 = LineString([(10, 10)])
-        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
-
-        lsoi_proj = lsoi.on((100, 100, 3))
-
-        assert np.all([ls_a.coords_almost_equals(ls_b)
-                      for ls_a, ls_b
-                      in zip(lsoi.line_strings, lsoi_proj.line_strings)])
-        assert lsoi_proj.shape == (100, 100, 3)
-
-    def test_on_image_with_2x_size(self):
-        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
-        ls2 = LineString([(10, 10)])
-        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
-
-        lsoi_proj = lsoi.on((200, 200, 3))
-
-        assert lsoi_proj.line_strings[0].coords_almost_equals(
-            [(0, 0), (1*2, 0), (2*2, 1*2)]
-        )
-        assert lsoi_proj.line_strings[1].coords_almost_equals(
-            [(10*2, 10*2)]
-        )
-        assert lsoi_proj.shape == (200, 200, 3)
-
-    def test_on_image_with_2x_size_and_empty_list_of_line_strings(self):
-        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
-
-        lsoi_proj = lsoi.on((200, 200, 3))
-
-        assert len(lsoi_proj.line_strings) == 0
-        assert lsoi_proj.shape == (200, 200, 3)
 
     def test_from_xy_arrays_single_input_array_with_two_line_strings(self):
         arrs = np.float32([
@@ -1998,71 +2315,18 @@ class TestLineStringsOnImage(unittest.TestCase):
         expected = np.copy(img)
         assert np.array_equal(observed, expected)
 
-    def test_remove_out_of_image_with_two_line_strings(self):
-        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
-        ls2 = LineString([(10, 10)])
-        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+    def test_remove_out_of_image_fraction_(self):
+        item1 = ia.LineString([(5, 1), (9, 1)])
+        item2 = ia.LineString([(5, 1), (15, 1)])
+        item3 = ia.LineString([(15, 1), (25, 1)])
+        cbaoi = ia.LineStringsOnImage([item1, item2, item3],
+                                      shape=(10, 10, 3))
 
-        observed = lsoi.remove_out_of_image()
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction_(0.6)
 
-        assert len(observed.line_strings) == 2
-        assert observed.line_strings[0] is ls1
-        assert observed.line_strings[1] is ls2
-
-    def test_remove_out_of_image_with_empty_list_of_line_strings(self):
-        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
-
-        observed = lsoi.remove_out_of_image()
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_remove_out_of_image_with_one_empty_line_string(self):
-        ls1 = LineString([])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.remove_out_of_image()
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_remove_out_of_image_with_one_line_string(self):
-        ls1 = LineString([(-10, -10), (5, 5)])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.remove_out_of_image()
-
-        assert len(observed.line_strings) == 1
-        assert observed.line_strings[0] is ls1
-        assert observed.shape == (100, 100, 3)
-
-    def test_remove_out_of_image_remove_even_partial_oois(self):
-        ls1 = LineString([(-10, -10), (5, 5)])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.remove_out_of_image(partly=True, fully=True)
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_remove_out_of_image_with_one_single_point_line_strings(self):
-        ls1 = LineString([(-10, -10)])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.remove_out_of_image()
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_remove_out_of_image_partly_false_and_fully_false(self):
-        ls1 = LineString([(-10, -10)])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.remove_out_of_image(partly=False, fully=False)
-
-        assert len(observed.line_strings) == 1
-        assert observed.line_strings[0] is ls1
-        assert observed.shape == (100, 100, 3)
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
+        assert cbaoi_reduced is cbaoi
 
     def test_remove_out_of_image_fraction(self):
         item1 = ia.LineString([(5, 1), (9, 1)])
@@ -2075,70 +2339,7 @@ class TestLineStringsOnImage(unittest.TestCase):
 
         assert len(cbaoi_reduced.items) == 2
         assert cbaoi_reduced.items == [item1, item2]
-
-    def test_clip_out_of_image_with_two_simple_line_strings(self):
-        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
-        ls2 = LineString([(10, 10)])
-        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
-
-        observed = lsoi.clip_out_of_image()
-
-        expected = []
-        expected.extend(ls1.clip_out_of_image((100, 100, 3)))
-        expected.extend(ls2.clip_out_of_image((100, 100, 3)))
-        assert len(lsoi.line_strings) == len(expected)
-        for ls_obs, ls_exp in zip(observed.line_strings, expected):
-            assert ls_obs.coords_almost_equals(ls_exp)
-        assert observed.shape == (100, 100, 3)
-
-    def test_clip_out_of_image_with_empty_list_of_line_strings(self):
-        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
-
-        observed = lsoi.clip_out_of_image()
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_clip_out_of_image_with_one_empty_line_string(self):
-        ls1 = LineString([])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.clip_out_of_image()
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_clip_out_of_image_with_single_point_ls_and_negative_coords(self):
-        ls1 = LineString([(-10, -10)])
-        lsoi = LineStringsOnImage([ls1], shape=(100, 100, 3))
-
-        observed = lsoi.clip_out_of_image()
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
-
-    def test_shift_with_two_simple_line_strings(self):
-        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
-        ls2 = LineString([(10, 10)])
-        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
-
-        observed = lsoi.shift(top=1, right=2, bottom=3, left=4)
-
-        assert observed.line_strings[0].coords_almost_equals(
-            ls1.shift(top=1, right=2, bottom=3, left=4)
-        )
-        assert observed.line_strings[1].coords_almost_equals(
-            ls2.shift(top=1, right=2, bottom=3, left=4)
-        )
-        assert observed.shape == (100, 100, 3)
-
-    def test_shift_with_empty_list_of_line_strings(self):
-        lsoi = LineStringsOnImage([], shape=(100, 100, 3))
-
-        observed = lsoi.shift(top=1, right=2, bottom=3, left=4)
-
-        assert len(observed.line_strings) == 0
-        assert observed.shape == (100, 100, 3)
+        assert cbaoi_reduced is not cbaoi
 
     def test_to_xy_array(self):
         lsoi = ia.LineStringsOnImage(

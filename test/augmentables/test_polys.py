@@ -294,11 +294,18 @@ class TestPolygon_width(unittest.TestCase):
         assert np.allclose(poly.width, 0.0, atol=1e-8, rtol=0)
 
 
-class TestPolygon_project(unittest.TestCase):
+class TestPolygon_project_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, poly, from_shape, to_shape):
+        return poly.project_(from_shape, to_shape)
+
     def test_project_square_to_image_of_identical_shape(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
 
-        poly_proj = poly.project((1, 1), (1, 1))
+        poly_proj = self._func(poly, (1, 1), (1, 1))
 
         assert poly_proj.exterior.dtype.name == "float32"
         assert poly_proj.exterior.shape == (4, 2)
@@ -315,7 +322,7 @@ class TestPolygon_project(unittest.TestCase):
     def test_project_square_to_image_with_twice_the_height_and_width(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
 
-        poly_proj = poly.project((1, 1), (2, 2))
+        poly_proj = self._func(poly, (1, 1), (2, 2))
 
         assert poly_proj.exterior.dtype.name == "float32"
         assert poly_proj.exterior.shape == (4, 2)
@@ -332,7 +339,7 @@ class TestPolygon_project(unittest.TestCase):
     def test_project_square_to_image_with_twice_the_height_but_same_width(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
 
-        poly_proj = poly.project((1, 1), (2, 1))
+        poly_proj = self._func(poly, (1, 1), (2, 1))
 
         assert poly_proj.exterior.dtype.name == "float32"
         assert poly_proj.exterior.shape == (4, 2)
@@ -348,9 +355,28 @@ class TestPolygon_project(unittest.TestCase):
 
     def test_project_empty_exterior(self):
         poly = ia.Polygon([])
-        poly_proj = poly.project((1, 1), (2, 2))
+        poly_proj = self._func(poly, (1, 1), (2, 2))
         assert poly_proj.exterior.dtype.name == "float32"
         assert poly_proj.exterior.shape == (0, 2)
+
+    def test_inplaceness(self):
+        poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
+
+        poly2 = self._func(poly, (1, 1), (1, 1))
+
+        if self._is_inplace:
+            assert poly is poly2
+        else:
+            assert poly is not poly2
+
+
+class TestPolygon_project(TestPolygon_project_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, poly, from_shape, to_shape):
+        return poly.project(from_shape, to_shape)
 
 
 class TestPolygon_find_closest_point_idx(unittest.TestCase):
@@ -836,15 +862,111 @@ class TestPolygon_clip_out_of_image(unittest.TestCase):
         assert len(multipoly_clipped) == 0
 
 
-class TestPolygon_shift(unittest.TestCase):
+class TestPolygon_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, poly, top=0, right=0, bottom=0, left=0):
+        return poly.shift_(top=top, right=right, bottom=bottom, left=left)
+
     @property
     def poly(self):
         return ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
 
-    def test_shift_does_not_work_inplace(self):
-        # make sure that shift does not change poly inplace
+    def test_shift_from_top(self):
+        for v in [1, 0, -1, 0.5]:
+            with self.subTest(top=v):
+                poly_shifted = self._func(self.poly, top=v)
+                assert np.allclose(poly_shifted.exterior, np.float32([
+                    [0, 0 + v],
+                    [1, 0 + v],
+                    [1, 1 + v],
+                    [0, 1 + v]
+                ]))
+                assert poly_shifted.label == "test"
+
+    def test_shift_from_bottom(self):
+        for v in [1, 0, -1, 0.5]:
+            with self.subTest(bottom=v):
+                poly_shifted = self._func(self.poly, bottom=v)
+                assert np.allclose(poly_shifted.exterior, np.float32([
+                    [0, 0 - v],
+                    [1, 0 - v],
+                    [1, 1 - v],
+                    [0, 1 - v]
+                ]))
+                assert poly_shifted.label == "test"
+
+    def test_shift_from_top_and_bottom(self):
+        for v in [1, 0, -1, 0.5]:
+            with self.subTest(top=v, bottom=-v):
+                poly_shifted = self._func(self.poly, top=v, bottom=-v)
+                assert np.allclose(poly_shifted.exterior, np.float32([
+                    [0, 0 + 2*v],
+                    [1, 0 + 2*v],
+                    [1, 1 + 2*v],
+                    [0, 1 + 2*v]
+                ]))
+                assert poly_shifted.label == "test"
+
+    def test_shift_from_left(self):
+        for v in [1, 0, -1, 0.5]:
+            with self.subTest(left=v):
+                poly_shifted = self._func(self.poly, left=v)
+                assert np.allclose(poly_shifted.exterior, np.float32([
+                    [0 + v, 0],
+                    [1 + v, 0],
+                    [1 + v, 1],
+                    [0 + v, 1]
+                ]))
+                assert poly_shifted.label == "test"
+
+    def test_shift_from_right(self):
+        for v in [1, 0, -1, 0.5]:
+            with self.subTest(right=v):
+                poly_shifted = self._func(self.poly, right=v)
+                assert np.allclose(poly_shifted.exterior, np.float32([
+                    [0 - v, 0],
+                    [1 - v, 0],
+                    [1 - v, 1],
+                    [0 - v, 1]
+                ]))
+                assert poly_shifted.label == "test"
+
+    def test_shift_from_left_and_right(self):
+        for v in [1, 0, -1, 0.5]:
+            with self.subTest(left=v, right=-v):
+                poly_shifted = self._func(self.poly, left=v, right=-v)
+                assert np.allclose(poly_shifted.exterior, np.float32([
+                    [0 + 2 * v, 0],
+                    [1 + 2 * v, 0],
+                    [1 + 2 * v, 1],
+                    [0 + 2 * v, 1]
+                ]))
+                assert poly_shifted.label == "test"
+
+    def test_inplaceness(self):
         poly = self.poly
-        poly_shifted = poly.shift(top=1)
+        poly2 = self._func(poly, top=1)
+
+        if self._is_inplace:
+            assert poly is poly2
+        else:
+            assert poly is not poly2
+
+
+class TestPolygon_shift(TestPolygon_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, poly, top=0, right=0, bottom=0, left=0):
+        return poly.shift(top=top, right=right, bottom=bottom, left=left)
+
+    def test_shift_does_not_work_inplace(self):
+        poly = self.poly
+        poly_shifted = self._func(poly, top=1)
         assert np.allclose(poly.exterior, np.float32([
             [0, 0],
             [1, 0],
@@ -857,78 +979,6 @@ class TestPolygon_shift(unittest.TestCase):
             [1, 2],
             [0, 2]
         ]))
-
-    def test_shift_from_top(self):
-        for v in [1, 0, -1, 0.5]:
-            with self.subTest(top=v):
-                poly_shifted = self.poly.shift(top=v)
-                assert np.allclose(poly_shifted.exterior, np.float32([
-                    [0, 0 + v],
-                    [1, 0 + v],
-                    [1, 1 + v],
-                    [0, 1 + v]
-                ]))
-                assert poly_shifted.label == "test"
-
-    def test_shift_from_bottom(self):
-        for v in [1, 0, -1, 0.5]:
-            with self.subTest(bottom=v):
-                poly_shifted = self.poly.shift(bottom=v)
-                assert np.allclose(poly_shifted.exterior, np.float32([
-                    [0, 0 - v],
-                    [1, 0 - v],
-                    [1, 1 - v],
-                    [0, 1 - v]
-                ]))
-                assert poly_shifted.label == "test"
-
-    def test_shift_from_top_and_bottom(self):
-        for v in [1, 0, -1, 0.5]:
-            with self.subTest(top=v, bottom=-v):
-                poly_shifted = self.poly.shift(top=v, bottom=-v)
-                assert np.allclose(poly_shifted.exterior, np.float32([
-                    [0, 0 + 2*v],
-                    [1, 0 + 2*v],
-                    [1, 1 + 2*v],
-                    [0, 1 + 2*v]
-                ]))
-                assert poly_shifted.label == "test"
-
-    def test_shift_from_left(self):
-        for v in [1, 0, -1, 0.5]:
-            with self.subTest(left=v):
-                poly_shifted = self.poly.shift(left=v)
-                assert np.allclose(poly_shifted.exterior, np.float32([
-                    [0 + v, 0],
-                    [1 + v, 0],
-                    [1 + v, 1],
-                    [0 + v, 1]
-                ]))
-                assert poly_shifted.label == "test"
-
-    def test_shift_from_right(self):
-        for v in [1, 0, -1, 0.5]:
-            with self.subTest(right=v):
-                poly_shifted = self.poly.shift(right=v)
-                assert np.allclose(poly_shifted.exterior, np.float32([
-                    [0 - v, 0],
-                    [1 - v, 0],
-                    [1 - v, 1],
-                    [0 - v, 1]
-                ]))
-                assert poly_shifted.label == "test"
-
-    def test_shift_from_left_and_right(self):
-        for v in [1, 0, -1, 0.5]:
-            with self.subTest(left=v, right=-v):
-                poly_shifted = self.poly.shift(left=v, right=-v)
-                assert np.allclose(poly_shifted.exterior, np.float32([
-                    [0 + 2 * v, 0],
-                    [1 + 2 * v, 0],
-                    [1 + 2 * v, 1],
-                    [0 + 2 * v, 1]
-                ]))
-                assert poly_shifted.label == "test"
 
 
 class TestPolygon_draw_on_image(unittest.TestCase):
@@ -1507,20 +1557,27 @@ class TestPolygon_change_first_point_by_index(unittest.TestCase):
         assert got_exception
 
 
-class TestPolygon_subdivide(unittest.TestCase):
+class TestPolygon_subdivide_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, poly, points_per_edge):
+        return poly.subdivide_(points_per_edge)
+
     def test_zero_points(self):
         poly = ia.Polygon([])
-        poly_sub = poly.subdivide(1)
+        poly_sub = self._func(poly, 1)
         assert len(poly_sub.exterior) == 0
 
     def test_one_point(self):
         poly = ia.Polygon([(1, 1)])
-        poly_sub = poly.subdivide(1)
+        poly_sub = self._func(poly, 1)
         assert len(poly_sub.exterior) == 1
 
     def test_two_points(self):
         poly = ia.Polygon([(1, 2), (2, 4)])
-        poly_sub = poly.subdivide(1)
+        poly_sub = self._func(poly, 1)
         assert len(poly_sub.exterior) == 4
         assert poly_sub.coords_almost_equals([
             (1, 2),
@@ -1531,7 +1588,7 @@ class TestPolygon_subdivide(unittest.TestCase):
 
     def test_three_points(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
-        poly_sub = poly.subdivide(1)
+        poly_sub = self._func(poly, 1)
         assert len(poly_sub.exterior) == 6
         assert poly_sub.coords_almost_equals([
             (0, 0),
@@ -1544,7 +1601,7 @@ class TestPolygon_subdivide(unittest.TestCase):
 
     def test_three_points__n_points_0(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
-        poly_sub = poly.subdivide(0)
+        poly_sub = self._func(poly, 0)
         assert len(poly_sub.exterior) == 3
         assert poly_sub.coords_almost_equals([
             (0, 0),
@@ -1554,7 +1611,7 @@ class TestPolygon_subdivide(unittest.TestCase):
 
     def test_three_points__n_points_2(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
-        poly_sub = poly.subdivide(2)
+        poly_sub = self._func(poly, 2)
         assert len(poly_sub.exterior) == 3+2*3
         assert poly_sub.coords_almost_equals([
             (0, 0),
@@ -1570,13 +1627,31 @@ class TestPolygon_subdivide(unittest.TestCase):
 
     def test_label_none_is_preserved(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1)])
-        poly_sub = poly.subdivide(1)
+        poly_sub = self._func(poly, 1)
         assert poly_sub.label is None
 
     def test_label_str_is_preserved(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1)], label="foo")
-        poly_sub = poly.subdivide(1)
+        poly_sub = self._func(poly, 1)
         assert poly_sub.label == "foo"
+
+    def test_inplaceness(self):
+        poly = ia.Polygon([(1, 2), (2, 4)])
+        poly2 = self._func(poly, 1)
+
+        if self._is_inplace:
+            assert poly is poly2
+        else:
+            assert poly is not poly2
+
+
+class TestPolygon_subdivide(TestPolygon_subdivide_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, poly, points_per_edge):
+        return poly.subdivide(points_per_edge)
 
 
 class TestPolygon_to_shapely_line_string(unittest.TestCase):
@@ -2271,6 +2346,19 @@ class TestPolygonsOnImage_items(unittest.TestCase):
         assert items == []
 
 
+class TestPolygonsOnImage_items_setter(unittest.TestCase):
+    def test_with_list_of_polygons(self):
+        ps = [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+              ia.Polygon([(1, 1), (2, 1), (2, 2)])]
+        psoi = ia.PolygonsOnImage([], shape=(10, 20, 3))
+        psoi.items = ps
+        assert np.all([
+            (np.allclose(ps_i.coords, ps_j.coords))
+            for ps_i, ps_j
+            in zip(psoi.polygons, ps)
+        ])
+
+
 class TestPolygonsOnImage_empty(unittest.TestCase):
     def test_with_multiple_polygons(self):
         poly_oi = ia.PolygonsOnImage(
@@ -2287,7 +2375,14 @@ class TestPolygonsOnImage_empty(unittest.TestCase):
         assert poly_oi.empty is True
 
 
-class TestPolygonsOnImage_on(unittest.TestCase):
+class TestPolygonsOnImage_on_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, psoi, image):
+        return psoi.on_(image)
+
     def test_new_shape_is_identical_to_old_shape(self):
         # size unchanged
         poly_oi = ia.PolygonsOnImage(
@@ -2296,7 +2391,7 @@ class TestPolygonsOnImage_on(unittest.TestCase):
              ia.Polygon([(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)])],
             shape=(1, 1, 3)
         )
-        poly_oi_proj = poly_oi.on((1, 1, 3))
+        poly_oi_proj = self._func(poly_oi, (1, 1, 3))
         assert np.allclose(
             poly_oi_proj.polygons[0].exterior,
             [(0, 0), (1, 0), (1, 1), (0, 1)],
@@ -2319,7 +2414,7 @@ class TestPolygonsOnImage_on(unittest.TestCase):
              ia.Polygon([(5, 0), (10, 5), (5, 10), (0, 5)])],
             shape=(10, 10, 3)
         )
-        poly_oi_proj = poly_oi.on((1, 1, 3))
+        poly_oi_proj = self._func(poly_oi, (1, 1, 3))
         assert np.allclose(
             poly_oi_proj.polygons[0].exterior,
             [(0, 0), (1, 0), (1, 1), (0, 1)],
@@ -2340,12 +2435,21 @@ class TestPolygonsOnImage_on(unittest.TestCase):
             [ia.Polygon([(0, 0), (50, 0), (50, 100), (0, 100)])],
             shape=(100, 100, 3)
         )
-        poly_oi_proj = poly_oi.on((10, 200, 3))
+        poly_oi_proj = self._func(poly_oi, (10, 200, 3))
         assert np.allclose(
             poly_oi_proj.polygons[0].exterior,
             [(0, 0), (100, 0), (100, 10), (0, 10)],
             rtol=0, atol=1e-4)
         assert poly_oi_proj.shape == (10, 200, 3)
+
+
+class TestPolygonsOnImage_on(TestPolygonsOnImage_on_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi, image):
+        return psoi.on(image)
 
 
 class TestPolygonsOnImage_draw_on_image(unittest.TestCase):
@@ -2377,13 +2481,21 @@ class TestPolygonsOnImage_draw_on_image(unittest.TestCase):
         assert np.allclose(image_drawn, image_expected)
 
 
-class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
+class TestPolygonsOnImage_remove_out_of_image_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi, fully=True, partly=False):
+        return psoi.remove_out_of_image_(fully, partly)
+
     def test_with_zero_polygons(self):
         # no polygons, nothing to remove
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
         for fully, partly in [(False, False), (False, True),
                               (True, False), (True, True)]:
-            poly_oi_rm = poly_oi.remove_out_of_image(fully=fully, partly=partly)
+            poly_oi_rm = self._func(poly_oi.deepcopy(),
+                                    fully=fully, partly=partly)
             assert len(poly_oi_rm.polygons) == 0
             assert poly_oi_rm.shape == (10, 11, 3)
 
@@ -2394,7 +2506,8 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
             shape=(10, 11, 3))
         for fully, partly in [(False, False), (False, True),
                               (True, False), (True, True)]:
-            poly_oi_rm = poly_oi.remove_out_of_image(fully=fully, partly=partly)
+            poly_oi_rm = self._func(poly_oi.deepcopy(),
+                                    fully=fully, partly=partly)
             assert len(poly_oi_rm.polygons) == 1
             assert np.allclose(poly_oi_rm.polygons[0].exterior,
                                [(1, 1), (9, 1), (9, 9), (1, 9)],
@@ -2408,7 +2521,7 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
              ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
             shape=(10, 10, 3))
 
-        poly_oi_rm = poly_oi.remove_out_of_image(fully=False, partly=False)
+        poly_oi_rm = self._func(poly_oi.deepcopy(), fully=False, partly=False)
         assert len(poly_oi.polygons) == 2
         assert len(poly_oi_rm.polygons) == 2
         assert np.allclose(poly_oi_rm.polygons[0].exterior,
@@ -2419,7 +2532,7 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
                            rtol=0, atol=1e-4)
         assert poly_oi_rm.shape == (10, 10, 3)
 
-        poly_oi_rm = poly_oi.remove_out_of_image(fully=True, partly=False)
+        poly_oi_rm = self._func(poly_oi.deepcopy(), fully=True, partly=False)
         assert len(poly_oi.polygons) == 2
         assert len(poly_oi_rm.polygons) == 1
         assert np.allclose(poly_oi_rm.polygons[0].exterior,
@@ -2427,7 +2540,7 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
                            rtol=0, atol=1e-4)
         assert poly_oi_rm.shape == (10, 10, 3)
 
-        poly_oi_rm = poly_oi.remove_out_of_image(fully=False, partly=True)
+        poly_oi_rm = self._func(poly_oi.deepcopy(), fully=False, partly=True)
         assert len(poly_oi.polygons) == 2
         assert len(poly_oi_rm.polygons) == 1
         assert np.allclose(poly_oi_rm.polygons[0].exterior,
@@ -2435,10 +2548,48 @@ class TestPolygonsOnImage_remove_out_of_image(unittest.TestCase):
                            rtol=0, atol=1e-4)
         assert poly_oi_rm.shape == (10, 10, 3)
 
-        poly_oi_rm = poly_oi.remove_out_of_image(fully=True, partly=True)
+        poly_oi_rm = self._func(poly_oi.deepcopy(), fully=True, partly=True)
         assert len(poly_oi.polygons) == 2
         assert len(poly_oi_rm.polygons) == 0
         assert poly_oi_rm.shape == (10, 10, 3)
+
+    def test_inplaceness(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (11, 1), (11, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 10, 3))
+
+        poly_oi_rm = self._func(poly_oi.deepcopy(), fully=True, partly=False)
+
+        if self._is_inplace:
+            assert poly_oi_rm is poly_oi
+        else:
+            assert poly_oi_rm is not poly_oi
+
+
+class TestPolygonsOnImage_remove_out_if_image(
+        TestPolygonsOnImage_remove_out_of_image_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi, fully=True, partly=False):
+        return psoi.remove_out_of_image(fully, partly)
+
+
+class TestPolygonsOnImage_remove_out_of_image_fraction_(unittest.TestCase):
+    def test_three_polygons(self):
+        item1 = ia.Polygon([(5, 1), (9, 1), (9, 2), (5, 2)])
+        item2 = ia.Polygon([(5, 1), (15, 1), (15, 2), (5, 2)])
+        item3 = ia.Polygon([(15, 1), (25, 1), (25, 2), (15, 2)])
+        cbaoi = ia.PolygonsOnImage([item1, item2, item3],
+                                   shape=(10, 10, 3))
+
+        cbaoi_reduced = cbaoi.remove_out_of_image_fraction_(0.6)
+
+        assert len(cbaoi_reduced.items) == 2
+        assert cbaoi_reduced.items == [item1, item2]
+        assert cbaoi_reduced is cbaoi
 
 
 class TestPolygonsOnImage_remove_out_of_image_fraction(unittest.TestCase):
@@ -2453,12 +2604,20 @@ class TestPolygonsOnImage_remove_out_of_image_fraction(unittest.TestCase):
 
         assert len(cbaoi_reduced.items) == 2
         assert cbaoi_reduced.items == [item1, item2]
+        assert cbaoi_reduced is not cbaoi
 
 
-class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
+class TestPolygonsOnImage_clip_out_of_image_(unittest.TestCase):
     # NOTE: clip_out_of_image() can change the order of points,
     # hence we check here for each expected point whether it appears
     # somewhere in the list of points
+
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, psoi):
+        return psoi.clip_out_of_image_()
 
     @classmethod
     def _any_point_close(cls, points, point_search):
@@ -2471,7 +2630,7 @@ class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
     def test_with_zero_polygons(self):
         # no polygons
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
-        poly_oi_clip = poly_oi.clip_out_of_image()
+        poly_oi_clip = self._func(poly_oi)
         assert len(poly_oi_clip.polygons) == 0
         assert poly_oi_clip.shape == (10, 11, 3)
 
@@ -2480,7 +2639,7 @@ class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
         poly_oi = ia.PolygonsOnImage(
             [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)])],
             shape=(10, 11, 3))
-        poly_oi_clip = poly_oi.clip_out_of_image()
+        poly_oi_clip = self._func(poly_oi)
         assert len(poly_oi_clip.polygons) == 1
         for point_search in [(1, 1), (8, 1), (8, 9), (1, 9)]:
             assert self._any_point_close(poly_oi_clip.polygons[0].exterior,
@@ -2492,7 +2651,7 @@ class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
         poly_oi = ia.PolygonsOnImage(
             [ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)])],
             shape=(10, 11, 3))
-        poly_oi_clip = poly_oi.clip_out_of_image()
+        poly_oi_clip = self._func(poly_oi)
         assert len(poly_oi_clip.polygons) == 1
         for point_search in [(1, 1), (11, 1), (11, 9), (1, 9)]:
             assert self._any_point_close(poly_oi_clip.polygons[0].exterior,
@@ -2504,7 +2663,7 @@ class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
         poly_oi = ia.PolygonsOnImage(
             [ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
             shape=(10, 11, 3))
-        poly_oi_clip = poly_oi.clip_out_of_image()
+        poly_oi_clip = self._func(poly_oi)
         assert len(poly_oi_clip.polygons) == 0
         assert poly_oi_clip.shape == (10, 11, 3)
 
@@ -2516,7 +2675,7 @@ class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
              ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
              ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
             shape=(10, 11, 3))
-        poly_oi_clip = poly_oi.clip_out_of_image()
+        poly_oi_clip = self._func(poly_oi)
         assert len(poly_oi_clip.polygons) == 2
         for point_search in [(1, 1), (8, 1), (8, 9), (1, 9)]:
             assert self._any_point_close(poly_oi_clip.polygons[0].exterior,
@@ -2526,12 +2685,41 @@ class TestPolygonsOnImage_clip_out_of_image(unittest.TestCase):
                                          point_search)
         assert poly_oi_clip.shape == (10, 11, 3)
 
+    def test_inplaceness(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)])],
+            shape=(10, 11, 3))
 
-class TestPolygonsOnImage_shift(unittest.TestCase):
+        poly_oi_clip = self._func(poly_oi)
+
+        if self._is_inplace:
+            assert poly_oi_clip is poly_oi
+        else:
+            assert poly_oi_clip is not poly_oi
+
+
+class TestPolygonsOnImage_clip_out_of_image(
+        TestPolygonsOnImage_clip_out_of_image_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi):
+        return psoi.clip_out_of_image()
+
+
+class TestPolygonsOnImage_shift_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, psoi, top=None, right=None, bottom=None, left=None):
+        return psoi.shift_(top, right, bottom, left)
+
     def test_with_zero_polygons(self):
         # no polygons
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
-        poly_oi_shifted = poly_oi.shift(top=3, right=0, bottom=1, left=-3)
+        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1, left=-3)
         assert len(poly_oi_shifted.polygons) == 0
         assert poly_oi_shifted.shape == (10, 11, 3)
 
@@ -2542,7 +2730,7 @@ class TestPolygonsOnImage_shift(unittest.TestCase):
              ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
              ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
             shape=(10, 11, 3))
-        poly_oi_shifted = poly_oi.shift(top=3, right=0, bottom=1, left=-3)
+        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1, left=-3)
         assert len(poly_oi_shifted.polygons) == 3
         assert np.allclose(poly_oi_shifted.polygons[0].exterior,
                            [(1-3, 1+2), (8-3, 1+2), (8-3, 9+2), (1-3, 9+2)],
@@ -2556,8 +2744,38 @@ class TestPolygonsOnImage_shift(unittest.TestCase):
                            rtol=0, atol=1e-4)
         assert poly_oi_shifted.shape == (10, 11, 3)
 
+    def test_inplaceness(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 11, 3))
 
-class TestPolygonsOnImage_subdivide(unittest.TestCase):
+        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1, left=-3)
+
+        if self._is_inplace:
+            assert poly_oi_shifted is poly_oi
+        else:
+            assert poly_oi_shifted is not poly_oi
+
+
+class TestPolygonsOnImage_shift(TestPolygonsOnImage_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi, top=None, right=None, bottom=None, left=None):
+        return psoi.shift(top, right, bottom, left)
+
+
+class TestPolygonsOnImage_subdivide_(unittest.TestCase):
+    @property
+    def _is_inplace(self):
+        return True
+
+    def _func(self, psoi, points_per_edge):
+        return psoi.subdivide_(points_per_edge)
+
     def test_mocked(self):
         poly_oi = ia.PolygonsOnImage(
             [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
@@ -2565,10 +2783,10 @@ class TestPolygonsOnImage_subdivide(unittest.TestCase):
             shape=(10, 11, 3))
         mock_sub = mock.Mock()
         mock_sub.return_value = "foo"
-        poly_oi.items[0].subdivide = mock_sub
-        poly_oi.items[1].subdivide = mock_sub
+        poly_oi.items[0].subdivide_ = mock_sub
+        poly_oi.items[1].subdivide_ = mock_sub
 
-        poly_oi_sub = poly_oi.subdivide(2)
+        poly_oi_sub = self._func(poly_oi, 2)
 
         assert mock_sub.call_count == 2
         assert mock_sub.call_args_list[0][0][0] == 2
@@ -2577,14 +2795,14 @@ class TestPolygonsOnImage_subdivide(unittest.TestCase):
 
     def test_with_zero_polygons(self):
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
-        poly_oi_sub = poly_oi.subdivide(1)
+        poly_oi_sub = self._func(poly_oi, 1)
         assert len(poly_oi_sub.polygons) == 0
         assert poly_oi_sub.shape == (10, 11, 3)
 
     def test_with_one_polygon(self):
         poly_oi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0)])],
                                      shape=(10, 11, 3))
-        poly_oi_sub = poly_oi.subdivide(1)
+        poly_oi_sub = self._func(poly_oi, 1)
         assert poly_oi_sub.shape == (10, 11, 3)
         assert len(poly_oi_sub.items) == 1
         assert poly_oi_sub.items[0].coords_almost_equals([
@@ -2593,6 +2811,45 @@ class TestPolygonsOnImage_subdivide(unittest.TestCase):
             (1, 0),
             (0.5, 0)
         ])
+
+    def test_inplaceness(self):
+        poly_oi = ia.PolygonsOnImage([ia.Polygon([(0, 0), (1, 0)])],
+                                     shape=(10, 11, 3))
+
+        poly_oi_sub = self._func(poly_oi, 1)
+
+        if self._is_inplace:
+            assert poly_oi_sub is poly_oi
+        else:
+            assert poly_oi_sub is not poly_oi
+
+
+class TestPolygonsOnImage_subdivide(TestPolygonsOnImage_subdivide_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi, points_per_edge):
+        return psoi.subdivide(points_per_edge)
+
+    def test_mocked(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)])],
+            shape=(10, 11, 3))
+        mock_sub = mock.Mock()
+        mock_sub.return_value = "foo"
+        poly_oi.items[0].subdivide_ = mock_sub
+        poly_oi.items[1].subdivide_ = mock_sub
+
+        poly_oi_sub = self._func(poly_oi, 2)
+
+        # When the PSOI is copied, each polygon is also copied. That leads
+        # to new Polygon instances that have no longer the subdivide_
+        # method overwritten by the mock. Hence, the mock is never actually
+        # called here.
+        assert mock_sub.call_count == 0
+        assert poly_oi_sub.items != ["foo", "foo"]
 
 
 class TestPolygonsOnImage_to_xy_array(unittest.TestCase):
@@ -2783,6 +3040,29 @@ class TestPolygonsOnImage_copy(unittest.TestCase):
                            [(0, 0), (1, 0), (1, 1)],
                            rtol=0, atol=1e-4)
 
+    def test_polygons_parameter_set(self):
+        poly1 = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly2 = ia.Polygon([(0+1, 0), (1+1, 0), (1+1, 1)])
+        poly3 = ia.Polygon([(0+2, 0), (1+2, 0), (1+2, 1)])
+        psoi = ia.PolygonsOnImage([poly1, poly2], shape=(40, 50, 3))
+
+        psoi_copy = psoi.copy(polygons=[poly3])
+
+        assert psoi_copy is not psoi
+        assert psoi_copy.shape == (40, 50, 3)
+        assert psoi_copy.polygons == [poly3]
+
+    def test_shape_parameter_set(self):
+        poly1 = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly2 = ia.Polygon([(0+1, 0), (1+1, 0), (1+1, 1)])
+        psoi = ia.PolygonsOnImage([poly1, poly2], shape=(40, 50, 3))
+
+        psoi_copy = psoi.copy(shape=(40+1, 50+1, 3))
+
+        assert psoi_copy is not psoi
+        assert psoi_copy.shape == (40+1, 50+1, 3)
+        assert psoi_copy.polygons == [poly1, poly2]
+
 
 class TestPolygonsOnImage_deepcopy(unittest.TestCase):
     def test_with_two_polygons(self):
@@ -2820,6 +3100,32 @@ class TestPolygonsOnImage_deepcopy(unittest.TestCase):
         assert np.allclose(poly_oi_copy.polygons[1].exterior,
                            [(100, 2), (16, 2), (16, 10), (2, 10)],
                            rtol=0, atol=1e-4)
+
+    def test_polygons_parameter_set(self):
+        poly1 = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly2 = ia.Polygon([(0+1, 0), (1+1, 0), (1+1, 1)])
+        poly3 = ia.Polygon([(0+2, 0), (1+2, 0), (1+2, 1)])
+        psoi = ia.PolygonsOnImage([poly1, poly2], shape=(40, 50, 3))
+
+        psoi_copy = psoi.deepcopy(polygons=[poly3])
+
+        assert psoi_copy is not psoi
+        assert psoi_copy.shape == (40, 50, 3)
+        assert len(psoi_copy.polygons) == 1
+        assert psoi_copy.polygons[0].coords_almost_equals(poly3)
+
+    def test_shape_parameter_set(self):
+        poly1 = ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        poly2 = ia.Polygon([(0+1, 0), (1+1, 0), (1+1, 1)])
+        psoi = ia.PolygonsOnImage([poly1, poly2], shape=(40, 50, 3))
+
+        psoi_copy = psoi.deepcopy(shape=(40+1, 50+1, 3))
+
+        assert psoi_copy is not psoi
+        assert psoi_copy.shape == (40+1, 50+1, 3)
+        assert len(psoi_copy.polygons) == 2
+        assert psoi_copy.polygons[0].coords_almost_equals(poly1)
+        assert psoi_copy.polygons[1].coords_almost_equals(poly2)
 
 
 class TestPolygonsOnImage___iter__(unittest.TestCase):

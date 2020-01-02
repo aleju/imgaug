@@ -249,11 +249,12 @@ class _DebugGridCBAsOICell(_IDebugGridCell):
         image_rsp, size_rs, paddings = _resizepad_to_size(
             self.image, (height, width), cval=_COLOR_GRID_BACKGROUND)
 
-        cbasoi = self.cbasoi.on(size_rs)
+        cbasoi = self.cbasoi.deepcopy()
+        cbasoi = cbasoi.on_(size_rs)
         if isinstance(cbasoi, ia.KeypointsOnImage):
-            cbasoi = cbasoi.shift(y=paddings[0], x=paddings[3])
+            cbasoi = cbasoi.shift_(y=paddings[0], x=paddings[3])
         else:
-            cbasoi = cbasoi.shift(top=paddings[0], left=paddings[3])
+            cbasoi = cbasoi.shift_(top=paddings[0], left=paddings[3])
         cbasoi.shape = image_rsp.shape
 
         return cbasoi.draw_on_image(image_rsp)

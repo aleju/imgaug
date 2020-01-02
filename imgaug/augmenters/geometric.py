@@ -3657,7 +3657,7 @@ class PerspectiveTransform(meta.Augmenter):
                         kp.x = coords[0]
                         kp.y = coords[1]
                 if self.keep_size:
-                    kpsoi = kpsoi.on(shape_orig)
+                    kpsoi = kpsoi.on_(shape_orig)
                 result[i] = kpsoi
 
         return result
@@ -4799,7 +4799,7 @@ class Rot90(meta.Augmenter):
                 kpsoi_i.shape = shape_aug
 
                 if self.keep_size and (h, w) != (h_aug, w_aug):
-                    kpsoi_i = kpsoi_i.on(shape_orig)
+                    kpsoi_i = kpsoi_i.on_(shape_orig)
                     kpsoi_i.shape = shape_orig
 
                 result.append(kpsoi_i)
@@ -4973,7 +4973,7 @@ class WithPolarWarping(meta.Augmenter):
             return batch, (False, batch_contained_polygons)
 
         psois = [bbsoi.to_polygons_on_image() for bbsoi in batch.bounding_boxes]
-        psois = [psoi.subdivide(2) for psoi in psois]
+        psois = [psoi.subdivide_(2) for psoi in psois]
 
         # Mark Polygons that are really Bounding Boxes
         for psoi in psois:

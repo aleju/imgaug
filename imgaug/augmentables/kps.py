@@ -1,8 +1,6 @@
 """Classes to represent keypoints, i.e. points given as xy-coordinates."""
 from __future__ import print_function, division, absolute_import
 
-import copy
-
 import numpy as np
 import scipy.spatial.distance
 import six.moves as sm
@@ -10,7 +8,7 @@ import six.moves as sm
 from .. import imgaug as ia
 from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
-                    _remove_out_of_image_fraction)
+                    _remove_out_of_image_fraction_)
 
 
 def compute_geometric_median(points=None, eps=1e-5, X=None):
@@ -149,6 +147,36 @@ class Keypoint(object):
         """
         return np.round(self.xy).astype(np.int32)
 
+    def project_(self, from_shape, to_shape):
+        """Project in-place the keypoint onto a new position on a new image.
+
+        E.g. if the keypoint is on its original image
+        at ``x=(10 of 100 pixels)`` and ``y=(20 of 100 pixels)`` and is
+        projected onto a new image with size ``(width=200, height=200)``, its
+        new position will be ``(20, 40)``.
+
+        This is intended for cases where the original image is resized.
+        It cannot be used for more complex changes (e.g. padding, cropping).
+
+        Parameters
+        ----------
+        from_shape : tuple of int
+            Shape of the original image. (Before resize.)
+
+        to_shape : tuple of int
+            Shape of the new image. (After resize.)
+
+        Returns
+        -------
+        imgaug.augmentables.kps.Keypoint
+            Keypoint object with new coordinates.
+            The instance of the keypoint may have been modified in-place.
+
+        """
+        xy_proj = project_coords([(self.x, self.y)], from_shape, to_shape)
+        self.x, self.y = xy_proj[0]
+        return self
+
     def project(self, from_shape, to_shape):
         """Project the keypoint onto a new position on a new image.
 
@@ -174,8 +202,7 @@ class Keypoint(object):
             Keypoint object with new coordinates.
 
         """
-        xy_proj = project_coords([(self.x, self.y)], from_shape, to_shape)
-        return self.deepcopy(x=xy_proj[0][0], y=xy_proj[0][1])
+        return self.deepcopy().project_(from_shape, to_shape)
 
     def is_out_of_image(self, image):
         """Estimate whether this point is outside of the given image plane.
@@ -225,6 +252,28 @@ class Keypoint(object):
         """
         return float(self.is_out_of_image(image))
 
+    def shift_(self, x=0, y=0):
+        """Move the keypoint around on an image in-place.
+
+        Parameters
+        ----------
+        x : number, optional
+            Move by this value on the x axis.
+
+        y : number, optional
+            Move by this value on the y axis.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.Keypoint
+            Keypoint object with new coordinates.
+            The instance of the keypoint may have been modified in-place.
+
+        """
+        self.x += x
+        self.y += y
+        return self
+
     def shift(self, x=0, y=0):
         """Move the keypoint around on an image.
 
@@ -242,7 +291,7 @@ class Keypoint(object):
             Keypoint object with new coordinates.
 
         """
-        return self.deepcopy(self.x + x, self.y + y)
+        return self.deepcopy().shift_(x, y)
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3,
                       copy=True, raise_if_out_of_image=False):
@@ -577,6 +626,18 @@ class KeypointsOnImage(IAugmentable):
         """
         return self.keypoints
 
+    @items.setter
+    def items(self, value):
+        """Set the keypoints in this container.
+
+        Parameters
+        ----------
+        value : list of Keypoint
+            Keypoints within this container.
+
+        """
+        self.keypoints = value
+
     @property
     def height(self):
         """Get the image height.
@@ -613,6 +674,33 @@ class KeypointsOnImage(IAugmentable):
         """
         return len(self.keypoints) == 0
 
+    def on_(self, image):
+        """Project all keypoints from one image shape to a new one in-place.
+
+        Parameters
+        ----------
+        image : ndarray or tuple of int
+            New image onto which the keypoints are to be projected.
+            May also simply be that new image's shape tuple.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Object containing all projected keypoints.
+            The object may have been modified in-place.
+
+        """
+        # pylint: disable=invalid-name
+        on_shape = normalize_shape(image)
+        if on_shape[0:2] == self.shape[0:2]:
+            self.shape = on_shape  # channels may differ
+            return self
+
+        for i, kp in enumerate(self.keypoints):
+            self.keypoints[i] = kp.project_(self.shape, on_shape)
+        self.shape = on_shape
+        return self
+
     def on(self, image):
         """Project all keypoints from one image shape to a new one.
 
@@ -629,13 +717,7 @@ class KeypointsOnImage(IAugmentable):
 
         """
         # pylint: disable=invalid-name
-        shape = normalize_shape(image)
-        if shape[0:2] == self.shape[0:2]:
-            return self.deepcopy()
-
-        keypoints = [kp.project(self.shape, shape)
-                     for kp in self.keypoints]
-        return self.deepcopy(keypoints, shape)
+        return self.deepcopy().on_(image)
 
     def draw_on_image(self, image, color=(0, 255, 0), alpha=1.0, size=3,
                       copy=True, raise_if_out_of_image=False):
@@ -683,6 +765,33 @@ class KeypointsOnImage(IAugmentable):
                 raise_if_out_of_image=raise_if_out_of_image)
         return image
 
+    def remove_out_of_image_fraction_(self, fraction):
+        """Remove all KPs with an OOI fraction of at least `fraction` in-place.
+
+        'OOI' is the abbreviation for 'out of image'.
+
+        This method exists for consistency with other augmentables, e.g.
+        bounding boxes.
+
+        Parameters
+        ----------
+        fraction : number
+            Minimum out of image fraction that a keypoint has to have in
+            order to be removed. Note that any keypoint can only have a
+            fraction of either ``1.0`` (is outside) or ``0.0`` (is inside).
+            Set this to ``0.0+eps`` to remove all points that are outside of
+            the image. Setting this to ``0.0`` will remove all points.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Reduced set of keypoints, with those thathad an out of image
+            fraction greater or equal the given one removed.
+            The object may have been modified in-place.
+
+        """
+        return _remove_out_of_image_fraction_(self, fraction)
+
     def remove_out_of_image_fraction(self, fraction):
         """Remove all KPs with an out of image fraction of at least `fraction`.
 
@@ -705,7 +814,23 @@ class KeypointsOnImage(IAugmentable):
             fraction greater or equal the given one removed.
 
         """
-        return _remove_out_of_image_fraction(self, fraction, KeypointsOnImage)
+        return self.deepcopy().remove_out_of_image_fraction_(fraction)
+
+    def clip_out_of_image_(self):
+        """Remove all KPs that are outside of the image plane.
+
+        This method exists for consistency with other augmentables, e.g.
+        bounding boxes.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Keypoints that are inside the image plane.
+            The object may have been modified in-place.
+
+        """
+        # we could use anything >0 here as the fraction
+        return self.remove_out_of_image_fraction_(0.5)
 
     def clip_out_of_image(self):
         """Remove all KPs that are outside of the image plane.
@@ -719,8 +844,29 @@ class KeypointsOnImage(IAugmentable):
             Keypoints that are inside the image plane.
 
         """
-        # we could use anything >0 here as the fraction
-        return self.remove_out_of_image_fraction(0.5)
+        return self.deepcopy().clip_out_of_image_()
+
+    def shift_(self, x=0, y=0):
+        """Move the keypoints on the x/y-axis in-place.
+
+        Parameters
+        ----------
+        x : number, optional
+            Move each keypoint by this value on the x axis.
+
+        y : number, optional
+            Move each keypoint by this value on the y axis.
+
+        Returns
+        -------
+        imgaug.augmentables.kps.KeypointsOnImage
+            Keypoints after moving them.
+            The object and its items may have been modified in-place.
+
+        """
+        for i, keypoint in enumerate(self.keypoints):
+            self.keypoints[i] = keypoint.shift_(x=x, y=y)
+        return self
 
     def shift(self, x=0, y=0):
         """Move the keypoints on the x/y-axis.
@@ -739,8 +885,7 @@ class KeypointsOnImage(IAugmentable):
             Keypoints after moving them.
 
         """
-        keypoints = [keypoint.shift(x=x, y=y) for keypoint in self.keypoints]
-        return self.deepcopy(keypoints)
+        return self.deepcopy().shift_(x=x, y=y)
 
     @ia.deprecated(alt_func="KeypointsOnImage.to_xy_array()")
     def get_coords_array(self):
@@ -1217,12 +1362,13 @@ class KeypointsOnImage(IAugmentable):
             Shallow copy.
 
         """
-        result = copy.copy(self)
-        if keypoints is not None:
-            result.keypoints = keypoints
-        if shape is not None:
-            result.shape = shape
-        return result
+        if keypoints is None:
+            keypoints = self.keypoints[:]
+        if shape is None:
+            # use tuple() here in case the shape was provided as a list
+            shape = tuple(self.shape)
+
+        return KeypointsOnImage(keypoints, shape)
 
     def deepcopy(self, keypoints=None, shape=None):
         """Create a deep copy of the ``KeypointsOnImage`` object.
@@ -1243,11 +1389,13 @@ class KeypointsOnImage(IAugmentable):
             Deep copy.
 
         """
-        # for some reason deepcopy is way slower here than manual copy
+        # Manual copy is far faster than deepcopy, so use manual copy here.
         if keypoints is None:
             keypoints = [kp.deepcopy() for kp in self.keypoints]
         if shape is None:
+            # use tuple() here in case the shape was provided as a list
             shape = tuple(self.shape)
+
         return KeypointsOnImage(keypoints, shape)
 
     def __iter__(self):

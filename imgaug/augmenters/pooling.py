@@ -166,7 +166,7 @@ class _AbstractPoolingBase(meta.Augmenter):
                 new_shape = _compute_shape_after_pooling(
                     kpsoi.shape, ksize_h, ksize_w)
 
-                keypoints_on_images[i] = kpsoi.on(new_shape)
+                keypoints_on_images[i] = kpsoi.on_(new_shape)
 
         return keypoints_on_images
 

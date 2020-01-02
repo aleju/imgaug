@@ -4854,7 +4854,7 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
             if column.name in ["keypoints", "bounding_boxes", "polygons",
                                "line_strings"]:
                 for i, cbaoi in enumerate(column.value):
-                    column.value[i] = cbaoi.remove_out_of_image_fraction(
+                    column.value[i] = cbaoi.remove_out_of_image_fraction_(
                         self.fraction)
 
         return batch
@@ -4924,7 +4924,7 @@ class ClipCBAsToImagePlanes(Augmenter):
             if column.name in ["keypoints", "bounding_boxes", "polygons",
                                "line_strings"]:
                 for i, cbaoi in enumerate(column.value):
-                    column.value[i] = cbaoi.clip_out_of_image()
+                    column.value[i] = cbaoi.clip_out_of_image_()
 
         return batch
 
