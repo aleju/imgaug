@@ -182,7 +182,7 @@ class Test_draw_debug_image(unittest.TestCase):
             for y in np.linspace(0, 256, 5):
                 bbs.append(ia.BoundingBox(x1=x, y1=y, x2=x+20, y2=y+20))
         bbsoi1 = ia.BoundingBoxesOnImage(bbs, shape=images[0].shape)
-        bbsoi2 = bbsoi1.shift(left=20)
+        bbsoi2 = bbsoi1.shift(x=20)
         image1_w_overlay = bbsoi1.draw_on_image(images[0])
         image2_w_overlay = bbsoi2.draw_on_image(images[1])
 
@@ -203,7 +203,7 @@ class Test_draw_debug_image(unittest.TestCase):
                 polys.append(ia.Polygon([(x, y), (x+20, y), (x+20, y+20),
                                          (x, y+20)]))
         psoi1 = ia.PolygonsOnImage(polys, shape=images[0].shape)
-        psoi2 = psoi1.shift(left=20)
+        psoi2 = psoi1.shift(x=20)
         image1_w_overlay = psoi1.draw_on_image(images[0])
         image2_w_overlay = psoi2.draw_on_image(images[1])
 

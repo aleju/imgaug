@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import warnings
 import sys
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
@@ -19,6 +20,7 @@ import numpy as np
 import imgaug as ia
 import imgaug.random as iarandom
 from imgaug.augmentables.bbs import _LabelOnImageDrawer
+from imgaug.testutils import reseed, wrap_shift_deprecation
 
 
 class TestBoundingBox_project_(unittest.TestCase):
@@ -262,7 +264,26 @@ class TestBoundingBox_shift_(unittest.TestCase):
         return True
 
     def _func(self, cba, *args, **kwargs):
-        return cba.shift_(*args, **kwargs)
+        def _func_impl():
+            return cba.shift_(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
+    def test_shift_by_x(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_top = self._func(bb, x=1)
+        assert bb_top.y1 == 10
+        assert bb_top.x1 == 20 + 1
+        assert bb_top.y2 == 30
+        assert bb_top.x2 == 40 + 1
+
+    def test_shift_by_y(self):
+        bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb_top = self._func(bb, y=1)
+        assert bb_top.y1 == 10 + 1
+        assert bb_top.x1 == 20
+        assert bb_top.y2 == 30 + 1
+        assert bb_top.x2 == 40
 
     def test_shift_top_by_zero(self):
         bb = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
@@ -384,7 +405,10 @@ class TestBoundingBox_shift(TestBoundingBox_shift_):
         return False
 
     def _func(self, cba, *args, **kwargs):
-        return cba.shift(*args, **kwargs)
+        def _func_impl():
+            return cba.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 class TestBoundingBox(unittest.TestCase):
@@ -1868,36 +1892,88 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
         bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
 
-        bbsoi_shifted = bbsoi.shift_(right=1)
+        bbsoi_shifted = bbsoi.shift_(y=2)
 
         assert len(bbsoi_shifted.bounding_boxes) == 2
-        assert bbsoi_shifted.bounding_boxes[0].y1 == 10
-        assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
-        assert bbsoi_shifted.bounding_boxes[0].y2 == 30
-        assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
-        assert bbsoi_shifted.bounding_boxes[1].y1 == 15
-        assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
-        assert bbsoi_shifted.bounding_boxes[1].y2 == 35
-        assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+        assert bbsoi_shifted.bounding_boxes[0].y1 == 10 + 2
+        assert bbsoi_shifted.bounding_boxes[0].x1 == 20
+        assert bbsoi_shifted.bounding_boxes[0].y2 == 30 + 2
+        assert bbsoi_shifted.bounding_boxes[0].x2 == 40
+        assert bbsoi_shifted.bounding_boxes[1].y1 == 15 + 2
+        assert bbsoi_shifted.bounding_boxes[1].x1 == 25
+        assert bbsoi_shifted.bounding_boxes[1].y2 == 35 + 2
+        assert bbsoi_shifted.bounding_boxes[1].x2 == 51
         assert bbsoi_shifted is bbsoi
+
+    def test_shift___deprecated_args(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+
+            bbsoi_shifted = bbsoi.shift_(right=1)
+
+            assert len(bbsoi_shifted.bounding_boxes) == 2
+            assert bbsoi_shifted.bounding_boxes[0].y1 == 10
+            assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
+            assert bbsoi_shifted.bounding_boxes[0].y2 == 30
+            assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
+            assert bbsoi_shifted.bounding_boxes[1].y1 == 15
+            assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
+            assert bbsoi_shifted.bounding_boxes[1].y2 == 35
+            assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+            assert bbsoi_shifted is bbsoi
+
+            assert (
+                "These are deprecated. Use `x` and `y` instead."
+                in str(caught_warnings[-1].message)
+            )
 
     def test_shift(self):
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
         bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
 
-        bbsoi_shifted = bbsoi.shift(right=1)
+        bbsoi_shifted = bbsoi.shift(y=2)
 
         assert len(bbsoi_shifted.bounding_boxes) == 2
-        assert bbsoi_shifted.bounding_boxes[0].y1 == 10
-        assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
-        assert bbsoi_shifted.bounding_boxes[0].y2 == 30
-        assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
-        assert bbsoi_shifted.bounding_boxes[1].y1 == 15
-        assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
-        assert bbsoi_shifted.bounding_boxes[1].y2 == 35
-        assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+        assert bbsoi_shifted.bounding_boxes[0].y1 == 10 + 2
+        assert bbsoi_shifted.bounding_boxes[0].x1 == 20
+        assert bbsoi_shifted.bounding_boxes[0].y2 == 30 + 2
+        assert bbsoi_shifted.bounding_boxes[0].x2 == 40
+        assert bbsoi_shifted.bounding_boxes[1].y1 == 15 + 2
+        assert bbsoi_shifted.bounding_boxes[1].x1 == 25
+        assert bbsoi_shifted.bounding_boxes[1].y2 == 35 + 2
+        assert bbsoi_shifted.bounding_boxes[1].x2 == 51
         assert bbsoi_shifted is not bbsoi
+
+    def test_shift__deprecated_args(self):
+        bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
+        bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=51)
+        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=(40, 50, 3))
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+
+            bbsoi_shifted = bbsoi.shift(right=1)
+
+            assert len(bbsoi_shifted.bounding_boxes) == 2
+            assert bbsoi_shifted.bounding_boxes[0].y1 == 10
+            assert bbsoi_shifted.bounding_boxes[0].x1 == 20 - 1
+            assert bbsoi_shifted.bounding_boxes[0].y2 == 30
+            assert bbsoi_shifted.bounding_boxes[0].x2 == 40 - 1
+            assert bbsoi_shifted.bounding_boxes[1].y1 == 15
+            assert bbsoi_shifted.bounding_boxes[1].x1 == 25 - 1
+            assert bbsoi_shifted.bounding_boxes[1].y2 == 35
+            assert bbsoi_shifted.bounding_boxes[1].x2 == 51 - 1
+            assert bbsoi_shifted is not bbsoi
+
+            assert (
+                "These are deprecated. Use `x` and `y` instead."
+                in str(caught_warnings[-1].message)
+            )
 
     def test_to_keypoints_on_image(self):
         bbsoi = ia.BoundingBoxesOnImage(

@@ -10,7 +10,8 @@ import skimage.measure
 from .. import imgaug as ia
 from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
-                    _remove_out_of_image_fraction_)
+                    _remove_out_of_image_fraction_,
+                    _normalize_shift_args)
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -633,25 +634,38 @@ class BoundingBox(object):
         """
         return self.deepcopy().clip_out_of_image_(image)
 
-    # TODO convert this to x/y params?
-    def shift_(self, top=None, right=None, bottom=None, left=None):
+    def shift_(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
         """Move this bounding box along the x/y-axis in-place.
+
+        The origin ``(0, 0)`` is at the top left of the image.
 
         Parameters
         ----------
+        x : number, optional
+            Value to be added to all x-coordinates. Positive values shift
+            towards the right images.
+
+        y : number, optional
+            Value to be added to all y-coordinates. Positive values shift
+            towards the bottom images.
+
         top : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -662,35 +676,46 @@ class BoundingBox(object):
             The object may have been modified in-place.
 
         """
-        top = top if top is not None else 0
-        right = right if right is not None else 0
-        bottom = bottom if bottom is not None else 0
-        left = left if left is not None else 0
-        self.x1 = self.x1 + left - right
-        self.x2 = self.x2 + left - right
-        self.y1 = self.y1 + top - bottom
-        self.y2 = self.y2 + top - bottom
+        x, y = _normalize_shift_args(
+            x, y, top=top, right=right, bottom=bottom, left=left)
+        self.x1 += x
+        self.x2 += x
+        self.y1 += y
+        self.y2 += y
         return self
 
-    # TODO convert this to x/y params?
-    def shift(self, top=None, right=None, bottom=None, left=None):
+    def shift(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
         """Move this bounding box along the x/y-axis.
+
+        The origin ``(0, 0)`` is at the top left of the image.
 
         Parameters
         ----------
+        x : number, optional
+            Value to be added to all x-coordinates. Positive values shift
+            towards the right images.
+
+        y : number, optional
+            Value to be added to all y-coordinates. Positive values shift
+            towards the bottom images.
+
         top : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -700,7 +725,7 @@ class BoundingBox(object):
             Shifted bounding box.
 
         """
-        return self.deepcopy().shift_(top, right, bottom, left)
+        return self.deepcopy().shift_(x, y, top, right, bottom, left)
 
     def draw_label_on_image(self, image, color=(0, 255, 0),
                             color_text=None, color_bg=None, alpha=1.0, size=1,
@@ -1825,24 +1850,38 @@ class BoundingBoxesOnImage(IAugmentable):
         """
         return self.deepcopy().clip_out_of_image_()
 
-    def shift_(self, top=None, right=None, bottom=None, left=None):
+    def shift_(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
         """Move all BBs along the x/y-axis in-place.
+
+        The origin ``(0, 0)`` is at the top left of the image.
 
         Parameters
         ----------
+        x : number, optional
+            Value to be added to all x-coordinates. Positive values shift
+            towards the right images.
+
+        y : number, optional
+            Value to be added to all y-coordinates. Positive values shift
+            towards the bottom images.
+
         top : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -1854,28 +1893,43 @@ class BoundingBoxesOnImage(IAugmentable):
 
         """
         for i, bb in enumerate(self.bounding_boxes):
-            self.bounding_boxes[i] = bb.shift_(top=top, right=right,
+            self.bounding_boxes[i] = bb.shift_(x=x, y=y,
+                                               top=top, right=right,
                                                bottom=bottom, left=left)
         return self
 
-    def shift(self, top=None, right=None, bottom=None, left=None):
+    def shift(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
         """Move all BBs along the x/y-axis.
+
+        The origin ``(0, 0)`` is at the top left of the image.
 
         Parameters
         ----------
+        x : number, optional
+            Value to be added to all x-coordinates. Positive values shift
+            towards the right images.
+
+        y : number, optional
+            Value to be added to all y-coordinates. Positive values shift
+            towards the bottom images.
+
         top : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
+            **Deprecated.**
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -1885,7 +1939,8 @@ class BoundingBoxesOnImage(IAugmentable):
             Shifted bounding boxes.
 
         """
-        return self.deepcopy().shift_(top=top, right=right,
+        return self.deepcopy().shift_(x=x, y=y,
+                                      top=top, right=right,
                                       bottom=bottom, left=left)
 
     def to_keypoints_on_image(self):

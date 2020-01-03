@@ -23,7 +23,7 @@ import shapely.geometry
 
 import imgaug as ia
 import imgaug.random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, wrap_shift_deprecation
 from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 
 
@@ -699,7 +699,8 @@ class TestPolygon_clip_out_of_image(unittest.TestCase):
 
     def test_polygon_half_outside_of_image(self):
         # square poly shifted by x=0.5, y=0.5 => half out of image
-        poly = ia.Polygon([(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)], label="test")
+        poly = ia.Polygon([(0.5, 0.5), (1.5, 0.5), (1.5, 1.5), (0.5, 1.5)],
+                          label="test")
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         multipoly_clipped = poly.clip_out_of_image(image)
         assert isinstance(multipoly_clipped, list)
@@ -867,12 +868,25 @@ class TestPolygon_shift_(unittest.TestCase):
     def _is_inplace(self):
         return True
 
-    def _func(self, poly, top=0, right=0, bottom=0, left=0):
-        return poly.shift_(top=top, right=right, bottom=bottom, left=left)
+    def _func(self, poly, *args, **kwargs):
+        def _func_impl():
+            return poly.shift_(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
     @property
     def poly(self):
         return ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], label="test")
+
+    def test_shift_along_xy(self):
+        poly_shifted = self._func(self.poly, x=1, y=2)
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0 + 1, 0 + 2],
+            [1 + 1, 0 + 2],
+            [1 + 1, 1 + 2],
+            [0 + 1, 1 + 2]
+        ]))
+        assert poly_shifted.label == "test"
 
     def test_shift_from_top(self):
         for v in [1, 0, -1, 0.5]:
@@ -961,8 +975,11 @@ class TestPolygon_shift(TestPolygon_shift_):
     def _is_inplace(self):
         return False
 
-    def _func(self, poly, top=0, right=0, bottom=0, left=0):
-        return poly.shift(top=top, right=right, bottom=bottom, left=left)
+    def _func(self, poly, *args, **kwargs):
+        def _func_impl():
+            return poly.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
     def test_shift_does_not_work_inplace(self):
         poly = self.poly
@@ -1984,13 +2001,15 @@ class TestPolygon_exterior_almost_equals(unittest.TestCase):
     def test_tiny_shift_below_max_distance(self):
         # tiny shift below tolerance
         poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0), (1+1e-6, 1), (0+1e-6, 1)])
+        poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0), (1+1e-6, 1),
+                             (0+1e-6, 1)])
         assert poly_a.exterior_almost_equals(poly_b, max_distance=1e-3)
 
     def test_tiny_shift_above_max_distance(self):
         # tiny shift above tolerance
         poly_a = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
-        poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0), (1+1e-6, 1), (0+1e-6, 1)])
+        poly_b = ia.Polygon([(0+1e-6, 0), (1+1e-6, 0), (1+1e-6, 1),
+                             (0+1e-6, 1)])
         assert not poly_a.exterior_almost_equals(poly_b, max_distance=1e-9)
 
     def test_polygons_with_half_intersection(self):
@@ -2713,13 +2732,40 @@ class TestPolygonsOnImage_shift_(unittest.TestCase):
     def _is_inplace(self):
         return True
 
-    def _func(self, psoi, top=None, right=None, bottom=None, left=None):
-        return psoi.shift_(top, right, bottom, left)
+    def _func(self, psoi, *args, **kwargs):
+        def _func_impl():
+            return psoi.shift_(*args, **kwargs)
+
+        if len(psoi.polygons) == 0:
+            return _func_impl()
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
+    def test_with_three_polygons_along_xy(self):
+        # three polygons
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 11, 3))
+        poly_oi_shifted = self._func(poly_oi, x=1, y=2)
+        assert len(poly_oi_shifted.polygons) == 3
+        assert np.allclose(poly_oi_shifted.polygons[0].exterior,
+                           [(1+1, 1+2), (8+1, 1+2), (8+1, 9+2), (1+1, 9+2)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_shifted.polygons[1].exterior,
+                           [(1+1, 1+2), (15+1, 1+2), (15+1, 9+2), (1+1, 9+2)],
+                           rtol=0, atol=1e-4)
+        assert np.allclose(poly_oi_shifted.polygons[2].exterior,
+                           [(100+1, 100+2), (200+1, 100+2),
+                            (200+1, 200+2), (100+1, 200+2)],
+                           rtol=0, atol=1e-4)
+        assert poly_oi_shifted.shape == (10, 11, 3)
 
     def test_with_zero_polygons(self):
         # no polygons
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
-        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1, left=-3)
+        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1,
+                                     left=-3)
         assert len(poly_oi_shifted.polygons) == 0
         assert poly_oi_shifted.shape == (10, 11, 3)
 
@@ -2730,7 +2776,8 @@ class TestPolygonsOnImage_shift_(unittest.TestCase):
              ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
              ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
             shape=(10, 11, 3))
-        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1, left=-3)
+        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1,
+                                     left=-3)
         assert len(poly_oi_shifted.polygons) == 3
         assert np.allclose(poly_oi_shifted.polygons[0].exterior,
                            [(1-3, 1+2), (8-3, 1+2), (8-3, 9+2), (1-3, 9+2)],
@@ -2751,7 +2798,8 @@ class TestPolygonsOnImage_shift_(unittest.TestCase):
              ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
             shape=(10, 11, 3))
 
-        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1, left=-3)
+        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1,
+                                     left=-3)
 
         if self._is_inplace:
             assert poly_oi_shifted is poly_oi
@@ -2764,8 +2812,13 @@ class TestPolygonsOnImage_shift(TestPolygonsOnImage_shift_):
     def _is_inplace(self):
         return False
 
-    def _func(self, psoi, top=None, right=None, bottom=None, left=None):
-        return psoi.shift(top, right, bottom, left)
+    def _func(self, psoi, *args, **kwargs):
+        def _func_impl():
+            return psoi.shift(*args, **kwargs)
+
+        if len(psoi.polygons) == 0:
+            return _func_impl()
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 class TestPolygonsOnImage_subdivide_(unittest.TestCase):

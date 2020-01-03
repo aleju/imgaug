@@ -17,7 +17,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug as ia
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, wrap_shift_deprecation
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
 from imgaug.augmentables.kps import Keypoint
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
@@ -69,8 +69,17 @@ class TestLineString_shift_(unittest.TestCase):
     def _is_inplace(self):
         return True
 
-    def _func(self, ls, top=0, right=0, bottom=0, left=0):
-        return ls.shift_(top=top, right=right, bottom=bottom, left=left)
+    def _func(self, ls, *args, **kwargs):
+        def _func_impl():
+            return ls.shift_(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
+    def test_shift_along_xy(self):
+        ls = LineString([(0, 0), (1, 0), (2, 1)])
+        ls_shift = self._func(ls.deepcopy(), x=1, y=2)
+        assert ls_shift.coords_almost_equals(
+            [(0+1, 0+2), (1+1, 0+2), (2+1, 1+2)])
 
     def test_shift_by_positive_args(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
@@ -121,8 +130,11 @@ class TestLineString_shift(TestLineString_shift_):
     def _is_inplace(self):
         return False
 
-    def _func(self, ls, top=0, right=0, bottom=0, left=0):
-        return ls.shift(top=top, right=right, bottom=bottom, left=left)
+    def _func(self, ls, *args, **kwargs):
+        def _func_impl():
+            return ls.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 class TestLineString(unittest.TestCase):
@@ -1623,8 +1635,8 @@ class TestLineString(unittest.TestCase):
         ls = LineString([(0, 0), (1, 0), (1, 1)])
         assert ls.coords_almost_equals(ls)
         assert ls.coords_almost_equals([(0, 0), (1, 0), (1, 1)])
-        assert not ls.shift(top=1).coords_almost_equals(ls)
-        assert ls.shift(top=1).coords_almost_equals(ls, max_distance=1.01)
+        assert not ls.shift(y=1).coords_almost_equals(ls)
+        assert ls.shift(y=1).coords_almost_equals(ls, max_distance=1.01)
         assert ls.coords_almost_equals([(0, 0), (0.5, 0), (1, 0), (1, 1)])
 
     def test_coords_almost_equals_with_4_point_ls_90deg_angle(self):
@@ -1667,7 +1679,7 @@ class TestLineString(unittest.TestCase):
 
     def test_almost_equals_three_point_ls_without_label(self):
         ls = LineString([(0, 0), (1, 0), (1, 1)])
-        ls_shifted = ls.shift(top=1)
+        ls_shifted = ls.shift(y=1)
         assert ls.almost_equals(ls)
         assert not ls.almost_equals(ls_shifted)
         assert ls.almost_equals(LineString([(0, 0), (1, 0), (1, 1)],
@@ -2070,8 +2082,28 @@ class TestLineStringsOnImage_shift_(unittest.TestCase):
     def _is_inplace(self):
         return True
 
-    def _func(self, lsoi, top=0, right=0, bottom=0, left=0):
-        return lsoi.shift_(top=top, right=right, bottom=bottom, left=left)
+    def _func(self, lsoi, *args, **kwargs):
+        def _func_impl():
+            return lsoi.shift_(*args, **kwargs)
+
+        if len(lsoi.line_strings) == 0:
+            return _func_impl()
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
+    def test_shift_two_simple_line_strings_along_xy(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        observed = self._func(lsoi.deepcopy(), x=1, y=2)
+
+        assert observed.line_strings[0].coords_almost_equals(
+            ls1.shift(x=1, y=2)
+        )
+        assert observed.line_strings[1].coords_almost_equals(
+            ls2.shift(x=1, y=2)
+        )
+        assert observed.shape == (100, 100, 3)
 
     def test_shift_with_two_simple_line_strings(self):
         ls1 = LineString([(0, 0), (1, 0), (2, 1)])
@@ -2080,12 +2112,14 @@ class TestLineStringsOnImage_shift_(unittest.TestCase):
 
         observed = self._func(lsoi.deepcopy(), top=1, right=2, bottom=3, left=4)
 
-        assert observed.line_strings[0].coords_almost_equals(
-            ls1.shift(top=1, right=2, bottom=3, left=4)
-        )
-        assert observed.line_strings[1].coords_almost_equals(
-            ls2.shift(top=1, right=2, bottom=3, left=4)
-        )
+        assert observed.line_strings[0].coords_almost_equals([
+            (0 - 2 + 4, 0 + 1 - 3),
+            (1 - 2 + 4, 0 + 1 - 3),
+            (2 - 2 + 4, 1 + 1 - 3)
+        ])
+        assert observed.line_strings[1].coords_almost_equals([
+            (10 - 2 + 4, 10 + 1 - 3)
+        ])
         assert observed.shape == (100, 100, 3)
 
     def test_shift_with_empty_list_of_line_strings(self):
@@ -2114,8 +2148,13 @@ class TestLineStringsOnImage_shift(TestLineStringsOnImage_shift_):
     def _is_inplace(self):
         return False
 
-    def _func(self, lsoi, top=0, right=0, bottom=0, left=0):
-        return lsoi.shift(top=top, right=right, bottom=bottom, left=left)
+    def _func(self, lsoi, *args, **kwargs):
+        def _func_impl():
+            return lsoi.shift(*args, **kwargs)
+
+        if len(lsoi.line_strings) == 0:
+            return _func_impl()
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 # TODO test to_keypoints_on_image()

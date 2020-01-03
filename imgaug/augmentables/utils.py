@@ -340,3 +340,21 @@ def _remove_out_of_image_fraction_(cbaoi, fraction):
         item for item in cbaoi.items
         if item.compute_out_of_image_fraction(cbaoi.shape) < fraction]
     return cbaoi
+
+
+def _normalize_shift_args(x, y, top=None, right=None, bottom=None, left=None):
+    """Normalize ``shift()`` arguments to x, y and handle deprecated args."""
+    if any([v is not None for v in [top, right, bottom, left]]):
+        ia.warn_deprecated(
+            "Got one of the arguments `top` (%s), `right` (%s), "
+            "`bottom` (%s), `left` (%s) in a shift() or shift_() call."
+            "These are deprecated. Use `x` and `y` instead." % (
+                top, right, bottom, left),
+            stacklevel=3)
+        top = top if top is not None else 0
+        right = right if right is not None else 0
+        bottom = bottom if bottom is not None else 0
+        left = left if left is not None else 0
+        x = x + left - right
+        y = y + top - bottom
+    return x, y
