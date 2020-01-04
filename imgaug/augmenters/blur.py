@@ -1,18 +1,6 @@
 """
 Augmenters that blur images.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.GaussianBlur((0.0, 3.0)),
-        iaa.AverageBlur((2, 5))
-    ])
-
 List of augmenters:
 
     * GaussianBlur

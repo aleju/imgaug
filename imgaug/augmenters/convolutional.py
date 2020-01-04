@@ -1,18 +1,6 @@
 """
 Augmenters that are based on applying convolution kernels to images.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.Sharpen((0.0, 1.0)),
-        iaa.Emboss((0.0, 1.0))
-    ])
-
 List of augmenters:
 
     * Convolve

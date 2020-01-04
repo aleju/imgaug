@@ -1,15 +1,6 @@
 """
 Augmenters that perform simple arithmetic changes.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead::
-
-    from imgaug import augmenters as iaa
-
-and then e.g.::
-
-    seq = iaa.Sequential([iaa.Add((-5, 5)), iaa.Multiply((0.9, 1.1))])
-
 List of augmenters:
 
     * Add

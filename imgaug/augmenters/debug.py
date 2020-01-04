@@ -1,16 +1,5 @@
 """Augmenters that help with debugging.
 
-Do not import directly from this file, as the categorization is not final.
-Use instead ::
-
-    from imgaug import augmenters as iaa
-
-and then e.g. ::
-
-    seq = iaa.Sequential([
-        iaa.SaveDebugImageEveryNBatches(...)
-    ])
-
 List of augmenters:
     * SaveDebugImageEveryNBatches
 
