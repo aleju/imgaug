@@ -1345,6 +1345,12 @@ class TestKeypointsOnImage(unittest.TestCase):
             i += 1
         assert i == 0
 
+    def test___len__(self):
+        cbas = [ia.Keypoint(x=1, y=2),
+                ia.Keypoint(x=3, y=4)]
+        cbasoi = ia.KeypointsOnImage(cbas, shape=(40, 50, 3))
+        assert len(cbasoi) == 2
+
     def test_string_conversion(self):
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))

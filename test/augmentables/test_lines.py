@@ -2642,6 +2642,12 @@ class TestLineStringsOnImage(unittest.TestCase):
             i += 1
         assert i == 0
 
+    def test___len__(self):
+        cbas = [ia.LineString([(0, 0), (1, 1)]),
+                ia.LineString([(1, 2), (3, 4)])]
+        cbasoi = ia.LineStringsOnImage(cbas, shape=(40, 50, 3))
+        assert len(cbasoi) == 2
+
     def test___repr__(self):
         def _func(obj):
             return obj.__repr__()

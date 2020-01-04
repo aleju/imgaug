@@ -1,4 +1,4 @@
-# Simplified Access to Coordinates and Items in Augmentables #495
+# Simplified Access to Coordinates and Items in Augmentables #495 #541
 
 * Added module `imgaug.augmentables.base`.
 * Added interface `imgaug.augmentables.base.IAugmentable`, implemented by
@@ -8,6 +8,10 @@
   (keypoints, bounding boxes, polygons, line strings), e.g.
   `bbsoi = BoundingBoxesOnImage(bbs, shape=...); for bb in bbsoi: ...`.
   would iterate now over `bbs`.
+* Added implementations of `__len__` methods to coordinate-based `*OnImage`
+  instances, e.g.
+  `bbsoi = BoundingBoxesOnImage(bbs, shape=...); print(len(bbsoi))`
+  would now print the number of bounding boxes in `bbsoi`.
 * Added ability to iterate over coordinates of `BoundingBox` (top-left,
   bottom-right), `Polygon` and `LineString` via `for xy in obj: ...`.
 * Added ability to access coordinates of `BoundingBox`, `Polygon` and

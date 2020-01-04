@@ -3145,6 +3145,14 @@ class TestPolygonsOnImage___iter__(unittest.TestCase):
         assert i == 0
 
 
+class TestPolygonsOnImage___len__(unittest.TestCase):
+    def test_with_two_polygons(self):
+        cbas = [ia.Polygon([(0, 0), (1, 0), (1, 1)]),
+                ia.Polygon([(1, 0), (2, 2), (1.5, 3)])]
+        cbasoi = ia.PolygonsOnImage(cbas, shape=(40, 50, 3))
+        assert len(cbasoi) == 2
+
+
 class TestPolygonsOnImage___repr___and___str__(unittest.TestCase):
     def test_with_zero_polygons(self):
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
