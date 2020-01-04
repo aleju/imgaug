@@ -9,6 +9,7 @@ import random
 import platform
 
 import numpy as np
+import cv2
 
 import imgaug.imgaug as ia
 import imgaug.random as iarandom
@@ -42,6 +43,8 @@ def _get_context_method():
     # see issue #414
     # TODO This is only a workaround and doesn't really fix the underlying
     #      issue. The cause of the underlying issue is currently unknown.
+    #      Its possible that #535 fixes the issue, though earlier tests
+    #      indicated that the cause was something else.
     # TODO this might break the semaphore used to prevent out of memory
     #      errors
     if "NixOS" in platform.version():
@@ -458,6 +461,12 @@ def _create_output_buffer_left(output_buffer_size):
 # This could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that
 # leads to pickle errors.
 def _Pool_initialize_worker(augseq, seed_start):
+    # Not using this seems to have caused infinite hanging in the case
+    # of gaussian blur on at least MacOSX.
+    # It is also in most cases probably not sensible to use multiple
+    # threads while already running augmentation in multiple processes.
+    cv2.setNumThreads(0)
+
     # pylint: disable=invalid-name, protected-access
     if seed_start is None:
         # pylint falsely thinks in older versions that
