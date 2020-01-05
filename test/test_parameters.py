@@ -2826,7 +2826,7 @@ class TestDiscretize(unittest.TestCase):
         assert (
             param.__str__()
             == param.__repr__()
-            == "Discretize(Deterministic(int 0))"
+            == "Discretize(Deterministic(int 0), round=True)"
         )
 
     def test_applied_to_deterministic(self):
@@ -2869,6 +2869,20 @@ class TestDiscretize(unittest.TestCase):
         samples2 = param.draw_samples((10000,))
 
         assert np.all(np.abs(samples1 - samples2) < 0.2*(10000/3))
+
+    def test_round(self):
+        param_orig = iap.Uniform(0, 1.99)
+        param_round = iap.Discretize(param_orig)
+        param_no_round = iap.Discretize(param_orig, round=False)
+
+        samples_round = param_round.draw_samples((10000,))
+        samples_no_round = param_no_round.draw_samples((10000,))
+
+        uq_round = np.unique(samples_round)
+        uq_no_round = np.unique(samples_no_round)
+
+        assert np.all([v in uq_round for v in [0, 1, 2]])
+        assert np.all([v in uq_no_round for v in [0, 1]])
 
     def test_samples_same_values_for_same_seeds(self):
         param_orig = iap.DiscreteUniform(0, 2)

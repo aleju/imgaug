@@ -1737,6 +1737,9 @@ class Discretize(StochasticParameter):
     other_param : imgaug.parameters.StochasticParameter
         The other parameter, which's values are to be discretized.
 
+    round : bool, optional
+        Whether to round before converting to integer dtype.
+
     Examples
     --------
     >>> import imgaug.parameters as iap
@@ -1745,10 +1748,12 @@ class Discretize(StochasticParameter):
     Create a discrete standard gaussian distribution.
 
     """
-    def __init__(self, other_param):
+    def __init__(self, other_param, round=True):
+        # pylint: disable=redefined-builtin
         super(Discretize, self).__init__()
         _assert_arg_is_stoch_param("other_param", other_param)
         self.other_param = other_param
+        self.round = round
 
     def _draw_samples(self, size, random_state):
         samples = self.other_param.draw_samples(size, random_state=random_state)
@@ -1768,14 +1773,16 @@ class Discretize(StochasticParameter):
         # lower bound here -- shouldn't happen though
         bitsize = max(bitsize, 8)
         dtype = np.dtype("int%d" % (bitsize,))
-        return np.round(samples).astype(dtype)
+        if self.round:
+            samples = np.round(samples)
+        return samples.astype(dtype)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         opstr = str(self.other_param)
-        return "Discretize(%s)" % (opstr,)
+        return "Discretize(%s, round=%s)" % (opstr, str(self.round))
 
 
 class Multiply(StochasticParameter):
