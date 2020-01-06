@@ -10,6 +10,7 @@ List of augmenters:
     * AdditivePoissonNoise
     * Multiply
     * MultiplyElementwise
+    * Cutout
     * Dropout
     * CoarseDropout
     * Dropout2d
@@ -39,6 +40,20 @@ import imgaug as ia
 from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
+
+
+# fill modes for apply_cutout_() and Cutout augmenter
+# contains roughly:
+#     'str fill_mode_name => (str module_name, str function_name)'
+# We could also assign the function to each fill mode name instead of its
+# name, but that has the disadvantage that these aren't defined yet (they
+# are defined further below) and that during unittesting they would be harder
+# to mock. (mock.patch() seems to not automatically replace functions
+# assigned in that way.)
+_CUTOUT_FILL_MODES = {
+    "constant": ("imgaug.augmenters.arithmetic", "_fill_rectangle_constant_"),
+    "gaussian": ("imgaug.augmenters.arithmetic", "_fill_rectangle_gaussian_")
+}
 
 
 def add_scalar(image, value):
@@ -628,6 +643,258 @@ def _multiply_elementwise_to_non_uint8(image, multipliers):
     )
     image = np.multiply(image, multipliers, out=image, casting="no")
     return iadt.restore_dtypes_(image, input_dtype)
+
+
+def cutout(image, x1, y1, x2, y2,
+           fill_mode="constant", cval=0, fill_per_channel=False,
+           random_state=None):
+    """Fill a single area within an image using a fill mode.
+
+    This cutout method uses the top-left and bottom-right corner coordinates
+    of the cutout region given as absolute pixel values.
+
+    .. note::
+
+        Gaussian fill mode will assume that float input images contain values
+        in the interval ``[0.0, 1.0]`` and hence sample values from a
+        gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image to modify.
+
+    x1 : number
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    y1 : number
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    x2 : number
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    y2 : number
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    fill_mode : {'constant', 'gaussian'}, optional
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    cval : number or tuple of number, optional
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    fill_per_channel : number or bool, optional
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    random_state : imgaug.random.RNG or None, optional
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    Returns
+    -------
+    ndarray
+        Image with area filled in.
+
+    """
+    return cutout_(np.copy(image),
+                   x1, y1, x2, y2,
+                   fill_mode, cval, fill_per_channel, random_state)
+
+
+def cutout_(image, x1, y1, x2, y2,
+            fill_mode="constant", cval=0, fill_per_channel=False,
+            random_state=None):
+    """Fill a single area within an image using a fill mode (in-place).
+
+    This cutout method uses the top-left and bottom-right corner coordinates
+    of the cutout region given as absolute pixel values.
+
+    .. note::
+
+        Gaussian fill mode will assume that float input images contain values
+        in the interval ``[0.0, 1.0]`` and hence sample values from a
+        gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
+
+    dtype support::
+
+        minimum of (
+            :func:`imgaug.augmenters.arithmetic._fill_rectangle_gaussian_`,
+            :func:`imgaug.augmenters.arithmetic._fill_rectangle_constant_`
+        )
+
+    Parameters
+    ----------
+    image : ndarray
+        Image to modify. Might be modified in-place.
+
+    x1 : number
+        X-coordinate of the top-left corner of the cutout region.
+
+    y1 : number
+        Y-coordinate of the top-left corner of the cutout region.
+
+    x2 : number
+        X-coordinate of the bottom-right corner of the cutout region.
+
+    y2 : number
+        Y-coordinate of the bottom-right corner of the cutout region.
+
+    fill_mode : {'constant', 'gaussian'}, optional
+        Fill mode to use.
+
+    cval : number or tuple of number, optional
+        The constant value to use when filling with mode ``constant``.
+        May be an intensity value or color tuple.
+
+    fill_per_channel : number or bool, optional
+        Whether to fill in a channelwise fashion.
+        If number then a value ``>=0.5`` will be interpreted as ``True``.
+
+    random_state : imgaug.random.RNG or None, optional
+        A random number generate to sample random values from.
+        Only required for ``fill_mode=gaussian``.
+
+    Returns
+    -------
+    ndarray
+        Image with area filled in.
+        The input image might have been modified in-place.
+
+    """
+    import importlib
+
+    height, width = image.shape[0:2]
+    x1 = min(max(int(x1), 0), width)
+    y1 = min(max(int(y1), 0), height)
+    x2 = min(max(int(x2), 0), width)
+    y2 = min(max(int(y2), 0), height)
+
+    if x2 > x1 and y2 > y1:
+        assert fill_mode in _CUTOUT_FILL_MODES, (
+            "Expected one of the following fill modes: %s. "
+            "Got: %s." % (
+                str(list(_CUTOUT_FILL_MODES.keys())), fill_mode))
+
+        module_name, fname = _CUTOUT_FILL_MODES[fill_mode]
+        module = importlib.import_module(module_name)
+        func = getattr(module, fname)
+        image = func(
+            image,
+            x1=x1, y1=y1, x2=x2, y2=y2,
+            cval=cval,
+            per_channel=(fill_per_channel >= 0.5),
+            random_state=random_state)
+    return image
+
+
+def _fill_rectangle_gaussian_(image, x1, y1, x2, y2, cval, per_channel,
+                              random_state):
+    """Fill a rectangular image area with samples from a gaussian.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: limited; tested (1)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: limited; tested (1)
+        * ``float16``: yes; tested (2)
+        * ``float32``: yes; tested (2)
+        * ``float64``: yes; tested (2)
+        * ``float128``: limited; tested (1) (2)
+        * ``bool``: yes; tested
+
+        - (1) Possible loss of resolution due to gaussian values being sampled
+              as ``float64`` s.
+        - (2) Float input arrays are assumed to be in interval ``[0.0, 1.0]``
+              and all gaussian samples are within that interval too.
+
+    """
+    # for float we assume value range [0.0, 1.0]
+    # that matches the common use case and also makes the tests way easier
+    # we also set bool here manually as the center value returned by
+    # get_value_range_for_dtype() is None
+    kind = image.dtype.kind
+    if kind in ["f", "b"]:
+        min_value = 0.0
+        center_value = 0.5
+        max_value = 1.0
+    else:
+        min_value, center_value, max_value = iadt.get_value_range_of_dtype(
+            image.dtype)
+
+    # set standard deviation to 1/3 of value range to get 99.7% of values
+    # within [min v.r., max v.r.]
+    # we also divide by 2 because we want to spread towards the
+    # "left"/"right" of the center value by half of the value range
+    stddev = (float(max_value) - float(min_value)) / 2.0 / 3.0
+
+    height = y2 - y1
+    width = x2 - x1
+    shape = (height, width)
+    if per_channel and image.ndim == 3:
+        shape = shape + (image.shape[2],)
+    rect = random_state.normal(center_value, stddev, size=shape)
+    if image.dtype.kind == "b":
+        rect_vr = (rect > 0.5)
+    else:
+        rect_vr = np.clip(rect, min_value, max_value).astype(image.dtype)
+
+    if image.ndim == 3:
+        image[y1:y2, x1:x2, :] = np.atleast_3d(rect_vr)
+    else:
+        image[y1:y2, x1:x2] = rect_vr
+
+    return image
+
+
+def _fill_rectangle_constant_(image, x1, y1, x2, y2, cval, per_channel,
+                              random_state):
+    """Fill a rectangular area within an image with constant value(s).
+
+    `cval` may be a single value or one per channel. If the number of items
+    in `cval` does not match the number of channels in `image`, it may
+    be tiled up to the number of channels.
+
+    dtype support::
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
+
+    """
+    if ia.is_iterable(cval):
+        if per_channel:
+            nb_channels = None if image.ndim == 2 else image.shape[-1]
+            if nb_channels is None:
+                cval = cval[0]
+            elif len(cval) < nb_channels:
+                mul = int(np.ceil(nb_channels / len(cval)))
+                cval = np.tile(cval, (mul,))[0:nb_channels]
+            elif len(cval) > nb_channels:
+                cval = cval[0:nb_channels]
+        else:
+            cval = cval[0]
+
+    # without the array(), uint64 max value is assigned as 0
+    image[y1:y2, x1:x2, ...] = np.array(cval, dtype=image.dtype)
+
+    return image
 
 
 def replace_elementwise_(image, mask, replacements):
@@ -2017,6 +2284,341 @@ class MultiplyElementwise(meta.Augmenter):
     def get_parameters(self):
         """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mul, self.per_channel]
+
+
+class _CutoutSamples(object):
+    def __init__(self, nb_iterations, pos_x, pos_y, size_h, size_w, squared,
+                 fill_mode, cval, fill_per_channel):
+        self.nb_iterations = nb_iterations
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.size_h = size_h
+        self.size_w = size_w
+        self.squared = squared
+        self.fill_mode = fill_mode
+        self.cval = cval
+        self.fill_per_channel = fill_per_channel
+
+
+class Cutout(meta.Augmenter):
+    """Fill one or more rectangular areas in an image using a fill mode.
+
+    See paper "Improved Regularization of Convolutional Neural Networks with
+    Cutout" by DeVries and Taylor.
+
+    In contrast to the paper, this implementation also supports replacing
+    image sub-areas with gaussian noise, random intensities or random RGB
+    colors. It also supports non-squared areas. While the paper uses
+    absolute pixel values for the size and position, this implementation
+    uses relative values, which seems more appropriate for mixed-size
+    datasets. The position parameter furthermore allows more flexibility, e.g.
+    gaussian distributions around the center.
+
+    .. note::
+
+        This augmenter affects only image data. Other datatypes (e.g.
+        segmentation map pixels or keypoints within the filled areas)
+        are not affected.
+
+    .. note::
+
+        Gaussian fill mode will assume that float input images contain values
+        in the interval ``[0.0, 1.0]`` and hence sample values from a
+        gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
+
+    dtype support::
+
+        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+
+    Parameters
+    ----------
+    nb_iterations : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
+        How many rectangular areas to fill.
+
+            * If ``int``: Exactly that many areas will be filled on all images.
+            * If ``tuple`` ``(a, b)``: A value from the interval ``[a, b]``
+              will be sampled per image.
+            * If ``list``: A random value will be sampled from that ``list``
+              per image.
+            * If ``StochasticParameter``: That parameter will be used to
+              sample ``(B,)`` values per batch of ``B`` images.
+
+    position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
+        Defines the position of each area to fill.
+        Analogous to the definition in e.g.
+        :class:`imgaug.augmenters.size.CropToFixedSize`.
+        Usually, ``uniform`` (anywhere in the image) or ``normal`` (anywhere
+        in the image with preference around the center) are sane values.
+
+    size : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        The size of the rectangle to fill as a fraction of the corresponding
+        image size, i.e. with value range ``[0.0, 1.0]``. The size is sampled
+        independently per image axis.
+
+            * If ``number``: Exactly that size is always used.
+            * If ``tuple`` ``(a, b)``: A value from the interval ``[a, b]``
+              will be sampled per area and axis.
+            * If ``list``: A random value will be sampled from that ``list``
+              per area and axis.
+            * If ``StochasticParameter``: That parameter will be used to
+              sample ``(N, 2)`` values per batch, where ``N`` is the total
+              number of areas to fill within the whole batch.
+
+    squared : bool or float or imgaug.parameters.StochasticParameter, optional
+        Whether to generate only squared areas cutout areas or allow
+        rectangular ones. If this evaluates to a true-like value, the
+        first value from `size` will be converted to absolute pixels and used
+        for both axes.
+
+        If this value is a float ``p``, then for ``p`` percent of all areas
+        to be filled `per_channel` will be treated as ``True``.
+        If it is a ``StochasticParameter`` it is expected to produce samples
+        with values between ``0.0`` and ``1.0``, where values ``>0.5`` will
+        lead to per-channel behaviour (i.e. same as ``True``).
+
+    fill_mode : str or list of str or imgaug.parameters.StochasticParameter, optional
+        Mode to use in order to fill areas. Corresponds to ``mode`` parameter
+        in some other augmenters. Valid strings for the mode are:
+
+            * ``contant``: Fill each area with a single value.
+            * ``gaussian``: Fill each area with gaussian noise.
+
+        Valid datatypes are:
+
+            * If ``str``: Exactly that mode will alaways be used.
+            * If ``list``: A random value will be sampled from that ``list``
+              per area.
+            * If ``StochasticParameter``: That parameter will be used to
+              sample ``(N,)`` values per batch, where ``N`` is the total number
+              of areas to fill within the whole batch.
+
+    cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        The value to use (i.e. the color) to fill areas if `fill_mode` is
+        ```constant``.
+
+            * If ``number``: Exactly that value is used for all areas
+              and channels.
+            * If ``tuple`` ``(a, b)``: A value from the interval ``[a, b]``
+              will be sampled per area (and channel if ``per_channel=True``).
+            * If ``list``: A random value will be sampled from that ``list``
+              per area (and channel if ``per_channel=True``).
+            * If ``StochasticParameter``: That parameter will be used to
+              sample ``(N, Cmax)`` values per batch, where ``N`` is the total
+              number of areas to fill within the whole batch and ``Cmax``
+              is the maximum number of channels in any image (usually ``3``).
+              If ``per_channel=False``, only the first value of the second
+              axis is used.
+
+    fill_per_channel : bool or float or imgaug.parameters.StochasticParameter, optional
+        Whether to fill each area in a channelwise fashion (``True``) or
+        not (``False``).
+        The behaviour per fill mode is:
+
+            * ``constant``: Whether to fill all channels with the same value
+              (i.e, grayscale) or different values (i.e. usually RGB color).
+            * ``gaussian``: Whether to sample once from a gaussian and use the
+              values for all channels (i.e. grayscale) or to sample
+              channelwise (i.e. RGB colors)
+
+        If this value is a float ``p``, then for ``p`` percent of all areas
+        to be filled `per_channel` will be treated as ``True``.
+        If it is a ``StochasticParameter`` it is expected to produce samples
+        with values between ``0.0`` and ``1.0``, where values ``>0.5`` will
+        lead to per-channel behaviour (i.e. same as ``True``).
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Cutout(nb_iterations=2)
+
+    Fill per image two random areas, by default with grayish pixels.
+
+    >>> aug = iaa.Cutout(nb_iterations=(1, 5), size=0.2, squared=False)
+
+    Fill per image between one and five areas, each having ``20%``
+    of the corresponding size of the height and width (for non-square
+    images this results in non-square areas to be filled).
+
+    >>> aug = iaa.Cutout(fill_mode="constant", cval=255)
+
+    Fill all areas with white pixels.
+
+    >>> aug = iaa.Cutout(fill_mode="constant", cval=(0, 255),
+    >>>                  fill_per_channel=0.5)
+
+    Fill ``50%`` of all areas with a random intensity value between
+    ``0`` and ``256``. Fill the other ``50%`` of all areas with
+    random colors.
+
+    >>> aug = iaa.Cutout(fill_mode="gaussian", fill_per_channel=True)
+
+    Fill areas with gaussian channelwise noise (i.e. usually RGB).
+
+    """
+
+    def __init__(self,
+                 nb_iterations=1,
+                 position="uniform",
+                 size=0.2,
+                 squared=True,
+                 fill_mode="constant",
+                 cval=128,
+                 fill_per_channel=False,
+                 name=None, deterministic=False, random_state=None):
+        from .size import _handle_position_parameter  # TODO move to iap
+        from .geometric import _handle_cval_arg  # TODO move to iap
+
+        super(Cutout, self).__init__(
+            name=name, deterministic=deterministic, random_state=random_state)
+        self.nb_iterations = iap.handle_discrete_param(
+            nb_iterations, "nb_iterations", value_range=(0, None),
+            tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+        self.position = _handle_position_parameter(position)
+        self.size = iap.handle_continuous_param(
+            size, "size", value_range=(0.0, 1.0+1e-4),
+            tuple_to_uniform=True, list_to_choice=True)
+        self.squared = iap.handle_probability_param(squared, "squared")
+        self.fill_mode = self._handle_fill_mode_param(fill_mode)
+        self.cval = _handle_cval_arg(cval)
+        self.fill_per_channel = iap.handle_probability_param(
+            fill_per_channel, "fill_per_channel")
+
+    @classmethod
+    def _handle_fill_mode_param(cls, fill_mode):
+        if ia.is_string(fill_mode):
+            assert fill_mode in _CUTOUT_FILL_MODES, (
+                "Expected 'fill_mode' to be one of: %s. Got %s." % (
+                     str(list(_CUTOUT_FILL_MODES.keys())), fill_mode))
+            return iap.Deterministic(fill_mode)
+        elif isinstance(fill_mode, iap.StochasticParameter):
+            return fill_mode
+        assert ia.is_iterable(fill_mode), (
+            "Expected 'fill_mode' to be a string, "
+            "StochasticParameter or list of strings. Got type %s." % (
+                type(fill_mode).__name__))
+        return iap.Choice(fill_mode)
+
+    def _augment_batch(self, batch, random_state, parents, hooks):
+        if batch.images is None:
+            return batch
+
+        samples = self._draw_samples(batch.images, random_state)
+
+        # map from xyhw to xyxy (both relative coords)
+        cutout_height_half = samples.size_h / 2
+        cutout_width_half = samples.size_w / 2
+        x1_rel = samples.pos_x - cutout_width_half
+        y1_rel = samples.pos_y - cutout_height_half
+        x2_rel = samples.pos_x + cutout_width_half
+        y2_rel = samples.pos_y + cutout_height_half
+
+        nb_iterations_sum = 0
+        gen = enumerate(zip(batch.images, samples.nb_iterations))
+        for i, (image, nb_iterations) in gen:
+            start = nb_iterations_sum
+            end = start + nb_iterations
+
+            height, width = image.shape[0:2]
+
+            # map from relative xyxy to absolute xyxy coords
+            batch.images[i] = self._augment_image_by_samples(
+                image,
+                x1_rel[start:end] * width,
+                y1_rel[start:end] * height,
+                x2_rel[start:end] * width,
+                y2_rel[start:end] * height,
+                samples.squared[start:end],
+                samples.fill_mode[start:end],
+                samples.cval[start:end],
+                samples.fill_per_channel[start:end],
+                random_state)
+
+            nb_iterations_sum += nb_iterations
+
+        return batch
+
+    def _draw_samples(self, images, random_state):
+        rngs = random_state.duplicate(8)
+        nb_rows = len(images)
+        nb_channels_max = meta.estimate_max_number_of_channels(images)
+
+        nb_iterations = self.nb_iterations.draw_samples(
+            (nb_rows,), random_state=rngs[0])
+        nb_dropped_areas = int(np.sum(nb_iterations))
+
+        if isinstance(self.position, tuple):
+            pos_x = self.position[0].draw_samples((nb_dropped_areas,),
+                                                  random_state=rngs[1])
+            pos_y = self.position[1].draw_samples((nb_dropped_areas,),
+                                                  random_state=rngs[2])
+        else:
+            pos = self.position.draw_samples((nb_dropped_areas, 2),
+                                             random_state=rngs[1])
+            pos_x = pos[:, 0]
+            pos_y = pos[:, 1]
+
+        size = self.size.draw_samples((nb_dropped_areas, 2),
+                                      random_state=rngs[3])
+        squared = self.squared.draw_samples((nb_dropped_areas,),
+                                            random_state=rngs[4])
+        fill_mode = self.fill_mode.draw_samples(
+           (nb_dropped_areas,), random_state=rngs[5])
+
+        cval = self.cval.draw_samples((nb_dropped_areas, nb_channels_max),
+                                      random_state=rngs[6])
+
+        fill_per_channel = self.fill_per_channel.draw_samples(
+            (nb_dropped_areas,), random_state=rngs[7])
+
+        return _CutoutSamples(
+            nb_iterations=nb_iterations,
+            pos_x=pos_x,
+            pos_y=pos_y,
+            size_h=size[:, 0],
+            size_w=size[:, 1],
+            squared=squared,
+            fill_mode=fill_mode,
+            cval=cval,
+            fill_per_channel=fill_per_channel
+        )
+
+    def _augment_image_by_samples(self, image, x1, y1, x2, y2, squared,
+                                  fill_mode, cval, fill_per_channel,
+                                  random_state):
+        for i in range(len(x1)):
+            x1_i = x1[i]
+            x2_i = x2[i]
+            if squared[i] >= 0.5:
+                height_h = (y2[i] - y1[i]) / 2
+                x_center = x1_i + (x2_i - x1_i) / 2
+                x1_i = x_center - height_h
+                x2_i = x_center + height_h
+
+            image = cutout_(
+                image,
+                x1=x1_i,
+                y1=y1[i],
+                x2=x2_i,
+                y2=y2[i],
+                fill_mode=fill_mode[i],
+                cval=cval[i],
+                fill_per_channel=fill_per_channel[i],
+                random_state=random_state)
+        return image
+
+    def get_parameters(self):
+        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        return [self.nb_iterations, self.position, self.size, self.squared,
+                self.fill_mode, self.cval, self.fill_per_channel]
 
 
 # TODO verify that (a, b) still leads to a p being sampled per image and not
