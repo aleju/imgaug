@@ -275,7 +275,7 @@ def equalize_(image, mask=None):
     if size == 0:
         return image
     if nb_channels == 3 and size < _EQUALIZE_USE_PIL_BELOW:
-        return _equalize_pil(image, mask)
+        return _equalize_pil_(image, mask)
     return _equalize_no_pil_(image, mask)
 
 
@@ -318,15 +318,18 @@ def _equalize_no_pil_(image, mask=None):
     return image
 
 
-def _equalize_pil(image, mask=None):
+def _equalize_pil_(image, mask=None):
     if mask is not None:
         mask = PIL.Image.fromarray(mask).convert("L")
-    return np.asarray(
+
+    # don't return np.asarray(...) directly as its results are read-only
+    image[...] = np.asarray(
         PIL.ImageOps.equalize(
             PIL.Image.fromarray(image),
             mask=mask
         )
     )
+    return image
 
 
 def autocontrast(image, cutoff=0, ignore=None):
@@ -392,7 +395,8 @@ def autocontrast(image, cutoff=0, ignore=None):
 
 
 def _autocontrast_pil(image, cutoff, ignore):
-    return np.asarray(
+    # don't return np.asarray(...) as its results are read-only
+    return np.array(
         PIL.ImageOps.autocontrast(
             PIL.Image.fromarray(image),
             cutoff=cutoff, ignore=ignore
@@ -498,7 +502,8 @@ def _apply_enhance_func(image, cls, factor):
     if 0 in image.shape:
         return np.copy(image)
 
-    return np.asarray(
+    # don't return np.asarray(...) as its results are read-only
+    return np.array(
         cls(
             PIL.Image.fromarray(image)
         ).enhance(factor)
@@ -682,7 +687,8 @@ def _filter_by_kernel(image, kernel):
 
     image_filtered = image_pil.filter(kernel)
 
-    return np.asarray(image_filtered)
+    # don't return np.asarray(...) as its results are read-only
+    return np.array(image_filtered)
 
 
 def filter_blur(image):
@@ -1171,7 +1177,8 @@ def warp_affine(image,
                                    center_px=center_px)
     matrix = matrix[:2, :].flat
 
-    return np.asarray(
+    # don't return np.asarray(...) as its results are read-only
+    return np.array(
         image_pil.transform(image_pil.size, PIL.Image.AFFINE, matrix,
                             fillcolor=fillcolor)
     )
