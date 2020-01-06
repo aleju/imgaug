@@ -585,18 +585,7 @@ class _AffineSamplingResult(object):
         self.mode = mode
         self.order = order
 
-    def to_matrix(self, idx, arr_shape, image_shape, fit_output,
-                  shift_add=(0.5, 0.5)):
-        if 0 in image_shape:
-            return tf.AffineTransform(), arr_shape
-
-        height, width = arr_shape[0:2]
-
-        # for images we use additional shifts of (0.5, 0.5) as otherwise
-        # we get an ugly black border for 90deg rotations
-        shift_y = height / 2.0 - shift_add[0]
-        shift_x = width / 2.0 - shift_add[1]
-
+    def get_affine_parameters(self, idx, arr_shape, image_shape):
         scale_y = self.scale[1][idx]  # TODO 1 and 0 should be inverted here
         scale_x = self.scale[0][idx]
 
@@ -613,20 +602,53 @@ class _AffineSamplingResult(object):
         else:
             translate_x_px = (translate_x / image_shape[1]) * arr_shape[1]
 
-        rotation_rad, shear_x_rad, shear_y_rad = np.deg2rad([
-            self.rotate[idx],
-            self.shear[0][idx], self.shear[1][idx]])
+        rotate_deg = self.rotate[idx]
+        shear_x_deg = self.shear[0][idx]
+        shear_y_deg = self.shear[1][idx]
+        rotate_rad, shear_x_rad, shear_y_rad = np.deg2rad([
+            rotate_deg, shear_x_deg, shear_y_deg])
+
+        # we add the _deg versions of rotate and shear here for PILAffine,
+        # Affine itself only uses *_rad
+        return {
+            "scale_y": scale_y,
+            "scale_x": scale_x,
+            "translate_y_px": translate_y_px,
+            "translate_x_px": translate_x_px,
+            "rotate_rad": rotate_rad,
+            "shear_y_rad": shear_y_rad,
+            "shear_x_rad": shear_x_rad,
+            "rotate_deg": rotate_deg,
+            "shear_y_deg": shear_y_deg,
+            "shear_x_deg": shear_x_deg
+        }
+
+    def to_matrix(self, idx, arr_shape, image_shape, fit_output,
+                  shift_add=(0.5, 0.5)):
+        if 0 in image_shape:
+            return tf.AffineTransform(), arr_shape
+
+        height, width = arr_shape[0:2]
+
+        params = self.get_affine_parameters(idx,
+                                            arr_shape=arr_shape,
+                                            image_shape=image_shape)
+
+        # for images we use additional shifts of (0.5, 0.5) as otherwise
+        # we get an ugly black border for 90deg rotations
+        shift_y = height / 2.0 - shift_add[0]
+        shift_x = width / 2.0 - shift_add[1]
 
         matrix_to_topleft = tf.SimilarityTransform(
             translation=[-shift_x, -shift_y])
         matrix_shear_y_rot = tf.AffineTransform(rotation=-3.141592/2)
-        matrix_shear_y = tf.AffineTransform(shear=shear_y_rad)
+        matrix_shear_y = tf.AffineTransform(shear=params["shear_y_rad"])
         matrix_shear_y_rot_inv = tf.AffineTransform(rotation=3.141592/2)
         matrix_transforms = tf.AffineTransform(
-            scale=(scale_x, scale_y),
-            translation=(translate_x_px, translate_y_px),
-            rotation=rotation_rad,
-            shear=shear_x_rad
+            scale=(params["scale_x"], params["scale_y"]),
+            translation=(params["translate_x_px"], params["translate_y_px"]),
+            rotation=params["rotate_rad"],
+            shear=params["shear_x_rad"]
         )
         matrix_to_center = tf.SimilarityTransform(
             translation=[shift_x, shift_y])
