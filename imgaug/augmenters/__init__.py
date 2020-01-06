@@ -5,6 +5,7 @@ from imgaug.augmenters.arithmetic import *
 from imgaug.augmenters.artistic import *
 from imgaug.augmenters.blend import *
 from imgaug.augmenters.blur import *
+from imgaug.augmenters.collections import *
 from imgaug.augmenters.color import *
 from imgaug.augmenters.contrast import *
 from imgaug.augmenters.convolutional import *
