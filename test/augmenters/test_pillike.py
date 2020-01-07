@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import functools
 import sys
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
@@ -24,6 +25,32 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import random as iarandom
 from imgaug.testutils import reseed
+
+
+def _test_shape_hw(func):
+    img = np.arange(20*10).reshape((20, 10)).astype(np.uint8)
+
+    observed = func(np.copy(img))
+
+    expected = func(
+        np.tile(np.copy(img)[:, :, np.newaxis], (1, 1, 3)),
+    )[:, :, 0]
+    assert observed.dtype.name == "uint8"
+    assert observed.shape == (20, 10)
+    assert np.array_equal(observed, expected)
+
+
+def _test_shape_hw1(func):
+    img = np.arange(20*10*1).reshape((20, 10, 1)).astype(np.uint8)
+
+    observed = func(np.copy(img))
+
+    expected = func(
+        np.tile(np.copy(img), (1, 1, 3)),
+    )[:, :, 0:1]
+    assert observed.dtype.name == "uint8"
+    assert observed.shape == (20, 10, 1)
+    assert np.array_equal(observed, expected)
 
 
 class Test_solarize_(unittest.TestCase):
@@ -53,6 +80,14 @@ class Test_solarize_(unittest.TestCase):
         assert kwargs["threshold"] == 5
         assert observed == "foo"
 
+    def test_image_shape_hw(self):
+        func = functools.partial(iaa.pillike.solarize_, threshold=5)
+        _test_shape_hw(func)
+
+    def test_image_shape_hw1(self):
+        func = functools.partial(iaa.pillike.solarize_, threshold=5)
+        _test_shape_hw1(func)
+
 
 class Test_solarize(unittest.TestCase):
     def test_compare_with_pil(self):
@@ -76,6 +111,14 @@ class Test_solarize(unittest.TestCase):
                     image_iaa = iaa.pillike.solarize(image, threshold)
                     assert np.array_equal(image_pil, image_iaa)
 
+    def test_image_shape_hw(self):
+        func = functools.partial(iaa.pillike.solarize, threshold=5)
+        _test_shape_hw(func)
+
+    def test_image_shape_hw1(self):
+        func = functools.partial(iaa.pillike.solarize, threshold=5)
+        _test_shape_hw1(func)
+
 
 class Test_posterize(unittest.TestCase):
     def test_by_comparison_with_pil(self):
@@ -91,6 +134,14 @@ class Test_posterize(unittest.TestCase):
             )
 
             assert np.array_equal(image_iaa, image_pil)
+
+    def test_image_shape_hw(self):
+        func = functools.partial(iaa.pillike.posterize, bits=2)
+        _test_shape_hw(func)
+
+    def test_image_shape_hw1(self):
+        func = functools.partial(iaa.pillike.posterize, bits=2)
+        _test_shape_hw1(func)
 
 
 class Test_equalize(unittest.TestCase):
@@ -180,6 +231,17 @@ class Test_equalize(unittest.TestCase):
 
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
+
+    def test_image_shape_hw(self):
+        func = functools.partial(iaa.pillike.equalize)
+        _test_shape_hw(func)
+
+    # already covered by unusal channel numbers test, but we run this one here
+    # anyways for consistency with other tests and because it works a bit
+    # different
+    def test_image_shape_hw1(self):
+        func = functools.partial(iaa.pillike.equalize)
+        _test_shape_hw1(func)
 
 
 class Test_autocontrast(unittest.TestCase):
@@ -282,7 +344,19 @@ class Test_autocontrast(unittest.TestCase):
                         assert image_aug.dtype.name == "uint8"
                         assert image_aug.shape == shape
 
+    def test_image_shape_hw(self):
+        func = functools.partial(iaa.pillike.autocontrast)
+        _test_shape_hw(func)
 
+    # already covered by unusal channel numbers test, but we run this one here
+    # anyways for consistency with other tests and because it works a bit
+    # different
+    def test_image_shape_hw1(self):
+        func = functools.partial(iaa.pillike.autocontrast)
+        _test_shape_hw1(func)
+
+
+# TODO add test for unusual channel numbers
 class _TestEnhanceFunc(unittest.TestCase):
     def _test_by_comparison_with_pil(
             self, func, cls,
@@ -329,6 +403,16 @@ class _TestEnhanceFunc(unittest.TestCase):
                     assert image_aug.dtype.name == "uint8"
                     assert image_aug.shape == shape
 
+    @classmethod
+    def _test_image_shape_hw(self, func):
+        func = functools.partial(func, factor=0.2)
+        _test_shape_hw(func)
+
+    @classmethod
+    def _test_image_shape_hw1(self, func):
+        func = functools.partial(func, factor=0.2)
+        _test_shape_hw1(func)
+
 
 class Test_enhance_color(_TestEnhanceFunc):
     def test_by_comparison_with_pil(self):
@@ -337,6 +421,12 @@ class Test_enhance_color(_TestEnhanceFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.enhance_color)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.enhance_color)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.enhance_color)
 
 
 class Test_enhance_contrast(_TestEnhanceFunc):
@@ -347,6 +437,12 @@ class Test_enhance_contrast(_TestEnhanceFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.enhance_contrast)
 
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.enhance_contrast)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.enhance_contrast)
+
 
 class Test_enhance_brightness(_TestEnhanceFunc):
     def test_by_comparison_with_pil(self):
@@ -355,6 +451,12 @@ class Test_enhance_brightness(_TestEnhanceFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.enhance_brightness)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.enhance_brightness)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.enhance_brightness)
 
 
 class Test_enhance_sharpness(_TestEnhanceFunc):
@@ -365,6 +467,12 @@ class Test_enhance_sharpness(_TestEnhanceFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.enhance_brightness,
                                    factors=[0.0, 0.4, 1.0, 1.5, 2.0])
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.enhance_sharpness)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.enhance_sharpness)
 
 
 class _TestFilterFunc(unittest.TestCase):
@@ -405,6 +513,14 @@ class _TestFilterFunc(unittest.TestCase):
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape
 
+    @classmethod
+    def _test_image_shape_hw(self, func):
+        _test_shape_hw(func)
+
+    @classmethod
+    def _test_image_shape_hw1(self, func):
+        _test_shape_hw1(func)
+
 
 class Test_filter_blur(_TestFilterFunc):
     def test_by_comparison_with_pil(self):
@@ -413,6 +529,12 @@ class Test_filter_blur(_TestFilterFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_blur)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_blur)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_blur)
 
 
 class Test_filter_smooth(_TestFilterFunc):
@@ -423,6 +545,12 @@ class Test_filter_smooth(_TestFilterFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_smooth)
 
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_smooth)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_smooth)
+
 
 class Test_filter_smooth_more(_TestFilterFunc):
     def test_by_comparison_with_pil(self):
@@ -431,6 +559,12 @@ class Test_filter_smooth_more(_TestFilterFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_smooth_more)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_smooth_more)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_smooth_more)
 
 
 class Test_filter_edge_enhance(_TestFilterFunc):
@@ -441,6 +575,12 @@ class Test_filter_edge_enhance(_TestFilterFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_edge_enhance)
 
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_edge_enhance)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_edge_enhance)
+
 
 class Test_filter_edge_enhance_more(_TestFilterFunc):
     def test_by_comparison_with_pil(self):
@@ -449,6 +589,12 @@ class Test_filter_edge_enhance_more(_TestFilterFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_edge_enhance_more)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_edge_enhance_more)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_edge_enhance_more)
 
 
 class Test_filter_find_edges(_TestFilterFunc):
@@ -459,6 +605,12 @@ class Test_filter_find_edges(_TestFilterFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_find_edges)
 
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_find_edges)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_find_edges)
+
 
 class Test_filter_contour(_TestFilterFunc):
     def test_by_comparison_with_pil(self):
@@ -467,6 +619,12 @@ class Test_filter_contour(_TestFilterFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_contour)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_contour)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_contour)
 
 
 class Test_filter_emboss(_TestFilterFunc):
@@ -477,6 +635,12 @@ class Test_filter_emboss(_TestFilterFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_emboss)
 
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_emboss)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_emboss)
+
 
 class Test_filter_sharpen(_TestFilterFunc):
     def test_by_comparison_with_pil(self):
@@ -486,6 +650,12 @@ class Test_filter_sharpen(_TestFilterFunc):
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_sharpen)
 
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_sharpen)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_sharpen)
+
 
 class Test_filter_detail(_TestFilterFunc):
     def test_by_comparison_with_pil(self):
@@ -494,6 +664,12 @@ class Test_filter_detail(_TestFilterFunc):
 
     def test_zero_sized_axes(self):
         self._test_zero_sized_axes(iaa.pillike.filter_detail)
+
+    def test_image_shape_hw(self):
+        self._test_image_shape_hw(iaa.pillike.filter_detail)
+
+    def test_image_shape_hw1(self):
+        self._test_image_shape_hw1(iaa.pillike.filter_detail)
 
 
 class Test_warp_affine(unittest.TestCase):
@@ -782,6 +958,14 @@ class Test_warp_affine(unittest.TestCase):
                                             center=(0.5, 0.5))
 
         assert image_aug[10, 18, 0] == 255
+
+    def test_image_shape_hw(self):
+        func = functools.partial(iaa.pillike.warp_affine, rotate_deg=90)
+        _test_shape_hw(func)
+
+    def test_image_shape_hw1(self):
+        func = functools.partial(iaa.pillike.warp_affine, rotate_deg=90)
+        _test_shape_hw1(func)
 
 
 class TestSolarize(unittest.TestCase):
