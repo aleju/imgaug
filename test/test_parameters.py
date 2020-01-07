@@ -413,6 +413,11 @@ class Test_handle_categorical_string_param(unittest.TestCase):
         assert isinstance(param, iap.Choice)
         assert param.a == valid_values
 
+    def test_arg_is_str(self):
+        param = iap.handle_categorical_string_param("class1", "foo")
+        assert isinstance(param, iap.Deterministic)
+        assert param.value == "class1"
+
     def test_arg_is_valid_str(self):
         valid_values = ["class1", "class2"]
 
@@ -433,6 +438,13 @@ class Test_handle_categorical_string_param(unittest.TestCase):
             "Expected parameter 'foo' to be one of: class1, class2. "
             "Got: class3.")
         assert expected == str(ctx.exception)
+
+    def test_arg_is_list(self):
+        param = iap.handle_categorical_string_param(["class1", "class3"],
+                                                    "foo")
+
+        assert isinstance(param, iap.Choice)
+        assert param.a == ["class1", "class3"]
 
     def test_arg_is_valid_list(self):
         valid_values = ["class1", "class2", "class3"]
@@ -485,6 +497,7 @@ class Test_handle_categorical_string_param(unittest.TestCase):
 
         expected = "Expected parameter 'foo' to be imgaug.ALL"
         assert expected in str(ctx.exception)
+
 
 class Test_handle_probability_param(unittest.TestCase):
     def test_bool_like_values(self):

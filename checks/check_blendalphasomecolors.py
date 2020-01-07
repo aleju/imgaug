@@ -1,9 +1,23 @@
+from __future__ import print_function, division, absolute_import
+import imageio
 import imgaug as ia
 import imgaug.augmenters as iaa
-import imageio
 
 
 def main():
+    aug = iaa.BlendAlphaMask(
+        iaa.SomeColorsMaskGen(),
+        iaa.OneOf([
+            iaa.TotalDropout(1.0),
+            iaa.AveragePooling(8)
+        ])
+    )
+
+    aug2 = iaa.BlendAlphaSomeColors(iaa.OneOf([
+            iaa.TotalDropout(1.0),
+            iaa.AveragePooling(8)
+    ]))
+
     urls = [
         ("https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/"
          "Sarcophilus_harrisii_taranna.jpg/"
@@ -21,12 +35,10 @@ def main():
          "Dutch_-_Flower_Still_Life_-_Google_Art_Project.jpg")
     ]
 
-    image = imageio.imread(urls[1])
-
-    aug = iaa.RemoveSaturationColorwise(10, 0.1, alpha=[0.0, 1.0])
-    images_aug = aug(images=[image] * (5*5))
-
-    ia.imshow(ia.draw_grid(images_aug))
+    for url in urls:
+        img = imageio.imread(url)
+        ia.imshow(ia.draw_grid(aug(images=[img]*25), cols=5, rows=5))
+        ia.imshow(ia.draw_grid(aug2(images=[img]*25), cols=5, rows=5))
 
 
 if __name__ == "__main__":
