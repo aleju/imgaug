@@ -68,6 +68,20 @@ from .. import parameters as iap
 _EQUALIZE_USE_PIL_BELOW = 64*64  # H*W
 
 
+def _ensure_valid_shape(image, func_name):
+    is_hw1 = image.ndim == 3 and image.shape[-1] == 1
+    if is_hw1:
+        image = image[:, :, 0]
+    assert (
+        image.ndim == 2
+        or (image.ndim == 3 and image.shape[-1] in [3, 4])
+    ), (
+        "Can apply %s only to images of "
+        "shape (H, W) or (H, W, 1) or (H, W, 3) or (H, W, 4). "
+        "Got shape %s." % (func_name, image.shape,))
+    return image, is_hw1
+
+
 def solarize_(image, threshold=128):
     """Invert all array components above a threshold in-place.
 
@@ -502,12 +516,18 @@ def _apply_enhance_func(image, cls, factor):
     if 0 in image.shape:
         return np.copy(image)
 
+    image, is_hw1 = _ensure_valid_shape(
+        image, "imgaug.augmenters.pillike.enhance_*()")
+
     # don't return np.asarray(...) as its results are read-only
-    return np.array(
+    result = np.array(
         cls(
             PIL.Image.fromarray(image)
         ).enhance(factor)
     )
+    if is_hw1:
+        result = result[:, :, np.newaxis]
+    return result
 
 
 def enhance_color(image, factor):
@@ -683,12 +703,18 @@ def _filter_by_kernel(image, kernel):
     if 0 in image.shape:
         return np.copy(image)
 
+    image, is_hw1 = _ensure_valid_shape(
+        image, "imgaug.augmenters.pillike.filter_*()")
+
     image_pil = PIL.Image.fromarray(image)
 
     image_filtered = image_pil.filter(kernel)
 
     # don't return np.asarray(...) as its results are read-only
-    return np.array(image_filtered)
+    result = np.array(image_filtered)
+    if is_hw1:
+        result = result[:, :, np.newaxis]
+    return result
 
 
 def filter_blur(image):
@@ -1163,6 +1189,9 @@ def warp_affine(image,
     if 0 in image.shape:
         return np.copy(image)
 
+    image, is_hw1 = _ensure_valid_shape(
+        image, "imgaug.augmenters.pillike.warp_affine()")
+
     image_pil = PIL.Image.fromarray(image)
 
     height, width = image.shape[0:2]
@@ -1178,10 +1207,14 @@ def warp_affine(image,
     matrix = matrix[:2, :].flat
 
     # don't return np.asarray(...) as its results are read-only
-    return np.array(
+    result = np.array(
         image_pil.transform(image_pil.size, PIL.Image.AFFINE, matrix,
                             fillcolor=fillcolor)
     )
+
+    if is_hw1:
+        result = result[:, :, np.newaxis]
+    return result
 
 
 # we don't use pil_solarize() here. but instead just subclass Invert,
