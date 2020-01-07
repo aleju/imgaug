@@ -1674,5 +1674,208 @@ def test_classes_and_functions_marked_deprecated():
         assert len(caught_warnings) == 0
 
 
+class Test_apply_lut(unittest.TestCase):
+    def test_2d_image(self):
+        table = np.mod(np.arange(256) + 10, 256).astype(np.uint8)
+
+        image = np.uint8([
+            [0, 50, 100, 245, 254, 255],
+            [1, 51, 101, 246, 255, 0]
+        ])
+
+        image_aug = ia.apply_lut(image, table)
+
+        expected = np.uint8([
+            [10, 60, 110, 255, 8, 9],
+            [11, 61, 111, 0, 9, 10]
+        ])
+        assert np.array_equal(image_aug, expected)
+        assert image_aug is not image
+        assert image_aug.shape == (2, 6)
+        assert image_aug.dtype.name == "uint8"
+
+
+class Test_apply_lut_(unittest.TestCase):
+    def test_2d_image(self):
+        table = np.mod(np.arange(256) + 10, 256).astype(np.uint8)
+        tables = [
+            ("array-1d", table),
+            ("array-2d", table[:, np.newaxis]),
+            ("array-3d", table[np.newaxis, :, np.newaxis]),
+            ("list", [table])
+        ]
+
+        for subtable_descr, subtable in tables:
+            with self.subTest(table_type=subtable_descr):
+                image = np.uint8([
+                    [0, 50, 100, 245, 254, 255],
+                    [1, 51, 101, 246, 255, 0]
+                ])
+
+                image_aug = ia.apply_lut_(image, subtable)
+
+                expected = np.uint8([
+                    [10, 60, 110, 255, 8, 9],
+                    [11, 61, 111, 0, 9, 10]
+                ])
+                assert np.array_equal(image_aug, expected)
+                assert image_aug is image
+                assert image_aug.shape == (2, 6)
+                assert image_aug.dtype.name == "uint8"
+
+    def test_HW1_image(self):
+        table = np.mod(np.arange(256) + 10, 256).astype(np.uint8)
+        tables = [
+            ("array-1d", table),
+            ("array-2d", table[:, np.newaxis]),
+            ("array-3d", table[np.newaxis, :, np.newaxis]),
+            ("list", [table])
+        ]
+
+        for subtable_descr, subtable in tables:
+            with self.subTest(table_type=subtable_descr):
+                image = np.uint8([
+                    [0, 50, 100, 245, 254, 255],
+                    [1, 51, 101, 246, 255, 0]
+                ])
+                image = image[:, :, np.newaxis]
+
+                image_aug = ia.apply_lut_(image, subtable)
+
+                expected = np.uint8([
+                    [10, 60, 110, 255, 8, 9],
+                    [11, 61, 111, 0, 9, 10]
+                ])
+                expected = expected[:, :, np.newaxis]
+                assert np.array_equal(image_aug, expected)
+                # (H,W,1) images always lead to a copy
+                assert image_aug is not image
+                assert image_aug.shape == (2, 6, 1)
+                assert image_aug.dtype.name == "uint8"
+
+    def test_HWC_image(self):
+        # Base table, mapping all values to value+10.
+        # For channels C>0 we additionally add +C below.
+        table_base = np.mod(np.arange(256) + 10, 256).astype(np.int32)
+        nb_channels_lst = [2, 3, 4, 5, 511, 512, 513, 512*2-1, 512*2, 512*2+1]
+
+        for nb_channels in nb_channels_lst:
+            # Create channelwise LUT.
+            tables = []
+            for c in np.arange(nb_channels):
+                tables.append(np.mod(table_base + c, 256).astype(np.uint8))
+
+            tables_by_type = [
+                ("array-1d", table_base.astype(np.uint8)),
+                ("array-2d", np.stack(tables, axis=-1)),
+                ("array-3d", np.stack(tables, axis=-1).reshape((1, 256, -1))),
+                ("list", tables)
+            ]
+
+            for subtable_descr, subtable in tables_by_type:
+                with self.subTest(nb_channels=nb_channels,
+                                  table_type=subtable_descr):
+                    # Create a normalized lut table, so that we can easily
+                    # find the projected value via x,y,c coordinates.
+                    # In case of array-1d, all channels are treated the same
+                    # way.
+                    if subtable_descr == "array-1d":
+                        tables_3d = np.stack([table_base] * nb_channels,
+                                             axis=-1)
+                    else:
+                        tables_3d = np.stack(tables, axis=-1).reshape(
+                            (256, -1))
+
+                    image = np.int32([
+                        [0, 50, 100, 245, 254, 255],
+                        [1, 51, 101, 246, 255, 0]
+                    ])
+                    image = image[:, :, np.newaxis]
+                    image = np.tile(image, (1, 1, nb_channels))
+                    for c in np.arange(nb_channels):
+                        image[:, :, c] += c
+                    image = np.mod(image, 256).astype(np.uint8)
+                    image_orig = np.copy(image)
+
+                    image_aug = ia.apply_lut_(image, subtable)
+
+                    # Reproduce effect of a LUT mapping on the input
+                    # image.
+                    expected = np.zeros_like(image_orig)
+                    for c in np.arange(nb_channels):
+                        for x in np.arange(image.shape[1]):
+                            for y in np.arange(image.shape[0]):
+                                v = image_orig[y, x, c]
+                                v_proj = tables_3d[v, c]
+                                expected[y, x, c] = v_proj
+
+                    assert np.array_equal(image_aug, expected)
+                    if nb_channels < 512:
+                        assert image_aug is image
+                    assert image_aug.shape == (2, 6, nb_channels)
+                    assert image_aug.dtype.name == "uint8"
+
+    def test_image_is_noncontiguous(self):
+        table = np.mod(np.arange(256) + 10, 256).astype(np.uint8)
+
+        image = np.uint8([
+            [0, 50, 100, 245, 254, 255],
+            [1, 51, 101, 246, 255, 0]
+        ])
+        image = np.fliplr(image)
+        assert image.flags["C_CONTIGUOUS"] is False
+
+        image_aug = ia.apply_lut_(image, table)
+
+        expected = np.uint8([
+            [10, 60, 110, 255, 8, 9],
+            [11, 61, 111, 0, 9, 10]
+        ])
+        assert np.array_equal(np.fliplr(image_aug), expected)
+        assert image_aug is not image  # non-contiguous should lead to copy
+        assert image_aug.shape == (2, 6)
+        assert image_aug.dtype.name == "uint8"
+
+    def test_image_is_view(self):
+        table = np.mod(np.arange(256) + 10, 256).astype(np.uint8)
+
+        image = np.uint8([
+            [0, 50, 100, 245, 254, 255],
+            [1, 51, 101, 246, 255, 0]
+        ])
+        image = image[:, 1:4]
+        assert image.flags["OWNDATA"] is False
+
+        image_aug = ia.apply_lut_(image, table)
+
+        expected = np.uint8([
+            [60, 110, 255],
+            [61, 111, 0]
+        ])
+        assert np.array_equal(image_aug, expected)
+        assert image_aug is not image  # non-owndata should lead to copy
+        assert image_aug.shape == (2, 3)
+        assert image_aug.dtype.name == "uint8"
+
+    def test_zero_sized_axes(self):
+        table = np.mod(np.arange(256) + 10, 256).astype(np.uint8)
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                image_aug = ia.apply_lut_(image, table)
+                assert image_aug.shape == shape
+                assert image_aug.dtype.name == "uint8"
+
+
 if __name__ == "__main__":
     main()

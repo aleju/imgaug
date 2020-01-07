@@ -241,6 +241,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
             # images that are views (e.g. image[..., 0:3]) and returns a
             # cv2.UMat instance instead of an array. So we check here first
             # if the array looks like it is non-contiguous or a view.
+            # TODO merge this with apply_lut() normalization/validation
             if image.flags["C_CONTIGUOUS"]:
                 return image
         return None
@@ -2315,11 +2316,13 @@ class AddToHueAndSaturation(meta.Augmenter):
         # code with using cache (at best maybe 10% faster for 64x64):
         table_hue = cls._LUT_CACHE[0]
         table_saturation = cls._LUT_CACHE[1]
+        tables = [
+            table_hue[255+int(hue)],
+            table_saturation[255+int(saturation)]
+        ]
 
-        image_hsv[..., 0] = cv2.LUT(
-            image_hsv[..., 0], table_hue[255+int(hue)])
-        image_hsv[..., 1] = cv2.LUT(
-            image_hsv[..., 1], table_saturation[255+int(saturation)])
+        image_hsv[..., [0, 1]] = ia.apply_lut(image_hsv[..., [0, 1]],
+                                              tables)
 
         return image_hsv
 
@@ -3084,7 +3087,7 @@ class GrayscaleColorwise(meta.Augmenter):
         hue = image_hsv[:, :, 0]
         table = hue_to_alpha * 255
         table = np.clip(np.round(table), 0, 255).astype(np.uint8)
-        mask = cv2.LUT(hue, table)
+        mask = ia.apply_lut(hue, table)
         return mask.astype(np.float32) / 255.0
 
     def get_parameters(self):
@@ -4055,14 +4058,12 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
     if nb_bins == 256 or 0 in arr.shape:
         return arr
 
+    # TODO remove dtype check here? apply_lut_() does that already
     assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
         arr.dtype.name,)
     assert 2 <= nb_bins <= 256, (
         "Expected nb_bins to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_bins,))
-
-    if arr.flags["C_CONTIGUOUS"] is False:
-        arr = np.ascontiguousarray(arr)
 
     table_class = (_QuantizeUniformCenterizedLUTTableSingleton
                    if to_bin_centers
@@ -4070,7 +4071,7 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
     table = (table_class
              .get_instance()
              .get_for_nb_bins(nb_bins))
-    arr = cv2.LUT(arr, table, dst=arr)
+    arr = ia.apply_lut_(arr, table)
     return arr
 
 

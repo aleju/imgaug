@@ -344,6 +344,7 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
         image = np.tile(image, (1, 1, 3))
 
     # prevent image from becoming cv2.UMat
+    # TODO merge this with apply_lut() normalization/validation
     if image.flags["C_CONTIGUOUS"] is False:
         image = np.ascontiguousarray(image)
 
