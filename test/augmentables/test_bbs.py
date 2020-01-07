@@ -18,6 +18,7 @@ import numpy as np
 
 import imgaug as ia
 import imgaug.random as iarandom
+from imgaug.augmentables.bbs import _LabelOnImageDrawer
 
 
 class TestBoundingBox_project_(unittest.TestCase):
@@ -667,8 +668,63 @@ class TestBoundingBox(unittest.TestCase):
                                               partly=partly, fully=fully)
                 assert observed is expected
 
+    @mock.patch("imgaug.augmentables.bbs._LabelOnImageDrawer")
+    def test_draw_label_on_image_mocked(self, mock_drawer):
+        mock_drawer.return_value = mock_drawer
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3)
+
+        result = bb.draw_label_on_image(image)
+
+        kwargs = mock_drawer.call_args_list[0][1]
+        assert kwargs["color"] == (0, 255, 0)
+        assert kwargs["color_text"] is None
+        assert kwargs["color_bg"] is None
+        assert np.isclose(kwargs["alpha"], 1.0)
+        assert kwargs["size"] == 1
+        assert kwargs["size_text"] == 20
+        assert kwargs["height"] == 30
+        assert kwargs["raise_if_out_of_image"] is False
+
+        assert mock_drawer.draw_on_image.call_count == 1
+
+    @mock.patch("imgaug.augmentables.bbs._LabelOnImageDrawer")
+    def test_draw_label_on_image_mocked_inplace(self, mock_drawer):
+        mock_drawer.return_value = mock_drawer
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3)
+
+        result = bb.draw_label_on_image(image, copy=False)
+
+        kwargs = mock_drawer.call_args_list[0][1]
+        assert kwargs["color"] == (0, 255, 0)
+        assert kwargs["color_text"] is None
+        assert kwargs["color_bg"] is None
+        assert np.isclose(kwargs["alpha"], 1.0)
+        assert kwargs["size"] == 1
+        assert kwargs["size_text"] == 20
+        assert kwargs["height"] == 30
+        assert kwargs["raise_if_out_of_image"] is False
+
+        assert mock_drawer.draw_on_image_.call_count == 1
+
+    def test_draw_label_on_image(self):
+        image = np.zeros((100, 70, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(y1=40, x1=10, y2=50, x2=40)
+
+        result = bb.draw_label_on_image(image,
+                                        color_bg=(123, 123, 123),
+                                        color_text=(222, 222, 222))
+
+        color_bg = np.uint8([123, 123, 123]).reshape((1, 1, -1))
+        color_text = np.uint8([222, 222, 222]).reshape((1, 1, -1))
+        matches_bg = np.min(result == color_bg, axis=-1)
+        matches_text = np.min(result == color_text, axis=-1)
+        assert np.any(matches_bg > 0)
+        assert np.any(matches_text > 0)
+
     @classmethod
-    def _get_standard_draw_on_image_vars(cls):
+    def _get_standard_draw_box_on_image_vars(cls):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3)
         bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
@@ -678,10 +734,10 @@ class TestBoundingBox(unittest.TestCase):
         bb_mask[3, 1:3+1] = True
         return image, bb, bb_mask
 
-    def test_draw_on_image(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
             raise_if_out_of_image=False)
 
@@ -689,40 +745,40 @@ class TestBoundingBox(unittest.TestCase):
         assert np.all(image_bb[~bb_mask] == [0, 0, 0])
         assert np.all(image == 0)
 
-    def test_draw_on_image_red_color(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_red_color(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=[255, 0, 0], alpha=1.0, size=1, copy=True,
             raise_if_out_of_image=False)
 
         assert np.all(image_bb[bb_mask] == [255, 0, 0])
         assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    def test_draw_on_image_single_int_as_color(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_single_int_as_color(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=128, alpha=1.0, size=1, copy=True,
             raise_if_out_of_image=False)
 
         assert np.all(image_bb[bb_mask] == [128, 128, 128])
         assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    def test_draw_on_image_alpha_at_50_percent(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_alpha_at_50_percent(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image + 100, color=[200, 200, 200], alpha=0.5, size=1, copy=True,
             raise_if_out_of_image=False)
 
         assert np.all(image_bb[bb_mask] == [150, 150, 150])
         assert np.all(image_bb[~bb_mask] == [100, 100, 100])
 
-    def test_draw_on_image_alpha_at_50_percent_and_float32_image(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_alpha_at_50_percent_and_float32_image(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             (image+100).astype(np.float32),
             color=[200, 200, 200], alpha=0.5, size=1,
             copy=True, raise_if_out_of_image=False)
@@ -730,10 +786,10 @@ class TestBoundingBox(unittest.TestCase):
         assert np.sum(np.abs((image_bb - [150, 150, 150])[bb_mask])) < 0.1
         assert np.sum(np.abs((image_bb - [100, 100, 100])[~bb_mask])) < 0.1
 
-    def test_draw_on_image_no_copy(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_no_copy(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=[255, 255, 255], alpha=1.0, size=1, copy=False,
             raise_if_out_of_image=False)
 
@@ -742,65 +798,88 @@ class TestBoundingBox(unittest.TestCase):
         assert np.all(image[bb_mask] == [255, 255, 255])
         assert np.all(image[~bb_mask] == [0, 0, 0])
 
-    def test_draw_on_image_bb_outside_of_image(self):
+    def test_draw_box_on_image_bb_outside_of_image(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         bb = ia.BoundingBox(y1=-1, x1=-1, y2=2, x2=2)
         bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
         bb_mask[2, 0:3] = True
         bb_mask[0:3, 2] = True
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
             raise_if_out_of_image=False)
 
         assert np.all(image_bb[bb_mask] == [255, 255, 255])
         assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    def test_draw_on_image_bb_outside_of_image_and_very_small(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_bb_outside_of_image_and_very_small(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
         bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1)
         bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
         bb_mask[0:1+1, 1] = True
         bb_mask[1, 0:1+1] = True
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
             raise_if_out_of_image=False)
 
         assert np.all(image_bb[bb_mask] == [255, 255, 255])
         assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    def test_draw_on_image_size_2(self):
-        image, bb, _ = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_size_2(self):
+        image, bb, _ = self._get_standard_draw_box_on_image_vars()
         bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
         bb_mask[0:5, 0:5] = True
         bb_mask[2, 2] = False
 
-        image_bb = bb.draw_on_image(
+        image_bb = bb.draw_box_on_image(
             image, color=[255, 255, 255], alpha=1.0, size=2, copy=True,
             raise_if_out_of_image=False)
 
         assert np.all(image_bb[bb_mask] == [255, 255, 255])
         assert np.all(image_bb[~bb_mask] == [0, 0, 0])
 
-    def test_draw_on_image_raise_true_but_bb_partially_inside_image(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_raise_true_but_bb_partially_inside_image(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
         bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1)
 
-        _ = bb.draw_on_image(
+        _ = bb.draw_box_on_image(
             image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
             raise_if_out_of_image=True)
 
-    def test_draw_on_image_raise_true_and_bb_fully_outside_image(self):
-        image, bb, bb_mask = self._get_standard_draw_on_image_vars()
+    def test_draw_box_on_image_raise_true_and_bb_fully_outside_image(self):
+        image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
         bb = ia.BoundingBox(y1=-5, x1=-5, y2=-1, x2=-1)
 
         with self.assertRaises(Exception) as context:
-            _ = bb.draw_on_image(
+            _ = bb.draw_box_on_image(
                 image, color=[255, 255, 255], alpha=1.0, size=1, copy=True,
                 raise_if_out_of_image=True)
 
         assert "Cannot draw bounding box" in str(context.exception)
+
+    def test_draw_on_image_label_is_none(self):
+        # if label is None, no label box should be drawn, only the rectangle
+        # box below the label
+        image = np.zeros((100, 70, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(y1=40, x1=10, y2=50, x2=40, label=None)
+
+        image_drawn = bb.draw_on_image(image)
+
+        expected = bb.draw_box_on_image(image)
+        assert np.array_equal(image_drawn, expected)
+
+    def test_draw_on_image_label_is_str(self):
+        # if label is None, no label box should be drawn, only the rectangle
+        # box below the label
+        image = np.zeros((100, 70, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(y1=40, x1=10, y2=50, x2=40, label="Foo")
+
+        image_drawn = bb.draw_on_image(image)
+
+        expected = bb.draw_box_on_image(image)
+        expected = bb.draw_label_on_image(expected)
+        assert np.array_equal(image_drawn, expected)
 
     def test_extract_from_image(self):
         image = iarandom.RNG(1234).integers(0, 255, size=(10, 10, 3))
@@ -2063,3 +2142,195 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
             == bbsoi.__str__()
             == expected
         )
+
+
+class Test_LabelOnImageDrawer(unittest.TestCase):
+    def test_draw_on_image_(self):
+        height = 30
+        image = np.full((100, 50, 3), 100, dtype=np.uint8)
+        bb = ia.BoundingBox(x1=5, x2=20, y1=50, y2=60)
+        drawer = _LabelOnImageDrawer(color_text=(255, 255, 255),
+                                     color_bg=(0, 0, 0),
+                                     height=height)
+
+        image_drawn = drawer.draw_on_image_(np.copy(image), bb)
+
+        frac_colors_as_expected = np.average(
+            np.logical_or(image_drawn[50-1-height:50-1, 5-1:20+1, :] == 0,
+                          image_drawn[50-1-height:50-1, 5-1:20+1, :] == 255)
+        )
+        assert np.all(image_drawn[:50-1-height, :, :] == 100)
+        assert np.all(image_drawn[50-1:, :, :] == 100)
+        assert np.all(image_drawn[:, :5-1, :] == 100)
+        assert np.all(image_drawn[:, 20+1:, :] == 100)
+        assert frac_colors_as_expected > 0.75
+
+    def test_draw_on_image(self):
+        image = np.full((20, 30, 3), 100, dtype=np.uint8)
+        bb = ia.BoundingBox(x1=1, x2=6, y1=2, y2=10)
+        drawer = _LabelOnImageDrawer(color_text=(255, 255, 255),
+                                     color_bg=(0, 0, 0))
+
+        image_drawn_inplace = drawer.draw_on_image_(np.copy(image), bb)
+        image_drawn = drawer.draw_on_image_(image, bb)
+
+        assert np.array_equal(image_drawn, image_drawn_inplace)
+
+    def test__do_raise_if_out_of_image__bb_is_fully_inside(self):
+        drawer = _LabelOnImageDrawer(raise_if_out_of_image=True)
+        image = np.zeros((20, 30, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(x1=1, x2=6, y1=2, y2=10)
+
+        # assert no exception
+        drawer._do_raise_if_out_of_image(image, bb)
+
+    def test__do_raise_if_out_of_image__bb_is_partially_outside(self):
+        drawer = _LabelOnImageDrawer(raise_if_out_of_image=True)
+        image = np.zeros((20, 30, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(x1=30-5, x2=30+1, y1=2, y2=10)
+
+        # assert no exception
+        drawer._do_raise_if_out_of_image(image, bb)
+
+    def test__do_raise_if_out_of_image__bb_is_fully_outside(self):
+        drawer = _LabelOnImageDrawer(raise_if_out_of_image=True)
+        image = np.zeros((20, 30, 3), dtype=np.uint8)
+        bb = ia.BoundingBox(x1=30+1, x2=30+6, y1=2, y2=10)
+
+        with self.assertRaises(Exception):
+            drawer._do_raise_if_out_of_image(image, bb)
+
+    def test__preprocess_colors__only_main_color_set(self):
+        drawer = _LabelOnImageDrawer(color=(0, 255, 0))
+        color_text, color_bg = drawer._preprocess_colors()
+        assert np.array_equal(color_text, [0, 0, 0])
+        assert np.array_equal(color_bg, [0, 255, 0])
+
+    def test__preprocess_colors__subcolors_set(self):
+        drawer = _LabelOnImageDrawer(color_text=(128, 129, 130),
+                                     color_bg=(131, 132, 133))
+        color_text, color_bg = drawer._preprocess_colors()
+        assert np.array_equal(color_text, [128, 129, 130])
+        assert np.array_equal(color_bg, [131, 132, 133])
+
+    def test__preprocess_colors__text_not_set_must_be_black(self):
+        drawer = _LabelOnImageDrawer(color=(255, 255, 255),
+                                     color_bg=(255, 255, 255))
+        color_text, color_bg = drawer._preprocess_colors()
+        assert np.array_equal(color_text, [0, 0, 0])
+        assert np.array_equal(color_bg, [255, 255, 255])
+
+    def test__compute_bg_corner_coords__standard_bb(self):
+        height = 30
+        for size in [1, 2]:
+            with self.subTest(size=size):
+                drawer = _LabelOnImageDrawer(size=size, height=height)
+                bb = ia.BoundingBox(x1=10, x2=30, y1=60, y2=90)
+                image = np.zeros((100, 200, 3), dtype=np.uint8)
+                x1, y1, x2, y2 = drawer._compute_bg_corner_coords(image, bb)
+                assert np.isclose(x1, max(bb.x1 - size + 1, 0))
+                assert np.isclose(y1, max(bb.y1 - 1 - height, 0))
+                assert np.isclose(x2, min(bb.x2 + size, image.shape[1]-1))
+                assert np.isclose(y2, min(bb.y1 - 1, image.shape[0]-1))
+
+    def test__compute_bg_corner_coords__zero_sized_bb(self):
+        height = 30
+        size = 1
+        drawer = _LabelOnImageDrawer(size=1, height=height)
+        bb = ia.BoundingBox(x1=10, x2=10, y1=60, y2=90)
+        image = np.zeros((100, 200, 3), dtype=np.uint8)
+        x1, y1, x2, y2 = drawer._compute_bg_corner_coords(image, bb)
+        assert np.isclose(x1, bb.x1 - size + 1)
+        assert np.isclose(y1, bb.y1 - 1 - height)
+        assert np.isclose(x2, bb.x2 + size)
+        assert np.isclose(y2, bb.y1 - 1)
+
+    def test__draw_label_arr__label_is_none(self):
+        drawer = _LabelOnImageDrawer()
+        height = 50
+        width = 100
+        nb_channels = 3
+        color_text = np.uint8([0, 255, 0])
+        color_bg = np.uint8([255, 0, 0])
+        size_text = 20
+
+        label_arr = drawer._draw_label_arr(None, height, width, nb_channels,
+                                           np.uint8,
+                                           color_text, color_bg, size_text)
+
+        frac_textcolor = np.average(
+            np.min(label_arr == color_text.reshape((1, 1, -1)), axis=-1)
+        )
+        frac_bgcolor = np.average(
+            np.min(label_arr == color_bg.reshape((1, 1, -1)), axis=-1)
+        )
+        assert label_arr.dtype.name == "uint8"
+        assert label_arr.shape == (height, width, nb_channels)
+        assert frac_textcolor > 0.02
+        assert frac_bgcolor > 0.8
+        # not all pixels of the text might be drawn with exactly the text
+        # color
+        assert frac_textcolor + frac_bgcolor > 0.75
+
+    def test__draw_label_arr__label_is_str(self):
+        drawer = _LabelOnImageDrawer()
+        height = 50
+        width = 100
+        nb_channels = 3
+        color_text = np.uint8([0, 255, 0])
+        color_bg = np.uint8([255, 0, 0])
+        size_text = 20
+
+        label_arr = drawer._draw_label_arr("Fooo", height, width, nb_channels,
+                                           np.uint8,
+                                           color_text, color_bg, size_text)
+
+        frac_textcolor = np.average(
+            np.min(label_arr == color_text.reshape((1, 1, -1)), axis=-1)
+        )
+        frac_bgcolor = np.average(
+            np.min(label_arr == color_bg.reshape((1, 1, -1)), axis=-1)
+        )
+        assert label_arr.dtype.name == "uint8"
+        assert label_arr.shape == (height, width, nb_channels)
+        assert frac_textcolor > 0.02
+        assert frac_bgcolor > 0.8
+        # not all pixels of the text might be drawn with exactly the text
+        # color
+        assert frac_textcolor + frac_bgcolor > 0.75
+
+    def test__blend_label_arr__alpha_is_1(self):
+        drawer = _LabelOnImageDrawer(alpha=1)
+        image = np.full((50, 60, 3), 100, dtype=np.uint8)
+        label_arr = np.full((10, 20, 3), 200, dtype=np.uint8)
+        x1 = 15
+        x2 = 15 + 20
+        y1 = 10
+        y2 = 10 + 10
+
+        image_blend = drawer._blend_label_arr_with_image_(image, label_arr,
+                                                          x1, y1, x2, y2)
+
+        assert np.all(image_blend[:, :15, :] == 100)
+        assert np.all(image_blend[:, 15+20:, :] == 100)
+        assert np.all(image_blend[:10, :, :] == 100)
+        assert np.all(image_blend[10+10:, :, :] == 100)
+        assert np.all(image_blend[10:10+10, 15:15+20, :] == 200)
+
+    def test__blend_label_arr__alpha_is_075(self):
+        drawer = _LabelOnImageDrawer(alpha=0.75)
+        image = np.full((50, 60, 3), 100, dtype=np.uint8)
+        label_arr = np.full((10, 20, 3), 200, dtype=np.uint8)
+        x1 = 15
+        x2 = 15 + 20
+        y1 = 10
+        y2 = 10 + 10
+
+        image_blend = drawer._blend_label_arr_with_image_(image, label_arr,
+                                                          x1, y1, x2, y2)
+
+        assert np.all(image_blend[:, :15, :] == 100)
+        assert np.all(image_blend[:, 15+20:, :] == 100)
+        assert np.all(image_blend[:10, :, :] == 100)
+        assert np.all(image_blend[10+10:, :, :] == 100)
+        assert np.all(image_blend[10:10+10, 15:15+20, :] == 100+75)
