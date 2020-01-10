@@ -5,8 +5,8 @@ List of augmenters:
 
     * :class:`Canny`
 
-:class:`imgaug.augmenters.convolutional.EdgeDetect` and
-:class:`imgaug.augmenters.convolutional.DirectedEdgeDetect` are currently
+:class:`~imgaug.augmenters.convolutional.EdgeDetect` and
+:class:`~imgaug.augmenters.convolutional.DirectedEdgeDetect` are currently
 still in ``convolutional.py``.
 
 """
