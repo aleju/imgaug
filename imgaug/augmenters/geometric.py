@@ -1,6 +1,7 @@
 """Augmenters that apply affine or similar transformations.
 
 List of augmenters:
+
     * :class:`Affine`
     * :class:`ScaleX`
     * :class:`ScaleY`
