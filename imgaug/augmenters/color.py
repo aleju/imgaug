@@ -3,26 +3,26 @@ Augmenters that affect image colors or image colorspaces.
 
 List of augmenters:
 
-    * InColorspace (deprecated)
-    * WithColorspace
-    * WithBrightnessChannels
-    * MultiplyAndAddToBrightness
-    * MultiplyBrightness
-    * AddToBrightness
-    * WithHueAndSaturation
-    * MultiplyHueAndSaturation
-    * MultiplyHue
-    * MultiplySaturation
-    * RemoveSaturation
-    * AddToHueAndSaturation
-    * AddToHue
-    * AddToSaturation
-    * ChangeColorspace
-    * Grayscale
-    * GrayscaleColorwise
-    * KMeansColorQuantization
-    * UniformColorQuantization
-    * Posterize
+    * :class:`InColorspace (deprecated)`
+    * :class:`WithColorspace`
+    * :class:`WithBrightnessChannels`
+    * :class:`MultiplyAndAddToBrightness`
+    * :class:`MultiplyBrightness`
+    * :class:`AddToBrightness`
+    * :class:`WithHueAndSaturation`
+    * :class:`MultiplyHueAndSaturation`
+    * :class:`MultiplyHue`
+    * :class:`MultiplySaturation`
+    * :class:`RemoveSaturation`
+    * :class:`AddToHueAndSaturation`
+    * :class:`AddToHue`
+    * :class:`AddToSaturation`
+    * :class:`ChangeColorspace`
+    * :class:`Grayscale`
+    * :class:`GrayscaleColorwise`
+    * :class:`KMeansColorQuantization`
+    * :class:`UniformColorQuantization`
+    * :class:`Posterize`
 
 """
 from __future__ import print_function, division, absolute_import

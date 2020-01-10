@@ -3,7 +3,7 @@ Augmenters that deal with edge detection.
 
 List of augmenters:
 
-    * Canny
+    * :class:`Canny`
 
 :class:`imgaug.augmenters.convolutional.EdgeDetect` and
 :class:`imgaug.augmenters.convolutional.DirectedEdgeDetect` are currently

@@ -3,12 +3,12 @@ Augmenters that create weather effects.
 
 List of augmenters:
 
-    * FastSnowyLandscape
-    * Clouds
-    * Fog
-    * CloudLayer
-    * Snowflakes
-    * SnowflakesLayer
+    * :class:`FastSnowyLandscape`
+    * :class:`Clouds`
+    * :class:`Fog`
+    * :class:`CloudLayer`
+    * :class:`Snowflakes`
+    * :class:`SnowflakesLayer`
 
 """
 from __future__ import print_function, division, absolute_import

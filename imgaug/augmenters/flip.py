@@ -3,8 +3,8 @@ Augmenters that apply mirroring/flipping operations to images.
 
 List of augmenters:
 
-    * Fliplr
-    * Flipud
+    * :class:`Fliplr`
+    * :class:`Flipud`
 
 """
 from __future__ import print_function, division, absolute_import

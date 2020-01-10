@@ -1,7 +1,7 @@
 """Augmenters that help with debugging.
 
 List of augmenters:
-    * SaveDebugImageEveryNBatches
+    * :class:`SaveDebugImageEveryNBatches`
 
 """
 from __future__ import print_function, division, absolute_import

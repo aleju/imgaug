@@ -1,21 +1,21 @@
 """Augmenters that apply affine or similar transformations.
 
 List of augmenters:
-    * Affine
-    * ScaleX
-    * ScaleY
-    * TranslateX
-    * TranslateY
-    * Rotate
-    * ShearX
-    * ShearY
-    * AffineCv2
-    * PiecewiseAffine
-    * PerspectiveTransform
-    * ElasticTransformation
-    * Rot90
-    * WithPolarWarping
-    * Jigsaw
+    * :class:`Affine`
+    * :class:`ScaleX`
+    * :class:`ScaleY`
+    * :class:`TranslateX`
+    * :class:`TranslateY`
+    * :class:`Rotate`
+    * :class:`ShearX`
+    * :class:`ShearY`
+    * :class:`AffineCv2`
+    * :class:`PiecewiseAffine`
+    * :class:`PerspectiveTransform`
+    * :class:`ElasticTransformation`
+    * :class:`Rot90`
+    * :class:`WithPolarWarping`
+    * :class:`Jigsaw`
 
 """
 from __future__ import print_function, division, absolute_import

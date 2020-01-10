@@ -14,25 +14,25 @@ to PIL are required.
 
 List of augmenters:
 
-    * Solarize
-    * Posterize
-    * Equalize
-    * Autocontrast
-    * EnhanceColor
-    * EnhanceContrast
-    * EnhanceBrightness
-    * EnhanceSharpness
-    * FilterBlur
-    * FilterSmooth
-    * FilterSmoothMore
-    * FilterEdgeEnhance
-    * FilterEdgeEnhanceMore
-    * FilterFindEdges
-    * FilterContour
-    * FilterEmboss
-    * FilterSharpen
-    * FilterDetail
-    * Affine
+    * :class:`Solarize`
+    * :class:`Posterize`
+    * :class:`Equalize`
+    * :class:`Autocontrast`
+    * :class:`EnhanceColor`
+    * :class:`EnhanceContrast`
+    * :class:`EnhanceBrightness`
+    * :class:`EnhanceSharpness`
+    * :class:`FilterBlur`
+    * :class:`FilterSmooth`
+    * :class:`FilterSmoothMore`
+    * :class:`FilterEdgeEnhance`
+    * :class:`FilterEdgeEnhanceMore`
+    * :class:`FilterFindEdges`
+    * :class:`FilterContour`
+    * :class:`FilterEmboss`
+    * :class:`FilterSharpen`
+    * :class:`FilterDetail`
+    * :class:`Affine`
 
 Standard usage of these augmenters follows roughly the schema::
 

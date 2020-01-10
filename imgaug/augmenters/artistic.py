@@ -3,7 +3,7 @@ Augmenters that apply artistic image filters.
 
 List of augmenters:
 
-    * Cartoon
+    * :class:`Cartoon`
 
 """
 

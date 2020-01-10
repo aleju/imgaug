@@ -3,10 +3,10 @@ Augmenters that blend two images with each other.
 
 List of augmenters:
 
-    * Alpha
-    * AlphaElementwise
-    * SimplexNoiseAlpha
-    * FrequencyNoiseAlpha
+    * :class:`Alpha`
+    * :class:`AlphaElementwise`
+    * :class:`SimplexNoiseAlpha`
+    * :class:`FrequencyNoiseAlpha`
 
 """
 from __future__ import print_function, division, absolute_import

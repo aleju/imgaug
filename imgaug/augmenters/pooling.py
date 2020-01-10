@@ -3,10 +3,10 @@ Augmenters that apply pooling operations to images.
 
 List of augmenters:
 
-    * AveragePooling
-    * MaxPooling
-    * MinPooling
-    * MedianPooling
+    * :class:`AveragePooling`
+    * :class:`MaxPooling`
+    * :class:`MinPooling`
+    * :class:`MedianPooling`
 
 """
 from __future__ import print_function, division, absolute_import

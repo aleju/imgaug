@@ -3,12 +3,12 @@ Augmenters that blur images.
 
 List of augmenters:
 
-    * GaussianBlur
-    * AverageBlur
-    * MedianBlur
-    * BilateralBlur
-    * MotionBlur
-    * MeanShiftBlur
+    * :class:`GaussianBlur`
+    * :class:`AverageBlur`
+    * :class:`MedianBlur`
+    * :class:`BilateralBlur`
+    * :class:`MotionBlur`
+    * :class:`MeanShiftBlur`
 
 """
 from __future__ import print_function, division, absolute_import
