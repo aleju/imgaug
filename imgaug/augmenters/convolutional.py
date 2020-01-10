@@ -3,11 +3,11 @@ Augmenters that are based on applying convolution kernels to images.
 
 List of augmenters:
 
-    * Convolve
-    * Sharpen
-    * Emboss
-    * EdgeDetect
-    * DirectedEdgeDetect
+    * :class:`Convolve`
+    * :class:`Sharpen`
+    * :class:`Emboss`
+    * :class:`EdgeDetect`
+    * :class:`DirectedEdgeDetect`
 
 For MotionBlur, see ``blur.py``.
 

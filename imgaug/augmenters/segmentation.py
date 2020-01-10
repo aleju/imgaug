@@ -3,11 +3,11 @@ Augmenters that apply changes to images based on segmentation methods.
 
 List of augmenters:
 
-    * Superpixels
-    * Voronoi
-    * UniformVoronoi
-    * RegularGridVoronoi
-    * RelativeRegularGridVoronoi
+    * :class:`Superpixels`
+    * :class:`Voronoi`
+    * :class:`UniformVoronoi`
+    * :class:`RegularGridVoronoi`
+    * :class:`RelativeRegularGridVoronoi`
 
 """
 from __future__ import print_function, division, absolute_import

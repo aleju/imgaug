@@ -3,31 +3,31 @@ Augmenters that somehow change the size of the images.
 
 List of augmenters:
 
-    * Resize
-    * CropAndPad
-    * Crop
-    * Pad
-    * PadToFixedSize
-    * CenterPadToFixedSize
-    * CropToFixedSize
-    * CenterCropToFixedSize
-    * CropToMultiplesOf
-    * CenterCropToMultiplesOf
-    * PadToMultiplesOf
-    * CenterPadToMultiplesOf
-    * CropToPowersOf
-    * CenterCropToPowersOf
-    * PadToPowersOf
-    * CenterPadToPowersOf
-    * CropToAspectRatio
-    * CenterCropToAspectRatio
-    * PadToAspectRatio
-    * CenterPadToAspectRatio
-    * CropToSquare
-    * CenterCropToSquare
-    * PadToSquare
-    * CenterPadToSquare
-    * KeepSizeByResize
+    * :class:`Resize`
+    * :class:`CropAndPad`
+    * :class:`Crop`
+    * :class:`Pad`
+    * :class:`PadToFixedSize`
+    * :class:`CenterPadToFixedSize`
+    * :class:`CropToFixedSize`
+    * :class:`CenterCropToFixedSize`
+    * :class:`CropToMultiplesOf`
+    * :class:`CenterCropToMultiplesOf`
+    * :class:`PadToMultiplesOf`
+    * :class:`CenterPadToMultiplesOf`
+    * :class:`CropToPowersOf`
+    * :class:`CenterCropToPowersOf`
+    * :class:`PadToPowersOf`
+    * :class:`CenterPadToPowersOf`
+    * :class:`CropToAspectRatio`
+    * :class:`CenterCropToAspectRatio`
+    * :class:`PadToAspectRatio`
+    * :class:`CenterPadToAspectRatio`
+    * :class:`CropToSquare`
+    * :class:`CenterCropToSquare`
+    * :class:`PadToSquare`
+    * :class:`CenterPadToSquare`
+    * :class:`KeepSizeByResize`
 
 """
 from __future__ import print_function, division, absolute_import

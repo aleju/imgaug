@@ -4,20 +4,20 @@ for meta usage.
 
 List of augmenters:
 
-    * Augmenter (base class for all augmenters)
-    * Sequential
-    * SomeOf
-    * OneOf
-    * Sometimes
-    * WithChannels
-    * Identity
-    * Noop
-    * Lambda
-    * AssertLambda
-    * AssertShape
-    * ChannelShuffle
+    * :class:`Augmenter` (base class for all augmenters)
+    * :class:`Sequential`
+    * :class:`SomeOf`
+    * :class:`OneOf`
+    * :class:`Sometimes`
+    * :class:`WithChannels`
+    * :class:`Identity`
+    * :class:`Noop`
+    * :class:`Lambda`
+    * :class:`AssertLambda`
+    * :class:`AssertShape`
+    * :class:`ChannelShuffle`
 
-Note: WithColorspace is in ``color.py``.
+Note: :class:`~imgaug.augmenters.color.WithColorspace` is in ``color.py``.
 
 """
 from __future__ import print_function, division, absolute_import

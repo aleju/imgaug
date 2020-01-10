@@ -3,14 +3,14 @@ Augmenters that perform contrast changes.
 
 List of augmenters:
 
-    * GammaContrast
-    * SigmoidContrast
-    * LogContrast
-    * LinearContrast
-    * AllChannelsHistogramEqualization
-    * HistogramEqualization
-    * AllChannelsCLAHE
-    * CLAHE
+    * :class:`GammaContrast`
+    * :class:`SigmoidContrast`
+    * :class:`LogContrast`
+    * :class:`LinearContrast`
+    * :class:`AllChannelsHistogramEqualization`
+    * :class:`HistogramEqualization`
+    * :class:`AllChannelsCLAHE`
+    * :class:`CLAHE`
 
 """
 from __future__ import print_function, division, absolute_import

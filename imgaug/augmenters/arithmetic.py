@@ -3,30 +3,30 @@ Augmenters that perform simple arithmetic changes.
 
 List of augmenters:
 
-    * Add
-    * AddElementwise
-    * AdditiveGaussianNoise
-    * AdditiveLaplaceNoise
-    * AdditivePoissonNoise
-    * Multiply
-    * MultiplyElementwise
-    * Cutout
-    * Dropout
-    * CoarseDropout
-    * Dropout2d
-    * TotalDropout
-    * ReplaceElementwise
-    * ImpulseNoise
-    * SaltAndPepper
-    * CoarseSaltAndPepper
-    * Salt
-    * CoarseSalt
-    * Pepper
-    * CoarsePepper
-    * Invert
-    * Solarize
-    * ContrastNormalization
-    * JpegCompression
+    * :class:`Add`
+    * :class:`AddElementwise`
+    * :class:`AdditiveGaussianNoise`
+    * :class:`AdditiveLaplaceNoise`
+    * :class:`AdditivePoissonNoise`
+    * :class:`Multiply`
+    * :class:`MultiplyElementwise`
+    * :class:`Cutout`
+    * :class:`Dropout`
+    * :class:`CoarseDropout`
+    * :class:`Dropout2d`
+    * :class:`TotalDropout`
+    * :class:`ReplaceElementwise`
+    * :class:`ImpulseNoise`
+    * :class:`SaltAndPepper`
+    * :class:`CoarseSaltAndPepper`
+    * :class:`Salt`
+    * :class:`CoarseSalt`
+    * :class:`Pepper`
+    * :class:`CoarsePepper`
+    * :class:`Invert`
+    * :class:`Solarize`
+    * :class:`ContrastNormalization`
+    * :class:`JpegCompression`
 
 """
 from __future__ import print_function, division, absolute_import
