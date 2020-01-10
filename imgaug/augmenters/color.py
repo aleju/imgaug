@@ -3,7 +3,7 @@ Augmenters that affect image colors or image colorspaces.
 
 List of augmenters:
 
-    * :class:`InColorspace (deprecated)`
+    * :class:`InColorspace` (deprecated)
     * :class:`WithColorspace`
     * :class:`WithBrightnessChannels`
     * :class:`MultiplyAndAddToBrightness`
