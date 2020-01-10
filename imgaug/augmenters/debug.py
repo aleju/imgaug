@@ -1,6 +1,7 @@
 """Augmenters that help with debugging.
 
 List of augmenters:
+
     * :class:`SaveDebugImageEveryNBatches`
 
 """
