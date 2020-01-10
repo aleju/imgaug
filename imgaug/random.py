@@ -868,10 +868,11 @@ def seed(entropy):
 
 
 def _seed_np117_(entropy):
-    # pylint: disable=global-statement
-    global GLOBAL_RNG
-    # TODO any way to seed the Generator object instead of creating a new one?
-    GLOBAL_RNG = RNG(entropy)
+    # We can't easily seed a BitGenerator in-place, nor can we easily modify
+    # a Generator's bit_generator in-place. So instead we create a new
+    # bit generator and set the current global RNG's internal bit generator
+    # state to a copy of the new bit generator's state.
+    get_global_rng().state = BIT_GENERATOR(entropy).state
 
 
 def _seed_np116_(entropy):
