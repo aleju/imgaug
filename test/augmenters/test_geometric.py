@@ -7042,6 +7042,20 @@ class TestElasticTransformation(unittest.TestCase):
 
         assert np.sum(np.logical_and(0 < observed, observed < 255)) > 0
 
+    def test_images_cval_is_int_image_hw3(self):
+        aug = iaa.ElasticTransformation(alpha=5.0, sigma=3.0, mode="constant",
+                                        cval=255, order=0)
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+
+        observed = aug.augment_image(img)
+
+        count_255 = np.sum(observed == 255, axis=2)
+        mask_not_all_channels_same_intensity = np.logical_and(
+            count_255 > 0, count_255 < 3)
+        mask_all_channels_same_intensity = (count_255 == 3)
+        assert not np.any(mask_not_all_channels_same_intensity)
+        assert np.any(mask_all_channels_same_intensity)
+
     def test_heatmaps_ignore_cval(self):
         # cval with heatmaps
         heatmaps = HeatmapsOnImage(
