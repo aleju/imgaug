@@ -1330,6 +1330,17 @@ class TestKeypointsOnImage(unittest.TestCase):
         assert kpsoi_copy.keypoints[0].coords_almost_equals(kp1)
         assert kpsoi_copy.keypoints[1].coords_almost_equals(kp2)
 
+    def test___getitem__(self):
+        cbas = [
+            ia.Keypoint(x=1, y=2),
+            ia.Keypoint(x=2, y=3)
+        ]
+        cbasoi = ia.KeypointsOnImage(cbas, shape=(3, 4, 3))
+
+        assert cbasoi[0] is cbas[0]
+        assert cbasoi[1] is cbas[1]
+        assert cbasoi[0:2] == cbas
+
     def test___iter__(self):
         cbas = [ia.Keypoint(x=1, y=2),
                 ia.Keypoint(x=3, y=4)]

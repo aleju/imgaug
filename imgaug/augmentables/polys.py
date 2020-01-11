@@ -2046,6 +2046,17 @@ class PolygonsOnImage(IAugmentable):
 
         return PolygonsOnImage(polygons, shape)
 
+    def __getitem__(self, indices):
+        """Get the polygon(s) with given indices.
+
+        Returns
+        -------
+        list of imgaug.augmentables.polys.Polygon
+            Polygon(s) with given indices.
+
+        """
+        return self.polygons[indices]
+
     def __iter__(self):
         """Iterate over the polygons in this container.
 
