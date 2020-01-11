@@ -458,3 +458,60 @@ class TestSnowflakesLayer(unittest.TestCase):
             if np.average(image_aug) > 128:
                 nb_seen += 1
         assert nb_seen > 30  # usually around 45
+
+
+# only a very rough test here currently, because the augmenter is fairly hard
+# to test
+# TODO add more tests, improve testability
+class TestRain(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    @classmethod
+    def _test_very_roughly(cls, nb_channels):
+        if nb_channels is None:
+            img = np.zeros((100, 100), dtype=np.uint8)
+        else:
+            img = np.zeros((100, 100, nb_channels), dtype=np.uint8)
+
+        imgs_aug = iaa.Rain()(images=[img] * 5)
+        assert 5 < np.average(imgs_aug) < 200
+        assert np.max(imgs_aug) > 70
+
+        for img_aug in imgs_aug:
+            img_aug_f32 = img_aug.astype(np.float32)
+            grad_x = img_aug_f32[:, 1:] - img_aug_f32[:, :-1]
+            grad_y = img_aug_f32[1:, :] - img_aug_f32[:-1, :]
+
+            assert np.sum(np.abs(grad_x)) > 10 * img.shape[1]
+            assert np.sum(np.abs(grad_y)) > 10 * img.shape[0]
+
+    def test_very_roughly_three_channels(self):
+        self._test_very_roughly(3)
+
+    def test_very_roughly_one_channel(self):
+        self._test_very_roughly(1)
+
+    def test_very_roughly_no_channels(self):
+        self._test_very_roughly(None)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0, 3),
+            (0, 1, 3),
+            (1, 0, 3)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                aug = iaa.Rain()
+
+                image_aug = aug(image=image)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == shape
+
+    def test_pickleable(self):
+        aug = iaa.Rain(random_state=1)
+        runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))

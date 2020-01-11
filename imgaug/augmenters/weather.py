@@ -4,11 +4,13 @@ Augmenters that create weather effects.
 List of augmenters:
 
     * :class:`FastSnowyLandscape`
+    * :class:`CloudLayer`
     * :class:`Clouds`
     * :class:`Fog`
-    * :class:`CloudLayer`
-    * :class:`Snowflakes`
     * :class:`SnowflakesLayer`
+    * :class:`Snowflakes`
+    * :class:`RainLayer`
+    * :class:`Rain`
 
 """
 from __future__ import print_function, division, absolute_import
@@ -791,6 +793,7 @@ class SnowflakesLayer(meta.Augmenter):
         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
+
     def __init__(self, density, density_uniformity, flake_size,
                  flake_size_uniformity, angle, speed, blur_sigma_fraction,
                  blur_sigma_limits=(0.5, 3.75), name=None, deterministic=False,
@@ -888,26 +891,10 @@ class SnowflakesLayer(meta.Augmenter):
                                              speed=speed_sample,
                                              random_state=random_state)
 
-        # use contrast adjustment of noise to make the flake size a bit less
-        # uniform then readjust the noise values to make them more visible
-        # again
-        gain = 1.0 + 2*(1 - flake_size_uniformity_sample)
-        gain_adj = 1.0 + 5*(1 - flake_size_uniformity_sample)
-        noise_small_blur = contrast.GammaContrast(gain).augment_image(
-            noise_small_blur)
-        noise_small_blur = noise_small_blur.astype(np.float32) * gain_adj
-        noise_small_blur_rgb = np.tile(
-            noise_small_blur[..., np.newaxis], (1, 1, nb_channels))
+        noise_small_blur_rgb = self._postprocess_noise(
+            noise_small_blur, flake_size_uniformity_sample, nb_channels)
 
-        # blend:
-        # sum for a bit of glowy, hardly visible flakes
-        # max for the main flakes
-        image_f32 = image.astype(np.float32)
-        image_f32 = self._blend_by_sum(
-            image_f32, (0.1 + 20*speed_sample) * noise_small_blur_rgb)
-        image_f32 = self._blend_by_max(
-            image_f32, (1.0 + 20*speed_sample) * noise_small_blur_rgb)
-        return image_f32
+        return self._blend(image, speed_sample, noise_small_blur_rgb)
 
     @classmethod
     def _generate_noise(cls, height, width, density, random_state):
@@ -943,6 +930,33 @@ class SnowflakesLayer(meta.Augmenter):
         blurer = blur.MotionBlur(
             k=max(k, 3), angle=angle, direction=1.0, random_state=random_state)
         return blurer.augment_image(noise)
+
+    @classmethod
+    def _postprocess_noise(cls, noise_small_blur,
+                           flake_size_uniformity_sample, nb_channels):
+        # use contrast adjustment of noise to make the flake size a bit less
+        # uniform then readjust the noise values to make them more visible
+        # again
+        gain = 1.0 + 2*(1 - flake_size_uniformity_sample)
+        gain_adj = 1.0 + 5*(1 - flake_size_uniformity_sample)
+        noise_small_blur = contrast.GammaContrast(gain).augment_image(
+            noise_small_blur)
+        noise_small_blur = noise_small_blur.astype(np.float32) * gain_adj
+        noise_small_blur_rgb = np.tile(
+            noise_small_blur[..., np.newaxis], (1, 1, nb_channels))
+        return noise_small_blur_rgb
+
+    @classmethod
+    def _blend(cls, image, speed_sample, noise_small_blur_rgb):
+        # blend:
+        # sum for a bit of glowy, hardly visible flakes
+        # max for the main flakes
+        image_f32 = image.astype(np.float32)
+        image_f32 = cls._blend_by_sum(
+            image_f32, (0.1 + 20*speed_sample) * noise_small_blur_rgb)
+        image_f32 = cls._blend_by_max(
+            image_f32, (1.0 + 20*speed_sample) * noise_small_blur_rgb)
+        return image_f32
 
     # TODO replace this by a function from module blend.py
     @classmethod
@@ -1132,6 +1146,202 @@ class Snowflakes(meta.SomeOf):
 
         super(Snowflakes, self).__init__(
             (1, 3),
+            children=[layer.deepcopy() for _ in range(3)],
+            random_order=False,
+            name=name,
+            deterministic=deterministic,
+            random_state=random_state
+        )
+
+
+class RainLayer(SnowflakesLayer):
+    """Add a single layer of falling raindrops to images.
+
+    dtype support::
+
+        * ``uint8``: yes; indirectly tested (1)
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
+        - (1) indirectly tested via tests for ``Rain``
+
+    Parameters
+    ----------
+    density : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    density_uniformity : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    drop_size : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as `flake_size` in
+        :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    drop_size_uniformity : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as `flake_size_uniformity` in
+        :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    angle : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    speed : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    blur_sigma_fraction : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    blur_sigma_limits : tuple of float, optional
+        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    """
+
+    def __init__(self, density, density_uniformity, drop_size,
+                 drop_size_uniformity, angle, speed, blur_sigma_fraction,
+                 blur_sigma_limits=(0.5, 3.75), name=None, deterministic=False,
+                 random_state=None):
+        super(RainLayer, self).__init__(
+            density, density_uniformity, drop_size,
+            drop_size_uniformity, angle, speed, blur_sigma_fraction,
+            blur_sigma_limits=blur_sigma_limits,
+            name=name, deterministic=deterministic, random_state=random_state
+        )
+
+    @classmethod
+    def _blur(cls, noise, sigma):
+        return noise
+
+    @classmethod
+    def _postprocess_noise(cls, noise_small_blur,
+                           flake_size_uniformity_sample, nb_channels):
+        noise_small_blur_rgb = np.tile(
+            noise_small_blur[..., np.newaxis], (1, 1, nb_channels))
+        return noise_small_blur_rgb
+
+    @classmethod
+    def _blend(cls, image, speed_sample, noise_small_blur_rgb):
+        # We set the mean color based on the noise here. That's a pseudo-random
+        # approach that saves us from adding the random state as a parameter.
+        # Note that the sum of noise_small_blur_rgb can be 0 when at least one
+        # image axis size is 0.
+        noise_sum = np.sum(noise_small_blur_rgb.flat[0:1000])
+        noise_sum = noise_sum if noise_sum > 0 else 1
+        drop_mean_color = 110 + (240 - 110) % noise_sum
+        noise_small_blur_rgb = noise_small_blur_rgb / 255.0
+        # The 1.3 multiplier increases the visibility of drops a bit.
+        noise_small_blur_rgb = np.clip(1.3 * noise_small_blur_rgb, 0, 1.0)
+        image_f32 = image.astype(np.float32)
+        image_f32 = (
+            (1 - noise_small_blur_rgb) * image_f32
+            + noise_small_blur_rgb * drop_mean_color
+        )
+        return np.clip(image_f32, 0, 255).astype(np.uint8)
+
+
+class Rain(meta.SomeOf):
+    """Add falling snowflakes to images.
+
+    This is a wrapper around
+    :class:`imgaug.augmenters.weather.RainLayer`. It executes 1 to 3
+    layers per image.
+
+    .. note::
+
+        This augmenter currently seems to work best for medium-sized images
+        around ``192x256``. For smaller images, you may want to increase the
+        `speed` value to e.g. ``(0.1, 0.3)``, otherwise the drops tend to
+        look like snowflakes. For larger images, you may want to increase
+        the `drop_size` to e.g. ``(0.10, 0.20)``.
+
+    dtype support::
+
+        * ``uint8``: yes; tested
+        * ``uint16``: no (1)
+        * ``uint32``: no (1)
+        * ``uint64``: no (1)
+        * ``int8``: no (1)
+        * ``int16``: no (1)
+        * ``int32``: no (1)
+        * ``int64``: no (1)
+        * ``float16``: no (1)
+        * ``float32``: no (1)
+        * ``float64``: no (1)
+        * ``float128``: no (1)
+        * ``bool``: no (1)
+
+        - (1) Parameters of this augmenter are optimized for the value range
+              of ``uint8``. While other dtypes may be accepted, they will lead
+              to images augmented in ways inappropriate for the respective
+              dtype.
+
+    Parameters
+    ----------
+    drop_size : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        See :class:`imgaug.augmenters.weather.RainLayer`.
+
+    speed : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
+        See :class:`imgaug.augmenters.weather.RainLayer`.
+
+    name : None or str, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    deterministic : bool, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Rain(speed=(0.1, 0.3))
+
+    Add rain to small images (around ``96x128``).
+
+    >>> aug = iaa.Rain()
+
+    Add rain to medium sized images (around ``192x256``).
+
+    >>> aug = iaa.Rain(drop_size=(0.10, 0.20))
+
+    Add rain to large images (around ``960x1280``).
+
+    """
+
+    def __init__(self, nb_iterations=(1, 3),
+                 drop_size=(0.01, 0.02),
+                 speed=(0.04, 0.20),
+                 name=None, deterministic=False, random_state=None):
+        layer = RainLayer(
+            density=(0.03, 0.14),
+            density_uniformity=(0.8, 1.0),
+            drop_size=drop_size,
+            drop_size_uniformity=(0.2, 0.5),
+            angle=(-15, 15),
+            speed=speed,
+            blur_sigma_fraction=(0.001, 0.001)
+        )
+
+        super(Rain, self).__init__(
+            nb_iterations,
             children=[layer.deepcopy() for _ in range(3)],
             random_order=False,
             name=name,
