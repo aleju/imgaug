@@ -18,6 +18,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug as ia
+import imgaug.augmenters as iaa
 from imgaug.testutils import reseed
 import imgaug.random as iarandom
 
@@ -703,6 +704,44 @@ class Test_seed(_Base):
     def test_integrationtest(self):
         iarandom.seed(1)
         assert iarandom.GLOBAL_RNG.equals(iarandom.RNG(1))
+
+    def test_seed_affects_augmenters_created_after_its_call(self):
+        image = np.full((50, 50, 3), 128, dtype=np.uint8)
+
+        images_aug = []
+        for _ in np.arange(5):
+            iarandom.seed(100)
+            aug = iaa.AdditiveGaussianNoise(scale=50, per_channel=True)
+            images_aug.append(aug(image=image))
+
+        # assert all images identical
+        for other_image_aug in images_aug[1:]:
+            assert np.array_equal(images_aug[0], other_image_aug)
+
+        # but different seed must lead to different image
+        iarandom.seed(101)
+        aug = iaa.AdditiveGaussianNoise(scale=50, per_channel=True)
+        image_aug = aug(image=image)
+        assert not np.array_equal(images_aug[0], image_aug)
+
+    def test_seed_affects_augmenters_created_before_its_call(self):
+        image = np.full((50, 50, 3), 128, dtype=np.uint8)
+
+        images_aug = []
+        for _ in np.arange(5):
+            aug = iaa.AdditiveGaussianNoise(scale=50, per_channel=True)
+            iarandom.seed(100)
+            images_aug.append(aug(image=image))
+
+        # assert all images identical
+        for other_image_aug in images_aug[1:]:
+            assert np.array_equal(images_aug[0], other_image_aug)
+
+        # but different seed must lead to different image
+        aug = iaa.AdditiveGaussianNoise(scale=50, per_channel=True)
+        iarandom.seed(101)
+        image_aug = aug(image=image)
+        assert not np.array_equal(images_aug[0], image_aug)
 
 
 class Test_normalize_generator(_Base):
