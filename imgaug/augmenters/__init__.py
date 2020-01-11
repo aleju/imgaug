@@ -13,6 +13,7 @@ from imgaug.augmenters.debug import *
 from imgaug.augmenters.edges import *
 from imgaug.augmenters.flip import *
 from imgaug.augmenters.geometric import *
+import imgaug.augmenters.imgcorruptlike  # use as iaa.imgcorrupt.<Augmenter>
 from imgaug.augmenters.meta import *
 import imgaug.augmenters.pillike  # use via: iaa.pillike.*
 from imgaug.augmenters.pooling import *

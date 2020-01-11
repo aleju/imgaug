@@ -1543,3 +1543,36 @@ def polyfill_random(generator, size, dtype="float32", out=None):
             out[...] = result
         return result
     return generator.random(size=size, dtype=dtype, out=out)
+
+
+# TODO add tests
+class temporary_numpy_seed(object):
+    """Context to temporarily alter the random state of ``numpy.random``.
+
+    The random state's internal state will be set back to the original one
+    once the context finishes.
+
+    Parameters
+    ----------
+    entropy : None or int
+        The seed value to use.
+        If `None` then the seed will not be altered and the internal state
+        of ``numpy.random`` will not be reset back upon context exit (i.e.
+        this context will do nothing).
+
+    """
+    # pylint complains about class name
+    # pylint: disable=invalid-name
+
+    def __init__(self, entropy=None):
+        self.old_state = None
+        self.entropy = entropy
+
+    def __enter__(self):
+        if self.entropy is not None:
+            self.old_state = np.random.get_state()
+            np.random.seed(self.entropy)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.entropy is not None:
+            np.random.set_state(self.old_state)
