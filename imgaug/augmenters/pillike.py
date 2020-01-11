@@ -56,6 +56,7 @@ import PIL.ImageEnhance
 import PIL.ImageFilter
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from . import arithmetic
 from . import color as colorlib
@@ -305,7 +306,8 @@ def _equalize_no_pil_(image, mask=None):
             image_c = image[:, :, np.newaxis]
         else:
             image_c = image[:, :, c_idx:c_idx+1]
-        histo = cv2.calcHist([image_c], [0], mask, [256], [0, 256])
+        histo = cv2.calcHist(
+            [_normalize_cv2_input_arr_(image_c)], [0], mask, [256], [0, 256])
         if len(histo.nonzero()[0]) <= 1:
             lut[0, :, c_idx] = np.arange(256).astype(np.int32)
             continue
@@ -430,7 +432,8 @@ def _autocontrast_no_pil(image, cutoff, ignore):  # noqa: C901
             image_c = image[:, :, np.newaxis]
         else:
             image_c = image[:, :, c_idx:c_idx+1]
-        h = cv2.calcHist([image_c], [0], None, [256], [0, 256])
+        h = cv2.calcHist(
+            [_normalize_cv2_input_arr_(image_c)], [0], None, [256], [0, 256])
         if ignore is not None:
             h[ignore] = 0
 

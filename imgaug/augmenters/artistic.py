@@ -12,6 +12,7 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 import cv2
 
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from . import color as colorlib
 from .. import dtypes as iadt
@@ -107,7 +108,7 @@ def stylize_cartoon(image, blur_ksize=3, segmentation_size=1.0,
     if segmentation_size <= 0:
         image_seg = image
     else:
-        cv2.pyrMeanShiftFiltering(image,
+        cv2.pyrMeanShiftFiltering(_normalize_cv2_input_arr_(image),
                                   sp=spatial_window_radius,
                                   sr=color_window_radius,
                                   dst=image_seg)
@@ -144,7 +145,7 @@ def _find_edges_canny(image, edge_multiplier, from_colorspace):
                                              from_colorspace=from_colorspace)
     image_gray = image_gray[..., 0]
     thresh = min(int(200 * (1/edge_multiplier)), 254)
-    edges = cv2.Canny(image_gray, thresh, thresh)
+    edges = cv2.Canny(_normalize_cv2_input_arr_(image_gray), thresh, thresh)
     return edges
 
 
@@ -153,7 +154,8 @@ def _find_edges_laplacian(image, edge_multiplier, from_colorspace):
                                              to_colorspace=colorlib.CSPACE_GRAY,
                                              from_colorspace=from_colorspace)
     image_gray = image_gray[..., 0]
-    edges_f = cv2.Laplacian(image_gray / 255.0, cv2.CV_64F)
+    edges_f = cv2.Laplacian(_normalize_cv2_input_arr_(image_gray / 255.0),
+                            cv2.CV_64F)
     edges_f = np.abs(edges_f)
     edges_f = edges_f ** 2
     vmax = np.percentile(edges_f, min(int(90 * (1/edge_multiplier)), 99))
@@ -170,7 +172,7 @@ def _blur_median(image, ksize):
         ksize += 1
     if ksize <= 1:
         return image
-    return cv2.medianBlur(image, ksize)
+    return cv2.medianBlur(_normalize_cv2_input_arr_(image), ksize)
 
 
 def _threshold(image, thresh):
@@ -182,7 +184,7 @@ def _threshold(image, thresh):
 
 def _suppress_edge_blobs(edges, size, thresh, inverse):
     kernel = np.ones((size, size), dtype=np.float32)
-    counts = cv2.filter2D(edges / 255.0, -1, kernel)
+    counts = cv2.filter2D(_normalize_cv2_input_arr_(edges / 255.0), -1, kernel)
 
     if inverse:
         mask = (counts < thresh)

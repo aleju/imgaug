@@ -39,6 +39,7 @@ import numpy as np
 import cv2
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
 
@@ -494,7 +495,8 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
                     cval = tuple([cval] * arr.shape[2])
 
                 arr_pad = cv2.copyMakeBorder(
-                    arr, top=top, bottom=bottom, left=left, right=right,
+                    _normalize_cv2_input_arr_(arr),
+                    top=top, bottom=bottom, left=left, right=right,
                     borderType=mapping_mode_np_to_cv2[mode], value=cval)
                 if arr.ndim == 3 and arr_pad.ndim == 2:
                     arr_pad = arr_pad[..., np.newaxis]
@@ -506,7 +508,8 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
                     arr_c = arr[..., channel_start_idx:channel_start_idx+4]
                     cval_c = cval[channel_start_idx:channel_start_idx+4]
                     arr_pad_c = cv2.copyMakeBorder(
-                        arr_c, top=top, bottom=bottom, left=left, right=right,
+                        _normalize_cv2_input_arr_(arr_c),
+                        top=top, bottom=bottom, left=left, right=right,
                         borderType=mapping_mode_np_to_cv2[mode], value=cval_c)
                     arr_pad_c = np.atleast_3d(arr_pad_c)
                     result.append(arr_pad_c)

@@ -34,6 +34,7 @@ import six
 import six.moves as sm
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from . import blend
 from . import arithmetic
@@ -234,15 +235,10 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     # the docs, but at least for conversion to grayscale that
     # results in errors, ie uint8 is expected
 
-    def _get_dst(image, from_to_cspace):
+    # this was once used to accomodate for image .flags -- still necessary?
+    def _get_dst(image_, from_to_cspace):
         if _CHANGE_COLORSPACE_INPLACE[from_to_cspace]:
-            # inplace mode for cv2's cvtColor seems to have issues with
-            # images that are views (e.g. image[..., 0:3]) and returns a
-            # cv2.UMat instance instead of an array. So we check here first
-            # if the array looks like it is non-contiguous or a view.
-            # TODO merge this with apply_lut() normalization/validation
-            if image.flags["C_CONTIGUOUS"]:
-                return image
+            return image_
         return None
 
     # cv2 does not support height/width 0
@@ -287,6 +283,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
         (CSPACE_RGB, to_colorspace)
     ]
 
+    image = _normalize_cv2_input_arr_(image)
     image_aug = image
     if from_to_direct in _CSPACE_OPENCV_CONV_VARS:
         from2to_var = _CSPACE_OPENCV_CONV_VARS[from_to_direct]

@@ -13,6 +13,7 @@ import numpy as np
 import cv2
 import six.moves as sm
 
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
 
@@ -736,10 +737,24 @@ def _fliplr_cv2(arr):
     # cv2.flip() fails for more than 512 channels
     if arr.ndim == 3 and arr.shape[-1] > 512:
         # TODO this is quite inefficient right now
-        channels = [cv2.flip(arr[..., c], 1) for c in sm.xrange(arr.shape[-1])]
+        channels = [
+            cv2.flip(_normalize_cv2_input_arr_(arr[..., c]), 1)
+            for c
+            in sm.xrange(arr.shape[-1])
+        ]
         result = np.stack(channels, axis=-1)
     else:
-        result = cv2.flip(arr, 1)
+        # Normalization from imgaug.imgaug._normalize_cv2_input_arr_().
+        # Moved here for performance reasons. Keep this aligned.
+        # TODO recalculate timings, they were computed without this.
+        flags = arr.flags
+        if not flags["OWNDATA"]:
+            arr = np.copy(arr)
+            flags = arr.flags
+        if not flags["C_CONTIGUOUS"]:
+            arr = np.ascontiguousarray(arr)
+
+        result = cv2.flip(_normalize_cv2_input_arr_(arr), 1)
 
     if result.ndim == 2 and arr.ndim == 3:
         return result[..., np.newaxis]

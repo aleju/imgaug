@@ -2143,6 +2143,16 @@ def do_assert(condition, message="Assertion failed."):
         raise AssertionError(str(message))
 
 
+def _normalize_cv2_input_arr_(arr):
+    flags = arr.flags
+    if not flags["OWNDATA"]:
+        arr = np.copy(arr)
+        flags = arr.flags
+    if not flags["C_CONTIGUOUS"]:
+        arr = np.ascontiguousarray(arr)
+    return arr
+
+
 def apply_lut(image, table):
     """Map an input image to a new one using a lookup table.
 
@@ -2215,11 +2225,7 @@ def apply_lut_(image, table):
     if 0 in image_shape_orig:
         return image
 
-    flags = image.flags
-    if not flags["OWNDATA"]:
-        image = np.copy(image)
-    if not flags["C_CONTIGUOUS"]:
-        image = np.ascontiguousarray(image)
+    image = _normalize_cv2_input_arr_(image)
 
     # [(256,), (256,), ...] => (256, C)
     if isinstance(table, list):

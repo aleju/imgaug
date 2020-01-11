@@ -26,6 +26,7 @@ import six
 import cv2
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
@@ -2545,7 +2546,7 @@ class SomeColorsMaskGen(IBatchwiseMaskGenerator):
         ])
 
         alphas = cv2.GaussianBlur(
-            alphas[np.newaxis, :],
+            _normalize_cv2_input_arr_(alphas[np.newaxis, :]),
             ksize=(ksize_x, ksize_y),
             sigmaX=sigma, sigmaY=sigma,
             borderType=cv2.BORDER_REPLICATE
