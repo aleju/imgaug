@@ -421,8 +421,8 @@ class Pool(object):
         Wait for the workers to exit.
 
         This may only be called after first calling
-        :func:`imgaug.multicore.Pool.close` or
-        :func:`imgaug.multicore.Pool.terminate`.
+        :func:`~imgaug.multicore.Pool.close` or
+        :func:`~imgaug.multicore.Pool.terminate`.
 
         """
         if self._pool is not None:

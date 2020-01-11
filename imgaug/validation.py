@@ -56,10 +56,10 @@ def assert_is_iterable_of(iterable_var, classes):
     Parameters
     ----------
     iterable_var : iterable
-        See :func:`imgaug.validation.is_iterable_of`.
+        See :func:`~imgaug.validation.is_iterable_of`.
 
     classes : type or iterable of type
-        See :func:`imgaug.validation.is_iterable_of`.
+        See :func:`~imgaug.validation.is_iterable_of`.
 
     """
     valid = is_iterable_of(iterable_var, classes)

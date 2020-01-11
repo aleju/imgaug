@@ -1,7 +1,7 @@
 """Classes and functions related to pseudo-random number generation.
 
 This module deals with the generation of pseudo-random numbers.
-It provides the :class:`imgaug.random.RNG` class, which is the primary
+It provides the :class:`~imgaug.random.RNG` class, which is the primary
 random number generator in ``imgaug``. It also provides various utility
 functions related random number generation, such as copying random number
 generators or setting their state.
@@ -22,8 +22,8 @@ Definitions
   Note that outside of this module, the term "random state" often roughly
   translates to "any random number generator with numpy-like interface
   in a given state", i.e. it can then include instances of
-  :class:`numpy.random.Generator` or :class:`imgaug.random.RNG`.
-- *RNG*: An instance of :class:`imgaug.random.RNG`.
+  :class:`numpy.random.Generator` or :class:`~imgaug.random.RNG`.
+- *RNG*: An instance of :class:`~imgaug.random.RNG`.
 
 Examples
 --------
@@ -102,7 +102,7 @@ class RNG(object):
     * :func:`numpy.random.RandomState.get_state`
     * :func:`numpy.random.RandomState.set_state`
 
-    In :func:`imgaug.random.RNG.choice`, the `axis` argument is not yet
+    In :func:`~imgaug.random.RNG.choice`, the `axis` argument is not yet
     supported.
 
     Parameters
@@ -357,7 +357,7 @@ class RNG(object):
             This simply samples one or more random values. This means that
             a call of this method will not completely change the outputs of
             the next called sampling method. To achieve more drastic output
-            changes, call :func:`imgaug.random.RNG.derive_rng_`.
+            changes, call :func:`~imgaug.random.RNG.derive_rng_`.
 
         Returns
         -------
@@ -397,7 +397,7 @@ class RNG(object):
         """Create a list containing `n` times this RNG.
 
         This method was mainly introduced as a replacement for previous
-        calls of :func:`imgaug.random.RNG.derive_rngs_`. These calls
+        calls of :func:`~imgaug.random.RNG.derive_rngs_`. These calls
         turned out to be very slow in numpy 1.17+ and were hence replaced
         by simple duplication (except for the cases where child RNGs
         absolutely *had* to be created).
@@ -932,7 +932,7 @@ def normalize_generator_(generator):
     Parameters
     ----------
     generator : None or int or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
-        See :func:`imgaug.random.normalize_generator`.
+        See :func:`~imgaug.random.normalize_generator`.
 
     Returns
     -------
@@ -1351,7 +1351,7 @@ def set_generator_state_(generator, state):
     state : tuple or dict
         The new state of the generator.
         Should correspond to the output of
-        :func:`imgaug.random.get_generator_state`.
+        :func:`~imgaug.random.get_generator_state`.
 
     """
     if isinstance(generator, np.random.RandomState):
@@ -1438,7 +1438,7 @@ def advance_generator_(generator):
         This simply samples one or more random values. This means that
         a call of this method will not completely change the outputs of
         the next called sampling method. To achieve more drastic output
-        changes, call :func:`imgaug.random.derive_generator_`.
+        changes, call :func:`~imgaug.random.derive_generator_`.
 
     Parameters
     ----------

@@ -525,7 +525,7 @@ class Keypoint(object):
 
         max_distance : number, optional
             See
-            :func:`imgaug.augmentables.kps.Keypoint.coords_almost_equals`.
+            :func:`~imgaug.augmentables.kps.Keypoint.coords_almost_equals`.
 
         Returns
         -------

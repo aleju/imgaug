@@ -74,13 +74,13 @@ class Convolve(meta.Augmenter):
               channel.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -222,7 +222,7 @@ class Convolve(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.matrix, self.matrix_type]
 
 
@@ -263,13 +263,13 @@ class Sharpen(Convolve):
               parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -370,13 +370,13 @@ class Emboss(Convolve):
               parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -457,13 +457,13 @@ class EdgeDetect(Convolve):
               parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -563,13 +563,13 @@ class DirectedEdgeDetect(Convolve):
               parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

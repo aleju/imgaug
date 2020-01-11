@@ -78,16 +78,16 @@ class FastSnowyLandscape(meta.Augmenter):
 
     from_colorspace : str, optional
         The source colorspace of the input images.
-        See :func:`imgaug.augmenters.color.ChangeColorspace.__init__`.
+        See :func:`~imgaug.augmenters.color.ChangeColorspace.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -175,7 +175,7 @@ class FastSnowyLandscape(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.lightness_threshold, self.lightness_multiplier]
 
 
@@ -206,7 +206,7 @@ class CloudLayer(meta.Augmenter):
         - (2) Note that random values are usually sampled as ``int64`` or
               ``float64``, which ``float128`` images would exceed. Note also
               that random values might have to upscaled, which is done
-              via :func:`imgaug.imgaug.imresize_many_images` and has its own
+              via :func:`~imgaug.imgaug.imresize_many_images` and has its own
               limited dtype support (includes however floats up to ``64bit``).
 
     Parameters
@@ -227,7 +227,7 @@ class CloudLayer(meta.Augmenter):
         Exponent of the frequency noise used to add fine intensity to the
         mean intensity.
         Recommended to be in the interval ``[-2.5, -1.5]``.
-        See :func:`imgaug.parameters.FrequencyNoise.__init__` for details.
+        See :func:`~imgaug.parameters.FrequencyNoise.__init__` for details.
 
     intensity_coarse_scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Standard deviation of the gaussian distribution used to add more
@@ -276,14 +276,14 @@ class CloudLayer(meta.Augmenter):
         Controls the image size at which the alpha mask is sampled.
         Lower values will lead to coarser alpha masks and hence larger
         clouds (and empty areas).
-        See :func:`imgaug.parameters.FrequencyNoise.__init__` for details.
+        See :func:`~imgaug.parameters.FrequencyNoise.__init__` for details.
 
     alpha_freq_exponent : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Exponent of the frequency noise used to sample the alpha mask.
         Similarly to `alpha_size_max_px`, lower values will lead to coarser
         alpha patterns.
         Recommended to be in the interval ``[-4.0, -1.5]``.
-        See :func:`imgaug.parameters.FrequencyNoise.__init__` for details.
+        See :func:`~imgaug.parameters.FrequencyNoise.__init__` for details.
 
     sparsity : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Exponent applied late to the alpha mask. Lower values will lead to
@@ -315,13 +315,13 @@ class CloudLayer(meta.Augmenter):
               per image from that parameter.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -357,7 +357,7 @@ class CloudLayer(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.intensity_mean,
                 self.alpha_min,
                 self.alpha_multiplier,
@@ -479,7 +479,7 @@ class Clouds(meta.SomeOf):
     """
     Add clouds to images.
 
-    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
+    This is a wrapper around :class:`~imgaug.augmenters.weather.CloudLayer`.
     It executes 1 to 2 layers per image, leading to varying densities and
     frequency patterns of clouds.
 
@@ -510,13 +510,13 @@ class Clouds(meta.SomeOf):
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -567,7 +567,7 @@ class Clouds(meta.SomeOf):
 class Fog(CloudLayer):
     """Add fog to images.
 
-    This is a wrapper around :class:`imgaug.augmenters.weather.CloudLayer`.
+    This is a wrapper around :class:`~imgaug.augmenters.weather.CloudLayer`.
     It executes a single layer per image with a configuration leading to
     fairly dense clouds with low-frequency patterns.
 
@@ -598,13 +598,13 @@ class Fog(CloudLayer):
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -727,7 +727,7 @@ class SnowflakesLayer(meta.Augmenter):
         Angle in degrees of motion blur applied to the snowflakes, where
         ``0.0`` is motion blur that points straight upwards.
         Recommended to be in the interval ``[-30, 30]``.
-        See also :func:`imgaug.augmenters.blur.MotionBlur.__init__`.
+        See also :func:`~imgaug.augmenters.blur.MotionBlur.__init__`.
 
             * If a ``number``, then that value will always be used.
             * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
@@ -784,13 +784,13 @@ class SnowflakesLayer(meta.Augmenter):
         values for very small or large images.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -832,7 +832,7 @@ class SnowflakesLayer(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.density,
                 self.density_uniformity,
                 self.flake_size,
@@ -975,7 +975,7 @@ class Snowflakes(meta.SomeOf):
     """Add falling snowflakes to images.
 
     This is a wrapper around
-    :class:`imgaug.augmenters.weather.SnowflakesLayer`. It executes 1 to 3
+    :class:`~imgaug.augmenters.weather.SnowflakesLayer`. It executes 1 to 3
     layers per image.
 
     dtype support::
@@ -1070,7 +1070,7 @@ class Snowflakes(meta.SomeOf):
         Angle in degrees of motion blur applied to the snowflakes, where
         ``0.0`` is motion blur that points straight upwards.
         Recommended to be in the interval ``[-30, 30]``.
-        See also :func:`imgaug.augmenters.blur.MotionBlur.__init__`.
+        See also :func:`~imgaug.augmenters.blur.MotionBlur.__init__`.
 
             * If a ``number``, then that value will always be used.
             * If a ``tuple`` ``(a, b)``, then a value will be uniformly sampled
@@ -1105,13 +1105,13 @@ class Snowflakes(meta.SomeOf):
               per image from that parameter.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1178,39 +1178,39 @@ class RainLayer(SnowflakesLayer):
     Parameters
     ----------
     density : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     density_uniformity : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     drop_size : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Same as `flake_size` in
-        :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     drop_size_uniformity : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         Same as `flake_size_uniformity` in
-        :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     angle : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     speed : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     blur_sigma_fraction : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     blur_sigma_limits : tuple of float, optional
-        Same as in :class:`imgaug.augmenters.weather.SnowflakesLayer`.
+        Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -1260,7 +1260,7 @@ class Rain(meta.SomeOf):
     """Add falling snowflakes to images.
 
     This is a wrapper around
-    :class:`imgaug.augmenters.weather.RainLayer`. It executes 1 to 3
+    :class:`~imgaug.augmenters.weather.RainLayer`. It executes 1 to 3
     layers per image.
 
     .. note::
@@ -1295,19 +1295,19 @@ class Rain(meta.SomeOf):
     Parameters
     ----------
     drop_size : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        See :class:`imgaug.augmenters.weather.RainLayer`.
+        See :class:`~imgaug.augmenters.weather.RainLayer`.
 
     speed : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
-        See :class:`imgaug.augmenters.weather.RainLayer`.
+        See :class:`~imgaug.augmenters.weather.RainLayer`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

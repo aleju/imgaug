@@ -642,7 +642,7 @@ def cutout(image, x1, y1, x2, y2,
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     Parameters
     ----------
@@ -650,28 +650,28 @@ def cutout(image, x1, y1, x2, y2,
         Image to modify.
 
     x1 : number
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     y1 : number
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     x2 : number
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     y2 : number
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     fill_mode : {'constant', 'gaussian'}, optional
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     cval : number or tuple of number, optional
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     fill_per_channel : number or bool, optional
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     random_state : imgaug.random.RNG or None, optional
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     Returns
     -------
@@ -701,8 +701,8 @@ def cutout_(image, x1, y1, x2, y2,
     dtype support::
 
         minimum of (
-            :func:`imgaug.augmenters.arithmetic._fill_rectangle_gaussian_`,
-            :func:`imgaug.augmenters.arithmetic._fill_rectangle_constant_`
+            :func:`~imgaug.augmenters.arithmetic._fill_rectangle_gaussian_`,
+            :func:`~imgaug.augmenters.arithmetic._fill_rectangle_constant_`
         )
 
     Parameters
@@ -898,7 +898,7 @@ def replace_elementwise_(image, mask, replacements):
         * ``bool``: yes; tested
 
         - (1) ``uint64`` is currently not supported, because
-              :func:`imgaug.dtypes.clip_to_dtype_value_range_()` does not
+              :func:`~imgaug.dtypes.clip_to_dtype_value_range_()` does not
               support it, which again is because numpy.clip() seems to not
               support it.
         - (2) `int64` is disallowed due to being converted to `float64`
@@ -995,7 +995,7 @@ def invert(image, min_value=None, max_value=None, threshold=None,
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.invert_`.
+        See :func:`~imgaug.augmenters.arithmetic.invert_`.
 
     Parameters
     ----------
@@ -1450,7 +1450,7 @@ class Add(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.add_scalar`.
+        See :func:`~imgaug.augmenters.arithmetic.add_scalar`.
 
     Parameters
     ----------
@@ -1477,13 +1477,13 @@ class Add(meta.Augmenter):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1570,7 +1570,7 @@ class Add(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.value, self.per_channel]
 
 
@@ -1586,7 +1586,7 @@ class AddElementwise(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.add_elementwise`.
+        See :func:`~imgaug.augmenters.arithmetic.add_elementwise`.
 
     Parameters
     ----------
@@ -1613,13 +1613,13 @@ class AddElementwise(meta.Augmenter):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1681,7 +1681,7 @@ class AddElementwise(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.value, self.per_channel]
 
 
@@ -1740,13 +1740,13 @@ class AdditiveGaussianNoise(AddElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1852,13 +1852,13 @@ class AdditiveLaplaceNoise(AddElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1953,13 +1953,13 @@ class AdditivePoissonNoise(AddElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2017,7 +2017,7 @@ class Multiply(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.multiply_scalar`.
+        See :func:`~imgaug.augmenters.arithmetic.multiply_scalar`.
 
     Parameters
     ----------
@@ -2044,13 +2044,13 @@ class Multiply(meta.Augmenter):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2134,7 +2134,7 @@ class Multiply(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mul, self.per_channel]
 
 
@@ -2149,7 +2149,7 @@ class MultiplyElementwise(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.multiply_elementwise`.
+        See :func:`~imgaug.augmenters.arithmetic.multiply_elementwise`.
 
     Parameters
     ----------
@@ -2176,13 +2176,13 @@ class MultiplyElementwise(meta.Augmenter):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2255,7 +2255,7 @@ class MultiplyElementwise(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mul, self.per_channel]
 
 
@@ -2301,7 +2301,7 @@ class Cutout(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.cutout_`.
+        See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     Parameters
     ----------
@@ -2319,7 +2319,7 @@ class Cutout(meta.Augmenter):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         Defines the position of each area to fill.
         Analogous to the definition in e.g.
-        :class:`imgaug.augmenters.size.CropToFixedSize`.
+        :class:`~imgaug.augmenters.size.CropToFixedSize`.
         Usually, ``uniform`` (anywhere in the image) or ``normal`` (anywhere
         in the image with preference around the center) are sane values.
 
@@ -2400,13 +2400,13 @@ class Cutout(meta.Augmenter):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.bit_generator.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2589,7 +2589,7 @@ class Cutout(meta.Augmenter):
         return image
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.nb_iterations, self.position, self.size, self.squared,
                 self.fill_mode, self.cval, self.fill_per_channel]
 
@@ -2637,13 +2637,13 @@ class Dropout(MultiplyElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2817,13 +2817,13 @@ class CoarseDropout(MultiplyElementwise):
         mask, leading easily to the whole image being dropped.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2940,13 +2940,13 @@ class Dropout2d(meta.Augmenter):
         all channels.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3064,7 +3064,7 @@ class Dropout2d(meta.Augmenter):
         return imagewise_channels_to_drop, all_dropped_ids
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p, self.nb_keep_channels]
 
 
@@ -3116,13 +3116,13 @@ class TotalDropout(meta.Augmenter):
               to convert parameter `p` to a 0/1 representation.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3203,7 +3203,7 @@ class TotalDropout(meta.Augmenter):
         return drop_ids
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p]
 
 
@@ -3213,7 +3213,7 @@ class ReplaceElementwise(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.replace_elementwise_`.
+        See :func:`~imgaug.augmenters.arithmetic.replace_elementwise_`.
 
     Parameters
     ----------
@@ -3257,13 +3257,13 @@ class ReplaceElementwise(meta.Augmenter):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3362,7 +3362,7 @@ class ReplaceElementwise(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mask, self.replacement, self.per_channel]
 
 
@@ -3401,13 +3401,13 @@ class SaltAndPepper(ReplaceElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3462,13 +3462,13 @@ class ImpulseNoise(SaltAndPepper):
               that mask will be replaced with impulse noise noise.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3576,13 +3576,13 @@ class CoarseSaltAndPepper(ReplaceElementwise):
         mask, leading easily to the whole image being replaced.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3673,13 +3673,13 @@ class Salt(ReplaceElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3790,13 +3790,13 @@ class CoarseSalt(ReplaceElementwise):
         mask, leading easily to the whole image being replaced.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3883,13 +3883,13 @@ class Pepper(ReplaceElementwise):
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3998,13 +3998,13 @@ class CoarsePepper(ReplaceElementwise):
         easily to the whole image being replaced.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4063,7 +4063,7 @@ class Invert(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.invert_`.
+        See :func:`~imgaug.augmenters.arithmetic.invert_`.
 
     Parameters
     ----------
@@ -4122,13 +4122,13 @@ class Invert(meta.Augmenter):
         If `threshold` is ``None`` this parameter has no effect.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4247,7 +4247,7 @@ class Invert(meta.Augmenter):
         )
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p, self.per_channel, self.min_value, self.max_value,
                 self.threshold, self.invert_above_threshold]
 
@@ -4297,13 +4297,13 @@ class Solarize(Invert):
         See :class:`Invert`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4363,13 +4363,13 @@ def ContrastNormalization(alpha=1.0, per_channel=False,
         lead to per-channel behaviour (i.e. same as ``True``).
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4413,7 +4413,7 @@ class JpegCompression(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.compress_jpeg`.
+        See :func:`~imgaug.augmenters.arithmetic.compress_jpeg`.
 
     Parameters
     ----------
@@ -4437,13 +4437,13 @@ class JpegCompression(meta.Augmenter):
               compression for the ``n``-th image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4482,5 +4482,5 @@ class JpegCompression(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.compression]

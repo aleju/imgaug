@@ -90,7 +90,7 @@ def solarize_(image, threshold=128):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.invert_(min_value=None and max_value=None)`.
+        See :func:`~imgaug.augmenters.arithmetic.invert_(min_value=None and max_value=None)`.
 
     Parameters
     ----------
@@ -119,7 +119,7 @@ def solarize(image, threshold=128):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.invert_(min_value=None and max_value=None)`.
+        See :func:`~imgaug.augmenters.arithmetic.invert_(min_value=None and max_value=None)`.
 
     Parameters
     ----------
@@ -147,7 +147,7 @@ def posterize_(image, bits):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.quantize_uniform_to_n_bits_.
+        See :func:`~imgaug.augmenters.color.quantize_uniform_to_n_bits_.
 
     Parameters
     ----------
@@ -175,7 +175,7 @@ def posterize(image, bits):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.quantize_uniform_to_n_bits`.
+        See :func:`~imgaug.augmenters.color.quantize_uniform_to_n_bits`.
 
     Parameters
     ----------
@@ -198,14 +198,14 @@ def posterize(image, bits):
 def equalize(image, mask=None):
     """Equalize the image histogram.
 
-    See :func:`imgaug.augmenters.pillike.equalize_` for details.
+    See :func:`~imgaug.augmenters.pillike.equalize_` for details.
 
     This function is identical in inputs and outputs to
     :func:`PIL.ImageOps.equalize`.
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pil.pil_equalize_`.
+        See :func:`~imgaug.augmenters.pil.pil_equalize_`.
 
     Parameters
     ----------
@@ -1223,24 +1223,24 @@ class Solarize(arithmetic.Invert):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.arithmetic.Invert`.
+        See :func:`~imgaug.augmenters.arithmetic.Invert`.
 
     Parameters
     ----------
     p : float or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.arithmetic.Invert`.
+        See :class:`~imgaug.augmenters.arithmetic.Invert`.
 
     threshold : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.arithmetic.Invert`.
+        See :class:`~imgaug.augmenters.arithmetic.Invert`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1268,14 +1268,14 @@ class Posterize(colorlib.Posterize):
     This augmenter quantizes each array component to ``N`` bits.
 
     This class is currently an alias for
-    :class:`imgaug.augmenters.color.Posterize`, which again is an alias
-    for :class:`imgaug.augmenters.color.UniformColorQuantizationToNBits`,
+    :class:`~imgaug.augmenters.color.Posterize`, which again is an alias
+    for :class:`~imgaug.augmenters.color.UniformColorQuantizationToNBits`,
     i.e. all three classes are right now guarantueed to have the same
     outputs as PIL's function.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.color.Posterize`.
+        See :class:`~imgaug.augmenters.color.Posterize`.
 
     """
 
@@ -1287,18 +1287,18 @@ class Equalize(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.equalize_`.
+        See :func:`~imgaug.augmenters.pillike.equalize_`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1321,7 +1321,7 @@ class Equalize(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
 
@@ -1330,11 +1330,11 @@ class Autocontrast(contrastlib._ContrastFuncWrapper):
 
     This augmenter has identical outputs to :func:`PIL.ImageOps.autocontrast`.
 
-    See :func:`imgaug.augmenters.pillike.autocontrast` for more details.
+    See :func:`~imgaug.augmenters.pillike.autocontrast` for more details.
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.autocontrast`.
+        See :func:`~imgaug.augmenters.pillike.autocontrast`.
 
     Parameters
     ----------
@@ -1357,13 +1357,13 @@ class Autocontrast(contrastlib._ContrastFuncWrapper):
         be treated as ``True``, otherwise as ``False``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1429,7 +1429,7 @@ class _EnhanceBase(meta.Augmenter):
         return self.factor.draw_samples((nb_rows,), random_state=random_state)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.factor]
 
 
@@ -1440,7 +1440,7 @@ class EnhanceColor(_EnhanceBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.enhance_color`.
+        See :func:`~imgaug.augmenters.pillike.enhance_color`.
 
     Parameters
     ----------
@@ -1458,13 +1458,13 @@ class EnhanceColor(_EnhanceBase):
               parameter will be queried once to return ``(N,)`` samples.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1492,7 +1492,7 @@ class EnhanceContrast(_EnhanceBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.enhance_contrast`.
+        See :func:`~imgaug.augmenters.pillike.enhance_contrast`.
 
     Parameters
     ----------
@@ -1511,13 +1511,13 @@ class EnhanceContrast(_EnhanceBase):
               parameter will be queried once to return ``(N,)`` samples.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1546,7 +1546,7 @@ class EnhanceBrightness(_EnhanceBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.enhance_brightness`.
+        See :func:`~imgaug.augmenters.pillike.enhance_brightness`.
 
     Parameters
     ----------
@@ -1564,13 +1564,13 @@ class EnhanceBrightness(_EnhanceBase):
               parameter will be queried once to return ``(N,)`` samples.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1599,7 +1599,7 @@ class EnhanceSharpness(_EnhanceBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.enhance_sharpness`.
+        See :func:`~imgaug.augmenters.pillike.enhance_sharpness`.
 
     Parameters
     ----------
@@ -1617,13 +1617,13 @@ class EnhanceSharpness(_EnhanceBase):
               parameter will be queried once to return ``(N,)`` samples.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1661,7 +1661,7 @@ class _FilterBase(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
 
@@ -1673,18 +1673,18 @@ class FilterBlur(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_blur`.
+        See :func:`~imgaug.augmenters.pillike.filter_blur`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1709,18 +1709,18 @@ class FilterSmooth(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_smooth`.
+        See :func:`~imgaug.augmenters.pillike.filter_smooth`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1745,18 +1745,18 @@ class FilterSmoothMore(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_smooth_more`.
+        See :func:`~imgaug.augmenters.pillike.filter_smooth_more`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1783,18 +1783,18 @@ class FilterEdgeEnhance(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_edge_enhance`.
+        See :func:`~imgaug.augmenters.pillike.filter_edge_enhance`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1821,18 +1821,18 @@ class FilterEdgeEnhanceMore(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_edge_enhance_more`.
+        See :func:`~imgaug.augmenters.pillike.filter_edge_enhance_more`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1859,18 +1859,18 @@ class FilterFindEdges(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_find_edges`.
+        See :func:`~imgaug.augmenters.pillike.filter_find_edges`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1895,18 +1895,18 @@ class FilterContour(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_contour`.
+        See :func:`~imgaug.augmenters.pillike.filter_contour`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1932,18 +1932,18 @@ class FilterEmboss(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_emboss`.
+        See :func:`~imgaug.augmenters.pillike.filter_emboss`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1968,18 +1968,18 @@ class FilterSharpen(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_sharpen`.
+        See :func:`~imgaug.augmenters.pillike.filter_sharpen`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2004,18 +2004,18 @@ class FilterDetail(_FilterBase):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.filter_detail`.
+        See :func:`~imgaug.augmenters.pillike.filter_detail`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2044,7 +2044,7 @@ class Affine(geometric.Affine):
         This augmenter can currently only transform image-data.
         Batches containing heatmaps, segmentation maps and
         coordinate-based augmentables will be rejected with an error.
-        Use :class:`imgaug.augmenters.geometric.Affine` if you have to
+        Use :class:`~imgaug.augmenters.geometric.Affine` if you have to
         transform such inputs.
 
     .. note ::
@@ -2057,27 +2057,27 @@ class Affine(geometric.Affine):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.pillike.warp_affine`.
+        See :func:`~imgaug.augmenters.pillike.warp_affine`.
 
     Parameters
     ----------
     scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     translate_percent : None or number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": number/tuple/list/StochasticParameter, "y": number/tuple/list/StochasticParameter}, optional
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     translate_px : None or int or tuple of int or list of int or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     rotate : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     shear : number or tuple of number or list of number or imgaug.parameters.StochasticParameter or dict {"x": int/tuple/list/StochasticParameter, "y": int/tuple/list/StochasticParameter}, optional
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     fillcolor : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See parameter ``cval`` in :class:`imgaug.augmenters.geometric.Affine`.
+        See parameter ``cval`` in :class:`~imgaug.augmenters.geometric.Affine`.
 
     center : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         The center point of the affine transformation, given as relative
@@ -2087,17 +2087,17 @@ class Affine(geometric.Affine):
         Set this to ``(0.5, 0.5)`` or ``center-center`` to use the image
         center as the transformation center.
         See also paramerer ``position`` in
-        :class:`imgaug.augmenters.size.PadToFixedSize` for details
+        :class:`~imgaug.augmenters.size.PadToFixedSize` for details
         about valid datatypes of this parameter.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2121,7 +2121,7 @@ class Affine(geometric.Affine):
     Rotate an image by ``-20`` to ``20`` degress and fill up all newly
     created pixels with a random RGB color.
 
-    See the similar augmenter :class:`imgaug.augmenters.geometric.Affine`
+    See the similar augmenter :class:`~imgaug.augmenters.geometric.Affine`
     for more examples.
 
     """
@@ -2209,7 +2209,7 @@ class Affine(geometric.Affine):
         return samples
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [
             self.scale, self.translate, self.rotate, self.shear, self.cval,
             self.center]

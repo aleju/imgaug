@@ -477,7 +477,7 @@ def seed(entropy=None, seedval=None):
 
         This function is not yet marked as deprecated, but might be in the
         future. The preferred way to seed `imgaug` is via
-        :func:`imgaug.random.seed`.
+        :func:`~imgaug.random.seed`.
 
     Parameters
     ----------
@@ -513,7 +513,7 @@ def normalize_random_state(random_state):
     Parameters
     ----------
     random_state : None or int or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.bit_generator.SeedSequence or numpy.random.RandomState
-        See :func:`imgaug.random.normalize_generator`.
+        See :func:`~imgaug.random.normalize_generator`.
 
     Returns
     -------
@@ -684,9 +684,9 @@ def _quokka_normalize_extract(extract):
               the image.
             * If a ``tuple``, then expected to contain four ``number`` s
               denoting ``(x1, y1, x2, y2)``.
-            * If a :class:`imgaug.augmentables.bbs.BoundingBox`, then that
+            * If a :class:`~imgaug.augmentables.bbs.BoundingBox`, then that
               bounding box's area will be extracted from the image.
-            * If a :class:`imgaug.augmentables.bbs.BoundingBoxesOnImage`,
+            * If a :class:`~imgaug.augmentables.bbs.BoundingBoxesOnImage`,
               then expected to contain exactly one bounding box and a shape
               matching the full image dimensions (i.e. ``(643, 960, *)``).
               Then the one bounding box will be used similar to
@@ -809,7 +809,7 @@ def quokka(size=None, extract=None):
     ----------
     size : None or float or tuple of int, optional
         Size of the output image. Input into
-        :func:`imgaug.imgaug.imresize_single_image`. Usually expected to be a
+        :func:`~imgaug.imgaug.imresize_single_image`. Usually expected to be a
         ``tuple`` ``(H, W)``, where ``H`` is the desired height and ``W`` is
         the width. If ``None``, then the image will not be resized.
 
@@ -822,9 +822,9 @@ def quokka(size=None, extract=None):
               the image.
             * If a ``tuple``, then expected to contain four ``number`` s
               denoting ``(x1, y1, x2, y2)``.
-            * If a :class:`imgaug.augmentables.bbs.BoundingBox`, then that
+            * If a :class:`~imgaug.augmentables.bbs.BoundingBox`, then that
               bounding box's area will be extracted from the image.
-            * If a :class:`imgaug.augmentables.bbs.BoundingBoxesOnImage`,
+            * If a :class:`~imgaug.augmentables.bbs.BoundingBoxesOnImage`,
               then expected to contain exactly one bounding box and a shape
               matching the full image dimensions (i.e. ``(643, 960, *)``).
               Then the one bounding box will be used similar to
@@ -853,7 +853,7 @@ def quokka_square(size=None):
     ----------
     size : None or float or tuple of int, optional
         Size of the output image. Input into
-        :func:`imgaug.imgaug.imresize_single_image`. Usually expected to be a
+        :func:`~imgaug.imgaug.imresize_single_image`. Usually expected to be a
         ``tuple`` ``(H, W)``, where ``H`` is the desired height and ``W`` is
         the width. If ``None``, then the image will not be resized.
 
@@ -872,10 +872,10 @@ def quokka_heatmap(size=None, extract=None):
     Parameters
     ----------
     size : None or float or tuple of int, optional
-        See :func:`imgaug.imgaug.quokka`.
+        See :func:`~imgaug.imgaug.quokka`.
 
     extract : None or 'square' or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage
-        See :func:`imgaug.imgaug.quokka`.
+        See :func:`~imgaug.imgaug.quokka`.
 
     Returns
     -------
@@ -912,10 +912,10 @@ def quokka_segmentation_map(size=None, extract=None):
     Parameters
     ----------
     size : None or float or tuple of int, optional
-        See :func:`imgaug.imgaug.quokka`.
+        See :func:`~imgaug.imgaug.quokka`.
 
     extract : None or 'square' or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage
-        See :func:`imgaug.imgaug.quokka`.
+        See :func:`~imgaug.imgaug.quokka`.
 
     Returns
     -------
@@ -971,7 +971,7 @@ def quokka_keypoints(size=None, extract=None):
         relative size changes, ``int`` s to absolute sizes in pixels.
 
     extract : None or 'square' or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage
-        Subarea to extract from the image. See :func:`imgaug.imgaug.quokka`.
+        Subarea to extract from the image. See :func:`~imgaug.imgaug.quokka`.
 
     Returns
     -------
@@ -1017,7 +1017,7 @@ def quokka_bounding_boxes(size=None, extract=None):
         to absolute sizes in pixels.
 
     extract : None or 'square' or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage
-        Subarea to extract from the image. See :func:`imgaug.imgaug.quokka`.
+        Subarea to extract from the image. See :func:`~imgaug.imgaug.quokka`.
 
     Returns
     -------
@@ -1071,7 +1071,7 @@ def quokka_polygons(size=None, extract=None):
         ``int`` s to absolute sizes in pixels.
 
     extract : None or 'square' or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage
-        Subarea to extract from the image. See :func:`imgaug.imgaug.quokka`.
+        Subarea to extract from the image. See :func:`~imgaug.imgaug.quokka`.
 
     Returns
     -------
@@ -1585,7 +1585,7 @@ def imresize_single_image(image, sizes, interpolation=None):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.imresize_many_images`.
+        See :func:`~imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -1594,10 +1594,10 @@ def imresize_single_image(image, sizes, interpolation=None):
         Usually recommended to be of dtype ``uint8``.
 
     sizes : float or iterable of int or iterable of float
-        See :func:`imgaug.imgaug.imresize_many_images`.
+        See :func:`~imgaug.imgaug.imresize_many_images`.
 
     interpolation : None or str or int, optional
-        See :func:`imgaug.imgaug.imresize_many_images`.
+        See :func:`~imgaug.imgaug.imresize_many_images`.
 
     Returns
     -------
@@ -1668,7 +1668,7 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
 
     pad_mode : str, optional
         Padding mode to use if the array cannot be divided by `block_size`
-        without remainder. See :func:`imgaug.imgaug.pad` for details.
+        without remainder. See :func:`~imgaug.imgaug.pad` for details.
 
     pad_cval : number, optional
         Value to use for padding if `mode` is ``constant``.
@@ -1754,30 +1754,30 @@ def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pool`.
+        See :func:`~imgaug.imgaug.pool`.
 
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     pad_mode : str, optional
         Padding mode to use if the array cannot be divided by `block_size`
         without remainder.
-        See :func:`imgaug.imgaug.pad` for details.
+        See :func:`~imgaug.imgaug.pad` for details.
 
     pad_cval : number, optional
         Padding value.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     preserve_dtype : bool, optional
         Whether to preserve the input array dtype.
-        See  :func:`imgaug.imgaug.pool` for details.
+        See  :func:`~imgaug.imgaug.pool` for details.
 
     cval : None or number, optional
         Deprecated. Old name for `pad_cval`.
@@ -1801,30 +1801,30 @@ def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pool`.
+        See :func:`~imgaug.imgaug.pool`.
 
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     pad_mode : str, optional
         Padding mode to use if the array cannot be divided by `block_size`
         without remainder.
-        See :func:`imgaug.imgaug.pad` for details.
+        See :func:`~imgaug.imgaug.pad` for details.
 
     pad_cval : number, optional
         Padding value.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     preserve_dtype : bool, optional
         Whether to preserve the input array dtype.
-        See  :func:`imgaug.imgaug.pool` for details.
+        See  :func:`~imgaug.imgaug.pool` for details.
 
     cval : None or number, optional
         Deprecated. Old name for `pad_cval`.
@@ -1848,30 +1848,30 @@ def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pool`.
+        See :func:`~imgaug.imgaug.pool`.
 
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     pad_mode : str, optional
         Padding mode to use if the array cannot be divided by `block_size`
         without remainder.
-        See :func:`imgaug.imgaug.pad` for details.
+        See :func:`~imgaug.imgaug.pad` for details.
 
     pad_cval : number, optional
         Padding value.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     preserve_dtype : bool, optional
         Whether to preserve the input array dtype.
-        See  :func:`imgaug.imgaug.pool` for details.
+        See  :func:`~imgaug.imgaug.pool` for details.
 
     Returns
     -------
@@ -1892,30 +1892,30 @@ def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pool`.
+        See :func:`~imgaug.imgaug.pool`.
 
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray
         Image-like array to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     block_size : int or tuple of int or tuple of int
         Size of each block of values to pool.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     pad_mode : str, optional
         Padding mode to use if the array cannot be divided by `block_size`
         without remainder.
-        See :func:`imgaug.imgaug.pad` for details.
+        See :func:`~imgaug.imgaug.pad` for details.
 
     pad_cval : number, optional
         Padding value.
-        See :func:`imgaug.imgaug.pool` for details.
+        See :func:`~imgaug.imgaug.pool` for details.
 
     preserve_dtype : bool, optional
         Whether to preserve the input array dtype.
-        See  :func:`imgaug.imgaug.pool` for details.
+        See  :func:`~imgaug.imgaug.pool` for details.
 
     Returns
     -------
@@ -2037,25 +2037,25 @@ def draw_grid(images, rows=None, cols=None):
 def show_grid(images, rows=None, cols=None):
     """Combine multiple images into a single image and plot the result.
 
-    This will show a window of the results of :func:`imgaug.imgaug.draw_grid`.
+    This will show a window of the results of :func:`~imgaug.imgaug.draw_grid`.
 
     dtype support::
 
         minimum of (
-            :func:`imgaug.imgaug.draw_grid`,
-            :func:`imgaug.imgaug.imshow`
+            :func:`~imgaug.imgaug.draw_grid`,
+            :func:`~imgaug.imgaug.imshow`
         )
 
     Parameters
     ----------
     images : (N,H,W,3) ndarray or iterable of (H,W,3) array
-        See :func:`imgaug.imgaug.draw_grid`.
+        See :func:`~imgaug.imgaug.draw_grid`.
 
     rows : None or int, optional
-        See :func:`imgaug.imgaug.draw_grid`.
+        See :func:`~imgaug.imgaug.draw_grid`.
 
     cols : None or int, optional
-        See :func:`imgaug.imgaug.draw_grid`.
+        See :func:`~imgaug.imgaug.draw_grid`.
 
     """
     grid = draw_grid(images, rows=rows, cols=cols)
@@ -2148,15 +2148,15 @@ def apply_lut(image, table):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.apply_lut_`.
+        See :func:`~imgaug.imgaug.apply_lut_`.
 
     Parameters
     ----------
     image : ndarray
-        See :func:`imgaug.imgaug.apply_lut_`.
+        See :func:`~imgaug.imgaug.apply_lut_`.
 
     table : ndarray or list of ndarray
-        See :func:`imgaug.imgaug.apply_lut_`.
+        See :func:`~imgaug.imgaug.apply_lut_`.
 
     Returns
     -------

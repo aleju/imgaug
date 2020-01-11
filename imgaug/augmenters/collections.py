@@ -70,7 +70,7 @@ class RandAugment(meta.Sequential):
     n : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or None, optional
         Parameter ``N`` in the paper, i.e. number of transformations to apply.
         The paper suggests ``N=2`` for ImageNet.
-        See also parameter ``n`` in :class:`imgaug.augmenters.meta.SomeOf`
+        See also parameter ``n`` in :class:`~imgaug.augmenters.meta.SomeOf`
         for more details.
 
         Note that horizontal flips (p=50%) and crops are always applied. This
@@ -99,7 +99,7 @@ class RandAugment(meta.Sequential):
     cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
         The constant value to use when filling in newly created pixels.
         See parameter `fillcolor` in
-        :class:`imgaug.augmenters.pillike.Affine` for details.
+        :class:`~imgaug.augmenters.pillike.Affine` for details.
 
         The paper's repository uses an RGB value of ``125, 122, 113``.
         This implementation uses a single intensity value of ``128``, which
@@ -283,6 +283,6 @@ class RandAugment(meta.Sequential):
         ]
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         someof = self[1]
         return [someof.n, self._m, self._cval]

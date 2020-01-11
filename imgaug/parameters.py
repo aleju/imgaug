@@ -374,7 +374,7 @@ class StochasticParameter(object):
         random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator to use during the sampling
             process. If ``None``, the global RNG will be used.
-            See also :func:`imgaug.augmenters.meta.Augmenter.__init__`
+            See also :func:`~imgaug.augmenters.meta.Augmenter.__init__`
             for a similar parameter with more details.
 
         Returns
@@ -396,7 +396,7 @@ class StochasticParameter(object):
         random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator to use during the sampling
             process. If ``None``, the global RNG will be used.
-            See also :func:`imgaug.augmenters.meta.Augmenter.__init__`
+            See also :func:`~imgaug.augmenters.meta.Augmenter.__init__`
             for a similar parameter with more details.
 
         Returns
@@ -574,7 +574,7 @@ class StochasticParameter(object):
             Number of points to sample. This is always expected to have at
             least two values. The first defines the number of sampling runs,
             the second (and further) dimensions define the size assigned
-            to each :func:`imgaug.parameters.StochasticParameter.draw_samples`
+            to each :func:`~imgaug.parameters.StochasticParameter.draw_samples`
             call. E.g. ``(10, 20, 15)`` will lead to ``10`` calls of
             ``draw_samples(size=(20, 15))``. The results will be merged to a
             single 1d array.
@@ -1497,7 +1497,7 @@ class FromLowerResolution(StochasticParameter):
         Upsampling/interpolation method to use. This is used after the sampling
         is finished and the low resolution plane has to be upsampled to the
         requested `size` in ``draw_samples(size, ...)``. The method may be
-        the same as in :func:`imgaug.imgaug.imresize_many_images`. Usually
+        the same as in :func:`~imgaug.imgaug.imresize_many_images`. Usually
         ``nearest`` or ``linear`` are good choices. ``nearest`` will result
         in rectangles with sharp edges and ``linear`` in rectangles with
         blurry and round edges. The method may be provided as a
@@ -2745,13 +2745,13 @@ class Sigmoid(StochasticParameter):
         Parameters
         ----------
         other_param : imgaug.parameters.StochasticParameter
-            See :func:`imgaug.parameters.Sigmoid.__init__`.
+            See :func:`~imgaug.parameters.Sigmoid.__init__`.
 
         threshold : number or tuple of number or iterable of number or imgaug.parameters.StochasticParameter, optional
-            See :func:`imgaug.parameters.Sigmoid.__init__`.
+            See :func:`~imgaug.parameters.Sigmoid.__init__`.
 
         activated : bool or number, optional
-            See :func:`imgaug.parameters.Sigmoid.__init__`.
+            See :func:`~imgaug.parameters.Sigmoid.__init__`.
 
         Returns
         -------
@@ -2826,7 +2826,7 @@ class SimplexNoise(StochasticParameter):
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the originally requested shape (i.e. usually
         the image size). This parameter controls the interpolation method to
-        use. See also :func:`imgaug.imgaug.imresize_many_images` for a
+        use. See also :func:`~imgaug.imgaug.imresize_many_images` for a
         description of possible values.
 
             * If ``imgaug.ALL``, then either ``nearest`` or ``linear`` or
@@ -3032,7 +3032,7 @@ class FrequencyNoise(StochasticParameter):
         After generating the noise maps in low resolution environments, they
         have to be upscaled to the originally requested shape (i.e. usually
         the image size). This parameter controls the interpolation method to
-        use. See also :func:`imgaug.imgaug.imresize_many_images` for a
+        use. See also :func:`~imgaug.imgaug.imresize_many_images` for a
         description of possible values.
 
             * If ``imgaug.ALL``, then either ``nearest`` or ``linear`` or

@@ -250,7 +250,7 @@ def apply_gaussian_noise(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -280,7 +280,7 @@ def apply_shot_noise(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -310,7 +310,7 @@ def apply_impulse_noise(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -340,7 +340,7 @@ def apply_speckle_noise(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -370,7 +370,7 @@ def apply_gaussian_blur(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -400,7 +400,7 @@ def apply_glass_blur(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -490,7 +490,7 @@ def apply_defocus_blur(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -520,7 +520,7 @@ def apply_motion_blur(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -550,7 +550,7 @@ def apply_zoom_blur(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -580,7 +580,7 @@ def apply_fog(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -610,7 +610,7 @@ def apply_frost(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -640,7 +640,7 @@ def apply_snow(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -670,7 +670,7 @@ def apply_spatter(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -700,7 +700,7 @@ def apply_contrast(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -730,7 +730,7 @@ def apply_brightness(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -760,7 +760,7 @@ def apply_saturate(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -790,7 +790,7 @@ def apply_jpeg_compression(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -820,7 +820,7 @@ def apply_pixelate(x, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -850,7 +850,7 @@ def apply_elastic_transform(image, severity=1, seed=None):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
+        See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
 
     Parameters
     ----------
@@ -912,7 +912,7 @@ def apply_elastic_transform(image, severity=1, seed=None):
 #
 #     dtype support::
 #
-#         See :func:`imgaug.augmenters.imgcorruptlike.apply_%s`.
+#         See :func:`~imgaug.augmenters.imgcorruptlike.apply_%s`.
 #
 #     Parameters
 #     ----------
@@ -921,13 +921,13 @@ def apply_elastic_transform(image, severity=1, seed=None):
 #         ``1 <= severity <= 5``.
 #
 #     name : None or str, optional
-#         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+#         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 #
 #     deterministic : bool, optional
-#         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+#         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 #
 #     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-#         See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+#         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 #
 #     Examples
 #     --------
@@ -973,7 +973,7 @@ class _ImgcorruptAugmenterBase(meta.Augmenter):
         return severities, seeds
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.severity]
 
 
@@ -988,7 +988,7 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_gaussian_noise`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_gaussian_noise`.
 
     Parameters
     ----------
@@ -997,13 +997,13 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1034,7 +1034,7 @@ class ShotNoise(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_shot_noise`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_shot_noise`.
 
     Parameters
     ----------
@@ -1043,13 +1043,13 @@ class ShotNoise(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1080,7 +1080,7 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_impulse_noise`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_impulse_noise`.
 
     Parameters
     ----------
@@ -1089,13 +1089,13 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1126,7 +1126,7 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_speckle_noise`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_speckle_noise`.
 
     Parameters
     ----------
@@ -1135,13 +1135,13 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1172,7 +1172,7 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_gaussian_blur`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_gaussian_blur`.
 
     Parameters
     ----------
@@ -1181,13 +1181,13 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1218,7 +1218,7 @@ class GlassBlur(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_glass_blur`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_glass_blur`.
 
     Parameters
     ----------
@@ -1227,13 +1227,13 @@ class GlassBlur(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1264,7 +1264,7 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_defocus_blur`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_defocus_blur`.
 
     Parameters
     ----------
@@ -1273,13 +1273,13 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1310,7 +1310,7 @@ class MotionBlur(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_motion_blur`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_motion_blur`.
 
     Parameters
     ----------
@@ -1319,13 +1319,13 @@ class MotionBlur(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1356,7 +1356,7 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_zoom_blur`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_zoom_blur`.
 
     Parameters
     ----------
@@ -1365,13 +1365,13 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1402,7 +1402,7 @@ class Fog(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_fog`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_fog`.
 
     Parameters
     ----------
@@ -1411,13 +1411,13 @@ class Fog(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1448,7 +1448,7 @@ class Frost(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_frost`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_frost`.
 
     Parameters
     ----------
@@ -1457,13 +1457,13 @@ class Frost(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1494,7 +1494,7 @@ class Snow(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_snow`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_snow`.
 
     Parameters
     ----------
@@ -1503,13 +1503,13 @@ class Snow(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1540,7 +1540,7 @@ class Spatter(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_spatter`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_spatter`.
 
     Parameters
     ----------
@@ -1549,13 +1549,13 @@ class Spatter(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1586,7 +1586,7 @@ class Contrast(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_contrast`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_contrast`.
 
     Parameters
     ----------
@@ -1595,13 +1595,13 @@ class Contrast(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1632,7 +1632,7 @@ class Brightness(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_brightness`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_brightness`.
 
     Parameters
     ----------
@@ -1641,13 +1641,13 @@ class Brightness(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1678,7 +1678,7 @@ class Saturate(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_saturate`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_saturate`.
 
     Parameters
     ----------
@@ -1687,13 +1687,13 @@ class Saturate(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1724,7 +1724,7 @@ class JpegCompression(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_jpeg_compression`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_jpeg_compression`.
 
     Parameters
     ----------
@@ -1733,13 +1733,13 @@ class JpegCompression(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1770,7 +1770,7 @@ class Pixelate(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_pixelate`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_pixelate`.
 
     Parameters
     ----------
@@ -1779,13 +1779,13 @@ class Pixelate(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1816,7 +1816,7 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
     dtype support::
 
         See
-        :func:`imgaug.augmenters.imgcorruptlike.apply_elastic_transform`.
+        :func:`~imgaug.augmenters.imgcorruptlike.apply_elastic_transform`.
 
     Parameters
     ----------
@@ -1825,13 +1825,13 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
         ``1 <= severity <= 5``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

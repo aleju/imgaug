@@ -551,13 +551,13 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
                         return_pad_amounts=False):
     """Pad an image array on its sides so that it matches a target aspect ratio.
 
-    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pad`.
+        See :func:`~imgaug.imgaug.pad`.
 
     Parameters
     ----------
@@ -569,7 +569,7 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
         image having twice as much width as height.
 
     mode : str, optional
-        Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
+        Padding mode to use. See :func:`~imgaug.imgaug.pad` for details.
 
     cval : number, optional
         Value to use for padding if `mode` is ``constant``.
@@ -617,13 +617,13 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
                         cval=0, return_pad_amounts=False):
     """Pad an image array until its side lengths are multiples of given values.
 
-    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pad`.
+        See :func:`~imgaug.imgaug.pad`.
 
     Parameters
     ----------
@@ -641,7 +641,7 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
         of this value.
 
     mode : str, optional
-        Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
+        Padding mode to use. See :func:`~imgaug.imgaug.pad` for details.
 
     cval : number, optional
         Value to use for padding if `mode` is ``constant``.
@@ -827,7 +827,7 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
                                            width_multiple):
     """Compute pad amounts until img height/width are multiples of given values.
 
-    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
 
@@ -888,7 +888,7 @@ def compute_croppings_to_reach_multiples_of(arr, height_multiple,
                                             width_multiple):
     """Compute croppings to reach multiples of given heights/widths.
 
-    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required cropping amounts are distributed per
     image axis.
 
@@ -953,7 +953,7 @@ def compute_paddings_to_reach_powers_of(arr, height_base, width_base,
     this function computes paddings that fulfill ``S' = B^E``, where ``E``
     is any exponent from the discrete interval ``[0 .. inf)``.
 
-    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
 
@@ -1022,7 +1022,7 @@ def compute_croppings_to_reach_powers_of(arr, height_base, width_base,
     this function computes croppings that fulfill ``S' = B^E``, where ``E``
     is any exponent from the discrete interval ``[0 .. inf)``.
 
-    See :func:`imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
+    See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required cropping amounts are distributed per
     image axis.
 
@@ -1103,7 +1103,7 @@ class Resize(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.imresize_many_images`.
+        See :func:`~imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -1159,13 +1159,13 @@ class Resize(meta.Augmenter):
               ``str``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1490,7 +1490,7 @@ class Resize(meta.Augmenter):
         return h, w
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.size, self.interpolation, self.size_order]
 
 
@@ -1555,7 +1555,7 @@ class CropAndPad(meta.Augmenter):
 
             minimum of (
                 ``imgaug.augmenters.size.CropAndPad(keep_size=False)``,
-                :func:`imgaug.imgaug.imresize_many_images`
+                :func:`~imgaug.imgaug.imresize_many_images`
             )
 
     Parameters
@@ -1624,7 +1624,7 @@ class CropAndPad(meta.Augmenter):
         i.e. ``constant``, ``edge``, ``linear_ramp``, ``maximum``, ``median``,
         ``minimum``, ``reflect``, ``symmetric``, ``wrap``. The modes
         ``constant`` and ``linear_ramp`` use extra values, which are provided
-        by ``pad_cval`` when necessary. See :func:`imgaug.imgaug.pad` for
+        by ``pad_cval`` when necessary. See :func:`~imgaug.imgaug.pad` for
         more details.
 
             * If ``imgaug.ALL``, then a random mode from all available modes
@@ -1638,7 +1638,7 @@ class CropAndPad(meta.Augmenter):
     pad_cval : number or tuple of number list of number or imgaug.parameters.StochasticParameter, optional
         The constant value to use if the pad mode is ``constant`` or the end
         value to use if the mode is ``linear_ramp``.
-        See :func:`imgaug.imgaug.pad` for more details.
+        See :func:`~imgaug.imgaug.pad` for more details.
 
             * If ``number``, then that value will be used.
             * If a ``tuple`` of two ``number`` s and at least one of them is
@@ -1666,13 +1666,13 @@ class CropAndPad(meta.Augmenter):
         If ``True``, four values will be sampled independently, one per side.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2113,7 +2113,7 @@ class CropAndPad(meta.Augmenter):
         return result
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.all_sides, self.top, self.right, self.bottom, self.left,
                 self.pad_mode, self.pad_cval]
 
@@ -2192,7 +2192,7 @@ class Pad(CropAndPad):
         i.e. ``constant``, ``edge``, ``linear_ramp``, ``maximum``, ``median``,
         ``minimum``, ``reflect``, ``symmetric``, ``wrap``. The modes
         ``constant`` and ``linear_ramp`` use extra values, which are provided
-        by ``pad_cval`` when necessary. See :func:`imgaug.imgaug.pad` for
+        by ``pad_cval`` when necessary. See :func:`~imgaug.imgaug.pad` for
         more details.
 
             * If ``imgaug.ALL``, then a random mode from all available modes
@@ -2206,7 +2206,7 @@ class Pad(CropAndPad):
     pad_cval : number or tuple of number list of number or imgaug.parameters.StochasticParameter, optional
         The constant value to use if the pad mode is ``constant`` or the end
         value to use if the mode is ``linear_ramp``.
-        See :func:`imgaug.imgaug.pad` for more details.
+        See :func:`~imgaug.imgaug.pad` for more details.
 
             * If ``number``, then that value will be used.
             * If a ``tuple`` of two ``number`` s and at least one of them is
@@ -2234,13 +2234,13 @@ class Pad(CropAndPad):
         If ``True``, four values will be sampled independently, one per side.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2431,13 +2431,13 @@ class Crop(CropAndPad):
         If ``True``, four values will be sampled independently, one per side.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2536,7 +2536,7 @@ class PadToFixedSize(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pad`.
+        See :func:`~imgaug.imgaug.pad`.
 
     Parameters
     ----------
@@ -2549,10 +2549,10 @@ class PadToFixedSize(meta.Augmenter):
         If ``None``, image heights will not be altered.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
+        See :func:`~imgaug.augmenters.size.CropAndPad.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.CropAndPad.__init__`.
+        See :func:`~imgaug.augmenters.size.CropAndPad.__init__`.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         Sets the center point of the padding, which determines how the
@@ -2597,13 +2597,13 @@ class PadToFixedSize(meta.Augmenter):
               second for ``y`` coordinates.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2814,7 +2814,7 @@ class PadToFixedSize(meta.Augmenter):
         return pad_top, pad_right, pad_bottom, pad_left
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.size[0], self.size[1], self.pad_mode, self.pad_cval,
                 self.position]
 
@@ -2822,14 +2822,14 @@ class PadToFixedSize(meta.Augmenter):
 class CenterPadToFixedSize(PadToFixedSize):
     """Pad images equally on all sides up to given minimum heights/widths.
 
-    This is an alias for :class:`imgaug.augmenters.size.PadToFixedSize`
+    This is an alias for :class:`~imgaug.augmenters.size.PadToFixedSize`
     with ``position="center"``. It spreads the pad amounts equally over
-    all image sides, while :class:`imgaug.augmenters.size.PadToFixedSize`
+    all image sides, while :class:`~imgaug.augmenters.size.PadToFixedSize`
     by defaults spreads them randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -2846,13 +2846,13 @@ class CenterPadToFixedSize(PadToFixedSize):
         See :func:`PadToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2958,13 +2958,13 @@ class CropToFixedSize(meta.Augmenter):
               second for ``y`` coordinates.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3128,14 +3128,14 @@ class CropToFixedSize(meta.Augmenter):
         return [self.size] * nb_images, offset_xs, offset_ys
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.size[0], self.size[1], self.position]
 
 
 class CenterCropToFixedSize(CropToFixedSize):
     """Take a crop from the center of each image.
 
-    This is an alias for :class:`imgaug.augmenters.size.CropToFixedSize` with
+    This is an alias for :class:`~imgaug.augmenters.size.CropToFixedSize` with
     ``position="center"``.
 
     .. note::
@@ -3147,7 +3147,7 @@ class CenterCropToFixedSize(CropToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3158,13 +3158,13 @@ class CenterCropToFixedSize(CropToFixedSize):
         See :func:`CropToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3195,7 +3195,7 @@ class CropToMultiplesOf(CropToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3213,13 +3213,13 @@ class CropToMultiplesOf(CropToFixedSize):
         See :func:`CropToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3268,22 +3268,22 @@ class CropToMultiplesOf(CropToFixedSize):
         return sizes, offset_xs, offset_ys
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_multiple, self.height_multiple, self.position]
 
 
 class CenterCropToMultiplesOf(CropToMultiplesOf):
     """Crop images equally on all sides until H/W are multiples of given values.
 
-    This is the same as :class:`imgaug.augmenters.size.CropToMultiplesOf`,
+    This is the same as :class:`~imgaug.augmenters.size.CropToMultiplesOf`,
     but uses ``position="center"`` by default, which spreads the crop amounts
     equally over all image sides, while
-    :class:`imgaug.augmenters.size.CropToMultiplesOf` by default spreads
+    :class:`~imgaug.augmenters.size.CropToMultiplesOf` by default spreads
     them randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3294,13 +3294,13 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
         See :func:`CropToMultiplesOf.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3329,7 +3329,7 @@ class PadToMultiplesOf(PadToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3344,22 +3344,22 @@ class PadToMultiplesOf(PadToFixedSize):
         If ``None``, image heights will not be altered.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`PadToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3411,7 +3411,7 @@ class PadToMultiplesOf(PadToFixedSize):
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_multiple, self.height_multiple,
                 self.pad_mode, self.pad_cval,
                 self.position]
@@ -3420,15 +3420,15 @@ class PadToMultiplesOf(PadToFixedSize):
 class CenterPadToMultiplesOf(PadToMultiplesOf):
     """Pad images equally on all sides until H/W are multiples of given values.
 
-    This is the same as :class:`imgaug.augmenters.size.PadToMultiplesOf`, but
+    This is the same as :class:`~imgaug.augmenters.size.PadToMultiplesOf`, but
     uses ``position="center"`` by default, which spreads the pad amounts
     equally over all image sides, while
-    :class:`imgaug.augmenters.size.PadToMultiplesOf` by default spreads them
+    :class:`~imgaug.augmenters.size.PadToMultiplesOf` by default spreads them
     randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3439,19 +3439,19 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
         See :func:`PadToMultiplesOf.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToMultiplesOf.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToMultiplesOf.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToMultiplesOf.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToMultiplesOf.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3495,7 +3495,7 @@ class CropToPowersOf(CropToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3515,13 +3515,13 @@ class CropToPowersOf(CropToFixedSize):
         See :func:`CropToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3570,22 +3570,22 @@ class CropToPowersOf(CropToFixedSize):
         return sizes, offset_xs, offset_ys
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_base, self.height_base, self.position]
 
 
 class CenterCropToPowersOf(CropToPowersOf):
     """Crop images equally on all sides until H/W is a power of a base.
 
-    This is the same as :class:`imgaug.augmenters.size.CropToPowersOf`, but
+    This is the same as :class:`~imgaug.augmenters.size.CropToPowersOf`, but
     uses ``position="center"`` by default, which spreads the crop amounts
     equally over all image sides, while
-    :class:`imgaug.augmenters.size.CropToPowersOf` by default spreads them
+    :class:`~imgaug.augmenters.size.CropToPowersOf` by default spreads them
     randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3596,13 +3596,13 @@ class CenterCropToPowersOf(CropToPowersOf):
         See :func:`CropToPowersOf.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3634,7 +3634,7 @@ class PadToPowersOf(PadToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3651,22 +3651,22 @@ class PadToPowersOf(PadToFixedSize):
         If ``None``, image heights will not be altered.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`PadToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3718,7 +3718,7 @@ class PadToPowersOf(PadToFixedSize):
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_base, self.height_base,
                 self.pad_mode, self.pad_cval,
                 self.position]
@@ -3727,14 +3727,14 @@ class PadToPowersOf(PadToFixedSize):
 class CenterPadToPowersOf(PadToPowersOf):
     """Pad images equally on all sides until H/W is a power of a base.
 
-    This is the same as :class:`imgaug.augmenters.size.PadToPowersOf`, but uses
+    This is the same as :class:`~imgaug.augmenters.size.PadToPowersOf`, but uses
     ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class:`imgaug.augmenters.size.PadToPowersOf`
+    over all image sides, while :class:`~imgaug.augmenters.size.PadToPowersOf`
     by default spreads them randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3745,19 +3745,19 @@ class CenterPadToPowersOf(PadToPowersOf):
         See :func:`PadToPowersOf.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToPowersOf.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToPowersOf.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToPowersOf.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToPowersOf.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3793,7 +3793,7 @@ class CropToAspectRatio(CropToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3805,13 +3805,13 @@ class CropToAspectRatio(CropToFixedSize):
         See :func:`CropToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3862,22 +3862,22 @@ class CropToAspectRatio(CropToFixedSize):
         return sizes, offset_xs, offset_ys
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.aspect_ratio, self.position]
 
 
 class CenterCropToAspectRatio(CropToAspectRatio):
     """Crop images equally on all sides until they reach an aspect ratio.
 
-    This is the same as :class:`imgaug.augmenters.size.CropToAspectRatio`, but
+    This is the same as :class:`~imgaug.augmenters.size.CropToAspectRatio`, but
     uses ``position="center"`` by default, which spreads the crop amounts
     equally over all image sides, while
-    :class:`imgaug.augmenters.size.CropToAspectRatio` by default spreads
+    :class:`~imgaug.augmenters.size.CropToAspectRatio` by default spreads
     them randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3885,13 +3885,13 @@ class CenterCropToAspectRatio(CropToAspectRatio):
         See :func:`CropToAspectRatio.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3921,7 +3921,7 @@ class PadToAspectRatio(PadToFixedSize):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3933,19 +3933,19 @@ class PadToAspectRatio(PadToFixedSize):
         See :func:`PadToFixedSize.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3995,7 +3995,7 @@ class PadToAspectRatio(PadToFixedSize):
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.aspect_ratio, self.pad_mode, self.pad_cval,
                 self.position]
 
@@ -4003,15 +4003,15 @@ class PadToAspectRatio(PadToFixedSize):
 class CenterPadToAspectRatio(PadToAspectRatio):
     """Pad images equally on all sides until H/W matches an aspect ratio.
 
-    This is the same as :class:`imgaug.augmenters.size.PadToAspectRatio`, but
+    This is the same as :class:`~imgaug.augmenters.size.PadToAspectRatio`, but
     uses ``position="center"`` by default, which spreads the pad amounts
     equally over all image sides, while
-    :class:`imgaug.augmenters.size.PadToAspectRatio` by default spreads them
+    :class:`~imgaug.augmenters.size.PadToAspectRatio` by default spreads them
     randomly.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -4019,19 +4019,19 @@ class CenterPadToAspectRatio(PadToAspectRatio):
         See :func:`PadToAspectRatio.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToAspectRatio.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToAspectRatio.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4057,14 +4057,14 @@ class CenterPadToAspectRatio(PadToAspectRatio):
 class CropToSquare(CropToAspectRatio):
     """Crop images until their width and height are identical.
 
-    This is identical to :class:`imgaug.augmenters.size.CropToAspectRatio`
+    This is identical to :class:`~imgaug.augmenters.size.CropToAspectRatio`
     with ``aspect_ratio=1.0``.
 
     Images with axis sizes of ``0`` will not be altered.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -4072,13 +4072,13 @@ class CropToSquare(CropToAspectRatio):
         See :func:`CropToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4102,33 +4102,33 @@ class CropToSquare(CropToAspectRatio):
 class CenterCropToSquare(CropToSquare):
     """Crop images equally on all sides until their height/width are identical.
 
-    In contrast to :class:`imgaug.augmenters.size.CropToSquare`, this
+    In contrast to :class:`~imgaug.augmenters.size.CropToSquare`, this
     augmenter always tries to spread the columns/rows to remove equally over
     both sides of the respective axis to be cropped.
-    :class:`imgaug.augmenters.size.CropToAspectRatio` by default spreads the
+    :class:`~imgaug.augmenters.size.CropToAspectRatio` by default spreads the
     croppings randomly.
 
-    This augmenter is identical to :class:`imgaug.augmenters.size.CropToSquare`
+    This augmenter is identical to :class:`~imgaug.augmenters.size.CropToSquare`
     with ``position="center"``, and thereby the same as
-    :class:`imgaug.augmenters.size.CropToAspectRatio` with
+    :class:`~imgaug.augmenters.size.CropToAspectRatio` with
     ``aspect_ratio=1.0, position="center"``.
 
     Images with axis sizes of ``0`` will not be altered.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.CropToFixedSize`.
+        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4152,11 +4152,11 @@ class PadToSquare(PadToAspectRatio):
     """Pad images until their height and width are identical.
 
     This augmenter is identical to
-    :class:`imgaug.augmenters.size.PadToAspectRatio` with ``aspect_ratio=1.0``.
+    :class:`~imgaug.augmenters.size.PadToAspectRatio` with ``aspect_ratio=1.0``.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -4164,19 +4164,19 @@ class PadToSquare(PadToAspectRatio):
         See :func:`PadToFixedSize.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToFixedSize.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4201,33 +4201,33 @@ class PadToSquare(PadToAspectRatio):
 class CenterPadToSquare(PadToSquare):
     """Pad images equally on all sides until their height & width are identical.
 
-    This is the same as :class:`imgaug.augmenters.size.PadToSquare`, but uses
+    This is the same as :class:`~imgaug.augmenters.size.PadToSquare`, but uses
     ``position="center"`` by default, which spreads the pad amounts equally
-    over all image sides, while :class:`imgaug.augmenters.size.PadToSquare`
+    over all image sides, while :class:`~imgaug.augmenters.size.PadToSquare`
     by default spreads them randomly. This augmenter is thus also identical to
-    :class:`imgaug.augmenters.size.PadToAspectRatio` with
+    :class:`~imgaug.augmenters.size.PadToAspectRatio` with
     ``aspect_ratio=1.0, position="center"``.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.size.PadToFixedSize`.
+        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     pad_mode : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToAspectRatio.__init__`.
 
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.size.PadToAspectRatio.__init__`.
+        See :func:`~imgaug.augmenters.size.PadToAspectRatio.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4260,7 +4260,7 @@ class KeepSizeByResize(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.imresize_many_images`.
+        See :func:`~imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -4270,7 +4270,7 @@ class KeepSizeByResize(meta.Augmenter):
 
     interpolation : KeepSizeByResize.NO_RESIZE or {'nearest', 'linear', 'area', 'cubic'} or {cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC} or list of str or list of int or StochasticParameter, optional
         The interpolation mode to use when resizing images.
-        Can take any value that :func:`imgaug.imgaug.imresize_single_image`
+        Can take any value that :func:`~imgaug.imgaug.imresize_single_image`
         accepts, e.g. ``cubic``.
 
             * If this is ``KeepSizeByResize.NO_RESIZE`` then images will not
@@ -4305,13 +4305,13 @@ class KeepSizeByResize(meta.Augmenter):
         majority of all cases.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4557,11 +4557,11 @@ class KeepSizeByResize(meta.Augmenter):
         return aug
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.interpolation, self.interpolation_heatmaps]
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
