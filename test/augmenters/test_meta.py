@@ -1985,7 +1985,7 @@ class _DummyAugmenterBBs(iaa.Augmenter):
 
     def _augment_bounding_boxes(self, bounding_boxes_on_images, random_state,
                                 parents, hooks):
-        return [bbsoi.shift(left=1)
+        return [bbsoi.shift(x=1)
                 for bbsoi
                 in bounding_boxes_on_images]
 
@@ -3348,13 +3348,13 @@ class _TestAugmenter_augment_cbaois(object):
         cbaoi_lst = [
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([cba.shift(left=1)], shape=(10, 20)),
+            self._ObjOnImage([cba.shift(x=1)], shape=(10, 20)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
             self._ObjOnImage([], shape=(1, 8)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
-            self._ObjOnImage([cba.shift(left=1)], shape=(10, 20)),
+            self._ObjOnImage([cba.shift(x=1)], shape=(10, 20)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20)),
             self._ObjOnImage([cba.deepcopy()], shape=(10, 20))
         ]
@@ -5876,9 +5876,9 @@ class TestSomeOf(unittest.TestCase):
         augs = [iaa.Affine(translate_px={"x": 1}),
                 iaa.Affine(translate_px={"y": 1})]
 
-        cbaoi_x = shift_cbaoi(cbaoi, left=1)
-        cbaoi_y = shift_cbaoi(cbaoi, top=1)
-        cbaoi_xy = shift_cbaoi(cbaoi, left=1, top=1)
+        cbaoi_x = shift_cbaoi(cbaoi, x=1)
+        cbaoi_y = shift_cbaoi(cbaoi, y=1)
+        cbaoi_xy = shift_cbaoi(cbaoi, x=1, y=1)
 
         ns = [0, 1, 2, None]
         expecteds = [[cbaoi],
@@ -5998,9 +5998,9 @@ class TestSomeOf(unittest.TestCase):
             iaa.Affine(translate_px={"x": 1}, order=0),
             iaa.Affine(translate_px={"y": 1}, order=0)
         ]
-        cbaoi_x = shift_cbaoi(cbaoi, left=1)
-        cbaoi_y = shift_cbaoi(cbaoi, top=1)
-        cbaoi_xy = shift_cbaoi(cbaoi, left=1, top=1)
+        cbaoi_x = shift_cbaoi(cbaoi, x=1)
+        cbaoi_y = shift_cbaoi(cbaoi, y=1)
+        cbaoi_xy = shift_cbaoi(cbaoi, x=1, y=1)
 
         aug = iaa.SomeOf((0, 2), children=augs)
         seen = [False, False, False, False]
@@ -7710,14 +7710,14 @@ class TestWithChannels(unittest.TestCase):
     def test_polygon_augmentation_all_channels_via_list(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(polygons, shape=(5, 6, 3))
-        psoi_x = psoi.shift(left=1)
+        psoi_x = psoi.shift(x=1)
         self._test_cbaoi_augmentation_all_channels_via_list(
             psoi, psoi_x, "augment_polygons")
 
     def test_polygon_augmentation_subset_of_channels(self):
         polygons = [ia.Polygon([(0, 0), (3, 0), (3, 3), (0, 3)])]
         psoi = ia.PolygonsOnImage(polygons, shape=(5, 6, 3))
-        psoi_x = psoi.shift(left=1)
+        psoi_x = psoi.shift(x=1)
         self._test_cbaoi_augmentation_subset_of_channels(
             psoi, psoi_x, "augment_polygons")
 
@@ -7735,14 +7735,14 @@ class TestWithChannels(unittest.TestCase):
     def test_line_string_augmentation_all_channels_via_list(self):
         lss = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
         lsoi = ia.LineStringsOnImage(lss, shape=(5, 6, 3))
-        lsoi_x = lsoi.shift(left=1)
+        lsoi_x = lsoi.shift(x=1)
         self._test_cbaoi_augmentation_all_channels_via_list(
             lsoi, lsoi_x, "augment_line_strings")
 
     def test_line_string_augmentation_subset_of_channels(self):
         lss = [ia.LineString([(0, 0), (3, 0), (3, 3), (0, 3)])]
         lsoi = ia.LineStringsOnImage(lss, shape=(5, 6, 3))
-        lsoi_x = lsoi.shift(left=1)
+        lsoi_x = lsoi.shift(x=1)
         self._test_cbaoi_augmentation_subset_of_channels(
             lsoi, lsoi_x, "augment_line_strings")
 
@@ -7760,14 +7760,14 @@ class TestWithChannels(unittest.TestCase):
     def test_bounding_boxes_augmentation_all_channels_via_list(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        bbsoi_x = bbsoi.shift(left=1)
+        bbsoi_x = bbsoi.shift(x=1)
         self._test_cbaoi_augmentation_all_channels_via_list(
             bbsoi, bbsoi_x, "augment_bounding_boxes")
 
     def test_bounding_boxes_augmentation_subset_of_channels(self):
         bbs = [ia.BoundingBox(x1=0, y1=0, x2=1.0, y2=1.5)]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(5, 6, 3))
-        bbsoi_x = bbsoi.shift(left=1)
+        bbsoi_x = bbsoi.shift(x=1)
         self._test_cbaoi_augmentation_subset_of_channels(
             bbsoi, bbsoi_x, "augment_bounding_boxes")
 
