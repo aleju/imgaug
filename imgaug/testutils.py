@@ -7,6 +7,7 @@ from __future__ import print_function, division, absolute_import
 
 import random
 import copy
+import warnings
 
 import numpy as np
 import six.moves as sm
@@ -64,10 +65,10 @@ def assert_cbaois_equal(observed, expected, max_distance=1e-4):
                     assert item_obs.is_valid
 
 
-def shift_cbaoi(cbaoi, top=0, right=0, bottom=0, left=0):
-    if isinstance(cbaoi, ia.KeypointsOnImage):
-        return cbaoi.shift(x=left-right, y=top-bottom)
-    return cbaoi.shift(top=top, right=right, bottom=bottom, left=left)
+# TODO remove this function, no longer needed since shift interfaces were
+#      standardized
+def shift_cbaoi(cbaoi, x=0, y=0, top=0, right=0, bottom=0, left=0):
+    return cbaoi.shift(x=x+left-right, y=y+top-bottom)
 
 
 def create_random_images(size):
@@ -146,3 +147,25 @@ def runtest_pickleable_uint8_img(augmenter, shape=(15, 15, 3), iterations=3):
         image_aug = augmenter(image=image)
         image_aug_pkl = augmenter_pkl(image=image)
         assert np.array_equal(image_aug, image_aug_pkl)
+
+
+def wrap_shift_deprecation(func, *args, **kwargs):
+    """Helper for tests of CBA shift() functions."""
+    # No deprecated arguments? Just call the functions directly.
+    deprecated_kwargs = ["top", "right", "bottom", "left"]
+    if not any([kwname in kwargs for kwname in deprecated_kwargs]):
+        return func()
+
+    # Deprecated arguments? Log warnings and assume that there was a
+    # deprecation warning with expected message.
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+
+        result = func()
+
+        assert (
+            "These are deprecated. Use `x` and `y` instead."
+            in str(caught_warnings[-1].message)
+        )
+
+        return result

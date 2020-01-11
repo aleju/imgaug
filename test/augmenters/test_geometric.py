@@ -4641,7 +4641,7 @@ class TestPiecewiseAffine(unittest.TestCase):
                     (10, 80), (10, 70), (10, 60), (10, 50),
                     (10, 40), (10, 30), (10, 20), (10, 10)]
         poly = ia.Polygon(exterior)
-        psoi = ia.PolygonsOnImage([poly, poly.shift(left=1, top=1)],
+        psoi = ia.PolygonsOnImage([poly, poly.shift(x=1, y=1)],
                                   shape=(100, 80))
 
         self._test_scale_is_zero_cbaoi(psoi, "augment_polygons")
@@ -4655,14 +4655,14 @@ class TestPiecewiseAffine(unittest.TestCase):
                   (10, 80), (10, 70), (10, 60), (10, 50),
                   (10, 40), (10, 30), (10, 20), (10, 10)]
         ls = ia.LineString(coords)
-        lsoi = ia.LineStringsOnImage([ls, ls.shift(left=1, top=1)],
+        lsoi = ia.LineStringsOnImage([ls, ls.shift(x=1, y=1)],
                                      shape=(100, 80))
 
         self._test_scale_is_zero_cbaoi(lsoi, "augment_line_strings")
 
     def test_scale_is_zero_bounding_boxes(self):
         bb = ia.BoundingBox(x1=10, y1=10, x2=70, y2=20)
-        bbsoi = ia.BoundingBoxesOnImage([bb, bb.shift(left=1, top=1)],
+        bbsoi = ia.BoundingBoxesOnImage([bb, bb.shift(x=1, y=1)],
                                         shape=(100, 80))
 
         self._test_scale_is_zero_cbaoi(bbsoi, "augment_bounding_boxes")
@@ -4921,7 +4921,7 @@ class TestPiecewiseAffine(unittest.TestCase):
                   (10, 80), (10, 70), (10, 60), (10, 50),
                   (10, 40), (10, 30), (10, 20), (10, 10)]
         cba = cba_class(coords)
-        cbaoi = cbaoi_class([cba, cba.shift(left=1, top=1)],
+        cbaoi = cbaoi_class([cba, cba.shift(x=1, y=1)],
                             shape=img.shape)
 
         aug = iaa.PiecewiseAffine(scale=0.03, nb_rows=10, nb_cols=10)
