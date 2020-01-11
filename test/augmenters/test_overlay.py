@@ -47,10 +47,10 @@ class TestAlpha(unittest.TestCase):
             warnings.simplefilter("always")
             _ = overlay.Alpha(factor, children_fg)
 
-        assert len(caught_warnings) == 1
+        assert len(caught_warnings) == 2
         assert (
-            "imgaug.augmenters.blend.Alpha"
-            in str(caught_warnings[-1].message)
+            "imgaug.augmenters.blend.BlendAlpha"
+            in str(caught_warnings[0].message)
         )
 
 
@@ -63,10 +63,10 @@ class TestAlphaElementwise(unittest.TestCase):
             warnings.simplefilter("always")
             _ = overlay.AlphaElementwise(factor, children_fg)
 
-        assert len(caught_warnings) == 1
+        assert len(caught_warnings) == 2
         assert (
-            "imgaug.augmenters.blend.AlphaElementwise"
-            in str(caught_warnings[-1].message)
+            "imgaug.augmenters.blend.BlendAlphaElementwise"
+            in str(caught_warnings[0].message)
         )
 
 
@@ -78,10 +78,10 @@ class TestSimplexNoiseAlpha(unittest.TestCase):
             warnings.simplefilter("always")
             _ = overlay.SimplexNoiseAlpha(children_fg)
 
-        assert len(caught_warnings) == 1
+        assert len(caught_warnings) == 2
         assert (
-            "imgaug.augmenters.blend.SimplexNoiseAlpha"
-            in str(caught_warnings[-1].message)
+            "imgaug.augmenters.blend.BlendAlphaSimplexNoise"
+            in str(caught_warnings[0].message)
         )
 
 
@@ -93,8 +93,8 @@ class TestFrequencyNoiseAlpha(unittest.TestCase):
             warnings.simplefilter("always")
             _ = overlay.FrequencyNoiseAlpha(first=children_fg)
 
-        assert len(caught_warnings) == 1
+        assert len(caught_warnings) == 2
         assert (
-            "imgaug.augmenters.blend.FrequencyNoiseAlpha"
-            in str(caught_warnings[-1].message)
+            "imgaug.augmenters.blend.BlendAlphaFrequencyNoise"
+            in str(caught_warnings[0].message)
         )

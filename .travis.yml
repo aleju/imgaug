@@ -54,8 +54,8 @@ before_script:
   #- flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
 script:
-  - python -m pytest --verbose --xdoctest-modules --ignore="test/run_all.py" -s --durations=50
-  - coverage run --source imgaug -m pytest --verbose --xdoctest-modules --ignore="test/run_all.py"
+  - python -m pytest --verbose --xdoctest-modules --ignore="test/run_all.py" -s --durations=50 -Walways
+  - coverage run --source imgaug -m pytest --verbose --xdoctest-modules --ignore="test/run_all.py" -Walways
 
 
 after_success:
