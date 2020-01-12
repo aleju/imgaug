@@ -863,7 +863,7 @@ class Fliplr(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self.p.draw_samples((batch.nb_rows,),
                                       random_state=random_state)
         for i, sample in enumerate(samples):
@@ -963,7 +963,7 @@ class Flipud(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.p = iap.handle_probability_param(p, "p")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self.p.draw_samples((batch.nb_rows,),
                                       random_state=random_state)
         for i, sample in enumerate(samples):

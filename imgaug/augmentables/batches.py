@@ -213,6 +213,45 @@ class UnnormalizedBatch(object):
             data=self.data
         )
 
+    def fill_from_augmented_normalized_batch_(self, batch_aug_norm):
+        """
+        Fill this batch with (normalized) augmentation results in-place.
+
+        This method receives a (normalized) Batch instance, takes all
+        ``*_aug`` attributes out if it and assigns them to this
+        batch *in unnormalized form*. Hence, the datatypes of all ``*_aug``
+        attributes will match the datatypes of the ``*_unaug`` attributes.
+
+        Parameters
+        ----------
+        batch_aug_norm: imgaug.augmentables.batches.Batch
+            Batch after normalization and augmentation.
+
+        Returns
+        -------
+        imgaug.augmentables.batches.UnnormalizedBatch
+            This instance itself.
+            All ``*_unaug`` attributes are unchanged.
+            All ``*_aug`` attributes are taken from `batch_normalized`,
+            converted to unnormalized form.
+
+        """
+        self.images_aug = nlib.invert_normalize_images(
+            batch_aug_norm.images_aug, self.images_unaug)
+        self.heatmaps_aug = nlib.invert_normalize_heatmaps(
+            batch_aug_norm.heatmaps_aug, self.heatmaps_unaug)
+        self.segmentation_maps_aug = nlib.invert_normalize_segmentation_maps(
+            batch_aug_norm.segmentation_maps_aug, self.segmentation_maps_unaug)
+        self.keypoints_aug = nlib.invert_normalize_keypoints(
+            batch_aug_norm.keypoints_aug, self.keypoints_unaug)
+        self.bounding_boxes_aug = nlib.invert_normalize_bounding_boxes(
+            batch_aug_norm.bounding_boxes_aug, self.bounding_boxes_unaug)
+        self.polygons_aug = nlib.invert_normalize_polygons(
+            batch_aug_norm.polygons_aug, self.polygons_unaug)
+        self.line_strings_aug = nlib.invert_normalize_line_strings(
+            batch_aug_norm.line_strings_aug, self.line_strings_unaug)
+        return self
+
     def fill_from_augmented_normalized_batch(self, batch_aug_norm):
         """
         Fill this batch with (normalized) augmentation results.
@@ -232,7 +271,7 @@ class UnnormalizedBatch(object):
         imgaug.augmentables.batches.UnnormalizedBatch
             New UnnormalizedBatch instance. All ``*_unaug`` attributes are
             taken from the old UnnormalizedBatch (without deepcopying them)
-            and all ``*_aug`` attributes are taken from `batch_normalized`
+            and all ``*_aug`` attributes are taken from `batch_normalized`,
             converted to unnormalized form.
 
         """

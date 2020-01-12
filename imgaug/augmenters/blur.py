@@ -443,7 +443,7 @@ class GaussianBlur(meta.Augmenter):
         # apply the blur
         self.eps = 1e-3
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -593,7 +593,7 @@ class AverageBlur(meta.Augmenter):
                 "Expected int, tuple/list with 2 entries or "
                 "StochasticParameter. Got %s." % (type(k),))
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -746,7 +746,7 @@ class MedianBlur(meta.Augmenter):
                 "Expected all values in iterable k to be odd, but at least "
                 "one was not. Add or subtract 1 to/from that value.")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -896,7 +896,7 @@ class BilateralBlur(meta.Augmenter):
             sigma_space, "sigma_space", value_range=(1, None),
             tuple_to_uniform=True, list_to_choice=True)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         if batch.images is None:
             return batch
@@ -1147,7 +1147,7 @@ class MeanShiftBlur(meta.Augmenter):
             value_range=(0.01, None), tuple_to_uniform=True,
             list_to_choice=True)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             samples = self._draw_samples(batch, random_state)
             for i, image in enumerate(batch.images):

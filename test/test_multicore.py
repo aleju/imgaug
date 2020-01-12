@@ -747,21 +747,21 @@ class Test_Pool_worker(unittest.TestCase):
 
     def test_without_seed_start(self):
         augseq = mock.MagicMock()
-        augseq.augment_batch.return_value = "augmented_batch"
+        augseq.augment_batch_.return_value = "augmented_batch_"
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         batch = UnnormalizedBatch(images=[image])
 
         multicore.Pool._WORKER_AUGSEQ = augseq
         result = multicore._Pool_worker(1, batch)
 
-        assert result == "augmented_batch"
-        assert augseq.augment_batch.call_count == 1
-        augseq.augment_batch.assert_called_once_with(batch)
+        assert result == "augmented_batch_"
+        assert augseq.augment_batch_.call_count == 1
+        augseq.augment_batch_.assert_called_once_with(batch)
 
     @mock.patch("imgaug.random.seed")
     def test_with_seed_start(self, mock_ia_seed):
         augseq = mock.MagicMock()
-        augseq.augment_batch.return_value = "augmented_batch"
+        augseq.augment_batch_.return_value = "augmented_batch_"
         image = np.zeros((1, 1, 3), dtype=np.uint8)
         batch = UnnormalizedBatch(images=[image])
         batch_idx = 1
@@ -784,9 +784,9 @@ class Test_Pool_worker(unittest.TestCase):
             % (iarandom.SEED_MAX_VALUE - iarandom.SEED_MIN_VALUE)
         )
 
-        assert result == "augmented_batch"
-        assert augseq.augment_batch.call_count == 1
-        augseq.augment_batch.assert_called_once_with(batch)
+        assert result == "augmented_batch_"
+        assert augseq.augment_batch_.call_count == 1
+        augseq.augment_batch_.assert_called_once_with(batch)
         mock_ia_seed.assert_called_once_with(seed_global_expected)
         augseq.seed_.assert_called_once_with(seed_local_expected)
 

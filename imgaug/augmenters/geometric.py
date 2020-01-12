@@ -1296,7 +1296,7 @@ class Affine(meta.Augmenter):
                 list_to_choice=True
             ), param_type
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
@@ -2903,7 +2903,7 @@ class PiecewiseAffine(meta.Augmenter):
         self._cval_heatmaps = 0
         self._cval_segmentation_maps = 0
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch.nb_rows, random_state)
 
         if batch.images is not None:
@@ -3468,7 +3468,7 @@ class PerspectiveTransform(meta.Augmenter):
             "of int/strings or StochasticParameter, got %s." % (
                 type(mode),))
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         samples_images = self._draw_samples(batch.get_rowwise_shapes(),
                                             random_state.copy())
 
@@ -3596,7 +3596,7 @@ class PerspectiveTransform(meta.Augmenter):
         # estimate max_heights/max_widths for the underlying images
         # this is only necessary if keep_size is False as then the underlying
         # image sizes change and we need to update them here
-        # TODO this was re-used from before _augment_batch() -- reoptimize
+        # TODO this was re-used from before _augment_batch_() -- reoptimize
         if self.keep_size:
             max_heights_imgs = samples.max_heights
             max_widths_imgs = samples.max_widths
@@ -4122,7 +4122,7 @@ class ElasticTransformation(meta.Augmenter):
         return _ElasticTransformationSamplingResult(
             rss[0:-5], alphas, sigmas, orders, cvals, modes)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         if batch.images is not None:
             iadt.gate_dtypes(
@@ -4714,7 +4714,7 @@ class Rot90(meta.Augmenter):
     def _draw_samples(self, nb_images, random_state):
         return self.k.draw_samples((nb_images,), random_state=random_state)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         ks = self._draw_samples(batch.nb_rows, random_state)
 
@@ -4952,7 +4952,7 @@ class WithPolarWarping(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.children = meta.handle_children_list(children, self.name, "then")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             iadt.gate_dtypes(
                 batch.images,
@@ -4975,9 +4975,9 @@ class WithPolarWarping(meta.Augmenter):
                 setattr(batch, column.attr_name, col_aug)
                 inv_data[column.name] = inv_data_col
 
-            batch = self.children.augment_batch(batch,
-                                                parents=parents + [self],
-                                                hooks=hooks)
+            batch = self.children.augment_batch_(batch,
+                                                 parents=parents + [self],
+                                                 hooks=hooks)
             for column in batch.columns:
                 func = getattr(self, "_invert_warp_%s_" % (column.name,))
                 col_unaug = func(column.value, inv_data[column.name])
@@ -5601,7 +5601,7 @@ class Jigsaw(meta.Augmenter):
             tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
         self.allow_pad = allow_pad
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch, random_state)
 
         # We resize here heatmaps/segmaps early to the image size in order to
@@ -5627,8 +5627,8 @@ class Jigsaw(meta.Augmenter):
                     width_multiple=samples.nb_cols[i],
                     height_multiple=samples.nb_rows[i])
                 row = batch.subselect_rows_by_indices([i])
-                row = padder.augment_batch(row, parents=parents + [self],
-                                           hooks=hooks)
+                row = padder.augment_batch_(row, parents=parents + [self],
+                                            hooks=hooks)
                 batch = batch.invert_subselect_rows_by_indices_([i], row)
 
         if batch.images is not None:

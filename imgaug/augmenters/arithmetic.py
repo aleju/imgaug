@@ -1523,7 +1523,7 @@ class Add(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -1658,7 +1658,7 @@ class AddElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2088,7 +2088,7 @@ class Multiply(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2221,7 +2221,7 @@ class MultiplyElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2480,7 +2480,7 @@ class Cutout(meta.Augmenter):
                 type(fill_mode).__name__))
         return iap.Choice(fill_mode)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2984,7 +2984,7 @@ class Dropout2d(meta.Augmenter):
         self._heatmaps_cval = 0.0
         self._segmentation_maps_cval = 0
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         imagewise_drop_channel_ids, all_dropped_ids = self._draw_samples(
             batch, random_state)
 
@@ -3154,7 +3154,7 @@ class TotalDropout(meta.Augmenter):
         self._heatmaps_cval = 0.0
         self._segmentation_maps_cval = 0
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         drop_mask = self._draw_samples(batch, random_state)
         drop_ids = None
 
@@ -3317,7 +3317,7 @@ class ReplaceElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -4188,7 +4188,7 @@ class Invert(meta.Augmenter):
         self.invert_above_threshold = iap.handle_probability_param(
             invert_above_threshold, "invert_above_threshold")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -4467,7 +4467,7 @@ class JpegCompression(meta.Augmenter):
             compression, "compression",
             value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 

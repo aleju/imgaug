@@ -335,7 +335,7 @@ class Cartoon(meta.Augmenter):
             tuple_to_uniform=True, list_to_choice=True)
         self.from_colorspace = from_colorspace
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             samples = self._draw_samples(batch, random_state)
             for i, image in enumerate(batch.images):

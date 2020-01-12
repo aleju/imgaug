@@ -211,7 +211,7 @@ class Superpixels(meta.Augmenter):
         self.max_size = max_size
         self.interpolation = interpolation
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -589,7 +589,7 @@ class Voronoi(meta.Augmenter):
         self.max_size = max_size
         self.interpolation = interpolation
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 

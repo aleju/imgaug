@@ -359,7 +359,7 @@ class _BatchCapturingDummyAugmenter(iaa.Augmenter):
         super(_BatchCapturingDummyAugmenter, self).__init__()
         self.last_batch = None
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         self.last_batch = copylib.deepcopy(batch.deepcopy())
         return batch
 
@@ -808,7 +808,7 @@ class TestWithHueAndSaturation(unittest.TestCase):
                 super(_DummyAugmenter, self).__init__()
                 self.call_count = 0
 
-            def _augment_batch(self, batch, random_state, parents, hooks):
+            def _augment_batch_(self, batch, random_state, parents, hooks):
                 assert batch.images[0].dtype.name == "int16"
                 self.call_count += 1
                 return batch
@@ -905,7 +905,7 @@ class TestWithHueAndSaturation(unittest.TestCase):
                 super(_DummyAugmenter, self).__init__()
                 self.call_count = 0
 
-            def _augment_batch(self, batch, random_state, parents, hooks):
+            def _augment_batch_(self, batch, random_state, parents, hooks):
                 self.call_count += 1
                 return batch
 
@@ -931,7 +931,7 @@ class TestWithHueAndSaturation(unittest.TestCase):
                 super(_DummyAugmenter, self).__init__()
                 self.call_count = 0
 
-            def _augment_batch(self, batch, random_state, parents, hooks):
+            def _augment_batch_(self, batch, random_state, parents, hooks):
                 self.call_count += 1
                 return batch
 

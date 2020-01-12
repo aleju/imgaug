@@ -512,7 +512,7 @@ def _Pool_worker(batch_idx, batch):
     if Pool._WORKER_SEED_START is not None:
         seed = Pool._WORKER_SEED_START + batch_idx
         _reseed_global_local(seed, augseq)
-    result = augseq.augment_batch(batch)
+    result = augseq.augment_batch_(batch)
     return result
 
 
@@ -878,7 +878,7 @@ class BackgroundAugmenter(object):
                     # loading queue is finished
                     queue_source.put(pickle.dumps(None, protocol=-1))
                 else:
-                    batch_aug = augseq.augment_batch(batch)
+                    batch_aug = augseq.augment_batch_(batch)
 
                     # send augmented batch to output queue
                     batch_str = pickle.dumps(batch_aug, protocol=-1)

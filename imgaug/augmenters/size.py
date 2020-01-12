@@ -1345,7 +1345,7 @@ class Resize(meta.Augmenter):
                 "got %s." % (type(interpolation),))
         return interpolation
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         nb_rows = batch.nb_rows
         samples = self._draw_samples(nb_rows, random_state)
 
@@ -1914,7 +1914,7 @@ class CropAndPad(meta.Augmenter):
                 "StochasticParameter, got type %s." % (type(percent),))
         return all_sides, top, right, bottom, left
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         shapes = batch.get_rowwise_shapes()
         samples = self._draw_samples(random_state, shapes)
 
@@ -2672,7 +2672,7 @@ class PadToFixedSize(meta.Augmenter):
         self._pad_cval_heatmaps = 0.0
         self._pad_cval_segmentation_maps = 0
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         # Providing the whole batch to _draw_samples() would not be necessary
         # for this augmenter. The number of rows would be sufficient. This
         # formulation however enables derived augmenters to use rowwise shapes
@@ -3010,7 +3010,7 @@ class CropToFixedSize(meta.Augmenter):
         # (0.0, 1.0) crops left and bottom, (1.0, 0.0) crops right and top.
         self.position = _handle_position_parameter(position)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         # Providing the whole batch to _draw_samples() would not be necessary
         # for this augmenter. The number of rows would be sufficient. This
         # formulation however enables derived augmenters to use rowwise shapes
@@ -4396,7 +4396,7 @@ class KeepSizeByResize(meta.Augmenter):
         self.interpolation_segmaps = _validate_param(interpolation_segmaps,
                                                      True)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             images_were_array = None
             if batch.images is not None:
@@ -4405,7 +4405,7 @@ class KeepSizeByResize(meta.Augmenter):
 
             samples = self._draw_samples(batch.nb_rows, random_state)
 
-            batch = self.children.augment_batch(
+            batch = self.children.augment_batch_(
                 batch, parents=parents + [self], hooks=hooks)
 
             if batch.images is not None:

@@ -953,7 +953,7 @@ class _ImgcorruptAugmenterBase(meta.Augmenter):
             severity, "severity", value_range=(1, 5), tuple_to_uniform=True,
             list_to_choice=True, allow_floats=False)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 

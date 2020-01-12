@@ -1009,7 +1009,7 @@ class _SaveDebugImage(meta.Augmenter):
         self.destination = destination
         self.schedule = schedule
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         save = self.schedule.on_batch(batch)
         self.destination.on_batch(batch)
 

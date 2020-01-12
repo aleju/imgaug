@@ -76,7 +76,7 @@ class _AbstractPoolingBase(meta.Augmenter):
             np.clip(kernel_sizes_w, 1, None)
         )
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None and self.keep_size:
             return batch
 
