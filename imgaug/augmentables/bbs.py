@@ -901,10 +901,10 @@ class BoundingBox(object):
 
         This will automatically also draw the label, unless it is ``None``.
         To only draw the box rectangle use
-        :func:`imgaug.augmentables.bbs.BoundingBox.draw_box_on_image`.
+        :func:`~imgaug.augmentables.bbs.BoundingBox.draw_box_on_image`.
         To draw the label even if it is ``None`` or to configure e.g. its
         color, use
-        :func:`imgaug.augmentables.bbs.BoundingBox.draw_label_on_image`.
+        :func:`~imgaug.augmentables.bbs.BoundingBox.draw_label_on_image`.
 
         Parameters
         ----------
@@ -1171,7 +1171,7 @@ class BoundingBox(object):
         """Compare this and another BB's label and coordinates.
 
         This is the same as
-        :func:`imgaug.augmentables.bbs.BoundingBox.coords_almost_equals` but
+        :func:`~imgaug.augmentables.bbs.BoundingBox.coords_almost_equals` but
         additionally compares the labels.
 
         Parameters
@@ -1182,7 +1182,7 @@ class BoundingBox(object):
 
         max_distance : number, optional
             See
-            :func:`imgaug.augmentables.bbs.BoundingBox.coords_almost_equals`.
+            :func:`~imgaug.augmentables.bbs.BoundingBox.coords_almost_equals`.
 
         Returns
         -------
@@ -1200,7 +1200,7 @@ class BoundingBox(object):
         """Convert a ``(2P,) or (P,2) ndarray`` to a BB instance.
 
         This is the inverse of
-        :func:`imgaug.BoundingBoxesOnImage.to_xyxy_array`.
+        :func:`~imgaug.BoundingBoxesOnImage.to_xyxy_array`.
 
         Parameters
         ----------
@@ -1484,7 +1484,7 @@ class BoundingBoxesOnImage(IAugmentable):
         """Convert an ``(N, 4) or (N, 2, 2) ndarray`` to a BBsOI instance.
 
         This is the inverse of
-        :func:`imgaug.BoundingBoxesOnImage.to_xyxy_array`.
+        :func:`~imgaug.BoundingBoxesOnImage.to_xyxy_array`.
 
         Parameters
         ----------
@@ -1561,7 +1561,7 @@ class BoundingBoxesOnImage(IAugmentable):
         """Convert the ``BoundingBoxesOnImage`` object to an ``(N,4) ndarray``.
 
         This is the inverse of
-        :func:`imgaug.BoundingBoxesOnImage.from_xyxy_array`.
+        :func:`~imgaug.BoundingBoxesOnImage.from_xyxy_array`.
 
         Parameters
         ----------
@@ -1647,7 +1647,7 @@ class BoundingBoxesOnImage(IAugmentable):
         """Modify the BB coordinates of this instance in-place.
 
         See
-        :func:`imgaug.augmentables.bbs.BoundingBoxesOnImage.fill_from_xyxy_array_`.
+        :func:`~imgaug.augmentables.bbs.BoundingBoxesOnImage.fill_from_xyxy_array_`.
 
         Parameters
         ----------

@@ -281,7 +281,7 @@ class BlendAlpha(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.blend.blend_alpha`.
+        See :func:`~imgaug.augmenters.blend.blend_alpha`.
 
     Parameters
     ----------
@@ -325,13 +325,13 @@ class BlendAlpha(meta.Augmenter):
         `per_channel` will be treated as True, otherwise as False.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -459,11 +459,11 @@ class BlendAlpha(meta.Augmenter):
         return _to_deterministic(self)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.factor, self.per_channel]
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [lst for lst in [self.foreground, self.background]
                 if lst is not None]
 
@@ -492,7 +492,7 @@ class BlendAlphaMask(meta.Augmenter):
     between a foreground branch of augmenters and a background branch.
     (Both branches default to the identity operation if not provided.)
 
-    See also :class:`imgaug.augmenters.blend.BlendAlpha`.
+    See also :class:`~imgaug.augmenters.blend.BlendAlpha`.
 
     .. note::
 
@@ -515,7 +515,7 @@ class BlendAlphaMask(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.blend.blend_alpha`.
+        See :func:`~imgaug.augmenters.blend.blend_alpha`.
 
     Parameters
     ----------
@@ -543,13 +543,13 @@ class BlendAlphaMask(meta.Augmenter):
               converted into a ``Sequential`` and used as the augmenter.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -741,11 +741,11 @@ class BlendAlphaMask(meta.Augmenter):
         return _to_deterministic(self)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.mask_generator]
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [lst for lst in [self.foreground, self.background]
                 if lst is not None]
 
@@ -774,17 +774,17 @@ class BlendAlphaElementwise(BlendAlphaMask):
     See :class:`BlendAlpha` for more details.
 
     This class is a wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -828,13 +828,13 @@ class BlendAlphaElementwise(BlendAlphaMask):
         `per_channel` will be treated as True, otherwise as False.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1029,13 +1029,13 @@ class BlendAlphaSimplexNoise(BlendAlphaElementwise):
               from that parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1258,13 +1258,13 @@ class BlendAlphaFrequencyNoise(BlendAlphaElementwise):
               from that parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1368,8 +1368,8 @@ class BlendAlphaSomeColors(BlendAlphaMask):
     grayscale a few colors, while keeping other colors unchanged.
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.SomeColorsMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.SomeColorsMaskGen`.
 
     .. note::
 
@@ -1380,11 +1380,11 @@ class BlendAlphaSomeColors(BlendAlphaMask):
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
@@ -1409,28 +1409,28 @@ class BlendAlphaSomeColors(BlendAlphaMask):
               converted into a ``Sequential`` and used as the augmenter.
 
     nb_bins : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.SomeColorsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SomeColorsMaskGen`.
 
     smoothness : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.SomeColorsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SomeColorsMaskGen`.
 
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.SomeColorsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SomeColorsMaskGen`.
 
     rotation_deg : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.SomeColorsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SomeColorsMaskGen`.
 
     from_colorspace : str, optional
-        See :class:`imgaug.augmenters.blend.SomeColorsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SomeColorsMaskGen`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1502,18 +1502,18 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
     mask.
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -1538,25 +1538,25 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
               converted into a ``Sequential`` and used as the augmenter.
 
     min_value : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
 
     max_value : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
 
     start_at : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
 
     end_at : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1614,18 +1614,18 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
     mask.
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -1650,25 +1650,25 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
               converted into a ``Sequential`` and used as the augmenter.
 
     min_value : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
 
     max_value : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
 
     start_at : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
 
     end_at : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
+        See :class:`~imgaug.augmenters.blend.VerticalLinearGradientMaskGen`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1736,28 +1736,28 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
     alpha values follow a fixed pattern.
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.RegularGridMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.RegularGridMaskGen`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
     nb_rows : int or tuple of int or list of int or imgaug.parameters.StochasticParameter
         Number of rows of the checkerboard.
-        See :class:`imgaug.augmenters.blend.CheckerboardMaskGen` for details.
+        See :class:`~imgaug.augmenters.blend.CheckerboardMaskGen` for details.
 
     nb_cols : int or tuple of int or list of int or imgaug.parameters.StochasticParameter
         Number of columns of the checkerboard. Analogous to `nb_rows`.
-        See :class:`imgaug.augmenters.blend.CheckerboardMaskGen` for details.
+        See :class:`~imgaug.augmenters.blend.CheckerboardMaskGen` for details.
 
     foreground : None or imgaug.augmenters.meta.Augmenter or iterable of imgaug.augmenters.meta.Augmenter, optional
         Augmenter(s) that make up the foreground branch.
@@ -1790,13 +1790,13 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
           per batch for ``(N,)`` values -- one per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1810,7 +1810,7 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
     half of the cells in the grid are filled with ``0.0``, the remaining ones
     are unaltered. Which cells exactly are "dropped" is randomly decided
     per image. The resulting effect is similar to
-    :class:`imgaug.augmenters.arithmetic.CoarseDropout`.
+    :class:`~imgaug.augmenters.arithmetic.CoarseDropout`.
 
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaRegularGrid(nb_rows=2, nb_cols=2,
@@ -1852,28 +1852,28 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
     have a value opposite to the cell's value (``0.0`` vs. ``1.0``).
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.CheckerboardMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.CheckerboardMaskGen`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
     nb_rows : int or tuple of int or list of int or imgaug.parameters.StochasticParameter
         Number of rows of the checkerboard.
-        See :class:`imgaug.augmenters.blend.CheckerboardMaskGen` for details.
+        See :class:`~imgaug.augmenters.blend.CheckerboardMaskGen` for details.
 
     nb_cols : int or tuple of int or list of int or imgaug.parameters.StochasticParameter
         Number of columns of the checkerboard. Analogous to `nb_rows`.
-        See :class:`imgaug.augmenters.blend.CheckerboardMaskGen` for details.
+        See :class:`~imgaug.augmenters.blend.CheckerboardMaskGen` for details.
 
     foreground : None or imgaug.augmenters.meta.Augmenter or iterable of imgaug.augmenters.meta.Augmenter, optional
         Augmenter(s) that make up the foreground branch.
@@ -1896,13 +1896,13 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
               converted into a ``Sequential`` and used as the augmenter.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1940,14 +1940,14 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
     by specific classes in segmentation maps.
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.SegMapClassIdsMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.SegMapClassIdsMaskGen`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     .. note::
 
@@ -1962,12 +1962,12 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
     class_ids : int or tuple of int or list of int or imgaug.parameters.StochasticParameter
-        See :class:`imgaug.augmenters.blend.SegMapClassIdsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SegMapClassIdsMaskGen`.
 
     foreground : None or imgaug.augmenters.meta.Augmenter or iterable of imgaug.augmenters.meta.Augmenter, optional
         Augmenter(s) that make up the foreground branch.
@@ -1990,16 +1990,16 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
               converted into a ``Sequential`` and used as the augmenter.
 
     nb_sample_classes : None or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.SegMapClassIdsMaskGen`.
+        See :class:`~imgaug.augmenters.blend.SegMapClassIdsMaskGen`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2062,14 +2062,14 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
     covers the area and has one of the requested labels.
 
     This class is a thin wrapper around
-    :class:`imgaug.augmenters.blend.BlendAlphaMask` together with
-    :class:`imgaug.augmenters.blend.BoundingBoxesMaskGen`.
+    :class:`~imgaug.augmenters.blend.BlendAlphaMask` together with
+    :class:`~imgaug.augmenters.blend.BoundingBoxesMaskGen`.
 
     .. note::
 
         Avoid using augmenters as children that affect pixel locations (e.g.
         horizontal flips). See
-        :class:`imgaug.augmenters.blend.BlendAlphaMask` for details.
+        :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
     .. note::
 
@@ -2078,12 +2078,12 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
     labels : None or str or list of str or imgaug.parameters.StochasticParameter
-        See :class:`imgaug.augmenters.blend.BoundingBoxesMaskGen`.
+        See :class:`~imgaug.augmenters.blend.BoundingBoxesMaskGen`.
 
     foreground : None or imgaug.augmenters.meta.Augmenter or iterable of imgaug.augmenters.meta.Augmenter, optional
         Augmenter(s) that make up the foreground branch.
@@ -2106,16 +2106,16 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
               converted into a ``Sequential`` and used as the augmenter.
 
     nb_sample_labels : None or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.blend.BoundingBoxesMaskGen`.
+        See :class:`~imgaug.augmenters.blend.BoundingBoxesMaskGen`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2182,7 +2182,7 @@ class IBatchwiseMaskGenerator(object):
 
     Child classes are supposed to receive a batch and generate an iterable
     of masks, one per row (i.e. image), matching the row shape (i.e. image
-    shape). This is used in :class:`imgaug.augmenters.blend.BlendAlphaMask`.
+    shape). This is used in :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     """
 
@@ -2197,7 +2197,7 @@ class IBatchwiseMaskGenerator(object):
         random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
             A seed or random number generator to use during the sampling
             process. If ``None``, the global RNG will be used.
-            See also :func:`imgaug.augmenters.meta.Augmenter.__init__`
+            See also :func:`~imgaug.augmenters.meta.Augmenter.__init__`
             for a similar parameter with more details.
 
         Returns
@@ -2248,7 +2248,7 @@ class StochasticParameterMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         shapes = batch.get_rowwise_shapes()
@@ -2316,7 +2316,7 @@ class SomeColorsMaskGen(IBatchwiseMaskGenerator):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
@@ -2382,7 +2382,7 @@ class SomeColorsMaskGen(IBatchwiseMaskGenerator):
 
     from_colorspace : str, optional
         The source colorspace (of the input images).
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     """
 
@@ -2410,7 +2410,7 @@ class SomeColorsMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         assert batch.images is not None, (
@@ -2585,7 +2585,7 @@ class _LinearGradientMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         random_state = iarandom.RNG(random_state)
@@ -2766,7 +2766,7 @@ class HorizontalLinearGradientMaskGen(_LinearGradientMaskGen):
 class VerticalLinearGradientMaskGen(_LinearGradientMaskGen):
     """Generator that produces vertical linear gradient masks.
 
-    See :class:`imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`
+    See :class:`~imgaug.augmenters.blend.HorizontalLinearGradientMaskGen`
     for details.
 
     Parameters
@@ -2911,7 +2911,7 @@ class RegularGridMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         random_state = iarandom.RNG(random_state)
@@ -3045,7 +3045,7 @@ class CheckerboardMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         random_state = iarandom.RNG(random_state)
@@ -3185,7 +3185,7 @@ class SegMapClassIdsMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         assert batch.segmentation_maps is not None, (
@@ -3341,7 +3341,7 @@ class BoundingBoxesMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         assert batch.bounding_boxes is not None, (
@@ -3441,7 +3441,7 @@ class InvertMaskGen(IBatchwiseMaskGenerator):
 
     def draw_masks(self, batch, random_state=None):
         """
-        See :func:`imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
+        See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
         random_state = iarandom.RNG(random_state)

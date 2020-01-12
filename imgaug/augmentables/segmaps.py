@@ -218,7 +218,7 @@ class SegmentationMapsOnImage(IAugmentable):
         ----------
         size : None or float or iterable of int or iterable of float, optional
             Size of the rendered RGB image as ``(height, width)``.
-            See :func:`imgaug.imgaug.imresize_single_image` for details.
+            See :func:`~imgaug.imgaug.imresize_single_image` for details.
             If set to ``None``, no resizing is performed and the size of the
             segmentation map array is used.
 
@@ -402,11 +402,11 @@ class SegmentationMapsOnImage(IAugmentable):
             Must be ``0`` or greater.
 
         mode : str, optional
-            Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
+            Padding mode to use. See :func:`~imgaug.imgaug.pad` for details.
 
         cval : number, optional
             Value to use for padding if `mode` is ``constant``.
-            See :func:`imgaug.imgaug.pad` for details.
+            See :func:`~imgaug.imgaug.pad` for details.
 
         Returns
         -------
@@ -436,11 +436,11 @@ class SegmentationMapsOnImage(IAugmentable):
 
         mode : str, optional
             Padding mode to use.
-            See :func:`imgaug.imgaug.pad` for details.
+            See :func:`~imgaug.imgaug.pad` for details.
 
         cval : number, optional
             Value to use for padding if `mode` is ``constant``.
-            See :func:`imgaug.imgaug.pad` for details.
+            See :func:`~imgaug.imgaug.pad` for details.
 
         return_pad_amounts : bool, optional
             If ``False``, then only the padded instance will be returned.
@@ -488,13 +488,13 @@ class SegmentationMapsOnImage(IAugmentable):
         ----------
         sizes : float or iterable of int or iterable of float
             New size of the array in ``(height, width)``.
-            See :func:`imgaug.imgaug.imresize_single_image` for details.
+            See :func:`~imgaug.imgaug.imresize_single_image` for details.
 
         interpolation : None or str or int, optional
             The interpolation to use during resize.
             Nearest neighbour interpolation (``"nearest"``) is almost always
             the best choice.
-            See :func:`imgaug.imgaug.imresize_single_image` for details.
+            See :func:`~imgaug.imgaug.imresize_single_image` for details.
 
         Returns
         -------
@@ -516,14 +516,14 @@ class SegmentationMapsOnImage(IAugmentable):
             Optionally the `arr` attribute to use for the new segmentation map
             instance. Will be copied from the old instance if not provided.
             See
-            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            :func:`~imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         shape : None or tuple of int, optional
             Optionally the shape attribute to use for the the new segmentation
             map instance. Will be copied from the old instance if not provided.
             See
-            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            :func:`~imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         Returns
@@ -548,14 +548,14 @@ class SegmentationMapsOnImage(IAugmentable):
             Optionally the `arr` attribute to use for the new segmentation map
             instance. Will be copied from the old instance if not provided.
             See
-            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            :func:`~imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         shape : None or tuple of int, optional
             Optionally the shape attribute to use for the the new segmentation
             map instance. Will be copied from the old instance if not provided.
             See
-            :func:`imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
+            :func:`~imgaug.augmentables.segmaps.SegmentationMapsOnImage.__init__`
             for details.
 
         Returns

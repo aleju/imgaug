@@ -87,7 +87,7 @@ class _ContrastFuncWrapper(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return self.params1d
 
 
@@ -426,7 +426,7 @@ class GammaContrast(_ContrastFuncWrapper):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.contrast.adjust_contrast_gamma`.
+        See :func:`~imgaug.augmenters.contrast.adjust_contrast_gamma`.
 
     Parameters
     ----------
@@ -448,13 +448,13 @@ class GammaContrast(_ContrastFuncWrapper):
         be treated as ``True``, otherwise as ``False``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -499,7 +499,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.contrast.adjust_contrast_sigmoid`.
+        See :func:`~imgaug.augmenters.contrast.adjust_contrast_sigmoid`.
 
     Parameters
     ----------
@@ -535,13 +535,13 @@ class SigmoidContrast(_ContrastFuncWrapper):
         be treated as ``True``, otherwise as ``False``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -594,7 +594,7 @@ class LogContrast(_ContrastFuncWrapper):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.contrast.adjust_contrast_log`.
+        See :func:`~imgaug.augmenters.contrast.adjust_contrast_log`.
 
     Parameters
     ----------
@@ -618,13 +618,13 @@ class LogContrast(_ContrastFuncWrapper):
         be treated as ``True``, otherwise as ``False``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -666,7 +666,7 @@ class LinearContrast(_ContrastFuncWrapper):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.contrast.adjust_contrast_linear`.
+        See :func:`~imgaug.augmenters.contrast.adjust_contrast_linear`.
 
     Parameters
     ----------
@@ -690,13 +690,13 @@ class LinearContrast(_ContrastFuncWrapper):
         be treated as ``True``, otherwise as ``False``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -864,7 +864,7 @@ class _IntensityChannelBasedApplier(object):
         return result
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.from_colorspace, self.to_colorspace]
 
 
@@ -922,13 +922,13 @@ class AllChannelsCLAHE(meta.Augmenter):
         be treated as ``True``, otherwise as ``False``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1037,7 +1037,7 @@ class AllChannelsCLAHE(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.clip_limit, self.tile_grid_size_px,
                 self.tile_grid_size_px_min, self.per_channel]
 
@@ -1133,7 +1133,7 @@ class CLAHE(meta.Augmenter):
         be ignored and it will be assumed that the input is grayscale.
         If a fourth channel is present in an input image, it will be removed
         before the colorspace conversion and later re-added.
-        See also :func:`imgaug.augmenters.color.change_colorspace_` for
+        See also :func:`~imgaug.augmenters.color.change_colorspace_` for
         details.
 
     to_colorspace : {"Lab", "HLS", "HSV"}, optional
@@ -1144,13 +1144,13 @@ class CLAHE(meta.Augmenter):
         see ``imgaug.augmenters.contrast.AllChannelsCLAHE``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1251,7 +1251,7 @@ class CLAHE(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         ac_clahe = self.all_channel_clahe
         intb_applier = self.intensity_channel_based_applier
         return [
@@ -1294,13 +1294,13 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
     Parameters
     ----------
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1351,7 +1351,7 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
 
@@ -1406,7 +1406,7 @@ class HistogramEqualization(meta.Augmenter):
         ignored and it will be assumed that the input is grayscale.
         If a fourth channel is present in an input image, it will be removed
         before the colorspace conversion and later re-added.
-        See also :func:`imgaug.augmenters.color.change_colorspace_` for
+        See also :func:`~imgaug.augmenters.color.change_colorspace_` for
         details.
 
     to_colorspace : {"Lab", "HLS", "HSV"}, optional
@@ -1418,13 +1418,13 @@ class HistogramEqualization(meta.Augmenter):
         ``imgaug.augmenters.contrast.AllChannelsHistogramEqualization``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1501,6 +1501,6 @@ class HistogramEqualization(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         icb_applier = self.intensity_channel_based_applier
         return icb_applier.get_parameters()

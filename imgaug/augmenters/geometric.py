@@ -1049,7 +1049,7 @@ class Affine(meta.Augmenter):
         and scaling.
         Note also that activating this may lead to image sizes differing from
         the input image sizes. To avoid this, wrap ``Affine`` in
-        :class:`imgaug.augmenters.size.KeepSizeByResize`,
+        :class:`~imgaug.augmenters.size.KeepSizeByResize`,
         e.g. ``KeepSizeByResize(Affine(...))``.
 
     backend : str, optional
@@ -1064,13 +1064,13 @@ class Affine(meta.Augmenter):
         automatically fall back to order ``3``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1498,7 +1498,7 @@ class Affine(meta.Augmenter):
             order=order_samples)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [
             self.scale, self.translate, self.rotate, self.shear, self.order,
             self.cval, self.mode, self.backend, self.fit_output]
@@ -1511,7 +1511,7 @@ class ScaleX(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1535,13 +1535,13 @@ class ScaleX(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1579,7 +1579,7 @@ class TranslateX(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1609,13 +1609,13 @@ class TranslateX(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1662,7 +1662,7 @@ class TranslateY(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1692,13 +1692,13 @@ class TranslateY(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1744,7 +1744,7 @@ class ScaleY(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1768,13 +1768,13 @@ class ScaleY(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1812,7 +1812,7 @@ class Rotate(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1835,13 +1835,13 @@ class Rotate(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1876,7 +1876,7 @@ class ShearX(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1900,13 +1900,13 @@ class ShearX(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -1933,7 +1933,7 @@ class ShearY(Affine):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.geometric.Affine`.
+        See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1957,13 +1957,13 @@ class ShearY(Affine):
         See :class:`Affine`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -2196,13 +2196,13 @@ class AffineCv2(meta.Augmenter):
               mentioned strings.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2661,7 +2661,7 @@ class AffineCv2(meta.Augmenter):
             bounding_boxes_on_images, random_state, parents, hooks)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.scale, self.translate, self.rotate, self.shear,
                 self.order, self.cval, self.mode]
 
@@ -2819,13 +2819,13 @@ class PiecewiseAffine(meta.Augmenter):
         Number of columns. Analogous to `nb_rows`.
 
     order : int or list of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.geometric.Affine.__init__`.
+        See :func:`~imgaug.augmenters.geometric.Affine.__init__`.
 
     cval : int or float or tuple of float or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.geometric.Affine.__init__`.
+        See :func:`~imgaug.augmenters.geometric.Affine.__init__`.
 
     mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.geometric.Affine.__init__`.
+        See :func:`~imgaug.augmenters.geometric.Affine.__init__`.
 
     absolute_scale : bool, optional
         Take `scale` as an absolute value rather than a relative value.
@@ -2838,16 +2838,16 @@ class PiecewiseAffine(meta.Augmenter):
         If ``None``, no polygon recoverer will be used.
         If an object, then that object will be used and must provide a
         ``recover_from()`` method, similar to
-        :class:`imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
+        :class:`~imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3211,7 +3211,7 @@ class PiecewiseAffine(meta.Augmenter):
                 return matrix
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [
             self.scale, self.nb_rows, self.nb_cols, self.order, self.cval,
             self.mode, self.absolute_scale]
@@ -3270,7 +3270,7 @@ class PerspectiveTransform(meta.Augmenter):
 
             minimum of (
                 ``imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False)``,
-                :func:`imgaug.imgaug.imresize_many_images`
+                :func:`~imgaug.imgaug.imresize_many_images`
             )
 
     Parameters
@@ -3356,16 +3356,16 @@ class PerspectiveTransform(meta.Augmenter):
         If ``None``, no polygon recoverer will be used.
         If an object, then that object will be used and must provide a
         ``recover_from()`` method, similar to
-        :class:`imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
+        :class:`~imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3840,7 +3840,7 @@ class PerspectiveTransform(meta.Augmenter):
         return matrix_expanded, max_width, max_height
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.jitter, self.keep_size, self.cval, self.mode,
                 self.fit_output]
 
@@ -4002,16 +4002,16 @@ class ElasticTransformation(meta.Augmenter):
         If ``None``, no polygon recoverer will be used.
         If an object, then that object will be used and must provide a
         ``recover_from()`` method, similar to
-        :class:`imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
+        :class:`~imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4329,7 +4329,7 @@ class ElasticTransformation(meta.Augmenter):
         return self._apply_to_cbaois_as_keypoints(bbsoi, func)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
     @classmethod
@@ -4633,7 +4633,7 @@ class Rot90(meta.Augmenter):
 
             minimum of (
                 ``imgaug.augmenters.geometric.Rot90(keep_size=False)``,
-                :func:`imgaug.imgaug.imresize_many_images`
+                :func:`~imgaug.imgaug.imresize_many_images`
             )
 
     Parameters
@@ -4658,13 +4658,13 @@ class Rot90(meta.Augmenter):
         also cause the augmented image to look distorted.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -4827,7 +4827,7 @@ class Rot90(meta.Augmenter):
         return result
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.k, self.keep_size]
 
 
@@ -4912,13 +4912,13 @@ class WithPolarWarping(meta.Augmenter):
         to polar representation.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -5465,11 +5465,11 @@ class WithPolarWarping(meta.Augmenter):
             return np.concatenate([rho, phi], axis=1)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def _to_deterministic(self):
@@ -5556,13 +5556,13 @@ class Jigsaw(meta.Augmenter):
         divisible by ``nb_rows`` and ``nb_cols``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

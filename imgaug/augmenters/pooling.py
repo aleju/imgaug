@@ -178,7 +178,7 @@ class _AbstractPoolingBase(meta.Augmenter):
                                                   func)
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.kernel_size, self.keep_size]
 
 
@@ -209,7 +209,7 @@ class AveragePooling(_AbstractPoolingBase):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.avg_pool`.
+        See :func:`~imgaug.imgaug.avg_pool`.
 
     Attributes
     ----------
@@ -244,13 +244,13 @@ class AveragePooling(_AbstractPoolingBase):
         identical to the input shape.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -320,7 +320,7 @@ class MaxPooling(_AbstractPoolingBase):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.max_pool`.
+        See :func:`~imgaug.imgaug.max_pool`.
 
     Attributes
     ----------
@@ -355,13 +355,13 @@ class MaxPooling(_AbstractPoolingBase):
         identical to the input shape.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -433,7 +433,7 @@ class MinPooling(_AbstractPoolingBase):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pool`.
+        See :func:`~imgaug.imgaug.pool`.
 
     Attributes
     ----------
@@ -468,13 +468,13 @@ class MinPooling(_AbstractPoolingBase):
         identical to the input shape.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -546,7 +546,7 @@ class MedianPooling(_AbstractPoolingBase):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.pool`.
+        See :func:`~imgaug.imgaug.pool`.
 
     Attributes
     ----------
@@ -581,13 +581,13 @@ class MedianPooling(_AbstractPoolingBase):
         identical to the input shape.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------

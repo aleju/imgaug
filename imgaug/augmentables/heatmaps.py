@@ -135,7 +135,7 @@ class HeatmapsOnImage(IAugmentable):
         ----------
         size : None or float or iterable of int or iterable of float, optional
             Size of the rendered RGB image as ``(height, width)``.
-            See :func:`imgaug.imgaug.imresize_single_image` for details.
+            See :func:`~imgaug.imgaug.imresize_single_image` for details.
             If set to ``None``, no resizing is performed and the size of the
             heatmaps array is used.
 
@@ -307,11 +307,11 @@ class HeatmapsOnImage(IAugmentable):
             Must be ``0`` or greater.
 
         mode : string, optional
-            Padding mode to use. See :func:`imgaug.imgaug.pad` for details.
+            Padding mode to use. See :func:`~imgaug.imgaug.pad` for details.
 
         cval : number, optional
             Value to use for padding `mode` is ``constant``.
-            See :func:`imgaug.imgaug.pad` for details.
+            See :func:`~imgaug.imgaug.pad` for details.
 
         Returns
         -------
@@ -352,11 +352,11 @@ class HeatmapsOnImage(IAugmentable):
 
         mode : str, optional
             Padding mode to use.
-            See :func:`imgaug.imgaug.pad` for details.
+            See :func:`~imgaug.imgaug.pad` for details.
 
         cval : number, optional
             Value to use for padding if `mode` is ``constant``.
-            See :func:`imgaug.imgaug.pad` for details.
+            See :func:`~imgaug.imgaug.pad` for details.
 
         return_pad_amounts : bool, optional
             If ``False``, then only the padded instance will be returned.
@@ -402,7 +402,7 @@ class HeatmapsOnImage(IAugmentable):
         ----------
         block_size : int or tuple of int
             Size of each block of values to pool, aka kernel size.
-            See :func:`imgaug.imgaug.pool` for details.
+            See :func:`~imgaug.imgaug.pool` for details.
 
         Returns
         -------
@@ -424,7 +424,7 @@ class HeatmapsOnImage(IAugmentable):
         ----------
         block_size : int or tuple of int
             Size of each block of values to pool, aka kernel size.
-            See :func:`imgaug.imgaug.pool` for details.
+            See :func:`~imgaug.imgaug.pool` for details.
 
         Returns
         -------
@@ -452,11 +452,11 @@ class HeatmapsOnImage(IAugmentable):
         ----------
         sizes : float or iterable of int or iterable of float
             New size of the array in ``(height, width)``.
-            See :func:`imgaug.imgaug.imresize_single_image` for details.
+            See :func:`~imgaug.imgaug.imresize_single_image` for details.
 
         interpolation : None or str or int, optional
             The interpolation to use during resize.
-            See :func:`imgaug.imgaug.imresize_single_image` for details.
+            See :func:`~imgaug.imgaug.imresize_single_image` for details.
 
         Returns
         -------
@@ -518,7 +518,7 @@ class HeatmapsOnImage(IAugmentable):
             Minimum value of the float heatmaps that the input array
             represents. This will usually be 0.0. In most other cases it will
             be close to the interval ``[0.0, 1.0]``.
-            Calling :func:`imgaug.HeatmapsOnImage.get_arr`, will automatically
+            Calling :func:`~imgaug.HeatmapsOnImage.get_arr`, will automatically
             convert the interval ``[0.0, 1.0]`` float array to this
             ``[min, max]`` interval.
 
@@ -562,7 +562,7 @@ class HeatmapsOnImage(IAugmentable):
             Minimum value of the float heatmaps that the input array
             represents. This will usually be 0.0. In most other cases it will
             be close to the interval ``[0.0, 1.0]``.
-            Calling :func:`imgaug.HeatmapsOnImage.get_arr`, will automatically
+            Calling :func:`~imgaug.HeatmapsOnImage.get_arr`, will automatically
             convert the interval ``[0.0, 1.0]`` float array to this
             ``[min, max]`` interval.
 

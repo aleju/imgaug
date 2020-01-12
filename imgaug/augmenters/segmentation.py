@@ -39,7 +39,7 @@ def _ensure_image_max_size(image, max_size, interpolation):
 
     dtype support::
 
-        See :func:`imgaug.imgaug.imresize_single_image`.
+        See :func:`~imgaug.imgaug.imresize_single_image`.
 
     Parameters
     ----------
@@ -50,7 +50,7 @@ def _ensure_image_max_size(image, max_size, interpolation):
         Maximum length of any side of the image.
 
     interpolation : string or int
-        See :func:`imgaug.imgaug.imresize_single_image`.
+        See :func:`~imgaug.imgaug.imresize_single_image`.
 
     """
     if max_size is not None:
@@ -104,7 +104,7 @@ class Superpixels(meta.Augmenter):
 
             minimum of (
                 ``imgaug.augmenters.segmentation.Superpixels(image size <= max_size)``,
-                :func:`imgaug.augmenters.segmentation._ensure_image_max_size`
+                :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
             )
 
     Parameters
@@ -165,16 +165,16 @@ class Superpixels(meta.Augmenter):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -308,7 +308,7 @@ class Superpixels(meta.Augmenter):
         return image_sp
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p_replace, self.n_segments, self.max_size,
                 self.interpolation]
 
@@ -476,7 +476,7 @@ class Voronoi(meta.Augmenter):
 
             minimum of (
                 ``imgaug.augmenters.segmentation.Voronoi(image size <= max_size)``,
-                :func:`imgaug.augmenters.segmentation._ensure_image_max_size`
+                :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
             )
 
     Parameters
@@ -526,16 +526,16 @@ class Voronoi(meta.Augmenter):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -632,7 +632,7 @@ class Voronoi(meta.Augmenter):
         return image_aug
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.points_sampler, self.p_replace, self.max_size,
                 self.interpolation]
 
@@ -641,8 +641,8 @@ class UniformVoronoi(Voronoi):
     """Uniformly sample Voronoi cells on images and average colors within them.
 
     This augmenter is a shortcut for the combination of
-    :class:`imgaug.augmenters.segmentation.Voronoi` with
-    :class:`imgaug.augmenters.segmentation.UniformPointsSampler`. Hence, it
+    :class:`~imgaug.augmenters.segmentation.Voronoi` with
+    :class:`~imgaug.augmenters.segmentation.UniformPointsSampler`. Hence, it
     generates a fixed amount of ``N`` random coordinates of voronoi cells on
     each image. The cell coordinates are sampled uniformly using the image
     height and width as maxima.
@@ -705,16 +705,16 @@ class UniformVoronoi(Voronoi):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -757,9 +757,9 @@ class RegularGridVoronoi(Voronoi):
     """Sample Voronoi cells from regular grids and color-average them.
 
     This augmenter is a shortcut for the combination of
-    :class:`imgaug.augmenters.segmentation.Voronoi`,
-    :class:`imgaug.augmenters.segmentation.RegularGridPointsSampler` and
-    :class:`imgaug.augmenters.segmentation.DropoutPointsSampler`. Hence, it
+    :class:`~imgaug.augmenters.segmentation.Voronoi`,
+    :class:`~imgaug.augmenters.segmentation.RegularGridPointsSampler` and
+    :class:`~imgaug.augmenters.segmentation.DropoutPointsSampler`. Hence, it
     generates a regular grid with ``R`` rows and ``C`` columns of coordinates
     on each image. Then, it drops ``p`` percent of the ``R*C`` coordinates
     to randomize the grid. Each image pixel then belongs to the voronoi
@@ -860,16 +860,16 @@ class RegularGridVoronoi(Voronoi):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -916,9 +916,9 @@ class RelativeRegularGridVoronoi(Voronoi):
     """Sample Voronoi cells from image-dependent grids and color-average them.
 
     This augmenter is a shortcut for the combination of
-    :class:`imgaug.augmenters.segmentation.Voronoi`,
-    :class:`imgaug.augmenters.segmentation.RegularGridPointsSampler` and
-    :class:`imgaug.augmenters.segmentation.DropoutPointsSampler`. Hence, it
+    :class:`~imgaug.augmenters.segmentation.Voronoi`,
+    :class:`~imgaug.augmenters.segmentation.RegularGridPointsSampler` and
+    :class:`~imgaug.augmenters.segmentation.DropoutPointsSampler`. Hence, it
     generates a regular grid with ``R`` rows and ``C`` columns of coordinates
     on each image. Then, it drops ``p`` percent of the ``R*C`` coordinates
     to randomize the grid. Each image pixel then belongs to the voronoi
@@ -1029,16 +1029,16 @@ class RelativeRegularGridVoronoi(Voronoi):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1092,7 +1092,7 @@ class IPointsSampler(object):
 
     Point samplers return coordinate arrays of shape ``Nx2``.
     These coordinates can be used in other augmenters, see e.g.
-    :class:`imgaug.augmenters.segmentation.Voronoi`.
+    :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
     """
 
@@ -1113,7 +1113,7 @@ class IPointsSampler(object):
         random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
             A random state to use for any probabilistic function required
             during the point sampling.
-            See :func:`imgaug.random.RNG` for details.
+            See :func:`~imgaug.random.RNG` for details.
 
         Returns
         -------

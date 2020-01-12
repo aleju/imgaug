@@ -237,7 +237,7 @@ class Cartoon(meta.Augmenter):
     ----------
     blur_ksize : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Median filter kernel size.
-        See :func:`imgaug.augmenters.artistic.stylize_cartoon` for details.
+        See :func:`~imgaug.augmenters.artistic.stylize_cartoon` for details.
 
             * If ``number``: That value will be used for all images.
             * If ``tuple (a, b) of number``: A random value will be uniformly
@@ -250,7 +250,7 @@ class Cartoon(meta.Augmenter):
 
     segmentation_size : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Mean-Shift segmentation size multiplier.
-        See :func:`imgaug.augmenters.artistic.stylize_cartoon` for details.
+        See :func:`~imgaug.augmenters.artistic.stylize_cartoon` for details.
 
             * If ``number``: That value will be used for all images.
             * If ``tuple (a, b) of number``: A random value will be uniformly
@@ -263,7 +263,7 @@ class Cartoon(meta.Augmenter):
 
     saturation : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Saturation multiplier.
-        See :func:`imgaug.augmenters.artistic.stylize_cartoon` for details.
+        See :func:`~imgaug.augmenters.artistic.stylize_cartoon` for details.
 
             * If ``number``: That value will be used for all images.
             * If ``tuple (a, b) of number``: A random value will be uniformly
@@ -276,7 +276,7 @@ class Cartoon(meta.Augmenter):
 
     edge_prevalence : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Multiplier for the prevalence of edges.
-        See :func:`imgaug.augmenters.artistic.stylize_cartoon` for details.
+        See :func:`~imgaug.augmenters.artistic.stylize_cartoon` for details.
 
             * If ``number``: That value will be used for all images.
             * If ``tuple (a, b) of number``: A random value will be uniformly
@@ -292,13 +292,13 @@ class Cartoon(meta.Augmenter):
         Defaults to ``RGB``.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -361,6 +361,6 @@ class Cartoon(meta.Augmenter):
         )
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.blur_ksize, self.segmentation_size, self.saturation,
                 self.edge_prevalence, self.from_colorspace]

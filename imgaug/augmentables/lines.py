@@ -1420,9 +1420,9 @@ class LineString(object):
         """Generate a heatmap object from the line string.
 
         This is similar to
-        :func:`imgaug.augmentables.lines.LineString.draw_lines_heatmap_array`,
+        :func:`~imgaug.augmentables.lines.LineString.draw_lines_heatmap_array`,
         executed with ``alpha=1.0``. The result is wrapped in a
-        :class:`imgaug.augmentables.heatmaps.HeatmapsOnImage` object instead
+        :class:`~imgaug.augmentables.heatmaps.HeatmapsOnImage` object instead
         of just an array. No points are drawn.
 
         Parameters
@@ -1464,7 +1464,7 @@ class LineString(object):
         """Generate a segmentation map object from the line string.
 
         This is similar to
-        :func:`imgaug.augmentables.lines.LineString.draw_mask`.
+        :func:`~imgaug.augmentables.lines.LineString.draw_mask`.
         The result is wrapped in a ``SegmentationMapsOnImage`` object
         instead of just an array.
 
@@ -1558,10 +1558,10 @@ class LineString(object):
             ``LineString``.
 
         max_distance : float, optional
-            See :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`.
+            See :func:`~imgaug.augmentables.lines.LineString.coords_almost_equals`.
 
         points_per_edge : int, optional
-            See :func:`imgaug.augmentables.lines.LineString.coords_almost_equals`.
+            See :func:`~imgaug.augmentables.lines.LineString.coords_almost_equals`.
 
         Returns
         -------
@@ -1791,7 +1791,7 @@ class LineStringsOnImage(IAugmentable):
         """Convert an ``(N,M,2)`` ndarray to a ``LineStringsOnImage`` object.
 
         This is the inverse of
-        :func:`imgaug.augmentables.lines.LineStringsOnImage.to_xy_array`.
+        :func:`~imgaug.augmentables.lines.LineStringsOnImage.to_xy_array`.
 
         Parameters
         ----------
@@ -1821,7 +1821,7 @@ class LineStringsOnImage(IAugmentable):
         """Convert this object to an iterable of ``(M,2)`` arrays of points.
 
         This is the inverse of
-        :func:`imgaug.augmentables.lines.LineStringsOnImage.from_xy_array`.
+        :func:`~imgaug.augmentables.lines.LineStringsOnImage.from_xy_array`.
 
         Parameters
         ----------

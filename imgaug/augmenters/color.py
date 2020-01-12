@@ -323,7 +323,7 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -964,27 +964,27 @@ class WithColorspace(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
     to_colorspace : str
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
         One or more augmenters to apply to converted images.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1044,11 +1044,11 @@ class WithColorspace(meta.Augmenter):
         return aug
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.channels]
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -1071,7 +1071,7 @@ class WithBrightnessChannels(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
@@ -1090,22 +1090,22 @@ class WithBrightnessChannels(meta.Augmenter):
             * If ``str``: Will always use this colorspace.
             * If ``list`` or ``str``: Will pick imagewise a random colorspace
               from this list.
-            * If :class:`imgaug.parameters.StochasticParameter`:
+            * If :class:`~imgaug.parameters.StochasticParameter`:
               A parameter that will be queried once per batch to generate
               all target colorspaces. Expected to return strings matching the
               ``CSPACE_*`` constants.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1220,11 +1220,11 @@ class WithBrightnessChannels(meta.Augmenter):
         return aug
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.to_colorspace, self.from_colorspace]
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -1251,21 +1251,21 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :func:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.airthmetic.Multiply`.
+        See :class:`~imgaug.augmenters.airthmetic.Multiply`.
 
     add : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.airthmetic.Add`.
+        See :class:`~imgaug.augmenters.airthmetic.Add`.
 
     to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     from_colorspace : str, optional
-        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     random_order : bool, optional
         Whether to apply the add and multiply operations in random
@@ -1273,13 +1273,13 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
         multiply and then add.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1351,27 +1351,27 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.MultiplyAndAddToBrightness`.
+        See :func:`~imgaug.augmenters.color.MultiplyAndAddToBrightness`.
 
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.airthmetic.Multiply`.
+        See :class:`~imgaug.augmenters.airthmetic.Multiply`.
 
     to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     from_colorspace : str, optional
-        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1415,27 +1415,27 @@ class AddToBrightness(MultiplyAndAddToBrightness):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.MultiplyAndAddToBrightness`.
+        See :func:`~imgaug.augmenters.color.MultiplyAndAddToBrightness`.
 
     Parameters
     ----------
     add : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.airthmetic.Add`.
+        See :class:`~imgaug.augmenters.airthmetic.Add`.
 
     to_colorspace : imgaug.ALL or str or list of str or imgaug.parameters.StochasticParameter, optional
-        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     from_colorspace : str, optional
-        See :class:`imgaug.augmenters.color.WithBrightnessChannels`.
+        See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1494,12 +1494,12 @@ class WithHueAndSaturation(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspaces_`.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter or None, optional
         One or more augmenters to apply to converted images.
@@ -1507,13 +1507,13 @@ class WithHueAndSaturation(meta.Augmenter):
         and have to modify these.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1631,11 +1631,11 @@ class WithHueAndSaturation(meta.Augmenter):
         return aug
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.from_colorspace]
 
     def get_children_lists(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_children_lists`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
     def __str__(self):
@@ -1723,16 +1723,16 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
         are used instead of `mul`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1872,16 +1872,16 @@ class MultiplyHue(MultiplyHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1933,16 +1933,16 @@ class MultiplySaturation(MultiplyHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -1988,16 +1988,16 @@ class RemoveSaturation(MultiplySaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2052,19 +2052,19 @@ def AddToHueAndSaturation(value=0, per_channel=False, from_colorspace="RGB",
     Parameters
     ----------
     value : int or tuple of int or list of int or imgaug.parameters.StochasticParameter, optional
-        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
+        See :func:`~imgaug.augmenters.arithmetic.Add.__init__()`.
 
     per_channel : bool or float, optional
-        See :func:`imgaug.augmenters.arithmetic.Add.__init__()`.
+        See :func:`~imgaug.augmenters.arithmetic.Add.__init__()`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     channels : int or list of int or None, optional
-        See :func:`imgaug.augmenters.meta.WithChannels.__init__()`.
+        See :func:`~imgaug.augmenters.meta.WithChannels.__init__()`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2105,7 +2105,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -2167,16 +2167,16 @@ class AddToHueAndSaturation(meta.Augmenter):
         are used instead of `value`.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2333,7 +2333,7 @@ class AddToHueAndSaturation(meta.Augmenter):
         return image_hsv
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.value, self.value_hue, self.value_saturation,
                 self.per_channel, self.from_colorspace]
 
@@ -2429,16 +2429,16 @@ class AddToHue(AddToHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2494,16 +2494,16 @@ class AddToSaturation(AddToHueAndSaturation):
               parameter per image.
 
     from_colorspace : str, optional
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2545,7 +2545,7 @@ class ChangeColorspace(meta.Augmenter):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -2583,13 +2583,13 @@ class ChangeColorspace(meta.Augmenter):
               parameter per image.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     """
 
@@ -2724,7 +2724,7 @@ class ChangeColorspace(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.to_colorspace, self.alpha]
 
 
@@ -2744,7 +2744,7 @@ class Grayscale(ChangeColorspace):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -2764,16 +2764,16 @@ class Grayscale(ChangeColorspace):
 
     from_colorspace : str, optional
         The source colorspace (of the input images).
-        See :func:`imgaug.augmenters.color.change_colorspace_`.
+        See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -2862,7 +2862,7 @@ class ChangeColorTemperature(meta.Augmenter):
         return batch
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.kelvin, self.from_colorspace]
 
 
@@ -2975,7 +2975,7 @@ class _AbstractColorQuantization(meta.Augmenter):
         """Apply the augmenter-specific quantization function to an image."""
 
     def get_parameters(self):
-        """See :func:`imgaug.augmenters.meta.Augmenter.get_parameters`."""
+        """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.counts,
                 self.from_colorspace,
                 self.to_colorspace,
@@ -3023,15 +3023,15 @@ class KMeansColorQuantization(_AbstractColorQuantization):
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_kmeans`
+                :func:`~imgaug.augmenters.color.quantize_colors_kmeans`
             )
 
         if (image size > max_size)::
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_kmeans`,
-                :func:`imgaug.imgaug.imresize_single_image`
+                :func:`~imgaug.augmenters.color.quantize_colors_kmeans`,
+                :func:`~imgaug.imgaug.imresize_single_image`
             )
 
     Parameters
@@ -3051,7 +3051,7 @@ class KMeansColorQuantization(_AbstractColorQuantization):
 
     to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
-        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
+        See :func:`~imgaug.augmenters.color.change_colorspace_` for valid values.
         This will be ignored for grayscale input images.
 
             * If ``None`` the colorspace of input images will not be changed.
@@ -3077,16 +3077,16 @@ class KMeansColorQuantization(_AbstractColorQuantization):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3292,15 +3292,15 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_uniform_`
+                :func:`~imgaug.augmenters.color.quantize_uniform_`
             )
 
         if (image size > max_size)::
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_uniform_`,
-                :func:`imgaug.imgaug.imresize_single_image`
+                :func:`~imgaug.augmenters.color.quantize_uniform_`,
+                :func:`~imgaug.imgaug.imresize_single_image`
             )
 
     Parameters
@@ -3318,7 +3318,7 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
     to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
-        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
+        See :func:`~imgaug.augmenters.color.change_colorspace_` for valid values.
         This will be ignored for grayscale input images.
 
             * If ``None`` the colorspace of input images will not be changed.
@@ -3344,16 +3344,16 @@ class UniformColorQuantization(_AbstractColorQuantization):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3437,15 +3437,15 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_uniform`
+                :func:`~imgaug.augmenters.color.quantize_colors_uniform`
             )
 
         if (image size > max_size)::
 
             minimum of (
                 ``imgaug.augmenters.color.ChangeColorspace``,
-                :func:`imgaug.augmenters.color.quantize_colors_uniform`,
-                :func:`imgaug.imgaug.imresize_single_image`
+                :func:`~imgaug.augmenters.color.quantize_colors_uniform`,
+                :func:`~imgaug.imgaug.imresize_single_image`
             )
 
     Parameters
@@ -3463,7 +3463,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
 
     to_colorspace : None or str or list of str or imgaug.parameters.StochasticParameter
         The colorspace in which to perform the quantization.
-        See :func:`imgaug.augmenters.color.change_colorspace_` for valid values.
+        See :func:`~imgaug.augmenters.color.change_colorspace_` for valid values.
         This will be ignored for grayscale input images.
 
             * If ``None`` the colorspace of input images will not be changed.
@@ -3489,16 +3489,16 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
     interpolation : int or str, optional
         Interpolation method to use during downscaling when `max_size` is
         exceeded. Valid methods are the same as in
-        :func:`imgaug.imgaug.imresize_single_image`.
+        :func:`~imgaug.imgaug.imresize_single_image`.
 
     name : None or str, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     deterministic : bool, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`imgaug.augmenters.meta.Augmenter.__init__`.
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
     Examples
     --------
@@ -3554,7 +3554,7 @@ class Posterize(UniformColorQuantizationToNBits):
 
     dtype support::
 
-        See :class:`imgaug.augmenters.color.UniformColorQuantizationToNBits`.
+        See :class:`~imgaug.augmenters.color.UniformColorQuantizationToNBits`.
 
     """
 
@@ -3572,7 +3572,7 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.quantize_uniform_`.
+        See :func:`~imgaug.augmenters.color.quantize_uniform_`.
 
     Parameters
     ----------
@@ -3751,7 +3751,7 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.quantize_uniform_to_n_bits_`.
+        See :func:`~imgaug.augmenters.color.quantize_uniform_to_n_bits_`.
 
     Parameters
     ----------
@@ -3786,7 +3786,7 @@ def quantize_uniform_to_n_bits_(arr, nb_bits):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.quantize_uniform_`.
+        See :func:`~imgaug.augmenters.color.quantize_uniform_`.
 
     Parameters
     ----------
@@ -3831,7 +3831,7 @@ def posterize(arr, nb_bits):
 
     dtype support::
 
-        See :func:`imgaug.augmenters.color.quantize_uniform_to_n_bits`.
+        See :func:`~imgaug.augmenters.color.quantize_uniform_to_n_bits`.
 
     Parameters
     ----------

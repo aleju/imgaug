@@ -84,7 +84,7 @@ class Polygon(object):
     ----------
     exterior : list of imgaug.augmentables.kps.Keypoint or list of tuple of float or (N,2) ndarray
         List of points defining the polygon. May be either a ``list`` of
-        :class:`imgaug.augmentables.kps.Keypoint` objects or a ``list`` of
+        :class:`~imgaug.augmentables.kps.Keypoint` objects or a ``list`` of
         ``tuple`` s in xy-form or a numpy array of shape (N,2) for ``N``
         points in xy-form.
         All coordinates are expected to be the absolute subpixel-coordinates
@@ -1055,7 +1055,7 @@ class Polygon(object):
     def subdivide_(self, points_per_edge):
         """Derive a new poly with ``N`` interpolated points per edge in-place.
 
-        See :func:`imgaug.augmentables.lines.LineString.subdivide` for details.
+        See :func:`~imgaug.augmentables.lines.LineString.subdivide` for details.
 
         Parameters
         ----------
@@ -1081,7 +1081,7 @@ class Polygon(object):
     def subdivide(self, points_per_edge):
         """Derive a new polygon with ``N`` interpolated points per edge.
 
-        See :func:`imgaug.augmentables.lines.LineString.subdivide` for details.
+        See :func:`~imgaug.augmentables.lines.LineString.subdivide` for details.
 
         Parameters
         ----------
@@ -1157,7 +1157,7 @@ class Polygon(object):
         Returns
         -------
         list of imgaug.augmentables.kps.Keypoint
-            Exterior vertices as :class:`imgaug.augmentables.kps.Keypoint`
+            Exterior vertices as :class:`~imgaug.augmentables.kps.Keypoint`
             instances.
 
         """
@@ -1238,15 +1238,15 @@ class Polygon(object):
         ----------
         other : imgaug.augmentables.polys.Polygon or (N,2) ndarray or list of tuple
             See
-            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+            :func:`~imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         max_distance : number, optional
             See
-            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+            :func:`~imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         points_per_edge : int, optional
             See
-            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+            :func:`~imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         Returns
         -------
@@ -1322,7 +1322,7 @@ class Polygon(object):
         Estimate if this polygon's and another's geometry/labels are similar.
 
         This is the same as
-        :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals` but
+        :func:`~imgaug.augmentables.polys.Polygon.exterior_almost_equals` but
         additionally compares the labels.
 
         Parameters
@@ -1332,11 +1332,11 @@ class Polygon(object):
 
         max_distance : float, optional
             See
-            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+            :func:`~imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         points_per_edge : int, optional
             See
-            :func:`imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
+            :func:`~imgaug.augmentables.polys.Polygon.exterior_almost_equals`.
 
         Returns
         -------
@@ -1357,7 +1357,7 @@ class Polygon(object):
         ----------
         exterior : list of imgaug.augmentables.kps.Keypoint or list of tuple or (N,2) ndarray, optional
             List of points defining the polygon. See
-            :func:`imgaug.augmentables.polys.Polygon.__init__` for details.
+            :func:`~imgaug.augmentables.polys.Polygon.__init__` for details.
 
         label : None or str, optional
             If not ``None``, the ``label`` of the copied object will be set
