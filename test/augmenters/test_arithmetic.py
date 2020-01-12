@@ -1194,7 +1194,7 @@ class TestAdd(unittest.TestCase):
                 assert not np.allclose(image_aug[:, :, 1:], image_aug[:, :, :-1])
 
     def test_pickleable(self):
-        aug = iaa.Add((0, 50), per_channel=True, random_state=1)
+        aug = iaa.Add((0, 50), per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=10)
 
 
@@ -1687,7 +1687,7 @@ class TestAddElementwise(unittest.TestCase):
                 assert not np.allclose(image_aug[:, :, 1:], image_aug[:, :, :-1])
 
     def test_pickleable(self):
-        aug = iaa.AddElementwise((0, 50), per_channel=True, random_state=1)
+        aug = iaa.AddElementwise((0, 50), per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=2)
 
 
@@ -1890,7 +1890,7 @@ class AdditiveGaussianNoise(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.AdditiveGaussianNoise(scale=(0.1, 10), per_channel=True,
-                                        random_state=1)
+                                        seed=1)
         runtest_pickleable_uint8_img(aug, iterations=2)
 
 
@@ -2356,7 +2356,7 @@ class TestDropout(unittest.TestCase):
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
     def test_pickleable(self):
-        aug = iaa.Dropout(p=0.5, per_channel=True, random_state=1)
+        aug = iaa.Dropout(p=0.5, per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -2454,7 +2454,7 @@ class TestCoarseDropout(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.CoarseDropout(p=0.5, size_px=10, per_channel=True,
-                                random_state=1)
+                                seed=1)
         runtest_pickleable_uint8_img(aug, iterations=10, shape=(40, 40, 3))
 
 
@@ -2810,7 +2810,7 @@ class TestDropout2d(unittest.TestCase):
                         assert np.sum(image_aug == 0) == 7
 
     def test_pickleable(self):
-        aug = iaa.Dropout2d(p=0.5, random_state=1)
+        aug = iaa.Dropout2d(p=0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(1, 1, 50))
 
 
@@ -3118,7 +3118,7 @@ class TestTotalDropout(unittest.TestCase):
                                 == 5*3)
 
     def test_pickleable(self):
-        aug = iaa.TotalDropout(p=0.5, random_state=1)
+        aug = iaa.TotalDropout(p=0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=30, shape=(4, 4, 2))
 
 
@@ -3592,7 +3592,7 @@ class TestMultiply(unittest.TestCase):
             """
 
     def test_pickleable(self):
-        aug = iaa.Multiply((0.5, 1.5), per_channel=True, random_state=1)
+        aug = iaa.Multiply((0.5, 1.5), per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
@@ -4100,7 +4100,7 @@ class TestMultiplyElementwise(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.MultiplyElementwise((0.5, 1.5), per_channel=True,
-                                      random_state=1)
+                                      seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -4476,7 +4476,7 @@ class TestReplaceElementwise(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.ReplaceElementwise(mask=0.5, replacement=(0, 255),
-                                     per_channel=True, random_state=1)
+                                     per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -4503,7 +4503,7 @@ class TestSaltAndPepper(unittest.TestCase):
         assert nb_salt > 200
 
     def test_pickleable(self):
-        aug = iaa.SaltAndPepper(p=0.5, per_channel=True, random_state=1)
+        aug = iaa.SaltAndPepper(p=0.5, per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -4594,7 +4594,7 @@ class TestCoarseSaltAndPepper(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.CoarseSaltAndPepper(p=0.5, size_px=(4, 15),
-                                      per_channel=True, random_state=1)
+                                      per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
@@ -4623,7 +4623,7 @@ class TestSalt(unittest.TestCase):
         assert nb_salt > 200
 
     def test_pickleable(self):
-        aug = iaa.Salt(p=0.5, per_channel=True, random_state=1)
+        aug = iaa.Salt(p=0.5, per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -4715,7 +4715,7 @@ class TestCoarseSalt(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.CoarseSalt(p=0.5, size_px=(4, 15),
-                             per_channel=True, random_state=1)
+                             per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
@@ -4743,7 +4743,7 @@ class TestPepper(unittest.TestCase):
         assert nb_salt == 0
 
     def test_pickleable(self):
-        aug = iaa.Pepper(p=0.5, per_channel=True, random_state=1)
+        aug = iaa.Pepper(p=0.5, per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -4835,7 +4835,7 @@ class TestCoarsePepper(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.CoarsePepper(p=0.5, size_px=(4, 15),
-                               per_channel=True, random_state=1)
+                               per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
@@ -5639,7 +5639,7 @@ class TestInvert(unittest.TestCase):
                 assert np.allclose(image_max_aug, image_min)
 
     def test_pickleable(self):
-        aug = iaa.Invert(p=0.5, per_channel=True, random_state=1)
+        aug = iaa.Invert(p=0.5, per_channel=True, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20, shape=(2, 2, 5))
 
 
@@ -5891,5 +5891,5 @@ class TestJpegCompression(unittest.TestCase):
                 assert image_aug.shape == image.shape
 
     def test_pickleable(self):
-        aug = iaa.JpegCompression((0, 100), random_state=1)
+        aug = iaa.JpegCompression((0, 100), seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)

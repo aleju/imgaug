@@ -260,13 +260,13 @@ class TestAugmenters(unittest.TestCase):
         # to get different augmentations as many functions are dependend
         # only on the severity. So we change only for some functions only
         # the seed and for the others severity+seed.
-        image_aug1 = aug_cls(severity=severity, random_state=1)(image=image)
-        image_aug2 = aug_cls(severity=severity, random_state=1)(image=image)
+        image_aug1 = aug_cls(severity=severity, seed=1)(image=image)
+        image_aug2 = aug_cls(severity=severity, seed=1)(image=image)
         if dependent_on_seed:
-            image_aug3 = aug_cls(severity=severity, random_state=2)(
+            image_aug3 = aug_cls(severity=severity, seed=2)(
                 image=image)
         else:
-            image_aug3 = aug_cls(severity=severity-1, random_state=2)(
+            image_aug3 = aug_cls(severity=severity-1, seed=2)(
                 image=image)
         image_aug_exp = func_expected(
             image,

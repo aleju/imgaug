@@ -107,6 +107,15 @@ class RandAugment(meta.Sequential):
         ``3`` channels or come from a different dataset than used by the
         paper.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
+    name : None or str, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
+    **old_kwargs
+        Outdated parameters. Avoid using these.
+
     Examples
     --------
     >>> import imgaug.augmenters as iaa
@@ -140,9 +149,9 @@ class RandAugment(meta.Sequential):
     # N=2, M=28 is optimal for ImageNet with EfficientNet-B7
     # for cval they use [125, 122, 113]
     def __init__(self, n=2, m=(6, 12), cval=128,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         # pylint: disable=invalid-name
-        random_state = iarandom.RNG(random_state)
+        random_state = iarandom.RNG(seed)
 
         # we don't limit the value range to 10 here, because the paper
         # gives several examples of using more than 10 for M
@@ -169,11 +178,12 @@ class RandAugment(meta.Sequential):
 
         super(RandAugment, self).__init__(
             [
-                meta.Sequential(initial_augs, random_state=random_state),
+                meta.Sequential(initial_augs,
+                                seed=random_state.derive_rng_()),
                 meta.SomeOf(n, main_augs, random_order=True,
-                            random_state=random_state)
+                            seed=random_state.derive_rng_())
             ],
-            name=name, deterministic=deterministic, random_state=random_state
+            seed=random_state, name=name, **old_kwargs
         )
 
     @classmethod

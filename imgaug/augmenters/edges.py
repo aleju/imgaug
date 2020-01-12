@@ -256,14 +256,14 @@ class Canny(meta.Augmenter):
         color that was uniformly randomly sampled from the space of all
         ``uint8`` colors.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -314,8 +314,8 @@ class Canny(meta.Augmenter):
                  hysteresis_thresholds=((100-40, 100+40), (200-40, 200+40)),
                  sobel_kernel_size=(3, 7),
                  colorizer=None,
-                 name=None, deterministic=False, random_state=None):
-        super(Canny, self).__init__(name=name, deterministic=deterministic, random_state=random_state)
+                 seed=None, name=None, **old_kwargs):
+        super(Canny, self).__init__(seed=seed, name=name, **old_kwargs)
 
         self.alpha = iap.handle_continuous_param(
             alpha, "alpha", value_range=(0, 1.0), tuple_to_uniform=True,

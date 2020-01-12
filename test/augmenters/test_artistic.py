@@ -239,5 +239,5 @@ class TestCartoon(unittest.TestCase):
         assert params[4] == iaa.CSPACE_RGB
 
     def test_pickleable(self):
-        aug = iaa.Cartoon(random_state=1)
+        aug = iaa.Cartoon(seed=1)
         runtest_pickleable_uint8_img(aug, iterations=6)

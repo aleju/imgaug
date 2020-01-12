@@ -74,14 +74,14 @@ class Convolve(meta.Augmenter):
               be ``None``, which will result in no changes to the respective
               channel.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -113,9 +113,9 @@ class Convolve(meta.Augmenter):
     """
 
     def __init__(self, matrix=None,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Convolve, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         if matrix is None:
             self.matrix = None
@@ -263,14 +263,14 @@ class Sharpen(Convolve):
             * If a ``StochasticParameter``, a value will be sampled from that
               parameter per image.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -289,7 +289,7 @@ class Sharpen(Convolve):
 
     """
     def __init__(self, alpha=0, lightness=1,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -300,8 +300,8 @@ class Sharpen(Convolve):
         matrix_gen = _SharpeningMatrixGenerator(alpha_param, lightness_param)
 
         super(Sharpen, self).__init__(
-            matrix=matrix_gen, name=name, deterministic=deterministic,
-            random_state=random_state)
+            matrix=matrix_gen,
+            seed=seed, name=name, **old_kwargs)
 
 
 class _SharpeningMatrixGenerator(object):
@@ -370,14 +370,14 @@ class Emboss(Convolve):
             * If a ``StochasticParameter``, a value will be sampled from the
               parameter per image.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -390,7 +390,7 @@ class Emboss(Convolve):
 
     """
     def __init__(self, alpha=0, strength=1,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -401,8 +401,8 @@ class Emboss(Convolve):
         matrix_gen = _EmbossMatrixGenerator(alpha_param, strength_param)
 
         super(Emboss, self).__init__(
-            matrix=matrix_gen, name=name, deterministic=deterministic,
-            random_state=random_state)
+            matrix=matrix_gen,
+            seed=seed, name=name, **old_kwargs)
 
 
 class _EmbossMatrixGenerator(object):
@@ -457,14 +457,14 @@ class EdgeDetect(Convolve):
             * If a ``StochasticParameter``, a value will be sampled from that
               parameter per image.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -476,8 +476,8 @@ class EdgeDetect(Convolve):
     blending factor between ``0%`` and ``100%``.
 
     """
-    def __init__(self, alpha=0, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, alpha=0,
+                 seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -485,8 +485,8 @@ class EdgeDetect(Convolve):
         matrix_gen = _EdgeDetectMatrixGenerator(alpha_param)
 
         super(EdgeDetect, self).__init__(
-            matrix=matrix_gen, name=name, deterministic=deterministic,
-            random_state=random_state)
+            matrix=matrix_gen,
+            seed=seed, name=name, **old_kwargs)
 
 
 class _EdgeDetectMatrixGenerator(object):
@@ -563,14 +563,14 @@ class DirectedEdgeDetect(Convolve):
             * If a ``StochasticParameter``, a value will be sampled from the
               parameter per image.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -600,7 +600,7 @@ class DirectedEdgeDetect(Convolve):
 
     """
     def __init__(self, alpha=0, direction=(0.0, 1.0),
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -612,8 +612,8 @@ class DirectedEdgeDetect(Convolve):
                                                         direction_param)
 
         super(DirectedEdgeDetect, self).__init__(
-            matrix=matrix_gen, name=name, deterministic=deterministic,
-            random_state=random_state)
+            matrix=matrix_gen,
+            seed=seed, name=name, **old_kwargs)
 
 
 class _DirectedEdgeDetectMatrixGenerator(object):

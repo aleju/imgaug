@@ -80,14 +80,14 @@ class FastSnowyLandscape(meta.Augmenter):
         The source colorspace of the input images.
         See :func:`~imgaug.augmenters.color.ChangeColorspace.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -127,9 +127,9 @@ class FastSnowyLandscape(meta.Augmenter):
     def __init__(self, lightness_threshold=(100, 255),
                  lightness_multiplier=(1.0, 4.0),
                  from_colorspace=colorlib.CSPACE_RGB,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(FastSnowyLandscape, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.lightness_threshold = iap.handle_continuous_param(
             lightness_threshold, "lightness_threshold",
@@ -314,14 +314,14 @@ class CloudLayer(meta.Augmenter):
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
@@ -329,9 +329,9 @@ class CloudLayer(meta.Augmenter):
                  intensity_coarse_scale, alpha_min, alpha_multiplier,
                  alpha_size_px_max, alpha_freq_exponent, sparsity,
                  density_multiplier,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CloudLayer, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.intensity_mean = iap.handle_continuous_param(
             intensity_mean, "intensity_mean")
         self.intensity_freq_exponent = intensity_freq_exponent
@@ -509,14 +509,14 @@ class Clouds(meta.SomeOf):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -527,7 +527,8 @@ class Clouds(meta.SomeOf):
 
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
+    def __init__(self, seed=None, name=None, **old_kwargs):
+        # FIXME random state not transferred to children
         layers = [
             CloudLayer(
                 intensity_mean=(196, 255),
@@ -557,9 +558,7 @@ class Clouds(meta.SomeOf):
             (1, 2),
             children=layers,
             random_order=False,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO add vertical gradient alpha to have fog only at skylevel/groundlevel
@@ -597,14 +596,14 @@ class Fog(CloudLayer):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -615,7 +614,7 @@ class Fog(CloudLayer):
 
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
+    def __init__(self, seed=None, name=None, **old_kwargs):
         super(Fog, self).__init__(
             intensity_mean=(220, 255),
             intensity_freq_exponent=(-2.0, -1.5),
@@ -626,10 +625,7 @@ class Fog(CloudLayer):
             alpha_freq_exponent=(-4.0, -2.0),
             sparsity=0.9,
             density_multiplier=(0.4, 0.9),
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO add examples and add these to the overview docs
@@ -783,23 +779,23 @@ class SnowflakesLayer(meta.Augmenter):
         will be clipped to be within that range. This prevents extreme
         values for very small or large images.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
     def __init__(self, density, density_uniformity, flake_size,
                  flake_size_uniformity, angle, speed, blur_sigma_fraction,
-                 blur_sigma_limits=(0.5, 3.75), name=None, deterministic=False,
-                 random_state=None):
+                 blur_sigma_limits=(0.5, 3.75),
+                 seed=None, name=None, **old_kwargs):
         super(SnowflakesLayer, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.density = density
         self.density_uniformity = iap.handle_continuous_param(
             density_uniformity, "density_uniformity", value_range=(0.0, 1.0))
@@ -1104,14 +1100,14 @@ class Snowflakes(meta.SomeOf):
             * If a ``StochasticParameter``, then a value will be sampled
               per image from that parameter.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1133,7 +1129,8 @@ class Snowflakes(meta.SomeOf):
     def __init__(self, density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
                  flake_size=(0.2, 0.7), flake_size_uniformity=(0.4, 0.8),
                  angle=(-30, 30), speed=(0.007, 0.03),
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
+        # FIXME random state not transferred to children
         layer = SnowflakesLayer(
             density=density,
             density_uniformity=density_uniformity,
@@ -1148,10 +1145,7 @@ class Snowflakes(meta.SomeOf):
             (1, 3),
             children=[layer.deepcopy() for _ in range(3)],
             random_order=False,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class RainLayer(SnowflakesLayer):
@@ -1203,27 +1197,26 @@ class RainLayer(SnowflakesLayer):
     blur_sigma_limits : tuple of float, optional
         Same as in :class:`~imgaug.augmenters.weather.SnowflakesLayer`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
     def __init__(self, density, density_uniformity, drop_size,
                  drop_size_uniformity, angle, speed, blur_sigma_fraction,
-                 blur_sigma_limits=(0.5, 3.75), name=None, deterministic=False,
-                 random_state=None):
+                 blur_sigma_limits=(0.5, 3.75),
+                 seed=None, name=None, **old_kwargs):
         super(RainLayer, self).__init__(
             density, density_uniformity, drop_size,
             drop_size_uniformity, angle, speed, blur_sigma_fraction,
             blur_sigma_limits=blur_sigma_limits,
-            name=name, deterministic=deterministic, random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
     @classmethod
     def _blur(cls, noise, sigma):
@@ -1300,14 +1293,14 @@ class Rain(meta.SomeOf):
     speed : number or tuple of number or list of number or imgaug.parameters.StochasticParameter
         See :class:`~imgaug.augmenters.weather.RainLayer`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1329,7 +1322,8 @@ class Rain(meta.SomeOf):
     def __init__(self, nb_iterations=(1, 3),
                  drop_size=(0.01, 0.02),
                  speed=(0.04, 0.20),
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
+        # FIXME random state not transferred to children
         layer = RainLayer(
             density=(0.03, 0.14),
             density_uniformity=(0.8, 1.0),
@@ -1344,7 +1338,4 @@ class Rain(meta.SomeOf):
             nb_iterations,
             children=[layer.deepcopy() for _ in range(3)],
             random_order=False,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)

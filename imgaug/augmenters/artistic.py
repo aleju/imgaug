@@ -291,14 +291,14 @@ class Cartoon(meta.Augmenter):
         The source colorspace. Use one of ``imgaug.augmenters.color.CSPACE_*``.
         Defaults to ``RGB``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -317,9 +317,9 @@ class Cartoon(meta.Augmenter):
     def __init__(self, blur_ksize=(1, 5), segmentation_size=(0.8, 1.2),
                  saturation=(1.5, 2.5), edge_prevalence=(0.9, 1.1),
                  from_colorspace=colorlib.CSPACE_RGB,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Cartoon, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.blur_ksize = iap.handle_continuous_param(
             blur_ksize, "blur_ksize", value_range=(0, None),

@@ -1161,14 +1161,14 @@ class Resize(meta.Augmenter):
               queried per image and is expected to return an ``int`` or
               ``str``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1232,9 +1232,9 @@ class Resize(meta.Augmenter):
     """
 
     def __init__(self, size, interpolation="cubic",
-                 name=None, deterministic=False, random_state=None):
-        super(Resize, self).__init__(name=name, deterministic=deterministic,
-                                     random_state=random_state)
+                 seed=None, name=None, **old_kwargs):
+        super(Resize, self).__init__(
+            seed=seed, name=name, **old_kwargs)
 
         self.size, self.size_order = self._handle_size_arg(size, False)
         self.interpolation = self._handle_interpolation_arg(interpolation)
@@ -1668,14 +1668,14 @@ class CropAndPad(meta.Augmenter):
         all sides. I.e. the crop/pad amount then is the same for all sides.
         If ``True``, four values will be sampled independently, one per side.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1754,10 +1754,10 @@ class CropAndPad(meta.Augmenter):
 
     def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0,
                  keep_size=True, sample_independently=True,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         # pylint: disable=invalid-name
         super(CropAndPad, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.mode, self.all_sides, self.top, self.right, self.bottom, \
             self.left = self._handle_px_and_percent_args(px, percent)
@@ -2236,14 +2236,14 @@ class Pad(CropAndPad):
         all sides. I.e. the pad amount then is the same for all sides.
         If ``True``, four values will be sampled independently, one per side.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2311,7 +2311,7 @@ class Pad(CropAndPad):
 
     def __init__(self, px=None, percent=None, pad_mode="constant", pad_cval=0,
                  keep_size=True, sample_independently=True,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         def recursive_validate(value):
             if value is None:
                 return value
@@ -2338,10 +2338,7 @@ class Pad(CropAndPad):
             pad_cval=pad_cval,
             keep_size=keep_size,
             sample_independently=sample_independently,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class Crop(CropAndPad):
@@ -2433,14 +2430,14 @@ class Crop(CropAndPad):
         all sides. I.e. the crop amount then is the same for all sides.
         If ``True``, four values will be sampled independently, one per side.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2487,7 +2484,7 @@ class Crop(CropAndPad):
 
     def __init__(self, px=None, percent=None, keep_size=True,
                  sample_independently=True,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         def recursive_negate(value):
             if value is None:
                 return value
@@ -2512,10 +2509,7 @@ class Crop(CropAndPad):
             percent=percent,
             keep_size=keep_size,
             sample_independently=sample_independently,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO maybe rename this to PadToMinimumSize?
@@ -2599,14 +2593,14 @@ class PadToFixedSize(meta.Augmenter):
               positions. First parameter is used for ``x`` coordinates,
               second for ``y`` coordinates.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2645,9 +2639,9 @@ class PadToFixedSize(meta.Augmenter):
 
     def __init__(self, width, height, pad_mode="constant", pad_cval=0,
                  position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PadToFixedSize, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.size = (width, height)
 
         # Position of where to pad. The further to the top left this is, the
@@ -2848,14 +2842,14 @@ class CenterPadToFixedSize(PadToFixedSize):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`PadToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2869,11 +2863,11 @@ class CenterPadToFixedSize(PadToFixedSize):
     """
 
     def __init__(self, width, height, pad_mode="constant", pad_cval=0,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterPadToFixedSize, self).__init__(
             width=width, height=height, pad_mode=pad_mode, pad_cval=pad_cval,
             position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO maybe rename this to CropToMaximumSize ?
@@ -2960,14 +2954,14 @@ class CropToFixedSize(meta.Augmenter):
               positions. First parameter is used for ``x`` coordinates,
               second for ``y`` coordinates.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2996,9 +2990,9 @@ class CropToFixedSize(meta.Augmenter):
     """
 
     def __init__(self, width, height, position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CropToFixedSize, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.size = (width, height)
 
         # Position of where to crop. The further to the top left this is,
@@ -3160,14 +3154,14 @@ class CenterCropToFixedSize(CropToFixedSize):
     height : int or None
         See :func:`CropToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3180,10 +3174,10 @@ class CenterCropToFixedSize(CropToFixedSize):
     """
 
     def __init__(self, width, height,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterCropToFixedSize, self).__init__(
             width=width, height=height, position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class CropToMultiplesOf(CropToFixedSize):
@@ -3215,14 +3209,14 @@ class CropToMultiplesOf(CropToFixedSize):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`CropToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3238,10 +3232,10 @@ class CropToMultiplesOf(CropToFixedSize):
     """
 
     def __init__(self, width_multiple, height_multiple, position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CropToMultiplesOf, self).__init__(
             width=None, height=None, position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.width_multiple = width_multiple
         self.height_multiple = height_multiple
 
@@ -3296,14 +3290,14 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     height_multiple : int or None
         See :func:`CropToMultiplesOf.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3319,12 +3313,12 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     """
 
     def __init__(self, width_multiple, height_multiple,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterCropToMultiplesOf, self).__init__(
             width_multiple=width_multiple,
             height_multiple=height_multiple,
             position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class PadToMultiplesOf(PadToFixedSize):
@@ -3355,14 +3349,14 @@ class PadToMultiplesOf(PadToFixedSize):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`PadToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3380,11 +3374,11 @@ class PadToMultiplesOf(PadToFixedSize):
     def __init__(self, width_multiple, height_multiple,
                  pad_mode="constant", pad_cval=0,
                  position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PadToMultiplesOf, self).__init__(
             width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.width_multiple = width_multiple
         self.height_multiple = height_multiple
 
@@ -3447,14 +3441,14 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`~imgaug.augmenters.size.PadToMultiplesOf.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3471,14 +3465,14 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
 
     def __init__(self, width_multiple, height_multiple,
                  pad_mode="constant", pad_cval=0,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterPadToMultiplesOf, self).__init__(
             width_multiple=width_multiple,
             height_multiple=height_multiple,
             pad_mode=pad_mode,
             pad_cval=pad_cval,
             position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class CropToPowersOf(CropToFixedSize):
@@ -3517,14 +3511,14 @@ class CropToPowersOf(CropToFixedSize):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`CropToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3540,10 +3534,10 @@ class CropToPowersOf(CropToFixedSize):
     """
 
     def __init__(self, width_base, height_base, position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CropToPowersOf, self).__init__(
             width=None, height=None, position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.width_base = width_base
         self.height_base = height_base
 
@@ -3598,14 +3592,14 @@ class CenterCropToPowersOf(CropToPowersOf):
     height_base : int or None
         See :func:`CropToPowersOf.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3621,10 +3615,10 @@ class CenterCropToPowersOf(CropToPowersOf):
     """
 
     def __init__(self, width_base, height_base,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterCropToPowersOf, self).__init__(
             width_base=width_base, height_base=height_base, position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class PadToPowersOf(PadToFixedSize):
@@ -3662,14 +3656,14 @@ class PadToPowersOf(PadToFixedSize):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`PadToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3687,11 +3681,11 @@ class PadToPowersOf(PadToFixedSize):
     def __init__(self, width_base, height_base,
                  pad_mode="constant", pad_cval=0,
                  position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PadToPowersOf, self).__init__(
             width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.width_base = width_base
         self.height_base = height_base
 
@@ -3753,14 +3747,14 @@ class CenterPadToPowersOf(PadToPowersOf):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`~imgaug.augmenters.size.PadToPowersOf.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3777,12 +3771,12 @@ class CenterPadToPowersOf(PadToPowersOf):
 
     def __init__(self, width_base, height_base,
                  pad_mode="constant", pad_cval=0,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterPadToPowersOf, self).__init__(
             width_base=width_base, height_base=height_base,
             pad_mode=pad_mode, pad_cval=pad_cval,
             position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class CropToAspectRatio(CropToFixedSize):
@@ -3807,14 +3801,14 @@ class CropToAspectRatio(CropToFixedSize):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`CropToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3830,10 +3824,10 @@ class CropToAspectRatio(CropToFixedSize):
     """
 
     def __init__(self, aspect_ratio, position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CropToAspectRatio, self).__init__(
             width=None, height=None, position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.aspect_ratio = aspect_ratio
 
     def _draw_samples(self, batch, random_state):
@@ -3887,14 +3881,14 @@ class CenterCropToAspectRatio(CropToAspectRatio):
     aspect_ratio : number
         See :func:`CropToAspectRatio.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3910,10 +3904,10 @@ class CenterCropToAspectRatio(CropToAspectRatio):
     """
 
     def __init__(self, aspect_ratio,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterCropToAspectRatio, self).__init__(
             aspect_ratio=aspect_ratio, position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class PadToAspectRatio(PadToFixedSize):
@@ -3941,14 +3935,14 @@ class PadToAspectRatio(PadToFixedSize):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3965,11 +3959,11 @@ class PadToAspectRatio(PadToFixedSize):
 
     def __init__(self, aspect_ratio, pad_mode="constant", pad_cval=0,
                  position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PadToAspectRatio, self).__init__(
             width=None, height=None, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.aspect_ratio = aspect_ratio
 
     def _draw_samples(self, batch, random_state):
@@ -4050,11 +4044,11 @@ class CenterPadToAspectRatio(PadToAspectRatio):
     """
 
     def __init__(self, aspect_ratio, pad_mode="constant", pad_cval=0,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterPadToAspectRatio, self).__init__(
             aspect_ratio=aspect_ratio, position="center",
             pad_mode=pad_mode, pad_cval=pad_cval,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class CropToSquare(CropToAspectRatio):
@@ -4074,14 +4068,14 @@ class CropToSquare(CropToAspectRatio):
     position : {'uniform', 'normal', 'center', 'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center', 'center-bottom', 'right-top', 'right-center', 'right-bottom'} or tuple of float or StochasticParameter or tuple of StochasticParameter, optional
         See :func:`CropToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4096,10 +4090,10 @@ class CropToSquare(CropToAspectRatio):
     """
 
     def __init__(self, position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CropToSquare, self).__init__(
             aspect_ratio=1.0, position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class CenterCropToSquare(CropToSquare):
@@ -4124,14 +4118,14 @@ class CenterCropToSquare(CropToSquare):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4145,10 +4139,10 @@ class CenterCropToSquare(CropToSquare):
 
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
+    def __init__(self, seed=None, name=None, **old_kwargs):
         super(CenterCropToSquare, self).__init__(
             position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class PadToSquare(PadToAspectRatio):
@@ -4172,14 +4166,14 @@ class PadToSquare(PadToAspectRatio):
     pad_cval : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         See :func:`~imgaug.augmenters.size.PadToFixedSize.__init__`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4194,11 +4188,11 @@ class PadToSquare(PadToAspectRatio):
     """
 
     def __init__(self, pad_mode="constant", pad_cval=0, position="uniform",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PadToSquare, self).__init__(
             aspect_ratio=1.0, pad_mode=pad_mode, pad_cval=pad_cval,
             position=position,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class CenterPadToSquare(PadToSquare):
@@ -4245,10 +4239,10 @@ class CenterPadToSquare(PadToSquare):
     """
 
     def __init__(self, pad_mode="constant", pad_cval=0,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CenterPadToSquare, self).__init__(
             pad_mode=pad_mode, pad_cval=pad_cval, position="center",
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class KeepSizeByResize(meta.Augmenter):
@@ -4307,14 +4301,14 @@ class KeepSizeByResize(meta.Augmenter):
         neighbour interpolation (i.e. ``nearest``) make sense in the vast
         majority of all cases.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4357,9 +4351,9 @@ class KeepSizeByResize(meta.Augmenter):
                  interpolation="cubic",
                  interpolation_heatmaps=SAME_AS_IMAGES,
                  interpolation_segmaps="nearest",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(KeepSizeByResize, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.children = children
 
         def _validate_param(val, allow_same_as_images):

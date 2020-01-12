@@ -835,14 +835,14 @@ class Fliplr(meta.Augmenter):
     p : number or imgaug.parameters.StochasticParameter, optional
         Probability of each image to get flipped.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -858,9 +858,9 @@ class Fliplr(meta.Augmenter):
 
     """
 
-    def __init__(self, p=0, name=None, deterministic=False, random_state=None):
+    def __init__(self, p=0, seed=None, name=None, **old_kwargs):
         super(Fliplr, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -936,14 +936,14 @@ class Flipud(meta.Augmenter):
     p : number or imgaug.parameters.StochasticParameter, optional
         Probability of each image to get flipped.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -958,9 +958,9 @@ class Flipud(meta.Augmenter):
 
     """
 
-    def __init__(self, p=0, name=None, deterministic=False, random_state=None):
+    def __init__(self, p=0, seed=None, name=None, **old_kwargs):
         super(Flipud, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_batch_(self, batch, random_state, parents, hooks):

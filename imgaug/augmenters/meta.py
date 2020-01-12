@@ -226,33 +226,12 @@ class Augmenter(object):
 
     Parameters
     ----------
-    name : None or str, optional
-        Name given to the Augmenter instance. This name is used when
-        converting the instance to a string, e.g. for ``print`` statements.
-        It is also used for ``find``, ``remove`` or similar operations
-        on augmenters with children.
-        If ``None``, ``UnnamedX`` will be used as the name, where ``X``
-        is the Augmenter's class name.
-
-    deterministic : bool, optional
-        Whether the augmenter instance's random state will be saved before
-        augmenting a batch and then reset to that initial saved state
-        after the augmentation was finished. I.e. if set to ``True``,
-        each batch will be augmented in the same way (e.g. first image
-        might always be flipped horizontally, second image will never be
-        flipped etc.).
-        This is useful when you want to transform multiple batches
-        in the same way, or when you want to augment images and
-        corresponding data (e.g. keypoints or segmentation maps) on these
-        images. Usually, there is no need to set this variable by hand.
-        Instead, instantiate the augmenter and then use
-        :func:`~imgaug.augmenters.Augmenter.to_deterministic`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        The RNG (random number generator) to use for this augmenter.
-        Setting this parameter allows to control/influence the random
-        number sampling of the augmenter. Usually, there is no need to
-        set this parameter.
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Seed to use for this augmenter's random number generator (RNG) or
+        alternatively an RNG itself. Setting this parameter allows to
+        control/influence the random number sampling of this specific
+        augmenter without affecting other augmenters. Usually, there is no
+        need to set this parameter.
 
             * If ``None``: The global RNG is used (shared by all
               augmenters).
@@ -278,11 +257,42 @@ class Augmenter(object):
         If a new bit generator has to be created, it will be an instance
         of :class:`numpy.random.SFC64`.
 
+    name : None or str, optional
+        Name given to the Augmenter instance. This name is used when
+        converting the instance to a string, e.g. for ``print`` statements.
+        It is also used for ``find``, ``remove`` or similar operations
+        on augmenters with children.
+        If ``None``, ``UnnamedX`` will be used as the name, where ``X``
+        is the Augmenter's class name.
+
+    deterministic : bool, optional
+        Whether the augmenter instance's random state will be saved before
+        augmenting a batch and then reset to that initial saved state
+        after the augmentation was finished. I.e. if set to ``True``,
+        each batch will be augmented in the same way (e.g. first image
+        might always be flipped horizontally, second image will never be
+        flipped etc.).
+        This is useful when you want to transform multiple batches
+        in the same way, or when you want to augment images and
+        corresponding data (e.g. keypoints or segmentation maps) on these
+        images. Usually, there is no need to set this variable by hand.
+        Instead, instantiate the augmenter and then use
+        :func:`~imgaug.augmenters.Augmenter.to_deterministic`.
+
+    **old_kwargs
+        Catch-all for deprecated parameters that should not be used anymore.
+
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
+    def __init__(self, seed=None, name=None, **old_kwargs):
         """Create a new Augmenter instance."""
         super(Augmenter, self).__init__()
+
+        valid_old_kwargs = {"random_state", "deterministic"}
+        for key in old_kwargs:
+            assert key in valid_old_kwargs, (
+                "Got an unknown parameter `%s` in "
+                "`imgaug.augmenters.meta.Augmenter`." % (key,))
 
         assert name is None or ia.is_string(name), (
             "Expected name to be None or string-like, got %s." % (
@@ -292,19 +302,32 @@ class Augmenter(object):
         else:
             self.name = name
 
+        deterministic = False
+        if "deterministic" in old_kwargs:
+            ia.warn_deprecated(
+                "The parameter `deterministic` is deprecated "
+                "in `imgaug.augmenters.meta.Augmenter`. Use "
+                "`.to_deterministic()` to switch into deterministic mode.",
+                stacklevel=4)
+            deterministic = old_kwargs["deterministic"]
+
         assert ia.is_single_bool(deterministic), (
             "Expected deterministic to be a boolean, got %s." % (
                 type(deterministic),))
         self.deterministic = deterministic
 
-        if deterministic and random_state is None:
+        if "random_state" in old_kwargs:
+            assert seed is None, "Cannot set both `seed` and `random_state`."
+            seed = old_kwargs["random_state"]
+
+        if deterministic and seed is None:
             # Usually if None is provided, the global RNG will be used.
             # In case of deterministic mode we most likely rather want a local
             # RNG, which is here created.
             self.random_state = iarandom.RNG.create_pseudo_random_()
         else:
             # self.random_state = iarandom.normalize_rng_(random_state)
-            self.random_state = iarandom.RNG(random_state)
+            self.random_state = iarandom.RNG(seed)
 
         self.activated = True
 
@@ -2993,14 +3016,14 @@ class Sequential(Augmenter, list):
         Whether to apply the child augmenters in random order.
         If ``True``, the order will be randomly sampled once per batch.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3032,10 +3055,9 @@ class Sequential(Augmenter, list):
 
     """
 
-    def __init__(self, children=None, random_order=False, name=None,
-                 deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic,
-                           random_state=random_state)
+    def __init__(self, children=None, random_order=False,
+                 seed=None, name=None, **old_kwargs):
+        Augmenter.__init__(self, seed=seed, name=name, **old_kwargs)
 
         if children is None:
             list.__init__(self, [])
@@ -3171,14 +3193,14 @@ class SomeOf(Augmenter, list):
         Whether to apply the child augmenters in random order.
         If ``True``, the order will be randomly sampled once per batch.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3220,9 +3242,8 @@ class SomeOf(Augmenter, list):
     """
 
     def __init__(self, n=None, children=None, random_order=False,
-                 name=None, deterministic=False, random_state=None):
-        Augmenter.__init__(self, name=name, deterministic=deterministic,
-                           random_state=random_state)
+                 seed=None, name=None, **old_kwargs):
+        Augmenter.__init__(self, seed=seed, name=name, **old_kwargs)
 
         # TODO use handle_children_list() here?
         if children is None:
@@ -3394,14 +3415,14 @@ class OneOf(SomeOf):
     children : imgaug.augmenters.meta.Augmenter or list of imgaug.augmenters.meta.Augmenter
         The choices of augmenters to apply.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3432,15 +3453,13 @@ class OneOf(SomeOf):
 
     """
 
-    def __init__(self, children, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, children,
+                 seed=None, name=None, **old_kwargs):
         super(OneOf, self).__init__(
             n=1,
             children=children,
             random_order=False,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class Sometimes(Augmenter):
@@ -3488,14 +3507,14 @@ class Sometimes(Augmenter):
         If this is a list of augmenters, it will be converted to a
         :class:`~imgaug.augmenters.meta.Sequential`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3511,10 +3530,10 @@ class Sometimes(Augmenter):
 
     """
 
-    def __init__(self, p=0.5, then_list=None, else_list=None, name=None,
-                 deterministic=False, random_state=None):
+    def __init__(self, p=0.5, then_list=None, else_list=None,
+                 seed=None, name=None, **old_kwargs):
         super(Sometimes, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.p = iap.handle_probability_param(p, "p")
 
@@ -3628,14 +3647,14 @@ class WithChannels(Augmenter):
         One or more augmenters to apply to images, after the channels
         are extracted.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3648,9 +3667,9 @@ class WithChannels(Augmenter):
     """
 
     def __init__(self, channels=None, children=None,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(WithChannels, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         # TODO change this to a stochastic parameter
         if channels is None:
@@ -3842,20 +3861,19 @@ class Identity(Augmenter):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
-        super(Identity, self).__init__(name=name, deterministic=deterministic,
-                                       random_state=random_state)
+    def __init__(self, seed=None, name=None, **old_kwargs):
+        super(Identity, self).__init__(seed=seed, name=name, **old_kwargs)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         return batch
@@ -3877,20 +3895,19 @@ class Noop(Identity):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
-        super(Noop, self).__init__(name=name, deterministic=deterministic,
-                                   random_state=random_state)
+    def __init__(self, seed=None, name=None, **old_kwargs):
+        super(Noop, self).__init__(seed=seed, name=name, **old_kwargs)
 
 
 class Lambda(Augmenter):
@@ -4009,14 +4026,14 @@ class Lambda(Augmenter):
         line strings will automatically be augmented by transforming their
         corner vertices to keypoints and calling `func_keypoints`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4061,9 +4078,8 @@ class Lambda(Augmenter):
                  func_segmentation_maps=None, func_keypoints=None,
                  func_bounding_boxes="keypoints", func_polygons="keypoints",
                  func_line_strings="keypoints",
-                 name=None, deterministic=False, random_state=None):
-        super(Lambda, self).__init__(name=name, deterministic=deterministic,
-                                     random_state=random_state)
+                 seed=None, name=None, **old_kwargs):
+        super(Lambda, self).__init__(seed=seed, name=name, **old_kwargs)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
         self.func_segmentation_maps = func_segmentation_maps
@@ -4305,14 +4321,14 @@ class AssertLambda(Lambda):
         It essentially re-uses the interface of
         :func:`~imgaug.augmenters.meta.Augmenter._augment_line_strings`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
@@ -4320,7 +4336,7 @@ class AssertLambda(Lambda):
                  func_segmentation_maps=None, func_keypoints=None,
                  func_bounding_boxes=None, func_polygons=None,
                  func_line_strings=None,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         def _default(var, augmentable_name):
             return (
                 _AssertLambdaCallback(var, augmentable_name=augmentable_name)
@@ -4337,7 +4353,7 @@ class AssertLambda(Lambda):
             func_bounding_boxes=_default(func_bounding_boxes, "bounding_boxes"),
             func_polygons=_default(func_polygons, "polygons"),
             func_line_strings=_default(func_line_strings, "line_strings"),
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
 
 class _AssertLambdaCallback(object):
@@ -4439,14 +4455,14 @@ class AssertShape(Lambda):
         :class:`~imgaug.augmentables.lines.LineStringsOnImage` instance the
         ``.shape`` attribute, i.e. the shape of the corresponding image.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4475,7 +4491,7 @@ class AssertShape(Lambda):
                  check_segmentation_maps=True, check_keypoints=True,
                  check_bounding_boxes=True, check_polygons=True,
                  check_line_strings=True,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         assert len(shape) == 4, (
             "Expected shape to have length 4, got %d with shape: %s." % (
                 len(shape), str(shape)))
@@ -4499,9 +4515,7 @@ class AssertShape(Lambda):
                                    check_polygons),
             func_line_strings=_default(_AssertShapeLineStringsCheck(shape),
                                        check_line_strings),
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
     @classmethod
     def _compare(cls, observed, expected, dimension, image_index):
@@ -4657,14 +4671,14 @@ class ChannelShuffle(Augmenter):
         (Values start at ``0``. All channel indices in the list must exist in
         each image.)
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4683,9 +4697,9 @@ class ChannelShuffle(Augmenter):
     """
 
     def __init__(self, p=1.0, channels=None,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(ChannelShuffle, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.p = iap.handle_probability_param(p, "p")
         valid_channels = (
             channels is None
@@ -4818,14 +4832,14 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
         where ``fraction_{actual}`` denotes the estimated out of image
         fraction.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4865,9 +4879,9 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
     """
 
     def __init__(self, fraction,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(RemoveCBAsByOutOfImageFraction, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.fraction = fraction
 
@@ -4914,14 +4928,14 @@ class ClipCBAsToImagePlanes(Augmenter):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4937,9 +4951,9 @@ class ClipCBAsToImagePlanes(Augmenter):
 
     """
 
-    def __init__(self, name=None, deterministic=False, random_state=None):
+    def __init__(self, seed=None, name=None, **old_kwargs):
         super(ClipCBAsToImagePlanes, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         for column in batch.columns:
