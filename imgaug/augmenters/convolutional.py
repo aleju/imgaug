@@ -21,6 +21,7 @@ import cv2
 import six.moves as sm
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
@@ -207,7 +208,7 @@ class Convolve(meta.Augmenter):
                     # ndimage.convolve caused problems here cv2.filter2D()
                     # always returns same output dtype as input dtype
                     image_aug[..., channel] = cv2.filter2D(
-                        image_aug[..., channel],
+                        _normalize_cv2_input_arr_(image_aug[..., channel]),
                         -1,
                         matrices[channel]
                     )

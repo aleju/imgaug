@@ -31,6 +31,7 @@ import cv2
 import six.moves as sm
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 from . import meta
 from . import blur as blur_lib
@@ -284,7 +285,7 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
         #      but was deactivated for now, because cval would always
         #      contain 3 values and not nb_channels values
         image_warped = cv2.warpAffine(
-            arr,
+            _normalize_cv2_input_arr_(arr),
             matrix.params[:2],
             dsize=dsize,
             flags=order,
@@ -300,7 +301,7 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
         # the result from a list of [H, W, 1] to (H, W, C).
         image_warped = [
             cv2.warpAffine(
-                arr[:, :, c],
+                _normalize_cv2_input_arr_(arr[:, :, c]),
                 matrix.params[:2],
                 dsize=dsize,
                 flags=order,
@@ -2527,7 +2528,7 @@ class AffineCv2(meta.Augmenter):
                           + matrix_to_center)
 
                 image_warped = cv2.warpAffine(
-                    images[i],
+                    _normalize_cv2_input_arr_(images[i]),
                     matrix.params[:2],
                     dsize=(width, height),
                     flags=order,
@@ -3551,7 +3552,7 @@ class PerspectiveTransform(meta.Augmenter):
                 warped = image
             elif nb_channels <= 4:
                 warped = cv2.warpPerspective(
-                    image,
+                    _normalize_cv2_input_arr_(image),
                     matrix,
                     (max_width, max_height),
                     borderValue=cval,
@@ -3564,7 +3565,7 @@ class PerspectiveTransform(meta.Augmenter):
                 # inputs
                 warped = [
                     cv2.warpPerspective(
-                        image[..., c],
+                        _normalize_cv2_input_arr_(image[..., c]),
                         matrix,
                         (max_width, max_height),
                         borderValue=cval[min(c, len(cval)-1)],
@@ -3625,7 +3626,7 @@ class PerspectiveTransform(meta.Augmenter):
                 if not map_has_zero_sized_axis:
                     warped = [
                         cv2.warpPerspective(
-                            arr[..., c],
+                            _normalize_cv2_input_arr_(arr[..., c]),
                             matrix,
                             (max_width, max_height),
                             borderValue=cval_i,
@@ -4577,7 +4578,8 @@ class ElasticTransformation(meta.Augmenter):
             # remap only supports up to 4 channels
             if nb_channels <= 4:
                 result = cv2.remap(
-                    image, map1, map2, interpolation=interpolation,
+                    _normalize_cv2_input_arr_(image),
+                    map1, map2, interpolation=interpolation,
                     borderMode=border_mode, borderValue=(cval,cval,cval))
                 if image.ndim == 3 and result.ndim == 2:
                     result = result[..., np.newaxis]
@@ -4587,7 +4589,8 @@ class ElasticTransformation(meta.Augmenter):
                 while current_chan_idx < nb_channels:
                     channels = image[..., current_chan_idx:current_chan_idx+4]
                     result_c = cv2.remap(
-                        channels, map1, map2, interpolation=interpolation,
+                        _normalize_cv2_input_arr_(channels),
+                        map1, map2, interpolation=interpolation,
                         borderMode=border_mode, borderValue=(cval,cval,cval))
                     if result_c.ndim == 2:
                         result_c = result_c[..., np.newaxis]
@@ -5156,13 +5159,14 @@ class WithPolarWarping(meta.Augmenter):
 
             if arr.ndim == 3 and arr.shape[-1] > 512:
                 arr_warped = np.stack(
-                    [cv2.warpPolar(arr[..., c_idx], dest_size, center_xy,
-                                   max_radius, flags)
+                    [cv2.warpPolar(_normalize_cv2_input_arr_(arr[..., c_idx]),
+                                   dest_size, center_xy, max_radius, flags)
                      for c_idx in np.arange(arr.shape[-1])],
                     axis=-1)
             else:
-                arr_warped = cv2.warpPolar(arr, dest_size, center_xy,
-                                           max_radius, flags)
+                arr_warped = cv2.warpPolar(_normalize_cv2_input_arr_(arr),
+                                           dest_size, center_xy, max_radius,
+                                           flags)
                 if arr_warped.ndim == 2 and arr.ndim == 3:
                     arr_warped = arr_warped[:, :, np.newaxis]
 
@@ -5217,13 +5221,15 @@ class WithPolarWarping(meta.Augmenter):
 
             if arr_warped.ndim == 3 and arr_warped.shape[-1] > 512:
                 arr_inv = np.stack(
-                    [cv2.warpPolar(arr_warped[..., c_idx], dest_size,
-                                   center_xy, max_radius, flags)
+                    [cv2.warpPolar(
+                        _normalize_cv2_input_arr_(arr_warped[..., c_idx]),
+                        dest_size, center_xy, max_radius, flags)
                      for c_idx in np.arange(arr_warped.shape[-1])],
                     axis=-1)
             else:
-                arr_inv = cv2.warpPolar(arr_warped, dest_size, center_xy,
-                                        max_radius, flags)
+                arr_inv = cv2.warpPolar(
+                    _normalize_cv2_input_arr_(arr_warped),
+                    dest_size, center_xy, max_radius, flags)
                 if arr_inv.ndim == 2 and arr_warped.ndim == 3:
                     arr_inv = arr_inv[:, :, np.newaxis]
 

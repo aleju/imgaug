@@ -19,6 +19,7 @@ import cv2
 import six
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from . import blend
 from .. import parameters as iap
@@ -437,7 +438,7 @@ class Canny(meta.Augmenter):
             has_zero_sized_axes = (0 in image.shape[0:2])
             if alpha > 0 and sobel > 1 and not has_zero_sized_axes:
                 image_canny = cv2.Canny(
-                    image[:, :, 0:3],
+                    _normalize_cv2_input_arr_(image[:, :, 0:3]),
                     threshold1=hthreshs[0],
                     threshold2=hthreshs[1],
                     apertureSize=sobel,

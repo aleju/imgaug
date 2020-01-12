@@ -19,6 +19,7 @@ import cv2
 import six.moves as sm
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from . import convolutional as iaa_convolutional
 from .. import parameters as iap
@@ -246,7 +247,10 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
 
             if ksize > 0:
                 image_warped = cv2.GaussianBlur(
-                    image, (ksize, ksize), sigmaX=sigma, sigmaY=sigma,
+                    _normalize_cv2_input_arr_(image),
+                    (ksize, ksize),
+                    sigmaX=sigma,
+                    sigmaY=sigma,
                     borderType=cv2.BORDER_REFLECT_101)
 
                 # re-add channel axis removed by cv2 if input was (H, W, 1)
@@ -343,14 +347,10 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
     elif shape_is_hw1:
         image = np.tile(image, (1, 1, 3))
 
-    # prevent image from becoming cv2.UMat
-    # TODO merge this with apply_lut() normalization/validation
-    if image.flags["C_CONTIGUOUS"] is False:
-        image = np.ascontiguousarray(image)
-
     spatial_window_radius = max(spatial_window_radius, 0)
     color_window_radius = max(color_window_radius, 0)
 
+    image = _normalize_cv2_input_arr_(image)
     image = cv2.pyrMeanShiftFiltering(
         image,
         sp=spatial_window_radius,
@@ -635,7 +635,9 @@ class AverageBlur(meta.Augmenter):
                     image = image.astype(np.int16, copy=False)
 
                 if image.ndim == 2 or image.shape[-1] <= 512:
-                    image_aug = cv2.blur(image, (ksize_h, ksize_w))
+                    image_aug = cv2.blur(
+                        _normalize_cv2_input_arr_(image),
+                        (ksize_h, ksize_w))
                     # cv2.blur() removes channel axis for single-channel images
                     if image_aug.ndim == 2:
                         image_aug = image_aug[..., np.newaxis]
@@ -643,7 +645,9 @@ class AverageBlur(meta.Augmenter):
                     # TODO this is quite inefficient
                     # handling more than 512 channels in cv2.blur()
                     channels = [
-                        cv2.blur(image[..., c], (ksize_h, ksize_w))
+                        cv2.blur(
+                            _normalize_cv2_input_arr_(image[..., c]),
+                            (ksize_h, ksize_w))
                         for c in sm.xrange(image.shape[-1])
                     ]
                     image_aug = np.stack(channels, axis=-1)
@@ -754,7 +758,8 @@ class MedianBlur(meta.Augmenter):
             if ksize > 1 and not has_zero_sized_axes:
                 ksize = ksize + 1 if ksize % 2 == 0 else ksize
                 if image.ndim == 2 or image.shape[-1] <= 512:
-                    image_aug = cv2.medianBlur(image, ksize)
+                    image_aug = cv2.medianBlur(
+                        _normalize_cv2_input_arr_(image), ksize)
                     # cv2.medianBlur() removes channel axis for single-channel
                     # images
                     if image_aug.ndim == 2:
@@ -763,7 +768,8 @@ class MedianBlur(meta.Augmenter):
                     # TODO this is quite inefficient
                     # handling more than 512 channels in cv2.medainBlur()
                     channels = [
-                        cv2.medianBlur(image[..., c], ksize)
+                        cv2.medianBlur(
+                            _normalize_cv2_input_arr_(image[..., c]), ksize)
                         for c in sm.xrange(image.shape[-1])
                     ]
                     image_aug = np.stack(channels, axis=-1)
@@ -915,8 +921,9 @@ class BilateralBlur(meta.Augmenter):
         for i, (image, di, sigma_color_i, sigma_space_i) in gen:
             has_zero_sized_axes = (image.size == 0)
             if di != 1 and not has_zero_sized_axes:
-                batch.images[i] = cv2.bilateralFilter(image, di, sigma_color_i,
-                                                      sigma_space_i)
+                batch.images[i] = cv2.bilateralFilter(
+                    _normalize_cv2_input_arr_(image),
+                    di, sigma_color_i, sigma_space_i)
         return batch
 
     def get_parameters(self):

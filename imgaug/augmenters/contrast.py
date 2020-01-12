@@ -21,6 +21,7 @@ import skimage.exposure as ski_exposure
 import cv2
 
 import imgaug as ia
+from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from . import color as color_lib
 from .. import parameters as iap
@@ -1020,7 +1021,9 @@ class AllChannelsCLAHE(meta.Augmenter):
                         clipLimit=clip_limit_i[c_param],
                         tileGridSize=(tgs_px_w_i[c_param], tgs_px_h_i[c_param])
                     )
-                    channel_warped = clahe.apply(image[..., c])
+                    channel_warped = clahe.apply(
+                        _normalize_cv2_input_arr_(image[..., c])
+                    )
                     image_warped.append(channel_warped)
                 else:
                     image_warped.append(image[..., c])
@@ -1338,8 +1341,9 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
             if image.size == 0:
                 continue
 
-            image_warped = [cv2.equalizeHist(image[..., c])
-                            for c in sm.xrange(image.shape[2])]
+            image_warped = [
+                cv2.equalizeHist(_normalize_cv2_input_arr_(image[..., c]))
+                for c in sm.xrange(image.shape[2])]
             image_warped = np.array(image_warped, dtype=image_warped[0].dtype)
             image_warped = image_warped.transpose((1, 2, 0))
 
