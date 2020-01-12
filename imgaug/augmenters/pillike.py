@@ -1316,7 +1316,7 @@ class Equalize(meta.Augmenter):
         super(Equalize, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=no-self-use
         if batch.images:
             for image in batch.images:
@@ -1418,7 +1418,7 @@ class _EnhanceBase(meta.Augmenter):
             factor, "factor", value_range=factor_value_range,
             tuple_to_uniform=True, list_to_choice=True)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -1654,7 +1654,7 @@ class _FilterBase(meta.Augmenter):
             name=name, deterministic=deterministic, random_state=random_state)
         self.func = func
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2150,14 +2150,14 @@ class Affine(geometric.Affine):
         # TODO move that func to iap
         self.center = sizelib._handle_position_parameter(center)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         cols = batch.get_column_names()
         assert len(cols) == 0 or (len(cols) == 1 and "images" in cols), (
             "PILAffine can currently only process image data. Got a batch "
             "containing: %s. Use imgaug.augmenters.geometric.Affine for "
             "batches containing non-image data." % (", ".join(cols),))
 
-        return super(Affine, self)._augment_batch(
+        return super(Affine, self)._augment_batch_(
             batch, random_state, parents, hooks)
 
     def _augment_images_by_samples(self, images, samples,

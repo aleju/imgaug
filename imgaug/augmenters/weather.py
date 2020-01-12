@@ -148,7 +148,7 @@ class FastSnowyLandscape(meta.Augmenter):
             (nb_augmentables,), rss[0])
         return thresh_samples, lmul_samples
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -345,7 +345,7 @@ class CloudLayer(meta.Augmenter):
         self.density_multiplier = iap.handle_continuous_param(
             density_multiplier, "density_multiplier")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -820,7 +820,7 @@ class SnowflakesLayer(meta.Augmenter):
         # (height, width), same for all images
         self.gate_noise_size = (8, 8)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 

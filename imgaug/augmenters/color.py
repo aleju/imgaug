@@ -1013,7 +1013,7 @@ class WithColorspace(meta.Augmenter):
         self.from_colorspace = from_colorspace
         self.children = meta.handle_children_list(children, self.name, "then")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             # TODO this did not fail in the tests when there was only one
             #      `if` with all three steps in it
@@ -1023,7 +1023,7 @@ class WithColorspace(meta.Augmenter):
                     to_colorspaces=self.to_colorspace,
                     from_colorspaces=self.from_colorspace)
 
-            batch = self.children.augment_batch(
+            batch = self.children.augment_batch_(
                 batch,
                 parents=parents + [self],
                 hooks=hooks
@@ -1164,7 +1164,7 @@ class WithBrightnessChannels(meta.Augmenter):
             valid_values=self._VALID_COLORSPACES)
         self.from_colorspace = from_colorspace
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             images_cvt = None
             to_colorspaces = None
@@ -1181,7 +1181,7 @@ class WithBrightnessChannels(meta.Augmenter):
 
                 batch.images = brightness_channels
 
-            batch = self.children.augment_batch(
+            batch = self.children.augment_batch_(
                 batch, parents=parents + [self], hooks=hooks)
 
             if batch.images is not None:
@@ -1557,12 +1557,12 @@ class WithHueAndSaturation(meta.Augmenter):
         # for Add or Multiply
         self._internal_dtype = np.int16
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             images_hs, images_hsv = self._images_to_hsv_(batch.images)
             batch.images = images_hs
 
-            batch = self.children.augment_batch(
+            batch = self.children.augment_batch_(
                 batch, parents=parents + [self], hooks=hooks)
 
             batch.images = self._hs_to_images_(batch.images, images_hsv)
@@ -2250,7 +2250,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         return samples_hue, samples_saturation
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2698,7 +2698,7 @@ class ChangeColorspace(meta.Augmenter):
             (n_augmentables,), random_state=rss[1])
         return alphas, to_colorspaces
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -2850,7 +2850,7 @@ class ChangeColorTemperature(meta.Augmenter):
             list_to_choice=True)
         self.from_colorspace = from_colorspace
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             nb_rows = batch.nb_rows
             kelvins = self.kelvin.draw_samples((nb_rows,),
@@ -2902,7 +2902,7 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         return counts
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 

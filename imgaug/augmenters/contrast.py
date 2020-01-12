@@ -42,7 +42,7 @@ class _ContrastFuncWrapper(meta.Augmenter):
         self.dtypes_allowed = dtypes_allowed
         self.dtypes_disallowed = dtypes_disallowed
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -968,7 +968,7 @@ class AllChannelsCLAHE(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -1219,7 +1219,7 @@ class CLAHE(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
             from_colorspace, to_colorspace, name=name)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -1240,7 +1240,7 @@ class CLAHE(meta.Augmenter):
             # pylint: disable=protected-access
             # TODO would .augment_batch() be sufficient here?
             batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
-            return self.all_channel_clahe._augment_batch(
+            return self.all_channel_clahe._augment_batch_(
                 batch_imgs, random_state_derived, parents + [self],
                 hooks
             ).images
@@ -1321,7 +1321,7 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
         super(AllChannelsHistogramEqualization, self).__init__(
             name=name, deterministic=deterministic, random_state=random_state)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -1469,7 +1469,7 @@ class HistogramEqualization(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
             from_colorspace, to_colorspace, name=name)
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 
@@ -1490,7 +1490,7 @@ class HistogramEqualization(meta.Augmenter):
             # pylint: disable=protected-access
             # TODO would .augment_batch() be sufficient here
             batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
-            return self.all_channel_histogram_equalization._augment_batch(
+            return self.all_channel_histogram_equalization._augment_batch_(
                 batch_imgs, random_state_derived, parents + [self],
                 hooks
             ).images

@@ -135,7 +135,7 @@ class Convolve(meta.Augmenter):
                 "StochasticParameter. Got %s." % (
                     type(matrix),))
 
-    def _augment_batch(self, batch, random_state, parents, hooks):
+    def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
 

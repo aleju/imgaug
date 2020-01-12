@@ -8,6 +8,8 @@ from __future__ import print_function, division, absolute_import
 import random
 import copy
 import warnings
+import tempfile
+import shutil
 
 import numpy as np
 import six.moves as sm
@@ -169,3 +171,23 @@ def wrap_shift_deprecation(func, *args, **kwargs):
         )
 
         return result
+
+
+class TemporaryDirectory(object):
+    """Create a context for a temporary directory.
+
+    The directory is automatically removed at the end of the context.
+    This context is available in ``tmpfile.TemporaryDirectory``, but only
+    from 3.2+.
+
+    """
+
+    def __init__(self, suffix="", prefix="tmp", dir=None):
+        # pylint: disable=redefined-builtin
+        self.name = tempfile.mkdtemp(suffix, prefix, dir)
+
+    def __enter__(self):
+        return self.name
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        shutil.rmtree(self.name)
