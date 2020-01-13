@@ -991,21 +991,21 @@ class _SaveDebugImage(meta.Augmenter):
         The schedule to use to determine for which batches an image is
         supposed to be generated.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
     def __init__(self, destination, schedule,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(_SaveDebugImage, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.destination = destination
         self.schedule = schedule
 
@@ -1046,14 +1046,14 @@ class SaveDebugImageEveryNBatches(_SaveDebugImage):
         executed conditionally or re-instantiated, it may not see all batches
         or the counter may be wrong in other ways.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1071,7 +1071,7 @@ class SaveDebugImageEveryNBatches(_SaveDebugImage):
     """
 
     def __init__(self, destination, interval,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         schedule = _EveryNBatchesSchedule(interval)
         if not isinstance(destination, _IImageDestination):
             assert os.path.isdir(destination), (
@@ -1084,7 +1084,7 @@ class SaveDebugImageEveryNBatches(_SaveDebugImage):
             ])
         super(SaveDebugImageEveryNBatches, self).__init__(
             destination=destination, schedule=schedule,
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
     def get_parameters(self):
         dests = self.destination.destinations

@@ -1063,14 +1063,14 @@ class Affine(meta.Augmenter):
         as RGB). If ``cv2`` is chosen and order is ``2`` or ``4``, it will
         automatically fall back to order ``3``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1149,9 +1149,9 @@ class Affine(meta.Augmenter):
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Affine, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         assert backend in ["auto", "skimage", "cv2"], (
             "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
@@ -1534,14 +1534,14 @@ class ScaleX(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1557,7 +1557,7 @@ class ScaleX(Affine):
 
     def __init__(self, scale, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(ScaleX, self).__init__(
             scale={"x": scale},
             order=order,
@@ -1565,10 +1565,7 @@ class ScaleX(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO make Affine more efficient for translation-only transformations
@@ -1608,14 +1605,14 @@ class TranslateX(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1634,7 +1631,7 @@ class TranslateX(Affine):
 
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         # we don't test here if both are not-None at the same time, because
         # that is already checked in Affine
         assert percent is not None or px is not None, (
@@ -1648,10 +1645,7 @@ class TranslateX(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO make Affine more efficient for translation-only transformations
@@ -1691,14 +1685,14 @@ class TranslateY(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1717,7 +1711,7 @@ class TranslateY(Affine):
 
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         # we don't test here if both are not-None at the same time, because
         # that is already checked in Affine
         assert percent is not None or px is not None, (
@@ -1731,10 +1725,7 @@ class TranslateY(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class ScaleY(Affine):
@@ -1767,14 +1758,14 @@ class ScaleY(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1790,7 +1781,7 @@ class ScaleY(Affine):
 
     def __init__(self, scale, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(ScaleY, self).__init__(
             scale={"y": scale},
             order=order,
@@ -1798,10 +1789,7 @@ class ScaleY(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class Rotate(Affine):
@@ -1834,14 +1822,14 @@ class Rotate(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1855,7 +1843,7 @@ class Rotate(Affine):
 
     def __init__(self, rotate, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Rotate, self).__init__(
             rotate=rotate,
             order=order,
@@ -1863,10 +1851,7 @@ class Rotate(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class ShearX(Affine):
@@ -1899,20 +1884,20 @@ class ShearX(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
     def __init__(self, shear, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(ShearX, self).__init__(
             shear={"x": shear},
             order=order,
@@ -1920,10 +1905,7 @@ class ShearX(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class ShearY(Affine):
@@ -1956,20 +1938,20 @@ class ShearY(Affine):
     backend : str, optional
         See :class:`Affine`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     """
 
     def __init__(self, shear, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(ShearY, self).__init__(
             shear={"y": shear},
             order=order,
@@ -1977,10 +1959,7 @@ class ShearY(Affine):
             mode=mode,
             fit_output=fit_output,
             backend=backend,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class AffineCv2(meta.Augmenter):
@@ -2195,14 +2174,14 @@ class AffineCv2(meta.Augmenter):
               that parameter per image, i.e. it must return only the above
               mentioned strings.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2274,9 +2253,9 @@ class AffineCv2(meta.Augmenter):
     def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
                  rotate=0.0, shear=0.0, order=cv2.INTER_LINEAR, cval=0,
                  mode=cv2.BORDER_CONSTANT,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(AffineCv2, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         # using a context on __init__ seems to produce no warning,
         # so warn manually here
@@ -2840,14 +2819,14 @@ class PiecewiseAffine(meta.Augmenter):
         ``recover_from()`` method, similar to
         :class:`~imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -2867,9 +2846,9 @@ class PiecewiseAffine(meta.Augmenter):
 
     def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0,
                  mode="constant", absolute_scale=False, polygon_recoverer=None,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PiecewiseAffine, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.scale = iap.handle_continuous_param(
             scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -3358,14 +3337,14 @@ class PerspectiveTransform(meta.Augmenter):
         ``recover_from()`` method, similar to
         :class:`~imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -3393,9 +3372,9 @@ class PerspectiveTransform(meta.Augmenter):
 
     def __init__(self, scale=0, cval=0, mode="constant", keep_size=True,
                  fit_output=False, polygon_recoverer="auto",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(PerspectiveTransform, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.scale = iap.handle_continuous_param(
             scale, "scale", value_range=(0, None), tuple_to_uniform=True,
@@ -4004,14 +3983,14 @@ class ElasticTransformation(meta.Augmenter):
         ``recover_from()`` method, similar to
         :class:`~imgaug.augmentables.polygons._ConcavePolygonRecoverer`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4053,10 +4032,10 @@ class ElasticTransformation(meta.Augmenter):
     }
 
     def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
-                 polygon_recoverer="auto", name=None, deterministic=False,
-                 random_state=None):
+                 polygon_recoverer="auto",
+                 seed=None, name=None, **old_kwargs):
         super(ElasticTransformation, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.alpha = iap.handle_continuous_param(
             alpha, "alpha", value_range=(0, None), tuple_to_uniform=True,
@@ -4657,14 +4636,14 @@ class Rot90(meta.Augmenter):
         image will be resized to the input image's size. Note that this might
         also cause the augmented image to look distorted.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4698,10 +4677,10 @@ class Rot90(meta.Augmenter):
 
     """
 
-    def __init__(self, k, keep_size=True, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, k, keep_size=True,
+                 seed=None, name=None, **old_kwargs):
         super(Rot90, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         if k == ia.ALL:
             k = [0, 1, 2, 3]
@@ -4911,14 +4890,14 @@ class WithPolarWarping(meta.Augmenter):
         One or more augmenters to apply to images after they were transformed
         to polar representation.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -4946,10 +4925,10 @@ class WithPolarWarping(meta.Augmenter):
 
     """
 
-    def __init__(self, children, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, children,
+                 seed=None, name=None, **old_kwargs):
         super(WithPolarWarping, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.children = meta.handle_children_list(children, self.name, "then")
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -5555,14 +5534,14 @@ class Jigsaw(meta.Augmenter):
         Whether to allow automatically padding images until they are evenly
         divisible by ``nb_rows`` and ``nb_cols``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -5586,9 +5565,9 @@ class Jigsaw(meta.Augmenter):
     """
 
     def __init__(self, nb_rows, nb_cols, max_steps=2, allow_pad=True,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Jigsaw, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.nb_rows = iap.handle_discrete_param(
             nb_rows, "nb_rows", value_range=(1, None), tuple_to_uniform=True,

@@ -167,14 +167,14 @@ class Superpixels(meta.Augmenter):
         exceeded. Valid methods are the same as in
         :func:`~imgaug.imgaug.imresize_single_image`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -199,9 +199,9 @@ class Superpixels(meta.Augmenter):
 
     def __init__(self, p_replace=0, n_segments=100, max_size=128,
                  interpolation="linear",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Superpixels, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.p_replace = iap.handle_probability_param(
             p_replace, "p_replace", tuple_to_uniform=True, list_to_choice=True)
@@ -528,14 +528,14 @@ class Voronoi(meta.Augmenter):
         exceeded. Valid methods are the same as in
         :func:`~imgaug.imgaug.imresize_single_image`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -574,9 +574,9 @@ class Voronoi(meta.Augmenter):
 
     def __init__(self, points_sampler, p_replace=1.0, max_size=128,
                  interpolation="linear",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(Voronoi, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         assert isinstance(points_sampler, IPointsSampler), (
             "Expected 'points_sampler' to be an instance of IPointsSampler, "
@@ -707,14 +707,14 @@ class UniformVoronoi(Voronoi):
         exceeded. Valid methods are the same as in
         :func:`~imgaug.imgaug.imresize_single_image`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -741,16 +741,13 @@ class UniformVoronoi(Voronoi):
 
     def __init__(self, n_points, p_replace=1.0, max_size=128,
                  interpolation="linear",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(UniformVoronoi, self).__init__(
             points_sampler=UniformPointsSampler(n_points),
             p_replace=p_replace,
             max_size=max_size,
             interpolation=interpolation,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class RegularGridVoronoi(Voronoi):
@@ -862,14 +859,14 @@ class RegularGridVoronoi(Voronoi):
         exceeded. Valid methods are the same as in
         :func:`~imgaug.imgaug.imresize_single_image`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -897,7 +894,7 @@ class RegularGridVoronoi(Voronoi):
 
     def __init__(self, n_rows, n_cols, p_drop_points=0.4, p_replace=1.0,
                  max_size=128, interpolation="linear",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(RegularGridVoronoi, self).__init__(
             points_sampler=DropoutPointsSampler(
                 RegularGridPointsSampler(n_rows, n_cols),
@@ -906,10 +903,7 @@ class RegularGridVoronoi(Voronoi):
             p_replace=p_replace,
             max_size=max_size,
             interpolation=interpolation,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class RelativeRegularGridVoronoi(Voronoi):
@@ -1031,14 +1025,14 @@ class RelativeRegularGridVoronoi(Voronoi):
         exceeded. Valid methods are the same as in
         :func:`~imgaug.imgaug.imresize_single_image`.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1071,7 +1065,7 @@ class RelativeRegularGridVoronoi(Voronoi):
 
     def __init__(self, n_rows_frac, n_cols_frac, p_drop_points=0.4,
                  p_replace=1.0, max_size=None, interpolation="linear",
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(RelativeRegularGridVoronoi, self).__init__(
             points_sampler=DropoutPointsSampler(
                 RelativeRegularGridPointsSampler(n_rows_frac, n_cols_frac),
@@ -1080,10 +1074,7 @@ class RelativeRegularGridVoronoi(Voronoi):
             p_replace=p_replace,
             max_size=max_size,
             interpolation=interpolation,
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 @six.add_metaclass(ABCMeta)

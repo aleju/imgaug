@@ -401,12 +401,12 @@ class TestConvolve(unittest.TestCase):
 
     def test_pickleable__identity_matrix(self):
         identity_matrix = np.int64([[1]])
-        aug = iaa.Convolve(identity_matrix, random_state=1)
+        aug = iaa.Convolve(identity_matrix, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
     def test_pickleable__callback_function(self):
         aug = iaa.Convolve(_convolve_pickleable_matrix_generator,
-                           random_state=1)
+                           seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
@@ -644,7 +644,7 @@ class TestSharpen(unittest.TestCase):
     """
 
     def test_pickleable(self):
-        aug = iaa.Sharpen(alpha=(0.0, 1.0), lightness=(1, 3), random_state=1)
+        aug = iaa.Sharpen(alpha=(0.0, 1.0), lightness=(1, 3), seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)
 
 
@@ -796,5 +796,5 @@ class TestEmboss(unittest.TestCase):
         assert got_exception
 
     def test_pickleable(self):
-        aug = iaa.Emboss(alpha=(0.0, 1.0), strength=(1, 3), random_state=1)
+        aug = iaa.Emboss(alpha=(0.0, 1.0), strength=(1, 3), seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)

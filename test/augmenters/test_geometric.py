@@ -5414,8 +5414,7 @@ class TestPiecewiseAffine(unittest.TestCase):
                                            np.float128(value)))
 
     def test_pickleable(self):
-        aug = iaa.PiecewiseAffine(scale=0.2, nb_rows=4, nb_cols=4,
-                                  random_state=1)
+        aug = iaa.PiecewiseAffine(scale=0.2, nb_rows=4, nb_cols=4, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(25, 25, 1))
 
 
@@ -6302,7 +6301,7 @@ class TestPerspectiveTransform(unittest.TestCase):
 
     def test_mode_replicate_copies_values(self):
         aug = iaa.PerspectiveTransform(
-            scale=0.001, mode="replicate", cval=0, random_state=31)
+            scale=0.001, mode="replicate", cval=0, seed=31)
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
 
         img_aug = aug.augment_image(img)
@@ -6311,9 +6310,9 @@ class TestPerspectiveTransform(unittest.TestCase):
 
     def test_mode_constant_uses_cval(self):
         aug255 = iaa.PerspectiveTransform(
-            scale=0.001, mode="constant", cval=255, random_state=31)
+            scale=0.001, mode="constant", cval=255, seed=31)
         aug0 = iaa.PerspectiveTransform(
-            scale=0.001, mode="constant", cval=0, random_state=31)
+            scale=0.001, mode="constant", cval=0, seed=31)
         img = np.ones((256, 256, 3), dtype=np.uint8) * 255
 
         img_aug255 = aug255.augment_image(img)
@@ -6610,7 +6609,7 @@ class TestPerspectiveTransform(unittest.TestCase):
                     ) > 0.7
 
     def test_pickleable(self):
-        aug = iaa.PerspectiveTransform(0.2, random_state=1)
+        aug = iaa.PerspectiveTransform(0.2, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=4, shape=(25, 25, 1))
 
 
@@ -7802,7 +7801,7 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.ElasticTransformation(alpha=(0.2, 1.5), sigma=(1.0, 10.0),
-                                        random_state=1)
+                                        seed=1)
         runtest_pickleable_uint8_img(aug, iterations=4, shape=(25, 25, 1))
 
 
@@ -8842,7 +8841,7 @@ class TestRot90(unittest.TestCase):
                     assert _allclose(image_aug[2, 2], np.float128(value))
 
     def test_pickleable(self):
-        aug = iaa.Rot90([0, 1, 2, 3], random_state=1)
+        aug = iaa.Rot90([0, 1, 2, 3], seed=1)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
 
@@ -9459,8 +9458,8 @@ class TestWithPolarWarping(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.WithPolarWarping(
-            iaa.Affine(translate_px=(0, 10), random_state=1),
-            random_state=2)
+            iaa.Affine(translate_px=(0, 10), seed=1),
+            seed=2)
         runtest_pickleable_uint8_img(aug, iterations=5, shape=(25, 25, 1))
 
 
@@ -10009,7 +10008,7 @@ class TestJigsaw(unittest.TestCase):
     def test_images_and_keypoints_aligned(self):
         for i in np.arange(20):
             aug = iaa.Jigsaw(nb_rows=(1, 3), nb_cols=(1, 3), max_steps=(2, 5),
-                             random_state=i)
+                             seed=i)
             # make sure that these coords are not exactly at a grid cell
             # border with any possibly sampled height/width in grid cells
             y = 17.5

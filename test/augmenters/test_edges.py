@@ -528,7 +528,7 @@ class TestCanny(unittest.TestCase):
                 hysteresis_thresholds=100,
                 sobel_kernel_size=3,
                 colorizer=colorizer,
-                random_state=i)
+                seed=i)
 
             image_aug = aug.augment_image(image)
             color_true = np.unique(image_aug[image_canny])
@@ -587,7 +587,7 @@ class TestCanny(unittest.TestCase):
                                        iap.Deterministic(200)),
                 sobel_kernel_size=[3, 5],
                 colorizer=colorizer,
-                random_state=i)
+                seed=i)
 
             image_aug = aug.augment_image(image)
             match_index = None
@@ -682,5 +682,5 @@ class TestCanny(unittest.TestCase):
         assert observed == expected
 
     def test_pickleable(self):
-        aug = iaa.Canny(random_state=1)
+        aug = iaa.Canny(seed=1)
         runtest_pickleable_uint8_img(aug, iterations=20)

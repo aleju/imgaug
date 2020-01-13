@@ -283,7 +283,7 @@ class TestSuperpixels(unittest.TestCase):
                 assert _allclose(img_aug, (7/8)*v2 + (1/8)*v1)
 
     def test_pickleable(self):
-        aug = iaa.Superpixels(p_replace=0.5, random_state=1)
+        aug = iaa.Superpixels(p_replace=0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=10, shape=(25, 25, 1))
 
 
@@ -755,7 +755,7 @@ class TestVoronoi(unittest.TestCase):
 
     def test_pickleable(self):
         sampler = iaa.RegularGridPointsSampler(5, 5)
-        aug = iaa.Voronoi(sampler, p_replace=0.5, random_state=1)
+        aug = iaa.Voronoi(sampler, p_replace=0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=10, shape=(25, 25, 1))
 
 
@@ -785,9 +785,8 @@ class TestUniformVoronoi(unittest.TestCase):
                 p_replace=0.5,
                 max_size=5,
                 interpolation="cubic",
-                name="foo",
-                deterministic=True,
-                random_state=rs
+                seed=rs,
+                name="foo"
             )
 
         assert mock_voronoi.call_count == 1
@@ -798,8 +797,7 @@ class TestUniformVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["max_size"] == 5
         assert mock_voronoi.call_args_list[0][1]["interpolation"] == "cubic"
         assert mock_voronoi.call_args_list[0][1]["name"] == "foo"
-        assert mock_voronoi.call_args_list[0][1]["deterministic"] is True
-        assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
+        assert mock_voronoi.call_args_list[0][1]["seed"] is rs
 
     def test___init___integrationtest(self):
         rs = iarandom.RNG(10)
@@ -808,20 +806,18 @@ class TestUniformVoronoi(unittest.TestCase):
             p_replace=0.5,
             max_size=5,
             interpolation="cubic",
-            name=None,
-            deterministic=True,
-            random_state=rs
+            seed=rs,
+            name=None
         )
         assert aug.points_sampler.n_points.value == 100
         assert np.isclose(aug.p_replace.p.value, 0.5)
         assert aug.max_size == 5
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedUniformVoronoi"
-        assert aug.deterministic is True
         assert aug.random_state.equals(rs)
 
     def test_pickleable(self):
-        aug = iaa.UniformVoronoi((10, 50), p_replace=0.5, random_state=1)
+        aug = iaa.UniformVoronoi((10, 50), p_replace=0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
 
 
@@ -840,9 +836,8 @@ class TestRegularGridVoronoi(unittest.TestCase):
                 p_replace=0.5,
                 max_size=5,
                 interpolation="cubic",
-                name="foo",
-                deterministic=True,
-                random_state=rs
+                seed=rs,
+                name="foo"
             )
 
         assert mock_voronoi.call_count == 1
@@ -858,8 +853,7 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["max_size"] == 5
         assert mock_voronoi.call_args_list[0][1]["interpolation"] == "cubic"
         assert mock_voronoi.call_args_list[0][1]["name"] == "foo"
-        assert mock_voronoi.call_args_list[0][1]["deterministic"] is True
-        assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
+        assert mock_voronoi.call_args_list[0][1]["seed"] is rs
 
     def test___init___integrationtest(self):
         rs = iarandom.RNG(10)
@@ -869,9 +863,8 @@ class TestRegularGridVoronoi(unittest.TestCase):
             p_replace=0.5,
             max_size=5,
             interpolation="cubic",
-            name=None,
-            deterministic=True,
-            random_state=rs
+            seed=rs,
+            name=None
         )
         assert np.isclose(aug.points_sampler.p_drop.p.value, 1-0.4)
         assert aug.points_sampler.other_points_sampler.n_rows.value == 10
@@ -883,12 +876,11 @@ class TestRegularGridVoronoi(unittest.TestCase):
         assert aug.max_size == 5
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedRegularGridVoronoi"
-        assert aug.deterministic is True
         assert aug.random_state.equals(rs)
 
     def test_pickleable(self):
         aug = iaa.RegularGridVoronoi((5, 10), (5, 10), p_replace=0.5,
-                                     random_state=1)
+                                     seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
 
 
@@ -907,9 +899,8 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
                 p_replace=0.5,
                 max_size=5,
                 interpolation="cubic",
-                name="foo",
-                deterministic=True,
-                random_state=rs
+                seed=rs,
+                name="foo"
             )
 
         assert mock_voronoi.call_count == 1
@@ -925,8 +916,7 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert mock_voronoi.call_args_list[0][1]["max_size"] == 5
         assert mock_voronoi.call_args_list[0][1]["interpolation"] == "cubic"
         assert mock_voronoi.call_args_list[0][1]["name"] == "foo"
-        assert mock_voronoi.call_args_list[0][1]["deterministic"] is True
-        assert mock_voronoi.call_args_list[0][1]["random_state"] is rs
+        assert mock_voronoi.call_args_list[0][1]["seed"] is rs
 
     def test___init___integrationtest(self):
         rs = iarandom.RNG(10)
@@ -936,9 +926,8 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
             p_replace=0.5,
             max_size=5,
             interpolation="cubic",
-            name=None,
-            deterministic=True,
-            random_state=rs
+            seed=rs,
+            name=None
         )
 
         ps = aug.points_sampler
@@ -951,12 +940,11 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         assert aug.max_size == 5
         assert aug.interpolation == "cubic"
         assert aug.name == "UnnamedRelativeRegularGridVoronoi"
-        assert aug.deterministic is True
         assert aug.random_state.equals(rs)
 
     def test_pickleable(self):
         aug = iaa.RelativeRegularGridVoronoi((0.01, 0.2), (0.01, 0.2),
-                                             p_replace=0.5, random_state=1)
+                                             p_replace=0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(50, 50, 1))
 
 

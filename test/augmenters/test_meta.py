@@ -46,8 +46,7 @@ IS_PY36_OR_HIGHER = (sys.version_info[0] == 3 and sys.version_info[1] >= 6)
 
 class _InplaceDummyAugmenterImgsArray(iaa.meta.Augmenter):
     def __init__(self, addval):
-        super(_InplaceDummyAugmenterImgsArray, self).__init__(
-            name=None, deterministic=False, random_state=None)
+        super(_InplaceDummyAugmenterImgsArray, self).__init__()
         self.addval = addval
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -60,8 +59,7 @@ class _InplaceDummyAugmenterImgsArray(iaa.meta.Augmenter):
 
 class _InplaceDummyAugmenterImgsList(iaa.meta.Augmenter):
     def __init__(self, addval):
-        super(_InplaceDummyAugmenterImgsList, self).__init__(
-            name=None, deterministic=False, random_state=None)
+        super(_InplaceDummyAugmenterImgsList, self).__init__()
         self.addval = addval
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -76,8 +74,7 @@ class _InplaceDummyAugmenterImgsList(iaa.meta.Augmenter):
 
 class _InplaceDummyAugmenterSegMaps(iaa.meta.Augmenter):
     def __init__(self, addval):
-        super(_InplaceDummyAugmenterSegMaps, self).__init__(
-            name=None, deterministic=False, random_state=None)
+        super(_InplaceDummyAugmenterSegMaps, self).__init__()
         self.addval = addval
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -92,8 +89,7 @@ class _InplaceDummyAugmenterSegMaps(iaa.meta.Augmenter):
 
 class _InplaceDummyAugmenterKeypoints(iaa.meta.Augmenter):
     def __init__(self, x, y):
-        super(_InplaceDummyAugmenterKeypoints, self).__init__(
-            name=None, deterministic=False, random_state=None)
+        super(_InplaceDummyAugmenterKeypoints, self).__init__()
         self.x = x
         self.y = y
 
@@ -823,12 +819,12 @@ class TestLambda(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.Lambda(
             func_images=_lambda_pickleable_callback_images,
-            random_state=1)
+            seed=1)
         runtest_pickleable_uint8_img(aug)
 
 
 def _lambda_pickleable_callback_images(images, random_state, parents, hooks):
-    aug = iaa.Flipud(0.5, random_state=random_state)
+    aug = iaa.Flipud(0.5, seed=random_state)
     return aug.augment_images(images)
 
 
@@ -1196,7 +1192,7 @@ class TestAssertLambda(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.AssertLambda(
             func_images=_assertlambda_pickleable_callback_images,
-            random_state=1)
+            seed=1)
         runtest_pickleable_uint8_img(aug, iterations=2)
 
 
@@ -1868,7 +1864,7 @@ class TestAssertShape(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.AssertShape(
             shape=(None, 15, 15, None), check_images=True,
-            random_state=1)
+            seed=1)
         runtest_pickleable_uint8_img(aug, iterations=2, shape=(15, 15, 1))
 
 
@@ -2092,18 +2088,42 @@ class TestAugmenter(unittest.TestCase):
         assert aug.random_state.is_global_rng()
 
     def test___init___deterministic(self):
-        aug = _DummyAugmenter(deterministic=True)
-        assert aug.deterministic
-        assert not aug.random_state.is_global_rng()
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
 
-    def test___init___rng(self):
+            aug = _DummyAugmenter(deterministic=True)
+            assert aug.deterministic
+            assert not aug.random_state.is_global_rng()
+
+            assert len(caught_warnings) == 1
+            assert (
+                "is deprecated"
+                in str(caught_warnings[-1].message))
+
+    # old name for parameter `seed`
+    def test___init___random_state_is_rng(self):
         rs = iarandom.RNG(123)
-        aug = _DummyAugmenter(random_state=rs)
+        aug = _DummyAugmenter(seed=rs)
         assert aug.random_state.generator is rs.generator
 
-    def test___init___seed(self):
-        aug = _DummyAugmenter(random_state=123)
+    # old name for parameter `seed`
+    def test___init___random_state_is_seed(self):
+        aug = _DummyAugmenter(seed=123)
         assert aug.random_state.equals(iarandom.RNG(123))
+
+    def test___init___seed_is_random_state(self):
+        rs = iarandom.RNG(123)
+        aug = _DummyAugmenter(seed=rs)
+        assert aug.random_state.generator is rs.generator
+
+    def test___init___seed_is_seed(self):
+        aug = _DummyAugmenter(seed=123)
+        assert aug.random_state.equals(iarandom.RNG(123))
+
+    def test___init__unknown_parameter(self):
+        with self.assertRaises(AssertionError) as ctx:
+            _aug = _DummyAugmenter(foo="bar")
+            assert "unknown parameter" in str(ctx.exception)
 
     def test_augment_images_called_probably_with_single_image(self):
         aug = _DummyAugmenter()
@@ -2518,7 +2538,7 @@ class TestAugmenter(unittest.TestCase):
 
     def test_seed_(self):
         aug1 = _DummyAugmenter()
-        aug2 = _DummyAugmenter(deterministic=True)
+        aug2 = _DummyAugmenter().to_deterministic()
         aug0 = iaa.Sequential([aug1, aug2])
 
         aug0_copy = aug0.deepcopy()
@@ -2534,7 +2554,7 @@ class TestAugmenter(unittest.TestCase):
 
     def test_seed__deterministic_too(self):
         aug1 = _DummyAugmenter()
-        aug2 = _DummyAugmenter(deterministic=True)
+        aug2 = _DummyAugmenter().to_deterministic()
         aug0 = iaa.Sequential([aug1, aug2])
 
         aug0_copy = aug0.deepcopy()
@@ -2550,7 +2570,7 @@ class TestAugmenter(unittest.TestCase):
 
     def test_seed__with_integer(self):
         aug1 = _DummyAugmenter()
-        aug2 = _DummyAugmenter(deterministic=True)
+        aug2 = _DummyAugmenter().to_deterministic()
         aug0 = iaa.Sequential([aug1, aug2])
 
         aug0_copy = aug0.deepcopy()
@@ -2568,7 +2588,7 @@ class TestAugmenter(unittest.TestCase):
 
     def test_seed__with_rng(self):
         aug1 = _DummyAugmenter()
-        aug2 = _DummyAugmenter(deterministic=True)
+        aug2 = _DummyAugmenter().to_deterministic()
         aug0 = iaa.Sequential([aug1, aug2])
 
         aug0_copy = aug0.deepcopy()
@@ -2635,7 +2655,7 @@ class TestAugmenter(unittest.TestCase):
                 return ["A", "B", "C"]
 
         aug1 = DummyAugmenterRepr(name="Example")
-        aug2 = DummyAugmenterRepr(name="Example", deterministic=True)
+        aug2 = DummyAugmenterRepr(name="Example").to_deterministic()
 
         expected1 = (
             "DummyAugmenterRepr("
@@ -3656,8 +3676,7 @@ class _DummyRecoverer(_ConcavePolygonRecoverer):
 
 class _DummyAugmenterWithRecoverer(iaa.Augmenter):
     def __init__(self, use_recoverer=True):
-        super(_DummyAugmenterWithRecoverer, self).__init__(
-            name=None, deterministic=False, random_state=None)
+        super(_DummyAugmenterWithRecoverer, self).__init__()
         self.random_samples_images = []
         self.random_samples_kps = []
 
@@ -4889,9 +4908,9 @@ class TestAugmenter_copy_random_state(unittest.TestCase):
             iaa.Fliplr(0.5, name="hflip"),
             iaa.Dropout(0.05, name="dropout"),
             iaa.Affine(translate_px=(-10, 10), name="translate",
-                       random_state=3),
-            iaa.GaussianBlur(1.0, name="blur", random_state=4)
-        ], random_state=5)
+                       seed=3),
+            iaa.GaussianBlur(1.0, name="blur", seed=4)
+        ], seed=5)
         return source
 
     @property
@@ -6087,10 +6106,10 @@ class TestSequential(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.Sequential(
-            [iaa.Add(1, random_state=1),
-             iaa.Multiply(3, random_state=2)],
+            [iaa.Add(1, seed=1),
+             iaa.Multiply(3, seed=2)],
             random_order=True,
-            random_state=3)
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
 
@@ -6694,12 +6713,12 @@ class TestSomeOf(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.SomeOf((0, 3),
-            [iaa.Add(1, random_state=1),
-             iaa.Add(2, random_state=2),
-             iaa.Multiply(1.5, random_state=3),
-             iaa.Multiply(2.0, random_state=4)],
+            [iaa.Add(1, seed=1),
+             iaa.Add(2, seed=2),
+             iaa.Multiply(1.5, seed=3),
+             iaa.Multiply(2.0, seed=4)],
             random_order=True,
-            random_state=5)
+            seed=5)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
     def test_get_children_lists(self):
@@ -6770,10 +6789,10 @@ class TestOneOf(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.OneOf(
-            [iaa.Add(1, random_state=1),
-             iaa.Add(10, random_state=2),
-             iaa.Multiply(2.0, random_state=3)],
-            random_state=4)
+            [iaa.Add(1, seed=1),
+             iaa.Add(10, seed=2),
+             iaa.Multiply(2.0, seed=3)],
+            seed=4)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
     def test_get_children_lists(self):
@@ -7816,7 +7835,7 @@ class TestSometimes(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.Sometimes(0.5, iaa.Add(10), [iaa.Add(1), iaa.Multiply(2.0)],
-                            random_state=1)
+                            seed=1)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
     def test_get_children_lists(self):
@@ -8326,8 +8345,8 @@ class TestWithChannels(unittest.TestCase):
                 assert np.all(image_aug == expected)
 
     def test_pickleable(self):
-        aug = iaa.WithChannels([0], iaa.Add((1, 10), random_state=2),
-                               random_state=1)
+        aug = iaa.WithChannels([0], iaa.Add((1, 10), seed=2),
+                               seed=1)
         runtest_pickleable_uint8_img(aug, iterations=5)
 
 
@@ -8572,7 +8591,7 @@ class TestChannelShuffle(unittest.TestCase):
                 assert np.all(seen)
 
     def test_pickleable(self):
-        aug = iaa.ChannelShuffle(0.5, random_state=1)
+        aug = iaa.ChannelShuffle(0.5, seed=1)
         runtest_pickleable_uint8_img(aug, iterations=5, shape=(2, 2, 10))
 
 

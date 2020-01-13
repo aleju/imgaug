@@ -83,7 +83,7 @@ class _TestPoolingAugmentersBase(object):
         segmap = SegmentationMapsOnImage(arr, shape=(6, 6, 3))
         mock_aug_segmaps.return_value = [segmap]
         rng = iarandom.RNG(0)
-        aug = self.augmenter(2, keep_size=False, random_state=rng)
+        aug = self.augmenter(2, keep_size=False, seed=rng)
 
         _ = aug.augment_segmentation_maps(segmap)
 

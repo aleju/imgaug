@@ -32,9 +32,9 @@ from ..augmentables import batches as iabatches
 class _ContrastFuncWrapper(meta.Augmenter):
     def __init__(self, func, params1d, per_channel, dtypes_allowed=None,
                  dtypes_disallowed=None,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(_ContrastFuncWrapper, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
         self.func = func
         self.params1d = params1d
         self.per_channel = iap.handle_probability_param(per_channel,
@@ -447,14 +447,14 @@ class GammaContrast(_ContrastFuncWrapper):
         float ``p``, then for ``p`` percent of all images `per_channel` will
         be treated as ``True``, otherwise as ``False``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -472,8 +472,8 @@ class GammaContrast(_ContrastFuncWrapper):
 
     """
 
-    def __init__(self, gamma=1, per_channel=False, name=None, deterministic=False,
-                 random_state=None):
+    def __init__(self, gamma=1, per_channel=False,
+                 seed=None, name=None, **old_kwargs):
         params1d = [iap.handle_continuous_param(
             gamma, "gamma", value_range=None, tuple_to_uniform=True,
             list_to_choice=True)]
@@ -484,10 +484,7 @@ class GammaContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class SigmoidContrast(_ContrastFuncWrapper):
@@ -534,14 +531,14 @@ class SigmoidContrast(_ContrastFuncWrapper):
         float ``p``, then for ``p`` percent of all images `per_channel` will
         be treated as ``True``, otherwise as ``False``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -562,7 +559,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, gain=10, cutoff=0.5, per_channel=False,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         # TODO add inv parameter?
         params1d = [
             iap.handle_continuous_param(
@@ -580,10 +577,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class LogContrast(_ContrastFuncWrapper):
@@ -617,14 +611,14 @@ class LogContrast(_ContrastFuncWrapper):
         float ``p``, then for ``p`` percent of all images `per_channel` will
         be treated as ``True``, otherwise as ``False``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -642,7 +636,7 @@ class LogContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, gain=1, per_channel=False,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         # TODO add inv parameter?
         params1d = [iap.handle_continuous_param(
             gain, "gain", value_range=(0, None), tuple_to_uniform=True,
@@ -655,10 +649,7 @@ class LogContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 class LinearContrast(_ContrastFuncWrapper):
@@ -689,14 +680,14 @@ class LinearContrast(_ContrastFuncWrapper):
         float ``p``, then for ``p`` percent of all images `per_channel` will
         be treated as ``True``, otherwise as ``False``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -714,7 +705,7 @@ class LinearContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, alpha=1, per_channel=False,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         params1d = [
             iap.handle_continuous_param(
                 alpha, "alpha", value_range=None, tuple_to_uniform=True,
@@ -729,10 +720,7 @@ class LinearContrast(_ContrastFuncWrapper):
                             "float16", "float32", "float64"],
             dtypes_disallowed=["uint64", "int64", "float96", "float128",
                                "float256", "bool"],
-            name=name,
-            deterministic=deterministic,
-            random_state=random_state
-        )
+            seed=seed, name=name, **old_kwargs)
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar
@@ -921,14 +909,14 @@ class AllChannelsCLAHE(meta.Augmenter):
         float ``p``, then for ``p`` percent of all images `per_channel` will
         be treated as ``True``, otherwise as ``False``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -954,9 +942,9 @@ class AllChannelsCLAHE(meta.Augmenter):
 
     def __init__(self, clip_limit=40, tile_grid_size_px=8,
                  tile_grid_size_px_min=3, per_channel=False,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(AllChannelsCLAHE, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.clip_limit = iap.handle_continuous_param(
             clip_limit, "clip_limit", value_range=(0+1e-4, None),
@@ -1143,14 +1131,14 @@ class CLAHE(meta.Augmenter):
         to all channels of an input image (without colorspace conversion),
         see ``imgaug.augmenters.contrast.AllChannelsCLAHE``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1206,9 +1194,9 @@ class CLAHE(meta.Augmenter):
                  tile_grid_size_px_min=3,
                  from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(CLAHE, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.all_channel_clahe = AllChannelsCLAHE(
             clip_limit=clip_limit,
@@ -1293,14 +1281,14 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
 
     Parameters
     ----------
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1317,9 +1305,9 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
     strengths. This leads to random strengths of the contrast adjustment.
 
     """
-    def __init__(self, name=None, deterministic=False, random_state=None):
+    def __init__(self, seed=None, name=None, **old_kwargs):
         super(AllChannelsHistogramEqualization, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
@@ -1417,14 +1405,14 @@ class HistogramEqualization(meta.Augmenter):
         (without colorspace conversion), see
         ``imgaug.augmenters.contrast.AllChannelsHistogramEqualization``.
 
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    deterministic : bool, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+    **old_kwargs
+        Outdated parameters. Avoid using these.
 
     Examples
     --------
@@ -1458,9 +1446,9 @@ class HistogramEqualization(meta.Augmenter):
 
     def __init__(self, from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,
-                 name=None, deterministic=False, random_state=None):
+                 seed=None, name=None, **old_kwargs):
         super(HistogramEqualization, self).__init__(
-            name=name, deterministic=deterministic, random_state=random_state)
+            seed=seed, name=name, **old_kwargs)
 
         self.all_channel_histogram_equalization = \
             AllChannelsHistogramEqualization(

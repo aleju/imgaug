@@ -1059,10 +1059,10 @@ class TestBlendAlpha(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.BlendAlpha(
             (0.1, 0.9),
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
             per_channel=True,
-            random_state=3)
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=10)
 
 
@@ -1733,10 +1733,10 @@ class TestBlendAlphaElementwise(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.BlendAlphaElementwise(
             (0.1, 0.9),
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
             per_channel=True,
-            random_state=3)
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -1798,9 +1798,9 @@ class TestBlendAlphaSomeColors(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.BlendAlphaSomeColors(
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
-            random_state=3)
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -1859,9 +1859,9 @@ class TestBlendAlphaHorizontalLinearGradient(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.BlendAlphaHorizontalLinearGradient(
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
-            random_state=3)
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -1920,9 +1920,9 @@ class TestBlendAlphaVerticalLinearGradient(unittest.TestCase):
 
     def test_pickleable(self):
         aug = iaa.BlendAlphaVerticalLinearGradient(
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
-            random_state=3)
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -1980,9 +1980,9 @@ class TestBlendAlphaRegularGrid(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.BlendAlphaRegularGrid(
             2, 3,
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
-            random_state=3)
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -2037,9 +2037,9 @@ class TestBlendAlphaCheckerboard(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.BlendAlphaCheckerboard(
             2, 3,
-            iaa.Add((1, 10), random_state=1),
-            iaa.Add((11, 20), random_state=2),
-            random_state=3)
+            iaa.Add((1, 10), seed=1),
+            iaa.Add((11, 20), seed=2),
+            seed=3)
         runtest_pickleable_uint8_img(aug, iterations=3)
 
 
@@ -2110,10 +2110,10 @@ class TestBlendAlphaSegMapClassIds(unittest.TestCase):
         iterations = 3
         augmenter = iaa.BlendAlphaSegMapClassIds(
             [1, 2],
-            foreground=iaa.Add((1, 10), random_state=1),
-            background=iaa.Add((11, 20), random_state=2),
+            foreground=iaa.Add((1, 10), seed=1),
+            background=iaa.Add((11, 20), seed=2),
             nb_sample_classes=1,
-            random_state=3)
+            seed=3)
         image = np.mod(np.arange(int(np.prod(shape))), 256).astype(np.uint8)
         image = image.reshape(shape)
         segmap_arr = np.zeros((15, 15, 1), dtype=np.int32)
@@ -2200,10 +2200,10 @@ class TestBlendAlphaBoundingBoxes(unittest.TestCase):
         iterations = 3
         augmenter = iaa.BlendAlphaBoundingBoxes(
             ["bb1", "bb2", "bb3"],
-            foreground=iaa.Add((1, 10), random_state=1),
-            background=iaa.Add((11, 20), random_state=2),
+            foreground=iaa.Add((1, 10), seed=1),
+            background=iaa.Add((11, 20), seed=2),
             nb_sample_labels=1,
-            random_state=3)
+            seed=3)
         image = np.mod(np.arange(int(np.prod(shape))), 256).astype(np.uint8)
         image = image.reshape(shape)
         bbs = [ia.BoundingBox(x1=1, y1=1, x2=5, y2=5, label="bb1"),

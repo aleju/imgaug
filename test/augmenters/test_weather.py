@@ -162,7 +162,7 @@ class TestFastSnowyLandscape(unittest.TestCase):
     def test_pickleable(self):
         aug = iaa.FastSnowyLandscape(lightness_threshold=(50, 150),
                                      lightness_multiplier=(1.0, 3.0),
-                                     random_state=1)
+                                     seed=1)
         runtest_pickleable_uint8_img(aug)
 
 
@@ -241,7 +241,7 @@ class TestClouds(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_pickleable(self):
-        aug = iaa.Clouds(random_state=1)
+        aug = iaa.Clouds(seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
 
 
@@ -320,7 +320,7 @@ class TestFog(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_pickleable(self):
-        aug = iaa.Fog(random_state=1)
+        aug = iaa.Fog(seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
 
 
@@ -405,7 +405,7 @@ class TestSnowflakes(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_pickleable(self):
-        aug = iaa.Snowflakes(random_state=1)
+        aug = iaa.Snowflakes(seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
 
     @classmethod
@@ -513,5 +513,5 @@ class TestRain(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_pickleable(self):
-        aug = iaa.Rain(random_state=1)
+        aug = iaa.Rain(seed=1)
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
