@@ -11,7 +11,6 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
-import tempfile
 import os
 
 import matplotlib
@@ -23,7 +22,7 @@ import imageio
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, TemporaryDirectory
 import imgaug.augmenters.debug as debuglib
 
 
@@ -286,22 +285,22 @@ class SaveDebugImageEveryNBatches(unittest.TestCase):
         assert np.array_equal(destination.received[1], expected)
 
     def test_temp_directory(self):
-        folder_path = tempfile.mkdtemp()
-        image = iarandom.RNG(0).integers(0, 256, size=(256, 256, 3),
-                                         dtype=np.uint8)
-        aug = iaa.SaveDebugImageEveryNBatches(folder_path, 10)
+        with TemporaryDirectory() as folder_path:
+            image = iarandom.RNG(0).integers(0, 256, size=(256, 256, 3),
+                                             dtype=np.uint8)
+            aug = iaa.SaveDebugImageEveryNBatches(folder_path, 10)
 
-        for _ in np.arange(20):
-            _ = aug(image=image)
+            for _ in np.arange(20):
+                _ = aug(image=image)
 
-        expected = iaa.draw_debug_image([image])
-        path1 = os.path.join(folder_path, "batch_000000.png")
-        path2 = os.path.join(folder_path, "batch_000010.png")
-        path_latest = os.path.join(folder_path, "batch_latest.png")
-        assert len(list(os.listdir(folder_path))) == 3
-        assert os.path.isfile(path1)
-        assert os.path.isfile(path2)
-        assert os.path.isfile(path_latest)
-        assert np.array_equal(imageio.imread(path1), expected)
-        assert np.array_equal(imageio.imread(path2), expected)
-        assert np.array_equal(imageio.imread(path_latest), expected)
+            expected = iaa.draw_debug_image([image])
+            path1 = os.path.join(folder_path, "batch_000000.png")
+            path2 = os.path.join(folder_path, "batch_000010.png")
+            path_latest = os.path.join(folder_path, "batch_latest.png")
+            assert len(list(os.listdir(folder_path))) == 3
+            assert os.path.isfile(path1)
+            assert os.path.isfile(path2)
+            assert os.path.isfile(path_latest)
+            assert np.array_equal(imageio.imread(path1), expected)
+            assert np.array_equal(imageio.imread(path2), expected)
+            assert np.array_equal(imageio.imread(path_latest), expected)
