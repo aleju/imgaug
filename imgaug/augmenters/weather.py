@@ -528,7 +528,6 @@ class Clouds(meta.SomeOf):
     """
 
     def __init__(self, seed=None, name=None, **old_kwargs):
-        # FIXME random state not transferred to children
         layers = [
             CloudLayer(
                 intensity_mean=(196, 255),
@@ -539,7 +538,9 @@ class Clouds(meta.SomeOf):
                 alpha_size_px_max=(2, 8),
                 alpha_freq_exponent=(-2.5, -2.0),
                 sparsity=(0.8, 1.0),
-                density_multiplier=(0.5, 1.0)
+                density_multiplier=(0.5, 1.0),
+                seed=seed,
+                **old_kwargs
             ),
             CloudLayer(
                 intensity_mean=(196, 255),
@@ -550,7 +551,9 @@ class Clouds(meta.SomeOf):
                 alpha_size_px_max=(64, 128),
                 alpha_freq_exponent=(-2.0, -1.0),
                 sparsity=(1.0, 1.4),
-                density_multiplier=(0.8, 1.5)
+                density_multiplier=(0.8, 1.5),
+                seed=seed,
+                **old_kwargs
             )
         ]
 
@@ -1130,7 +1133,6 @@ class Snowflakes(meta.SomeOf):
                  flake_size=(0.2, 0.7), flake_size_uniformity=(0.4, 0.8),
                  angle=(-30, 30), speed=(0.007, 0.03),
                  seed=None, name=None, **old_kwargs):
-        # FIXME random state not transferred to children
         layer = SnowflakesLayer(
             density=density,
             density_uniformity=density_uniformity,
@@ -1138,7 +1140,9 @@ class Snowflakes(meta.SomeOf):
             flake_size_uniformity=flake_size_uniformity,
             angle=angle,
             speed=speed,
-            blur_sigma_fraction=(0.0001, 0.001)
+            blur_sigma_fraction=(0.0001, 0.001),
+            seed=seed,
+            **old_kwargs
         )
 
         super(Snowflakes, self).__init__(
@@ -1323,7 +1327,6 @@ class Rain(meta.SomeOf):
                  drop_size=(0.01, 0.02),
                  speed=(0.04, 0.20),
                  seed=None, name=None, **old_kwargs):
-        # FIXME random state not transferred to children
         layer = RainLayer(
             density=(0.03, 0.14),
             density_uniformity=(0.8, 1.0),
@@ -1331,7 +1334,9 @@ class Rain(meta.SomeOf):
             drop_size_uniformity=(0.2, 0.5),
             angle=(-15, 15),
             speed=speed,
-            blur_sigma_fraction=(0.001, 0.001)
+            blur_sigma_fraction=(0.001, 0.001),
+            seed=seed,
+            **old_kwargs
         )
 
         super(Rain, self).__init__(
