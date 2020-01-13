@@ -1568,6 +1568,70 @@ class ScaleX(Affine):
             seed=seed, name=name, **old_kwargs)
 
 
+class ScaleY(Affine):
+    """Apply affine scaling on the y-axis to input data.
+
+    This is a wrapper around :class:`Affine`.
+
+    dtype support::
+
+        See :class:`~imgaug.augmenters.geometric.Affine`.
+
+    Parameters
+    ----------
+    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
+        Analogous to ``scale`` in :class:`Affine`, except that this scale
+        value only affects the y-axis. No dictionary input is allowed.
+
+    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
+        See :class:`Affine`.
+
+    fit_output : bool, optional
+        See :class:`Affine`.
+
+    backend : str, optional
+        See :class:`Affine`.
+
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
+    name : None or str, optional
+        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
+
+    **old_kwargs
+        Outdated parameters. Avoid using these.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ScaleY((0.5, 1.5))
+
+    Create an augmenter that scales images along the height to sizes between
+    ``50%`` and ``150%``. This does not change the image shape (i.e. height
+    and width), only the pixels within the image are remapped and potentially
+    new ones are filled in.
+
+    """
+
+    def __init__(self, scale, order=1, cval=0, mode="constant",
+                 fit_output=False, backend="auto",
+                 seed=None, name=None, **old_kwargs):
+        super(ScaleY, self).__init__(
+            scale={"y": scale},
+            order=order,
+            cval=cval,
+            mode=mode,
+            fit_output=fit_output,
+            backend=backend,
+            seed=seed, name=name, **old_kwargs)
+
+
 # TODO make Affine more efficient for translation-only transformations
 class TranslateX(Affine):
     """Apply affine translation on the x-axis to input data.
@@ -1720,70 +1784,6 @@ class TranslateY(Affine):
         super(TranslateY, self).__init__(
             translate_percent=({"y": percent} if percent is not None else None),
             translate_px=({"y": px} if px is not None else None),
-            order=order,
-            cval=cval,
-            mode=mode,
-            fit_output=fit_output,
-            backend=backend,
-            seed=seed, name=name, **old_kwargs)
-
-
-class ScaleY(Affine):
-    """Apply affine scaling on the y-axis to input data.
-
-    This is a wrapper around :class:`Affine`.
-
-    dtype support::
-
-        See :class:`~imgaug.augmenters.geometric.Affine`.
-
-    Parameters
-    ----------
-    scale : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Analogous to ``scale`` in :class:`Affine`, except that this scale
-        value only affects the y-axis. No dictionary input is allowed.
-
-    order : int or iterable of int or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See :class:`Affine`.
-
-    cval : number or tuple of number or list of number or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See :class:`Affine`.
-
-    mode : str or list of str or imgaug.ALL or imgaug.parameters.StochasticParameter, optional
-        See :class:`Affine`.
-
-    fit_output : bool, optional
-        See :class:`Affine`.
-
-    backend : str, optional
-        See :class:`Affine`.
-
-    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    name : None or str, optional
-        See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
-
-    **old_kwargs
-        Outdated parameters. Avoid using these.
-
-    Examples
-    --------
-    >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.ScaleY((0.5, 1.5))
-
-    Create an augmenter that scales images along the height to sizes between
-    ``50%`` and ``150%``. This does not change the image shape (i.e. height
-    and width), only the pixels within the image are remapped and potentially
-    new ones are filled in.
-
-    """
-
-    def __init__(self, scale, order=1, cval=0, mode="constant",
-                 fit_output=False, backend="auto",
-                 seed=None, name=None, **old_kwargs):
-        super(ScaleY, self).__init__(
-            scale={"y": scale},
             order=order,
             cval=cval,
             mode=mode,
