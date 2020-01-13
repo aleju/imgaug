@@ -981,7 +981,7 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.gaussian_noise`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1027,7 +1027,7 @@ class ShotNoise(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.shot_noise`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1073,7 +1073,7 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.impulse_noise`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1119,7 +1119,7 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.speckle_noise`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1165,7 +1165,7 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.gaussian_blur`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1211,7 +1211,7 @@ class GlassBlur(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.glass_blur`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1257,7 +1257,7 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.defocus_blur`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1303,7 +1303,7 @@ class MotionBlur(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.motion_blur`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1349,7 +1349,7 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.zoom_blur`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1395,7 +1395,7 @@ class Fog(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.fog`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1441,7 +1441,7 @@ class Frost(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.frost`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1487,7 +1487,7 @@ class Snow(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.snow`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1533,7 +1533,7 @@ class Spatter(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.spatter`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1579,7 +1579,7 @@ class Contrast(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.contrast`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1625,7 +1625,7 @@ class Brightness(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.brightness`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1671,7 +1671,7 @@ class Saturate(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.saturate`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1717,7 +1717,7 @@ class JpegCompression(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.jpeg_compression`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1763,7 +1763,7 @@ class Pixelate(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.pixelate`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 
@@ -1809,7 +1809,7 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.elastic_transform`.
 
-    .. note ::
+    .. note::
 
         This augmenter only affects images. Other data is not changed.
 

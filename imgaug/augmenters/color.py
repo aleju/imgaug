@@ -2524,7 +2524,7 @@ class ChangeColorspace(meta.Augmenter):
         This augmenter is not tested. Some colorspaces might work, others
         might not.
 
-    ..note ::
+    ..note::
 
         This augmenter tries to project the colorspace value range on
         0-255. It outputs dtype=uint8 images.
