@@ -5604,7 +5604,9 @@ class Jigsaw(meta.Augmenter):
             for i in np.arange(len(samples.destinations)):
                 padder = size_lib.CenterPadToMultiplesOf(
                     width_multiple=samples.nb_cols[i],
-                    height_multiple=samples.nb_rows[i])
+                    height_multiple=samples.nb_rows[i],
+                    seed=random_state
+                )
                 row = batch.subselect_rows_by_indices([i])
                 row = padder.augment_batch_(row, parents=parents + [self],
                                             hooks=hooks)
