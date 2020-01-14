@@ -17,7 +17,7 @@ matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 from imgaug import augmenters as iaa
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 
 
 class TestRandAugment(unittest.TestCase):
@@ -93,3 +93,7 @@ class TestRandAugment(unittest.TestCase):
         assert params[0] is aug[1].n
         assert params[1] is aug._m
         assert params[2] is aug._cval
+
+    def test_pickleable(self):
+        aug = iaa.RandAugment(m=(0, 10), n=(1, 2))
+        runtest_pickleable_uint8_img(aug, iterations=50)

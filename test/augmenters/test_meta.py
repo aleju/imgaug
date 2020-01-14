@@ -15,6 +15,10 @@ try:
     import unittest.mock as mock
 except ImportError:
     import mock
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -8681,6 +8685,19 @@ class TestRemoveCBAsByOutOfImageFraction(unittest.TestCase):
         assert len(params) == 1
         assert np.isclose(params[0], 0.51)
 
+    def test_pickleable(self):
+        item1 = ia.Keypoint(x=5, y=1)
+        item2 = ia.Keypoint(x=15, y=1)
+        cbaoi = ia.KeypointsOnImage([item1, item2], shape=(10, 10, 3))
+
+        augmenter = iaa.RemoveCBAsByOutOfImageFraction(0.51)
+        augmenter_pkl = pickle.loads(pickle.dumps(augmenter, protocol=-1))
+
+        for _ in np.arange(3):
+            cbaoi_aug = augmenter(keypoints=cbaoi)
+            cbaoi_aug_pkl = augmenter_pkl(keypoints=cbaoi)
+            assert np.allclose(cbaoi_aug.to_xy_array(), cbaoi_aug_pkl.to_xy_array())
+
 
 class TestClipCBAsToImagePlanes(unittest.TestCase):
     def setUp(self):
@@ -8774,3 +8791,16 @@ class TestClipCBAsToImagePlanes(unittest.TestCase):
         aug = iaa.ClipCBAsToImagePlanes()
         params = aug.get_parameters()
         assert len(params) == 0
+
+    def test_pickleable(self):
+        item1 = ia.Keypoint(x=5, y=1)
+        item2 = ia.Keypoint(x=15, y=1)
+        cbaoi = ia.KeypointsOnImage([item1, item2], shape=(10, 10, 3))
+
+        augmenter = iaa.ClipCBAsToImagePlanes()
+        augmenter_pkl = pickle.loads(pickle.dumps(augmenter, protocol=-1))
+
+        for _ in np.arange(3):
+            cbaoi_aug = augmenter(keypoints=cbaoi)
+            cbaoi_aug_pkl = augmenter_pkl(keypoints=cbaoi)
+            assert np.allclose(cbaoi_aug.to_xy_array(), cbaoi_aug_pkl.to_xy_array())

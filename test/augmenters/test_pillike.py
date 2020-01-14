@@ -24,7 +24,7 @@ import PIL.ImageFilter
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import random as iarandom
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 
 
 def _test_shape_hw(func):
@@ -981,6 +981,10 @@ class TestSolarize(unittest.TestCase):
         assert np.isclose(aug.threshold.value, 128)
         assert aug.invert_above_threshold.value == 1
 
+    def test_pickleable(self):
+        aug = iaa.pillike.Solarize()
+        runtest_pickleable_uint8_img(aug)
+
 
 class TestPosterize(unittest.TestCase):
     def setUp(self):
@@ -989,6 +993,10 @@ class TestPosterize(unittest.TestCase):
     def test_returns_posterize(self):
         aug = iaa.pillike.Posterize()
         assert isinstance(aug, iaa.Posterize)
+
+    def test_pickleable(self):
+        aug = iaa.pillike.Posterize()
+        runtest_pickleable_uint8_img(aug)
 
 
 class TestEqualize(unittest.TestCase):
@@ -1021,6 +1029,10 @@ class TestEqualize(unittest.TestCase):
                 assert np.all(channelwise_sums > 0)
             assert np.min(image_aug) < 50
             assert np.max(image_aug) > 150
+
+    def test_pickleable(self):
+        aug = iaa.pillike.Equalize()
+        runtest_pickleable_uint8_img(aug)
 
 
 class TestAutocontrast(unittest.TestCase):
@@ -1077,6 +1089,10 @@ class TestAutocontrast(unittest.TestCase):
         assert np.min(image_aug) < 50
         assert np.max(image_aug) > 150
 
+    def test_pickleable(self):
+        aug = iaa.pillike.Autocontrast((0, 30), per_channel=0.5)
+        runtest_pickleable_uint8_img(aug)
+
 
 class TestEnhanceColor(unittest.TestCase):
     def setUp(self):
@@ -1131,6 +1147,10 @@ class TestEnhanceColor(unittest.TestCase):
         params = aug.get_parameters()
         assert params[0] is aug.factor
 
+    def test_pickleable(self):
+        aug = iaa.pillike.EnhanceColor((0.1, 2.0))
+        runtest_pickleable_uint8_img(aug)
+
 
 # we don't have to test very much here, because some functions of the base
 # class are already tested via EnhanceColor
@@ -1174,6 +1194,10 @@ class TestEnhanceContrast(unittest.TestCase):
 
         assert np.allclose(hm_aug.get_arr(), hm.get_arr())
 
+    def test_pickleable(self):
+        aug = iaa.pillike.EnhanceContrast((0.1, 2.0))
+        runtest_pickleable_uint8_img(aug)
+
 
 # we don't have to test very much here, because some functions of the base
 # class are already tested via EnhanceColor
@@ -1211,6 +1235,10 @@ class TestEnhanceBrightness(unittest.TestCase):
         hm_aug = aug(heatmaps=hm)
 
         assert np.allclose(hm_aug.get_arr(), hm.get_arr())
+
+    def test_pickleable(self):
+        aug = iaa.pillike.EnhanceBrightness((0.1, 2.0))
+        runtest_pickleable_uint8_img(aug)
 
 
 # we don't have to test very much here, because some functions of the base
@@ -1251,6 +1279,10 @@ class TestEnhanceSharpness(unittest.TestCase):
 
         assert np.allclose(hm_aug.get_arr(), hm.get_arr())
 
+    def test_pickleable(self):
+        aug = iaa.pillike.EnhanceSharpness((0.1, 2.0))
+        runtest_pickleable_uint8_img(aug)
+
 
 class _TestFilter(unittest.TestCase):
     def _test___init__(self, cls, func):
@@ -1263,6 +1295,10 @@ class _TestFilter(unittest.TestCase):
         image_aug_pil = PIL.Image.fromarray(image).filter(pil_kernel)
         assert np.array_equal(image_aug, image_aug_pil)
 
+    def _test_pickleable(self, cls):
+        aug = cls()
+        runtest_pickleable_uint8_img(aug)
+
 
 class FilterBlur(_TestFilter):
     def test___init__(self):
@@ -1272,6 +1308,9 @@ class FilterBlur(_TestFilter):
     def test_image(self):
         self._test_image(iaa.pillike.FilterBlur,
                          PIL.ImageFilter.BLUR)
+
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterBlur)
 
 
 class FilterSmooth(_TestFilter):
@@ -1283,6 +1322,9 @@ class FilterSmooth(_TestFilter):
         self._test_image(iaa.pillike.FilterSmooth,
                          PIL.ImageFilter.SMOOTH)
 
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterSmooth)
+
 
 class FilterSmoothMore(_TestFilter):
     def test___init__(self):
@@ -1292,6 +1334,9 @@ class FilterSmoothMore(_TestFilter):
     def test_image(self):
         self._test_image(iaa.pillike.FilterSmoothMore,
                          PIL.ImageFilter.SMOOTH_MORE)
+
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterSmoothMore)
 
 
 class FilterEdgeEnhance(_TestFilter):
@@ -1303,6 +1348,9 @@ class FilterEdgeEnhance(_TestFilter):
         self._test_image(iaa.pillike.FilterEdgeEnhance,
                          PIL.ImageFilter.EDGE_ENHANCE)
 
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterEdgeEnhance)
+
 
 class FilterEdgeEnhanceMore(_TestFilter):
     def test___init__(self):
@@ -1312,6 +1360,9 @@ class FilterEdgeEnhanceMore(_TestFilter):
     def test_image(self):
         self._test_image(iaa.pillike.FilterEdgeEnhanceMore,
                          PIL.ImageFilter.EDGE_ENHANCE_MORE)
+
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterEdgeEnhanceMore)
 
 
 class FilterFindEdges(_TestFilter):
@@ -1323,6 +1374,9 @@ class FilterFindEdges(_TestFilter):
         self._test_image(iaa.pillike.FilterFindEdges,
                          PIL.ImageFilter.FIND_EDGES)
 
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterFindEdges)
+
 
 class FilterContour(_TestFilter):
     def test___init__(self):
@@ -1332,6 +1386,9 @@ class FilterContour(_TestFilter):
     def test_image(self):
         self._test_image(iaa.pillike.FilterContour,
                          PIL.ImageFilter.CONTOUR)
+
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterContour)
 
 
 class FilterEmboss(_TestFilter):
@@ -1343,6 +1400,9 @@ class FilterEmboss(_TestFilter):
         self._test_image(iaa.pillike.FilterEmboss,
                          PIL.ImageFilter.EMBOSS)
 
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterEmboss)
+
 
 class FilterSharpen(_TestFilter):
     def test___init__(self):
@@ -1353,6 +1413,9 @@ class FilterSharpen(_TestFilter):
         self._test_image(iaa.pillike.FilterSharpen,
                          PIL.ImageFilter.SHARPEN)
 
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterSharpen)
+
 
 class FilterDetail(_TestFilter):
     def test___init__(self):
@@ -1362,6 +1425,9 @@ class FilterDetail(_TestFilter):
     def test_image(self):
         self._test_image(iaa.pillike.FilterDetail,
                          PIL.ImageFilter.DETAIL)
+
+    def test_pickleable(self):
+        self._test_pickleable(iaa.pillike.FilterDetail)
 
 
 class TestAffine(unittest.TestCase):
@@ -1484,3 +1550,14 @@ class TestAffine(unittest.TestCase):
         assert params[3] is aug.shear
         assert params[4] is aug.cval
         assert params[5] is aug.center
+
+    def test_pickleable(self):
+        aug = iaa.pillike.Affine(
+            scale={"x": 1.25, "y": 1.5},
+            translate_px={"x": 10, "y": 20},
+            rotate=30,
+            shear={"x": 40, "y": 50},
+            fillcolor=(100, 200),
+            center="uniform"
+        )
+        runtest_pickleable_uint8_img(aug)

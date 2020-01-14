@@ -12,6 +12,10 @@ try:
 except ImportError:
     import mock
 import os
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import matplotlib
 matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
@@ -304,3 +308,37 @@ class SaveDebugImageEveryNBatches(unittest.TestCase):
             assert np.array_equal(imageio.imread(path1), expected)
             assert np.array_equal(imageio.imread(path2), expected)
             assert np.array_equal(imageio.imread(path_latest), expected)
+
+    def test_pickleable(self):
+        shape = (16, 16, 3)
+        image = np.mod(np.arange(int(np.prod(shape))), 256).astype(np.uint8)
+        image = image.reshape(shape)
+
+        with TemporaryDirectory() as folder_path:
+            path1 = os.path.join(folder_path, "batch_000000.png")
+            path2 = os.path.join(folder_path, "batch_000010.png")
+
+            augmenter = iaa.SaveDebugImageEveryNBatches(folder_path, 10)
+            augmenter_pkl = pickle.loads(pickle.dumps(augmenter, protocol=-1))
+
+            # save two images via augmenter without pickling
+            for _ in np.arange(20):
+                _ = augmenter(image=image)
+
+            img11 = imageio.imread(path1)
+            img12 = imageio.imread(path2)
+
+            # reset folder content
+            os.remove(path1)
+            os.remove(path2)
+
+            # save two images via augmenter that was pickled
+            for _ in np.arange(20):
+                _ = augmenter_pkl(image=image)
+
+            img21 = imageio.imread(path1)
+            img22 = imageio.imread(path2)
+
+            # compare the two images of original/pickled augmenters
+            assert np.array_equal(img11, img21)
+            assert np.array_equal(img12, img22)

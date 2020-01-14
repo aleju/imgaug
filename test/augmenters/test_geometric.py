@@ -10082,3 +10082,7 @@ class TestJigsaw(unittest.TestCase):
         assert params[1] is aug.nb_cols
         assert params[2] is aug.max_steps
         assert params[3] is True
+
+    def test_pickleable(self):
+        aug = iaa.Jigsaw(nb_rows=(1, 4), nb_cols=(1, 4), max_steps=(1, 3))
+        runtest_pickleable_uint8_img(aug, iterations=20, shape=(32, 32, 3))
