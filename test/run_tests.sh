@@ -6,4 +6,4 @@
 # The command below executes all tests.
 # To execute only one specific test, use e.g.
 # pytest ./test/augmenters/test_geometric.py::TestRot90::test_empty_polygons
-python -m pytest ./test --verbose --xdoctest-modules -s --durations=20
+python -m pytest ./test --verbose --xdoctest-modules -s --durations=20 -Walways
