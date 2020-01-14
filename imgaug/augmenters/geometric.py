@@ -713,7 +713,7 @@ class Affine(meta.Augmenter):
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
 
-    .. note ::
+    .. note::
 
         While this augmenter supports segmentation maps and heatmaps that
         have a different size than the corresponding image, it is strongly

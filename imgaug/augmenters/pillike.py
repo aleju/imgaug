@@ -2039,7 +2039,7 @@ class Affine(geometric.Affine):
     This augmenter has identical outputs to
     :func:`PIL.Image.transform` with parameter ``method=PIL.Image.AFFINE``.
 
-    .. note ::
+    .. note::
 
         This augmenter can currently only transform image-data.
         Batches containing heatmaps, segmentation maps and
@@ -2047,7 +2047,7 @@ class Affine(geometric.Affine):
         Use :class:`~imgaug.augmenters.geometric.Affine` if you have to
         transform such inputs.
 
-    .. note ::
+    .. note::
 
         This augmenter uses the image center as the transformation center.
         This has to be explicitly enforced in PIL using corresponding
