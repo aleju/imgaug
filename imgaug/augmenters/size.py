@@ -356,7 +356,8 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
 
     This function is a wrapper around :func:`numpy.pad`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested (1)
         * ``uint16``: yes; fully tested (1)
@@ -558,9 +559,10 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
     explanation of how the required padding amounts are distributed per
     image axis.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.pad`.
+    See :func:`~imgaug.augmenters.size.pad`.
 
     Parameters
     ----------
@@ -624,9 +626,10 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
     explanation of how the required padding amounts are distributed per
     image axis.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.pad`.
+    See :func:`~imgaug.augmenters.size.pad`.
 
     Parameters
     ----------
@@ -1104,9 +1107,10 @@ def Scale(*args, **kwargs):
 class Resize(meta.Augmenter):
     """Augmenter that resizes images to specified heights and widths.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.imresize_many_images`.
+    See :func:`~imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------
@@ -1536,30 +1540,31 @@ class CropAndPad(meta.Augmenter):
         after it has augmented them. To deactivate this, add the
         parameter ``keep_size=False``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (keep_size=False)::
+    if (keep_size=False):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested
-            * ``uint64``: yes; tested
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: yes; tested
-            * ``float16``: yes; tested
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: yes; tested
-            * ``bool``: yes; tested
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
 
-        if (keep_size=True)::
+    if (keep_size=True):
 
-            minimum of (
-                ``imgaug.augmenters.size.CropAndPad(keep_size=False)``,
-                :func:`~imgaug.imgaug.imresize_many_images`
-            )
+        minimum of (
+            ``imgaug.augmenters.size.CropAndPad(keep_size=False)``,
+            :func:`~imgaug.imgaug.imresize_many_images`
+        )
 
     Parameters
     ----------
@@ -2124,9 +2129,10 @@ class CropAndPad(meta.Augmenter):
 class Pad(CropAndPad):
     """Pad images, i.e. adds columns/rows of pixels to them.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.size.CropAndPad``.
+    See :class:`~imgaug.augmenters.size.CropAndPad`.
 
     Parameters
     ----------
@@ -2350,9 +2356,10 @@ class Crop(CropAndPad):
 
     This augmenter will never crop images below a height or width of ``1``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.size.CropAndPad``.
+    See :class:`~imgaug.augmenters.size.CropAndPad`.
 
     Parameters
     ----------
@@ -2531,9 +2538,10 @@ class PadToFixedSize(meta.Augmenter):
     and 0px to the left and sometimes add 1px to both sides. Set `position`
     to ``center`` to prevent that.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.pad`.
+    See :func:`~imgaug.augmenters.size.pad`.
 
     Parameters
     ----------
@@ -2824,9 +2832,10 @@ class CenterPadToFixedSize(PadToFixedSize):
     all image sides, while :class:`~imgaug.augmenters.size.PadToFixedSize`
     by defaults spreads them randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -2888,7 +2897,8 @@ class CropToFixedSize(meta.Augmenter):
     remove 2px from the right and 0px from the left and sometimes remove 1px
     from both sides. Set `position` to ``center`` to prevent that.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3142,9 +3152,10 @@ class CenterCropToFixedSize(CropToFixedSize):
         respective axis. Hence, resulting images can be smaller than the
         provided axis sizes.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3190,9 +3201,10 @@ class CropToMultiplesOf(CropToFixedSize):
         As a result, this augmenter can still produce axis sizes that are
         not multiples of the given values.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3278,9 +3290,10 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     :class:`~imgaug.augmenters.size.CropToMultiplesOf` by default spreads
     them randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3324,9 +3337,10 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
 class PadToMultiplesOf(PadToFixedSize):
     """Pad images until their height/width is a multiple of a value.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3423,9 +3437,10 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
     :class:`~imgaug.augmenters.size.PadToMultiplesOf` by default spreads them
     randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3490,9 +3505,10 @@ class CropToPowersOf(CropToFixedSize):
         to combine this augmenter with a padding augmenter that pads each
         axis up to ``B``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3580,9 +3596,10 @@ class CenterCropToPowersOf(CropToPowersOf):
     :class:`~imgaug.augmenters.size.CropToPowersOf` by default spreads them
     randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3629,9 +3646,10 @@ class PadToPowersOf(PadToFixedSize):
     provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
     interval ``[1 .. inf)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3729,9 +3747,10 @@ class CenterPadToPowersOf(PadToPowersOf):
     over all image sides, while :class:`~imgaug.augmenters.size.PadToPowersOf`
     by default spreads them randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -3788,9 +3807,10 @@ class CropToAspectRatio(CropToFixedSize):
     side to crop reaches a size of ``1``. If any side of the image starts
     with a size of ``0``, the image will not be changed.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3872,9 +3892,10 @@ class CenterCropToAspectRatio(CropToAspectRatio):
     :class:`~imgaug.augmenters.size.CropToAspectRatio` by default spreads
     them randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -3916,9 +3937,10 @@ class PadToAspectRatio(PadToFixedSize):
     This augmenter adds either rows or columns until the image reaches
     the desired aspect ratio given in ``width / height``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -4006,9 +4028,10 @@ class CenterPadToAspectRatio(PadToAspectRatio):
     :class:`~imgaug.augmenters.size.PadToAspectRatio` by default spreads them
     randomly.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -4059,9 +4082,10 @@ class CropToSquare(CropToAspectRatio):
 
     Images with axis sizes of ``0`` will not be altered.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -4112,9 +4136,10 @@ class CenterCropToSquare(CropToSquare):
 
     Images with axis sizes of ``0`` will not be altered.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.CropToFixedSize`.
+    See :class:`~imgaug.augmenters.size.CropToFixedSize`.
 
     Parameters
     ----------
@@ -4151,9 +4176,10 @@ class PadToSquare(PadToAspectRatio):
     This augmenter is identical to
     :class:`~imgaug.augmenters.size.PadToAspectRatio` with ``aspect_ratio=1.0``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -4205,9 +4231,10 @@ class CenterPadToSquare(PadToSquare):
     :class:`~imgaug.augmenters.size.PadToAspectRatio` with
     ``aspect_ratio=1.0, position="center"``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.size.PadToFixedSize`.
+    See :class:`~imgaug.augmenters.size.PadToFixedSize`.
 
     Parameters
     ----------
@@ -4255,9 +4282,10 @@ class KeepSizeByResize(meta.Augmenter):
     the interpolation mode and which augmentables to resize (images, heatmaps,
     segmentation maps).
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.imresize_many_images`.
+    See :func:`~imgaug.imgaug.imresize_many_images`.
 
     Parameters
     ----------

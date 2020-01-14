@@ -358,7 +358,8 @@ def apply_jigsaw(arr, destinations):
     This function will split the image into ``rows x cols`` cells and
     move each cell to the target index given in `destinations`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -725,9 +726,53 @@ class Affine(meta.Augmenter):
         For performance reasons, there is no explicit validation of whether
         the aspect ratios are similar.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (backend="skimage", order in [0, 1])::
+    if (backend="skimage", order in [0, 1]):
+
+        * ``uint8``: yes; tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested  (1)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (2)
+        * ``bool``: yes; tested
+
+        - (1) scikit-image converts internally to float64, which might
+              affect the accuracy of large integers. In tests this seemed
+              to not be an issue.
+        - (2) results too inaccurate
+
+    if (backend="skimage", order in [3, 4]):
+
+        * ``uint8``: yes; tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested  (1)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: limited; tested (3)
+        * ``float128``: no (2)
+        * ``bool``: yes; tested
+
+        - (1) scikit-image converts internally to float64, which might
+              affect the accuracy of large integers. In tests this seemed
+              to not be an issue.
+        - (2) results too inaccurate
+        - (3) ``NaN`` around minimum and maximum of float64 value range
+
+    if (backend="skimage", order=5]):
 
             * ``uint8``: yes; tested
             * ``uint16``: yes; tested
@@ -739,124 +784,81 @@ class Affine(meta.Augmenter):
             * ``int64``: no (2)
             * ``float16``: yes; tested
             * ``float32``: yes; tested
-            * ``float64``: yes; tested
+            * ``float64``: limited; not tested (3)
             * ``float128``: no (2)
             * ``bool``: yes; tested
 
-            - (1) scikit-image converts internally to float64, which might
-                  affect the accuracy of large integers. In tests this seemed
-                  to not be an issue.
-            - (2) results too inaccurate
-
-        if (backend="skimage", order in [3, 4])::
-
-            * ``uint8``: yes; tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested (1)
-            * ``uint64``: no (2)
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested  (1)
-            * ``int64``: no (2)
-            * ``float16``: yes; tested
-            * ``float32``: yes; tested
-            * ``float64``: limited; tested (3)
-            * ``float128``: no (2)
-            * ``bool``: yes; tested
-
-            - (1) scikit-image converts internally to float64, which might
-                  affect the accuracy of large integers. In tests this seemed
-                  to not be an issue.
+            - (1) scikit-image converts internally to ``float64``, which
+                  might affect the accuracy of large integers. In tests
+                  this seemed to not be an issue.
             - (2) results too inaccurate
             - (3) ``NaN`` around minimum and maximum of float64 value range
 
-        if (backend="skimage", order=5])::
+    if (backend="cv2", order=0):
 
-                * ``uint8``: yes; tested
-                * ``uint16``: yes; tested
-                * ``uint32``: yes; tested (1)
-                * ``uint64``: no (2)
-                * ``int8``: yes; tested
-                * ``int16``: yes; tested
-                * ``int32``: yes; tested  (1)
-                * ``int64``: no (2)
-                * ``float16``: yes; tested
-                * ``float32``: yes; tested
-                * ``float64``: limited; not tested (3)
-                * ``float128``: no (2)
-                * ``bool``: yes; tested
+        * ``uint8``: yes; tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (3)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (3)
 
-                - (1) scikit-image converts internally to ``float64``, which
-                      might affect the accuracy of large integers. In tests
-                      this seemed to not be an issue.
-                - (2) results too inaccurate
-                - (3) ``NaN`` around minimum and maximum of float64 value range
+        - (1) rejected by cv2
+        - (2) changed to ``int32`` by cv2
+        - (3) mapped internally to ``float32``
 
-        if (backend="cv2", order=0)::
+    if (backend="cv2", order=1):
 
-            * ``uint8``: yes; tested
-            * ``uint16``: yes; tested
-            * ``uint32``: no (1)
-            * ``uint64``: no (2)
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: no (2)
-            * ``float16``: yes; tested (3)
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: no (1)
-            * ``bool``: yes; tested (3)
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: no (2)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (4)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (4)
 
-            - (1) rejected by cv2
-            - (2) changed to ``int32`` by cv2
-            - (3) mapped internally to ``float32``
+        - (1) rejected by cv2
+        - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4)
+              (...)imgwarp.cpp:1805: error:
+              (-215:Assertion failed) ifunc != 0 in function 'remap'``
+        - (3) mapped internally to ``int16``
+        - (4) mapped internally to ``float32``
 
-        if (backend="cv2", order=1):
+    if (backend="cv2", order=3):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: no (1)
-            * ``uint64``: no (2)
-            * ``int8``: yes; tested (3)
-            * ``int16``: yes; tested
-            * ``int32``: no (2)
-            * ``int64``: no (2)
-            * ``float16``: yes; tested (4)
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: no (1)
-            * ``bool``: yes; tested (4)
+        * ``uint8``: yes; tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: no (2)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (4)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (4)
 
-            - (1) rejected by cv2
-            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4)
-                  (...)imgwarp.cpp:1805: error:
-                  (-215:Assertion failed) ifunc != 0 in function 'remap'``
-            - (3) mapped internally to ``int16``
-            - (4) mapped internally to ``float32``
-
-        if (backend="cv2", order=3):
-
-            * ``uint8``: yes; tested
-            * ``uint16``: yes; tested
-            * ``uint32``: no (1)
-            * ``uint64``: no (2)
-            * ``int8``: yes; tested (3)
-            * ``int16``: yes; tested
-            * ``int32``: no (2)
-            * ``int64``: no (2)
-            * ``float16``: yes; tested (4)
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: no (1)
-            * ``bool``: yes; tested (4)
-
-            - (1) rejected by cv2
-            - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4)
-                  (...)imgwarp.cpp:1805: error:
-                  (-215:Assertion failed) ifunc != 0 in function 'remap'``
-            - (3) mapped internally to ``int16``
-            - (4) mapped internally to ``float32``
+        - (1) rejected by cv2
+        - (2) causes cv2 error: ``cv2.error: OpenCV(3.4.4)
+              (...)imgwarp.cpp:1805: error:
+              (-215:Assertion failed) ifunc != 0 in function 'remap'``
+        - (3) mapped internally to ``int16``
+        - (4) mapped internally to ``float32``
 
 
     Parameters
@@ -1509,9 +1511,10 @@ class ScaleX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1573,9 +1576,10 @@ class ScaleY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1638,9 +1642,10 @@ class TranslateX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1718,9 +1723,10 @@ class TranslateY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1798,9 +1804,10 @@ class Rotate(Affine):
     This is a wrapper around :class:`Affine`.
     It is the same as ``Affine(rotate=<value>)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1859,9 +1866,10 @@ class ShearX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1913,9 +1921,10 @@ class ShearY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.geometric.Affine`.
+    See :class:`~imgaug.augmenters.geometric.Affine`.
 
     Parameters
     ----------
@@ -1990,7 +1999,8 @@ class AffineCv2(meta.Augmenter):
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: ?
@@ -2735,7 +2745,8 @@ class PiecewiseAffine(meta.Augmenter):
         which will make it significantly slower for such inputs than other
         augmenters. See :ref:`performance`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested (1)
@@ -3220,37 +3231,38 @@ class PerspectiveTransform(meta.Augmenter):
     Code partially from
     http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (keep_size=False)::
+    if (keep_size=False):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: no (1)
-            * ``uint64``: no (2)
-            * ``int8``: yes; tested (3)
-            * ``int16``: yes; tested
-            * ``int32``: no (2)
-            * ``int64``: no (2)
-            * ``float16``: yes; tested (4)
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: no (1)
-            * ``bool``: yes; tested (4)
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: no (2)
+        * ``int64``: no (2)
+        * ``float16``: yes; tested (4)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (1)
+        * ``bool``: yes; tested (4)
 
-            - (1) rejected by opencv
-            - (2) leads to opencv error: cv2.error: ``OpenCV(3.4.4)
-                  (...)imgwarp.cpp:1805: error: (-215:Assertion failed)
-                  ifunc != 0 in function 'remap'``.
-            - (3) mapped internally to ``int16``.
-            - (4) mapped intenally to ``float32``.
+        - (1) rejected by opencv
+        - (2) leads to opencv error: cv2.error: ``OpenCV(3.4.4)
+              (...)imgwarp.cpp:1805: error: (-215:Assertion failed)
+              ifunc != 0 in function 'remap'``.
+        - (3) mapped internally to ``int16``.
+        - (4) mapped intenally to ``float32``.
 
-        if (keep_size=True)::
+    if (keep_size=True):
 
-            minimum of (
-                ``imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False)``,
-                :func:`~imgaug.imgaug.imresize_many_images`
-            )
+        minimum of (
+            ``imgaug.augmenters.geometric.PerspectiveTransform(keep_size=False)``,
+            :func:`~imgaug.imgaug.imresize_many_images`
+        )
 
     Parameters
     ----------
@@ -3871,7 +3883,8 @@ class ElasticTransformation(meta.Augmenter):
         which will make it significantly slower for such inputs than other
         augmenters. See :ref:`performance`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested (1)
         * ``uint16``: yes; tested (1)
@@ -4347,115 +4360,116 @@ class ElasticTransformation(meta.Augmenter):
     def _map_coordinates(cls, image, dx, dy, order=1, cval=0, mode="constant"):
         """Remap pixels in an image according to x/y shift maps.
 
-        dtype support::
+        Supported dtypes
+        ----------------
 
-            if (backend="scipy" and order=0)::
+        if (backend="scipy" and order=0):
 
-                * ``uint8``: yes
-                * ``uint16``: yes
-                * ``uint32``: yes
-                * ``uint64``: no (1)
-                * ``int8``: yes
-                * ``int16``: yes
-                * ``int32``: yes
-                * ``int64``: no (2)
-                * ``float16``: yes
-                * ``float32``: yes
-                * ``float64``: yes
-                * ``float128``: no (3)
-                * ``bool``: yes
+            * ``uint8``: yes
+            * ``uint16``: yes
+            * ``uint32``: yes
+            * ``uint64``: no (1)
+            * ``int8``: yes
+            * ``int16``: yes
+            * ``int32``: yes
+            * ``int64``: no (2)
+            * ``float16``: yes
+            * ``float32``: yes
+            * ``float64``: yes
+            * ``float128``: no (3)
+            * ``bool``: yes
 
-                - (1) produces array filled with only 0
-                - (2) produces array filled with <min_value> when testing
-                      with <max_value>
-                - (3) causes: 'data type no supported'
+            - (1) produces array filled with only 0
+            - (2) produces array filled with <min_value> when testing
+                  with <max_value>
+            - (3) causes: 'data type no supported'
 
-            if (backend="scipy" and order>0)::
+        if (backend="scipy" and order>0):
 
-                * ``uint8``: yes (1)
-                * ``uint16``: yes (1)
-                * ``uint32``: yes (1)
-                * ``uint64``: yes (1)
-                * ``int8``: yes (1)
-                * ``int16``: yes (1)
-                * ``int32``: yes (1)
-                * ``int64``: yes (1)
-                * ``float16``: yes (1)
-                * ``float32``: yes (1)
-                * ``float64``: yes (1)
-                * ``float128``: no (2)
-                * ``bool``: yes
+            * ``uint8``: yes (1)
+            * ``uint16``: yes (1)
+            * ``uint32``: yes (1)
+            * ``uint64``: yes (1)
+            * ``int8``: yes (1)
+            * ``int16``: yes (1)
+            * ``int32``: yes (1)
+            * ``int64``: yes (1)
+            * ``float16``: yes (1)
+            * ``float32``: yes (1)
+            * ``float64``: yes (1)
+            * ``float128``: no (2)
+            * ``bool``: yes
 
-                - (1) rather loose test, to avoid having to re-compute the
-                      interpolation
-                - (2) causes: 'data type no supported'
+            - (1) rather loose test, to avoid having to re-compute the
+                  interpolation
+            - (2) causes: 'data type no supported'
 
-            if (backend="cv2" and order=0)::
+        if (backend="cv2" and order=0):
 
-                * ``uint8``: yes
-                * ``uint16``: yes
-                * ``uint32``: no (1)
-                * ``uint64``: no (2)
-                * ``int8``: yes
-                * ``int16``: yes
-                * ``int32``: yes
-                * ``int64``: no (2)
-                * ``float16``: yes
-                * ``float32``: yes
-                * ``float64``: yes
-                * ``float128``: no (3)
-                * ``bool``: no (4)
+            * ``uint8``: yes
+            * ``uint16``: yes
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: yes
+            * ``int16``: yes
+            * ``int32``: yes
+            * ``int64``: no (2)
+            * ``float16``: yes
+            * ``float32``: yes
+            * ``float64``: yes
+            * ``float128``: no (3)
+            * ``bool``: no (4)
 
-                - (1) causes: src data type = 6 is not supported
-                - (2) silently converts to int32
-                - (3) causes: src data type = 13 is not supported
-                - (4) causes: src data type = 0 is not supported
+            - (1) causes: src data type = 6 is not supported
+            - (2) silently converts to int32
+            - (3) causes: src data type = 13 is not supported
+            - (4) causes: src data type = 0 is not supported
 
-            if (backend="cv2" and order=1)::
+        if (backend="cv2" and order=1):
 
-                * ``uint8``: yes
-                * ``uint16``: yes
-                * ``uint32``: no (1)
-                * ``uint64``: no (2)
-                * ``int8``: no (2)
-                * ``int16``: no (2)
-                * ``int32``: no (2)
-                * ``int64``: no (2)
-                * ``float16``: yes
-                * ``float32``: yes
-                * ``float64``: yes
-                * ``float128``: no (3)
-                * ``bool``: no (4)
+            * ``uint8``: yes
+            * ``uint16``: yes
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: no (2)
+            * ``int16``: no (2)
+            * ``int32``: no (2)
+            * ``int64``: no (2)
+            * ``float16``: yes
+            * ``float32``: yes
+            * ``float64``: yes
+            * ``float128``: no (3)
+            * ``bool``: no (4)
 
-                - (1) causes: src data type = 6 is not supported
-                - (2) causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
-                      error: (-215:Assertion failed) ifunc != 0 in function
-                      'remap'
-                - (3) causes: src data type = 13 is not supported
-                - (4) causes: src data type = 0 is not supported
+            - (1) causes: src data type = 6 is not supported
+            - (2) causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap'
+            - (3) causes: src data type = 13 is not supported
+            - (4) causes: src data type = 0 is not supported
 
-            if (backend="cv2" and order>=2)::
+        if (backend="cv2" and order>=2):
 
-                * ``uint8``: yes
-                * ``uint16``: yes
-                * ``uint32``: no (1)
-                * ``uint64``: no (2)
-                * ``int8``: no (2)
-                * ``int16``: yes
-                * ``int32``: no (2)
-                * ``int64``: no (2)
-                * ``float16``: yes
-                * ``float32``: yes
-                * ``float64``: yes
-                * ``float128``: no (3)
-                * ``bool``: no (4)
+            * ``uint8``: yes
+            * ``uint16``: yes
+            * ``uint32``: no (1)
+            * ``uint64``: no (2)
+            * ``int8``: no (2)
+            * ``int16``: yes
+            * ``int32``: no (2)
+            * ``int64``: no (2)
+            * ``float16``: yes
+            * ``float32``: yes
+            * ``float64``: yes
+            * ``float128``: no (3)
+            * ``bool``: no (4)
 
-                - (1) causes: src data type = 6 is not supported
-                - (2) causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
-                      error: (-215:Assertion failed) ifunc != 0 in function
-                      'remap'
-                - (3) causes: src data type = 13 is not supported
-                - (4) causes: src data type = 0 is not supported
+            - (1) causes: src data type = 6 is not supported
+            - (2) causes: OpenCV(3.4.5) (...)/imgwarp.cpp:1805:
+                  error: (-215:Assertion failed) ifunc != 0 in function
+                  'remap'
+            - (3) causes: src data type = 13 is not supported
+            - (4) causes: src data type = 0 is not supported
 
         """
         # pylint: disable=invalid-name
@@ -4590,30 +4604,31 @@ class Rot90(meta.Augmenter):
     This could also be achieved using ``Affine``, but ``Rot90`` is
     significantly more efficient.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (keep_size=False)::
+    if (keep_size=False):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested
-            * ``uint64``: yes; tested
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: yes; tested
-            * ``float16``: yes; tested
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: yes; tested
-            * ``bool``: yes; tested
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: yes; tested
+        * ``bool``: yes; tested
 
-        if (keep_size=True)::
+    if (keep_size=True):
 
-            minimum of (
-                ``imgaug.augmenters.geometric.Rot90(keep_size=False)``,
-                :func:`~imgaug.imgaug.imresize_many_images`
-            )
+        minimum of (
+            ``imgaug.augmenters.geometric.Rot90(keep_size=False)``,
+            :func:`~imgaug.imgaug.imresize_many_images`
+        )
 
     Parameters
     ----------
@@ -4862,7 +4877,8 @@ class WithPolarWarping(meta.Augmenter):
         recovery are currently ``PerspectiveTransform``, ``PiecewiseAffine``
         and ``ElasticTransformation``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -5491,9 +5507,10 @@ class Jigsaw(meta.Augmenter):
         heatmaps, segmentation maps and keypoints. Other augmentables,
         i.e. bounding boxes, polygons and line strings, will result in errors.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`apply_jigsaw`.
+    See :func:`apply_jigsaw`.
 
     Parameters
     ----------

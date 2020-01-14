@@ -37,9 +37,10 @@ def _ensure_image_max_size(image, max_size, interpolation):
     This downscales to `max_size` if any side violates that maximum.
     The other side is downscaled too so that the aspect ratio is maintained.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.imresize_single_image`.
+    See :func:`~imgaug.imgaug.imresize_single_image`.
 
     Parameters
     ----------
@@ -76,36 +77,37 @@ class Superpixels(meta.Augmenter):
 
         This augmenter is fairly slow. See :ref:`performance`.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (image size <= max_size)::
+    if (image size <= max_size):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested
-            * ``uint64``: limited (1)
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: limited (1)
-            * ``float16``: no (2)
-            * ``float32``: no (2)
-            * ``float64``: no (3)
-            * ``float128``: no (2)
-            * ``bool``: yes; tested
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: limited (1)
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: limited (1)
+        * ``float16``: no (2)
+        * ``float32``: no (2)
+        * ``float64``: no (3)
+        * ``float128``: no (2)
+        * ``bool``: yes; tested
 
-            - (1) Superpixel mean intensity replacement requires computing
-                  these means as float64s. This can cause inaccuracies for
-                  large integer values.
-            - (2) Error in scikit-image.
-            - (3) Loss of resolution in scikit-image.
+        - (1) Superpixel mean intensity replacement requires computing
+              these means as ``float64`` s. This can cause inaccuracies for
+              large integer values.
+        - (2) Error in scikit-image.
+        - (3) Loss of resolution in scikit-image.
 
-        if (image size > max_size)::
+    if (image size > max_size):
 
-            minimum of (
-                ``imgaug.augmenters.segmentation.Superpixels(image size <= max_size)``,
-                :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
-            )
+        minimum of (
+            ``imgaug.augmenters.segmentation.Superpixels(image size <= max_size)``,
+            :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
+        )
 
     Parameters
     ----------
@@ -454,30 +456,31 @@ class Voronoi(meta.Augmenter):
     This code is very loosely based on
     https://codegolf.stackexchange.com/questions/50299/draw-an-image-as-a-voronoi-map/50345#50345
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (image size <= max_size)::
+    if (image size <= max_size):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: no; not tested
-            * ``uint32``: no; not tested
-            * ``uint64``: no; not tested
-            * ``int8``: no; not tested
-            * ``int16``: no; not tested
-            * ``int32``: no; not tested
-            * ``int64``: no; not tested
-            * ``float16``: no; not tested
-            * ``float32``: no; not tested
-            * ``float64``: no; not tested
-            * ``float128``: no; not tested
-            * ``bool``: no; not tested
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no; not tested
+        * ``uint32``: no; not tested
+        * ``uint64``: no; not tested
+        * ``int8``: no; not tested
+        * ``int16``: no; not tested
+        * ``int32``: no; not tested
+        * ``int64``: no; not tested
+        * ``float16``: no; not tested
+        * ``float32``: no; not tested
+        * ``float64``: no; not tested
+        * ``float128``: no; not tested
+        * ``bool``: no; not tested
 
-        if (image size > max_size)::
+    if (image size > max_size):
 
-            minimum of (
-                ``imgaug.augmenters.segmentation.Voronoi(image size <= max_size)``,
-                :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
-            )
+        minimum of (
+            ``imgaug.augmenters.segmentation.Voronoi(image size <= max_size)``,
+            :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
+        )
 
     Parameters
     ----------
@@ -647,9 +650,10 @@ class UniformVoronoi(Voronoi):
     each image. The cell coordinates are sampled uniformly using the image
     height and width as maxima.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.segmentation.Voronoi``.
+    See :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
     Parameters
     ----------
@@ -762,9 +766,10 @@ class RegularGridVoronoi(Voronoi):
     to randomize the grid. Each image pixel then belongs to the voronoi
     cell with the closest coordinate.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.segmentation.Voronoi``.
+    See :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
     Parameters
     ----------
@@ -926,9 +931,10 @@ class RelativeRegularGridVoronoi(Voronoi):
         make most use of the added points for larger images. It does however
         slow down the augmentation process.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.segmentation.Voronoi``.
+    See :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
     Parameters
     ----------

@@ -32,89 +32,90 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
 
     This operation *may* change the input image in-place.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        if (backend="auto")::
+    if (backend="auto"):
 
-            * ``uint8``: yes; fully tested (1)
-            * ``uint16``: yes; tested (1)
-            * ``uint32``: yes; tested (2)
-            * ``uint64``: yes; tested (2)
-            * ``int8``: yes; tested (1)
-            * ``int16``: yes; tested (1)
-            * ``int32``: yes; tested (1)
-            * ``int64``: yes; tested (2)
-            * ``float16``: yes; tested (1)
-            * ``float32``: yes; tested (1)
-            * ``float64``: yes; tested (1)
-            * ``float128``: no
-            * ``bool``: yes; tested (1)
+        * ``uint8``: yes; fully tested (1)
+        * ``uint16``: yes; tested (1)
+        * ``uint32``: yes; tested (2)
+        * ``uint64``: yes; tested (2)
+        * ``int8``: yes; tested (1)
+        * ``int16``: yes; tested (1)
+        * ``int32``: yes; tested (1)
+        * ``int64``: yes; tested (2)
+        * ``float16``: yes; tested (1)
+        * ``float32``: yes; tested (1)
+        * ``float64``: yes; tested (1)
+        * ``float128``: no
+        * ``bool``: yes; tested (1)
 
-            - (1) Handled by ``cv2``. See ``backend="cv2"``.
-            - (2) Handled by ``scipy``. See ``backend="scipy"``.
+        - (1) Handled by ``cv2``. See ``backend="cv2"``.
+        - (2) Handled by ``scipy``. See ``backend="scipy"``.
 
-        if (backend="cv2")::
+    if (backend="cv2"):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: no (2)
-            * ``uint64``: no (3)
-            * ``int8``: yes; tested (4)
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested (5)
-            * ``int64``: no (6)
-            * ``float16``: yes; tested (7)
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: no (8)
-            * ``bool``: yes; tested (1)
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (2)
+        * ``uint64``: no (3)
+        * ``int8``: yes; tested (4)
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested (5)
+        * ``int64``: no (6)
+        * ``float16``: yes; tested (7)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (8)
+        * ``bool``: yes; tested (1)
 
-            - (1) Mapped internally to ``float32``. Otherwise causes
-                  ``TypeError: src data type = 0 is not supported``.
-            - (2) Causes ``TypeError: src data type = 6 is not supported``.
-            - (3) Causes ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957:
-                  error: (-213:The function/feature is not implemented)
-                  Unsupported combination of source format (=4), and buffer
-                  format (=5) in function 'getLinearRowFilter'``.
-            - (4) Mapped internally to ``int16``. Otherwise causes
-                  ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957: error:
-                  (-213:The function/feature is not implemented) Unsupported
-                  combination of source format (=1), and buffer format (=5)
-                  in function 'getLinearRowFilter'``.
-            - (5) Mapped internally to ``float64``. Otherwise causes
-                  ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957: error:
-                  (-213:The function/feature is not implemented) Unsupported
-                  combination of source format (=4), and buffer format (=5)
-                  in function 'getLinearRowFilter'``.
-            - (6) Causes ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957:
-                  error: (-213:The function/feature is not implemented)
-                  Unsupported combination of source format (=4), and buffer
-                  format (=5) in function 'getLinearRowFilter'``.
-            - (7) Mapped internally to ``float32``. Otherwise causes
-                  ``TypeError: src data type = 23 is not supported``.
-            - (8) Causes ``TypeError: src data type = 13 is not supported``.
+        - (1) Mapped internally to ``float32``. Otherwise causes
+              ``TypeError: src data type = 0 is not supported``.
+        - (2) Causes ``TypeError: src data type = 6 is not supported``.
+        - (3) Causes ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957:
+              error: (-213:The function/feature is not implemented)
+              Unsupported combination of source format (=4), and buffer
+              format (=5) in function 'getLinearRowFilter'``.
+        - (4) Mapped internally to ``int16``. Otherwise causes
+              ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957: error:
+              (-213:The function/feature is not implemented) Unsupported
+              combination of source format (=1), and buffer format (=5)
+              in function 'getLinearRowFilter'``.
+        - (5) Mapped internally to ``float64``. Otherwise causes
+              ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957: error:
+              (-213:The function/feature is not implemented) Unsupported
+              combination of source format (=4), and buffer format (=5)
+              in function 'getLinearRowFilter'``.
+        - (6) Causes ``cv2.error: OpenCV(3.4.5) (...)/filter.cpp:2957:
+              error: (-213:The function/feature is not implemented)
+              Unsupported combination of source format (=4), and buffer
+              format (=5) in function 'getLinearRowFilter'``.
+        - (7) Mapped internally to ``float32``. Otherwise causes
+              ``TypeError: src data type = 23 is not supported``.
+        - (8) Causes ``TypeError: src data type = 13 is not supported``.
 
-        if (backend="scipy")::
+    if (backend="scipy"):
 
-            * ``uint8``: yes; fully tested
-            * ``uint16``: yes; tested
-            * ``uint32``: yes; tested
-            * ``uint64``: yes; tested
-            * ``int8``: yes; tested
-            * ``int16``: yes; tested
-            * ``int32``: yes; tested
-            * ``int64``: yes; tested
-            * ``float16``: yes; tested (1)
-            * ``float32``: yes; tested
-            * ``float64``: yes; tested
-            * ``float128``: no (2)
-            * ``bool``: yes; tested (3)
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: yes; tested
+        * ``uint64``: yes; tested
+        * ``int8``: yes; tested
+        * ``int16``: yes; tested
+        * ``int32``: yes; tested
+        * ``int64``: yes; tested
+        * ``float16``: yes; tested (1)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no (2)
+        * ``bool``: yes; tested (3)
 
-            - (1) Mapped internally to ``float32``. Otherwise causes
-                  ``RuntimeError: array type dtype('float16') not supported``.
-            - (2) Causes ``RuntimeError: array type dtype('float128') not
-                  supported``.
-            - (3) Mapped internally to ``float32``. Otherwise too inaccurate.
+        - (1) Mapped internally to ``float32``. Otherwise causes
+              ``RuntimeError: array type dtype('float16') not supported``.
+        - (2) Causes ``RuntimeError: array type dtype('float128') not
+              supported``.
+        - (3) Mapped internally to ``float32``. Otherwise too inaccurate.
 
     Parameters
     ----------
@@ -286,7 +287,8 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
 
         This function is quite slow.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -386,9 +388,10 @@ def _compute_gaussian_blur_ksize(sigma):
 class GaussianBlur(meta.Augmenter):
     """Augmenter to blur images using gaussian kernels.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.blur.blur_gaussian_(backend="auto")`.
+    See ``~imgaug.augmenters.blur.blur_gaussian_(backend="auto")``.
 
     Parameters
     ----------
@@ -466,7 +469,8 @@ class AverageBlur(meta.Augmenter):
     The padding behaviour around the image borders is cv2's
     ``BORDER_REFLECT_101``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -671,7 +675,8 @@ class MedianBlur(meta.Augmenter):
     Median blurring can be used to remove small dirt from images.
     At larger kernel sizes, its effects have some similarity with Superpixels.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: ?
@@ -793,7 +798,8 @@ class BilateralBlur(meta.Augmenter):
     http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html#bilateralfilter
     for more information regarding the parameters.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; not tested
         * ``uint16``: ?
@@ -935,9 +941,10 @@ class BilateralBlur(meta.Augmenter):
 class MotionBlur(iaa_convolutional.Convolve):
     """Blur images in a way that fakes camera or object movements.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.convolutional.Convolve``.
+    See :class:`~imgaug.augmenters.convolutional.Convolve`.
 
     Parameters
     ----------
@@ -1087,9 +1094,10 @@ class MeanShiftBlur(meta.Augmenter):
 
         This augmenter is quite slow.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.blur.blur_mean_shift_`.
+    See :func:`~imgaug.augmenters.blur.blur_mean_shift_`.
 
     Parameters
     ----------

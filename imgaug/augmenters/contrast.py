@@ -96,7 +96,8 @@ def adjust_contrast_gamma(arr, gamma):
     """
     Adjust image contrast by scaling pixel values to ``255*((v/255)**gamma)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested (1) (2) (3)
         * ``uint16``: yes; tested (2) (3)
@@ -174,7 +175,8 @@ def adjust_contrast_sigmoid(arr, gain, cutoff):
     """
     Adjust image contrast to ``255*1/(1+exp(gain*(cutoff-I_ij/255)))``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested (1) (2) (3)
         * ``uint16``: yes; tested (2) (3)
@@ -261,7 +263,8 @@ def adjust_contrast_log(arr, gain):
     """
     Adjust image contrast by scaling pixels to ``255*gain*log_2(1+v/255)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested (1) (2) (3)
         * ``uint16``: yes; tested (2) (3)
@@ -341,7 +344,8 @@ def adjust_contrast_log(arr, gain):
 def adjust_contrast_linear(arr, alpha):
     """Adjust contrast by scaling each pixel to ``127 + alpha*(v-127)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested (1) (2)
         * ``uint16``: yes; tested (2)
@@ -424,9 +428,10 @@ class GammaContrast(_ContrastFuncWrapper):
 
     Values in the range ``gamma=(0.5, 2.0)`` seem to be sensible.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.contrast.adjust_contrast_gamma`.
+    See :func:`~imgaug.augmenters.contrast.adjust_contrast_gamma`.
 
     Parameters
     ----------
@@ -494,9 +499,10 @@ class SigmoidContrast(_ContrastFuncWrapper):
     Values in the range ``gain=(5, 20)`` and ``cutoff=(0.25, 0.75)`` seem to
     be sensible.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.contrast.adjust_contrast_sigmoid`.
+    See :func:`~imgaug.augmenters.contrast.adjust_contrast_sigmoid`.
 
     Parameters
     ----------
@@ -586,9 +592,10 @@ class LogContrast(_ContrastFuncWrapper):
     This augmenter is fairly similar to
     ``imgaug.augmenters.arithmetic.Multiply``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.contrast.adjust_contrast_log`.
+    See :func:`~imgaug.augmenters.contrast.adjust_contrast_log`.
 
     Parameters
     ----------
@@ -655,9 +662,10 @@ class LogContrast(_ContrastFuncWrapper):
 class LinearContrast(_ContrastFuncWrapper):
     """Adjust contrast by scaling each pixel to ``127 + alpha*(v-127)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.contrast.adjust_contrast_linear`.
+    See :func:`~imgaug.augmenters.contrast.adjust_contrast_linear`.
 
     Parameters
     ----------
@@ -869,7 +877,8 @@ class AllChannelsCLAHE(meta.Augmenter):
     perform any colorspace transformations and does not focus on specific
     channels (e.g. ``L`` in ``Lab`` colorspace).
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -1054,7 +1063,8 @@ class CLAHE(meta.Augmenter):
     colorspace (without any colorspace conversion), use
     ``imgaug.augmenters.contrast.AllChannelsCLAHE`` instead.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -1070,8 +1080,9 @@ class CLAHE(meta.Augmenter):
         * ``float128``: no (1)
         * ``bool``: no (1)
 
-        - (1) This augmenter uses ChangeColorspace, which is currently
-              limited to ``uint8``.
+        - (1) This augmenter uses
+              :class:`~imgaug.augmenters.color.ChangeColorspace`, which is
+              currently limited to ``uint8``.
 
     Parameters
     ----------
@@ -1258,7 +1269,8 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
     not perform any colorspace transformations and does not focus on specific
     channels (e.g. ``L`` in ``Lab`` colorspace).
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -1368,7 +1380,8 @@ class HistogramEqualization(meta.Augmenter):
     input image's colorspace (without any colorspace conversion), use
     ``imgaug.augmenters.contrast.AllChannelsHistogramEqualization`` instead.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -1384,7 +1397,8 @@ class HistogramEqualization(meta.Augmenter):
         * ``float128``: no (1)
         * ``bool``: no (1)
 
-        - (1) This augmenter uses AllChannelsHistogramEqualization, which only supports ``uint8``.
+        - (1) This augmenter uses :class:`AllChannelsHistogramEqualization`,
+              which only supports ``uint8``.
 
     Parameters
     ----------
