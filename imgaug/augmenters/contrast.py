@@ -738,7 +738,7 @@ class _IntensityChannelBasedApplier(object):
         Lab: 0
     }
 
-    def __init__(self, from_colorspace, to_colorspace, name):
+    def __init__(self, from_colorspace, to_colorspace):
         super(_IntensityChannelBasedApplier, self).__init__()
 
         # TODO maybe add CIE, Luv?
@@ -1205,7 +1205,7 @@ class CLAHE(meta.Augmenter):
             name="%s_AllChannelsCLAHE" % (name,))
 
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
-            from_colorspace, to_colorspace, name=name)
+            from_colorspace, to_colorspace)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
@@ -1455,7 +1455,7 @@ class HistogramEqualization(meta.Augmenter):
                 name="%s_AllChannelsHistogramEqualization" % (name,))
 
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
-            from_colorspace, to_colorspace, name=name)
+            from_colorspace, to_colorspace)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
