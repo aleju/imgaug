@@ -1537,6 +1537,7 @@ class PolygonsOnImage(IAugmentable):
             Object containing all projected polygons.
 
         """
+        # pylint: disable=invalid-name
         return self.deepcopy().on_(image)
 
     def draw_on_image(self,

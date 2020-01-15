@@ -4573,7 +4573,7 @@ class ElasticTransformation(meta.Augmenter):
                 result = cv2.remap(
                     _normalize_cv2_input_arr_(image),
                     map1, map2, interpolation=interpolation,
-                    borderMode=border_mode, borderValue=(cval,cval,cval))
+                    borderMode=border_mode, borderValue=(cval, cval, cval))
                 if image.ndim == 3 and result.ndim == 2:
                     result = result[..., np.newaxis]
             else:
@@ -4584,7 +4584,7 @@ class ElasticTransformation(meta.Augmenter):
                     result_c = cv2.remap(
                         _normalize_cv2_input_arr_(channels),
                         map1, map2, interpolation=interpolation,
-                        borderMode=border_mode, borderValue=(cval,cval,cval))
+                        borderMode=border_mode, borderValue=(cval, cval, cval))
                     if result_c.ndim == 2:
                         result_c = result_c[..., np.newaxis]
                     result.append(result_c)

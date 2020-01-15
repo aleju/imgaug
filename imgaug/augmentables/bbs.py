@@ -725,6 +725,7 @@ class BoundingBox(object):
             Shifted bounding box.
 
         """
+        # pylint: disable=redefined-outer-name
         return self.deepcopy().shift_(x, y, top, right, bottom, left)
 
     def draw_label_on_image(self, image, color=(0, 255, 0),
@@ -783,6 +784,7 @@ class BoundingBox(object):
             Image with bounding box drawn on it.
 
         """
+        # pylint: disable=redefined-outer-name
         drawer = _LabelOnImageDrawer(
             color=color,
             color_text=color_text,
@@ -942,6 +944,7 @@ class BoundingBox(object):
             Image with bounding box drawn on it.
 
         """
+        # pylint: disable=redefined-outer-name
         image_drawn = self.draw_box_on_image(
             image, color=color, alpha=alpha, size=size,
             copy=copy, raise_if_out_of_image=raise_if_out_of_image,
@@ -1477,6 +1480,7 @@ class BoundingBoxesOnImage(IAugmentable):
             the new image shape.
 
         """
+        # pylint: disable=invalid-name
         return self.deepcopy().on_(image)
 
     @classmethod

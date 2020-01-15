@@ -35,7 +35,6 @@ import tempfile
 
 import imageio
 import numpy as np
-import cv2
 
 import imgaug as ia
 from . import meta
@@ -151,7 +150,6 @@ def _add_scalar_to_uint8(image, value):
             "in `value` to be identical. Got %d vs. %d." % (
                 image.shape[-1], value.size))
 
-        result = []
         # TODO check if tile() is here actually needed
         tables = np.tile(
             value_range[:, np.newaxis],
@@ -435,7 +433,6 @@ def _multiply_scalar_to_uint8(image, multiplier):
             "in `multiplier` to be identical. Got %d vs. %d." % (
                 image.shape[-1], multiplier.size))
 
-        result = []
         # TODO check if tile() is here actually needed
         tables = np.tile(
             value_range[:, np.newaxis],
@@ -2493,9 +2490,9 @@ class Cutout(meta.Augmenter):
         if ia.is_string(fill_mode):
             assert fill_mode in _CUTOUT_FILL_MODES, (
                 "Expected 'fill_mode' to be one of: %s. Got %s." % (
-                     str(list(_CUTOUT_FILL_MODES.keys())), fill_mode))
+                    str(list(_CUTOUT_FILL_MODES.keys())), fill_mode))
             return iap.Deterministic(fill_mode)
-        elif isinstance(fill_mode, iap.StochasticParameter):
+        if isinstance(fill_mode, iap.StochasticParameter):
             return fill_mode
         assert ia.is_iterable(fill_mode), (
             "Expected 'fill_mode' to be a string, "
@@ -2567,7 +2564,7 @@ class Cutout(meta.Augmenter):
         squared = self.squared.draw_samples((nb_dropped_areas,),
                                             random_state=rngs[4])
         fill_mode = self.fill_mode.draw_samples(
-           (nb_dropped_areas,), random_state=rngs[5])
+            (nb_dropped_areas,), random_state=rngs[5])
 
         cval = self.cval.draw_samples((nb_dropped_areas, nb_channels_max),
                                       random_state=rngs[6])
@@ -2590,8 +2587,7 @@ class Cutout(meta.Augmenter):
     def _augment_image_by_samples(self, image, x1, y1, x2, y2, squared,
                                   fill_mode, cval, fill_per_channel,
                                   random_state):
-        for i in range(len(x1)):
-            x1_i = x1[i]
+        for i, x1_i in enumerate(x1):
             x2_i = x2[i]
             if squared[i] >= 0.5:
                 height_h = (y2[i] - y1[i]) / 2
