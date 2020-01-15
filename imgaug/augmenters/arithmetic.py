@@ -3456,7 +3456,7 @@ class SaltAndPepper(ReplaceElementwise):
     noise.
 
     """
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.03), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(SaltAndPepper, self).__init__(
             mask=p,
