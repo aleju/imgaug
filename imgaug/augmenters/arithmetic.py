@@ -2697,7 +2697,7 @@ class Dropout(MultiplyElementwise):
     active for ``50`` percent of all images.
 
     """
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.05), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         p_param = _handle_dropout_probability_param(p, "p")
 
