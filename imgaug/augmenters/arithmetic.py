@@ -1799,7 +1799,7 @@ class AdditiveGaussianNoise(AddElementwise):
     active for 50 percent of all images.
 
     """
-    def __init__(self, loc=0, scale=0, per_channel=False,
+    def __init__(self, loc=0, scale=(0, 15), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         loc2 = iap.handle_continuous_param(
             loc, "loc", value_range=None, tuple_to_uniform=True,
