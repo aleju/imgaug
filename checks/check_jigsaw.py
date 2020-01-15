@@ -26,7 +26,7 @@ def main():
     )
     print("Time to generate 128x dest:", gen_time)
 
-    destinations = iaa.generate_jigsaw_destinations(10, 10, 1, random_state=1)
+    destinations = iaa.generate_jigsaw_destinations(10, 10, 1, seed=1)
     image_jig = iaa.apply_jigsaw(image, destinations)
     ia.imshow(image_jig)
 

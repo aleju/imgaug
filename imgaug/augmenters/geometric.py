@@ -505,7 +505,7 @@ def apply_jigsaw_to_coords(coords, destinations, image_shape):
     return result
 
 
-def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
+def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, seed,
                                  connectivity=4):
     """Generate a destination pattern for :func:`apply_jigsaw`.
 
@@ -520,8 +520,9 @@ def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
     max_steps : int
         Maximum number of cells that each cell may be moved.
 
-    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
-        RNG or seed to use. If ``None`` the global RNG will be used.
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+        Seed value or alternatively RNG to use.
+        If ``None`` the global RNG will be used.
 
     connectivity : int, optional
         Whether a diagonal move of a cell counts as one step
@@ -536,7 +537,7 @@ def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, random_state,
     """
     assert connectivity in (4, 8), (
         "Expected connectivity of 4 or 8, got %d." % (connectivity,))
-    random_state = iarandom.RNG(random_state)
+    random_state = iarandom.RNG(seed)
     steps = random_state.integers(0, max_steps, size=(nb_rows, nb_cols),
                                   endpoint=True)
     directions = random_state.integers(0, connectivity,
@@ -5680,7 +5681,7 @@ class Jigsaw(meta.Augmenter):
             destinations.append(
                 generate_jigsaw_destinations(
                     nb_rows[i], nb_cols[i], max_steps[i],
-                    random_state=random_state)
+                    seed=random_state)
             )
 
         samples = _JigsawSamples(nb_rows, nb_cols, max_steps, destinations)
