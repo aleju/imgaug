@@ -3169,7 +3169,7 @@ class TotalDropout(meta.Augmenter):
 
     """
 
-    def __init__(self, p, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=1, seed=None, name=None, **old_kwargs):
         super(TotalDropout, self).__init__(
             seed=seed, name=name, **old_kwargs)
         self.p = _handle_dropout_probability_param(p, "p")
