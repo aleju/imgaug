@@ -461,13 +461,14 @@ def _create_output_buffer_left(output_buffer_size):
 # This could be a classmethod or staticmethod of Pool in 3.x, but in 2.7 that
 # leads to pickle errors.
 def _Pool_initialize_worker(augseq, seed_start):
+    # pylint: disable=invalid-name, protected-access
+
     # Not using this seems to have caused infinite hanging in the case
     # of gaussian blur on at least MacOSX.
     # It is also in most cases probably not sensible to use multiple
     # threads while already running augmentation in multiple processes.
     cv2.setNumThreads(0)
 
-    # pylint: disable=invalid-name, protected-access
     if seed_start is None:
         # pylint falsely thinks in older versions that
         # multiprocessing.current_process() was not callable, see

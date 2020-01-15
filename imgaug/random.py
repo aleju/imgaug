@@ -61,10 +61,12 @@ if _NP_VERSION[0] > 1 or _NP_VERSION[1] >= 17:
     # interface of BitGenerator
     # in 1.17 this was at numpy.random.bit_generator.BitGenerator
     # in 1.18 this was moved to numpy.random.BitGenerator
+    # pylint: disable=invalid-name, no-member
     if _NP_VERSION[1] == 17:
         _BIT_GENERATOR_INTERFACE = np.random.bit_generator.BitGenerator
     else:
         _BIT_GENERATOR_INTERFACE = np.random.BitGenerator
+    # pylint: enable=invalid-name, no-member
 
 # We instantiate a current/global random state here once.
 GLOBAL_RNG = None

@@ -19,7 +19,7 @@ List of augmenters:
 """
 from __future__ import print_function, division, absolute_import
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import six
@@ -606,10 +606,9 @@ class BlendAlphaMask(meta.Augmenter):
         batch_fg, batch_bg = _generate_branch_outputs(
             self, batch, hooks, parents)
 
-        shapes = batch.get_rowwise_shapes()
         masks = self.mask_generator.draw_masks(batch, random_state)
 
-        for i, (shape, mask) in enumerate(zip(shapes, masks)):
+        for i, mask in enumerate(masks):
             if batch.images is not None:
                 batch.images[i] = blend_alpha(batch_fg.images[i],
                                               batch_bg.images[i],
@@ -1481,6 +1480,7 @@ class BlendAlphaSomeColors(BlendAlphaMask):
                  alpha=[0.0, 1.0], rotation_deg=(0, 360),
                  from_colorspace="RGB",
                  seed=None, name=None, **old_kwargs):
+        # pylint: disable=dangerous-default-value
         super(BlendAlphaSomeColors, self).__init__(
             SomeColorsMaskGen(
                 nb_bins=nb_bins,
@@ -1826,6 +1826,7 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
                  foreground=None, background=None,
                  alpha=[0.0, 1.0],
                  seed=None, name=None, **old_kwargs):
+        # pylint: disable=dangerous-default-value
         super(BlendAlphaRegularGrid, self).__init__(
             RegularGridMaskGen(
                 nb_rows=nb_rows,
@@ -2380,6 +2381,7 @@ class SomeColorsMaskGen(IBatchwiseMaskGenerator):
     def __init__(self, nb_bins=(5, 15), smoothness=(0.1, 0.3),
                  alpha=[0.0, 1.0], rotation_deg=(0, 360),
                  from_colorspace="RGB"):
+        # pylint: disable=dangerous-default-value
         super(SomeColorsMaskGen, self).__init__()
 
         self.nb_bins = iap.handle_discrete_param(
@@ -2605,6 +2607,39 @@ class _LinearGradientMaskGen(IBatchwiseMaskGenerator):
             (nb_rows,), random_state=random_state)
 
         return min_value, max_value, start_at, end_at
+
+    @classmethod
+    @abstractmethod
+    def generate_mask(cls, shape, min_value, max_value, start_at, end_at):
+        """Generate a horizontal gradient mask.
+
+        Parameters
+        ----------
+        shape : tuple of int
+            Shape of the image. The mask will have the same height and
+            width.
+
+        min_value : number
+            Minimum value of the gradient in interval ``[0.0, 1.0]``.
+
+        max_value : number
+            Maximum value of the gradient in interval ``[0.0, 1.0]``.
+
+        start_at : number
+            Position on the x-axis where the linear gradient starts, given as
+            a fraction of the axis size. Interval is ``[0.0, 1.0]``.
+
+        end_at : number
+            Position on the x-axis where the linear gradient ends, given as
+            a fraction of the axis size. Interval is ``[0.0, 1.0]``.
+
+        Returns
+        -------
+        ndarray
+            ``float32`` mask array with same height and width as the image.
+            Values are in ``[0.0, 1.0]``.
+
+        """
 
     @classmethod
     def _generate_mask(cls, shape, axis, min_value, max_value, start_at,
@@ -2887,6 +2922,7 @@ class RegularGridMaskGen(IBatchwiseMaskGenerator):
     """
 
     def __init__(self, nb_rows, nb_cols, alpha=[0.0, 1.0]):
+        # pylint: disable=dangerous-default-value
         self.nb_rows = iap.handle_discrete_param(
             nb_rows, "nb_rows", value_range=(1, None),
             tuple_to_uniform=True, list_to_choice=True,
@@ -2975,7 +3011,7 @@ class RegularGridMaskGen(IBatchwiseMaskGenerator):
             "values (nb_rows=%d, nb_cols=%d) for requested mask shape %s." % (
                 alphas.size, nb_rows * nb_cols, nb_rows, nb_cols,
                 (height, width)))
-        mask = np.float32(alphas).reshape((nb_rows, nb_cols))
+        mask = alphas.astype(np.float32).reshape((nb_rows, nb_cols))
         mask = np.repeat(mask, cell_height, axis=0)
         mask = np.repeat(mask, cell_width, axis=1)
 
@@ -3038,6 +3074,7 @@ class CheckerboardMaskGen(IBatchwiseMaskGenerator):
         See :func:`~imgaug.augmenters.blend.IBatchwiseMaskGenerator.draw_masks`.
 
         """
+        # pylint: disable=protected-access
         random_state = iarandom.RNG(random_state)
         shapes = batch.get_rowwise_shapes()
         nb_rows, nb_cols, _alpha = self.grid._draw_samples(
@@ -3451,6 +3488,7 @@ class InvertMaskGen(IBatchwiseMaskGenerator):
                        "Parameter 'second' was renamed to 'background'.")
 def Alpha(factor=0, first=None, second=None, per_channel=False,
           seed=None, name=None, **old_kwargs):
+    # pylint: disable=invalid-name
     return BlendAlpha(
         factor=factor,
         foreground=first,
@@ -3467,6 +3505,8 @@ def Alpha(factor=0, first=None, second=None, per_channel=False,
                        "Parameter 'second' was renamed to 'background'.")
 def AlphaElementwise(factor=0, first=None, second=None, per_channel=False,
                      seed=None, name=None, **old_kwargs):
+    """See :class:`BlendAlpha`."""
+    # pylint: disable=invalid-name
     return BlendAlphaElementwise(
         factor=factor,
         foreground=first,
@@ -3486,6 +3526,8 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
                       iterations=(1, 3), aggregation_method="max",
                       sigmoid=True, sigmoid_thresh=None,
                       seed=None, name=None, **old_kwargs):
+    """See :class:`BlendAlphaSimplexNoise`."""
+    # pylint: disable=invalid-name
     return BlendAlphaSimplexNoise(
         foreground=first,
         background=second,
@@ -3511,6 +3553,8 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None,
                         iterations=(1, 3), aggregation_method=["avg", "max"],
                         sigmoid=0.5, sigmoid_thresh=None,
                         seed=None, name=None, **old_kwargs):
+    """See :class:`BlendAlphaFrequencyNoise`."""
+    # pylint: disable=invalid-name, dangerous-default-value
     return BlendAlphaFrequencyNoise(
         exponent=exponent,
         foreground=first,
