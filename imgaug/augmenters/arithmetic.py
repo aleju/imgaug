@@ -3510,7 +3510,7 @@ class ImpulseNoise(SaltAndPepper):
     Replace ``10%`` of all pixels with impulse noise.
 
     """
-    def __init__(self, p=0, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=(0.0, 0.03), seed=None, name=None, **old_kwargs):
         super(ImpulseNoise, self).__init__(
             p=p,
             per_channel=True,
