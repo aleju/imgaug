@@ -168,7 +168,8 @@ class Canny(meta.Augmenter):
     """
     Apply a canny edge detector to input images.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no; not tested

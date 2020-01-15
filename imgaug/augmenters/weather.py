@@ -31,7 +31,8 @@ class FastSnowyLandscape(meta.Augmenter):
     This augmenter is based on the method proposed in
     https://medium.freecodecamp.org/image-augmentation-make-it-rain-make-it-snow-how-to-modify-a-photo-with-machine-learning-163c0cb3843f?gi=bca4a13e634c
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -186,7 +187,8 @@ class FastSnowyLandscape(meta.Augmenter):
 class CloudLayer(meta.Augmenter):
     """Add a single layer of clouds to an image.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
@@ -202,7 +204,7 @@ class CloudLayer(meta.Augmenter):
         * ``float128``: yes; not tested (2)
         * ``bool``: no
 
-        - (1) Indirectly tested via tests for ``Clouds`` and ``Fog``
+        - (1) Indirectly tested via tests for :class:`Clouds`` and :class:`Fog`
         - (2) Note that random values are usually sampled as ``int64`` or
               ``float64``, which ``float128`` images would exceed. Note also
               that random values might have to upscaled, which is done
@@ -486,7 +488,8 @@ class Clouds(meta.SomeOf):
     This augmenter seems to be fairly robust w.r.t. the image size. Tested
     with ``96x128``, ``192x256`` and ``960x1280``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)
@@ -576,7 +579,8 @@ class Fog(CloudLayer):
     This augmenter seems to be fairly robust w.r.t. the image size. Tested
     with ``96x128``, ``192x256`` and ``960x1280``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)
@@ -637,7 +641,8 @@ class Fog(CloudLayer):
 class SnowflakesLayer(meta.Augmenter):
     """Add a single layer of falling snowflakes to images.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
@@ -653,7 +658,7 @@ class SnowflakesLayer(meta.Augmenter):
         * ``float128``: no
         * ``bool``: no
 
-        - (1) indirectly tested via tests for ``Snowflakes``
+        - (1) indirectly tested via tests for :class:`Snowflakes`
 
     Parameters
     ----------
@@ -977,7 +982,8 @@ class Snowflakes(meta.SomeOf):
     :class:`~imgaug.augmenters.weather.SnowflakesLayer`. It executes 1 to 3
     layers per image.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)
@@ -1155,7 +1161,8 @@ class Snowflakes(meta.SomeOf):
 class RainLayer(SnowflakesLayer):
     """Add a single layer of falling raindrops to images.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
@@ -1171,7 +1178,7 @@ class RainLayer(SnowflakesLayer):
         * ``float128``: no
         * ``bool``: no
 
-        - (1) indirectly tested via tests for ``Rain``
+        - (1) indirectly tested via tests for :class:`Rain`
 
     Parameters
     ----------
@@ -1268,7 +1275,8 @@ class Rain(meta.SomeOf):
         look like snowflakes. For larger images, you may want to increase
         the `drop_size` to e.g. ``(0.10, 0.20)``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)

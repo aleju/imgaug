@@ -52,7 +52,8 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     ``a`` is the alpha value. Each pixel intensity is then computed as
     ``a * A_ij + (1-a) * B_ij``.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -279,9 +280,10 @@ class BlendAlpha(meta.Augmenter):
         foreground branch are used as the new coordinates, otherwise the
         results of the background branch.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.blend.blend_alpha`.
+    See :func:`~imgaug.augmenters.blend.blend_alpha`.
 
     Parameters
     ----------
@@ -513,9 +515,10 @@ class BlendAlphaMask(meta.Augmenter):
         (on an image) of the foreground or all of the background branch will
         be used, based on the average over the whole alpha mask.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.blend.blend_alpha`.
+    See :func:`~imgaug.augmenters.blend.blend_alpha`.
 
     Parameters
     ----------
@@ -779,9 +782,10 @@ class BlendAlphaElementwise(BlendAlphaMask):
         horizontal flips). See
         :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -910,9 +914,10 @@ class BlendAlphaSimplexNoise(BlendAlphaElementwise):
     connected blobs of 1s surrounded by 0s. If nearest neighbour
     upsampling is used, these blobs can be rectangular with sharp edges.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.blend.BlendAlphaElementwise``.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaElementwise`.
 
     Parameters
     ----------
@@ -1124,9 +1129,10 @@ class BlendAlphaFrequencyNoise(BlendAlphaElementwise):
     neighbour upsampling is used, these blobs can be rectangular with sharp
     edges.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See ``imgaug.augmenters.blend.BlendAlphaElementwise``.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaElementwise`.
 
     Parameters
     ----------
@@ -1379,9 +1385,10 @@ class BlendAlphaSomeColors(BlendAlphaMask):
         horizontal flips). See
         :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
+    See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------
@@ -1505,9 +1512,10 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
         horizontal flips). See
         :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -1614,9 +1622,10 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
         horizontal flips). See
         :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -1733,9 +1742,10 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
         horizontal flips). See
         :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -1846,9 +1856,10 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
         horizontal flips). See
         :class:`~imgaug.augmenters.blend.BlendAlphaMask` for details.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -1942,9 +1953,10 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
         This class will produce an ``AssertionError`` if there are no
         segmentation maps in a batch.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -2055,9 +2067,10 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
         This class will produce an ``AssertionError`` if there are no
         bounding boxes in a batch.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
+    See :class:`~imgaug.augmenters.blend.BlendAlphaMask`.
 
     Parameters
     ----------
@@ -2290,9 +2303,10 @@ class SomeColorsMaskGen(IBatchwiseMaskGenerator):
         This mask generator will produce an ``AssertionError`` for batches
         that contain no images.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
+    See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
     Parameters
     ----------

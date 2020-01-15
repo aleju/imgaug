@@ -207,9 +207,10 @@ class AveragePooling(_AbstractPoolingBase):
         are updated. This is because imgaug can handle maps/maks that are
         larger/smaller than their corresponding image.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.avg_pool`.
+    See :func:`~imgaug.imgaug.avg_pool`.
 
     Attributes
     ----------
@@ -318,9 +319,10 @@ class MaxPooling(_AbstractPoolingBase):
         are updated. This is because imgaug can handle maps/maks that are
         larger/smaller than their corresponding image.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.max_pool`.
+    See :func:`~imgaug.imgaug.max_pool`.
 
     Attributes
     ----------
@@ -431,9 +433,10 @@ class MinPooling(_AbstractPoolingBase):
         are updated. This is because imgaug can handle maps/maks that are
         larger/smaller than their corresponding image.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.pool`.
+    See :func:`~imgaug.imgaug.pool`.
 
     Attributes
     ----------
@@ -544,9 +547,10 @@ class MedianPooling(_AbstractPoolingBase):
         are updated. This is because imgaug can handle maps/maks that are
         larger/smaller than their corresponding image.
 
-    dtype support::
+    Supported dtypes
+    ----------------
 
-        See :func:`~imgaug.imgaug.pool`.
+    See :func:`~imgaug.imgaug.pool`.
 
     Attributes
     ----------
