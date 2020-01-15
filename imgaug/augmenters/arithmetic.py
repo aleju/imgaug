@@ -1536,7 +1536,7 @@ class Add(meta.Augmenter):
 
     """
 
-    def __init__(self, value=0, per_channel=False,
+    def __init__(self, value=(-20, 20), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(Add, self).__init__(seed=seed, name=name, **old_kwargs)
 
