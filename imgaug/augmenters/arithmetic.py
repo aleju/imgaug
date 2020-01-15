@@ -40,6 +40,7 @@ import imgaug as ia
 from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
+from .. import random as iarandom
 
 
 # fill modes for apply_cutout_() and Cutout augmenter
@@ -633,7 +634,7 @@ def _multiply_elementwise_to_non_uint8(image, multipliers):
 
 def cutout(image, x1, y1, x2, y2,
            fill_mode="constant", cval=0, fill_per_channel=False,
-           random_state=None):
+           seed=None):
     """Fill a single area within an image using a fill mode.
 
     This cutout method uses the top-left and bottom-right corner coordinates
@@ -676,7 +677,7 @@ def cutout(image, x1, y1, x2, y2,
     fill_per_channel : number or bool, optional
         See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
-    random_state : imgaug.random.RNG or None, optional
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
     Returns
@@ -687,12 +688,12 @@ def cutout(image, x1, y1, x2, y2,
     """
     return cutout_(np.copy(image),
                    x1, y1, x2, y2,
-                   fill_mode, cval, fill_per_channel, random_state)
+                   fill_mode, cval, fill_per_channel, seed)
 
 
 def cutout_(image, x1, y1, x2, y2,
             fill_mode="constant", cval=0, fill_per_channel=False,
-            random_state=None):
+            seed=None):
     """Fill a single area within an image using a fill mode (in-place).
 
     This cutout method uses the top-left and bottom-right corner coordinates
@@ -741,9 +742,10 @@ def cutout_(image, x1, y1, x2, y2,
         Whether to fill in a channelwise fashion.
         If number then a value ``>=0.5`` will be interpreted as ``True``.
 
-    random_state : imgaug.random.RNG or None, optional
-        A random number generate to sample random values from.
-        Only required for ``fill_mode=gaussian``.
+    seed : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        A random number generator to sample random values from.
+        Usually an integer seed value or an ``RNG`` instance.
+        See :class:`imgaug.random.RNG` for details.
 
     Returns
     -------
@@ -774,7 +776,11 @@ def cutout_(image, x1, y1, x2, y2,
             x1=x1, y1=y1, x2=x2, y2=y2,
             cval=cval,
             per_channel=(fill_per_channel >= 0.5),
-            random_state=random_state)
+            random_state=(
+                iarandom.RNG(seed)
+                if not isinstance(seed, iarandom.RNG)
+                else seed)  # only RNG(.) without "if" is ~8x slower
+        )
     return image
 
 
@@ -2605,7 +2611,7 @@ class Cutout(meta.Augmenter):
                 fill_mode=fill_mode[i],
                 cval=cval[i],
                 fill_per_channel=fill_per_channel[i],
-                random_state=random_state)
+                seed=random_state)
         return image
 
     def get_parameters(self):

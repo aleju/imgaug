@@ -46,7 +46,7 @@ class Test_cutout(unittest.TestCase):
                                fill_mode="gaussian",
                                cval=1,
                                fill_per_channel=0.5,
-                               random_state=rng)
+                               seed=rng)
 
         assert mock_inplace.call_count == 1
         assert image_aug == "foo"
@@ -78,7 +78,7 @@ class Test_cutout_(unittest.TestCase):
                                 fill_mode="constant",
                                 cval=0,
                                 fill_per_channel=False,
-                                random_state=None)
+                                seed=None)
 
         mask = np.zeros(image.shape, dtype=bool)
         mask[20:40, 10:30, :] = True
@@ -102,7 +102,7 @@ class Test_cutout_(unittest.TestCase):
             (100, 100, 3))
         mock_fill.return_value = image
 
-        random_state = iarandom.RNG(0)
+        seed = iarandom.RNG(0)
 
         image_aug = iaa.cutout_(image,
                                 x1=10,
@@ -112,7 +112,7 @@ class Test_cutout_(unittest.TestCase):
                                 fill_mode=fill_mode,
                                 cval=0,
                                 fill_per_channel=False,
-                                random_state=random_state)
+                                seed=seed)
 
         assert mock_fill.call_count == 1
         args = mock_fill.call_args_list[0][0]
@@ -125,7 +125,7 @@ class Test_cutout_(unittest.TestCase):
         assert kwargs["y2"] == 40
         assert kwargs["cval"] == 0
         assert kwargs["per_channel"] is False
-        assert kwargs["random_state"] is random_state
+        assert kwargs["random_state"] is seed
 
     def test_zero_height(self):
         image = np.mod(np.arange(100*100*3), 255).astype(np.uint8).reshape(
@@ -141,7 +141,7 @@ class Test_cutout_(unittest.TestCase):
                                 fill_mode="constant",
                                 cval=0,
                                 fill_per_channel=False,
-                                random_state=None)
+                                seed=None)
 
         assert np.array_equal(image_aug, image_cp)
 
@@ -159,7 +159,7 @@ class Test_cutout_(unittest.TestCase):
                                 fill_mode="constant",
                                 cval=0,
                                 fill_per_channel=False,
-                                random_state=None)
+                                seed=None)
 
         assert np.array_equal(image_aug, image_cp)
 
@@ -177,7 +177,7 @@ class Test_cutout_(unittest.TestCase):
                                 fill_mode="constant",
                                 cval=0,
                                 fill_per_channel=False,
-                                random_state=None)
+                                seed=None)
 
         assert np.array_equal(image_aug, image_cp)
 
@@ -194,7 +194,7 @@ class Test_cutout_(unittest.TestCase):
                                 fill_mode="constant",
                                 cval=0,
                                 fill_per_channel=False,
-                                random_state=None)
+                                seed=None)
 
         assert np.all(image_aug[0:25, 0:25] == 0)
         assert np.all(image_aug[0:25, 25:] > 0)
@@ -1966,7 +1966,7 @@ class TestCutout(unittest.TestCase):
             assert kwargs["fill_mode"] == "gaussian"
             assert np.array_equal(kwargs["cval"], [1, 1, 1])
             assert np.isclose(kwargs["fill_per_channel"], 1.0)
-            assert isinstance(kwargs["random_state"], iarandom.RNG)
+            assert isinstance(kwargs["seed"], iarandom.RNG)
 
     @mock.patch("imgaug.augmenters.arithmetic.cutout_")
     def test_mocked__squared_true(self, mock_apply):
@@ -2000,7 +2000,7 @@ class TestCutout(unittest.TestCase):
             assert kwargs["fill_mode"] == "gaussian"
             assert np.array_equal(kwargs["cval"], [1, 1, 1])
             assert np.isclose(kwargs["fill_per_channel"], 1.0)
-            assert isinstance(kwargs["random_state"], iarandom.RNG)
+            assert isinstance(kwargs["seed"], iarandom.RNG)
 
     def test_simple_image(self):
         aug = iaa.Cutout(nb_iterations=2,
