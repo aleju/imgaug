@@ -2584,7 +2584,8 @@ class Cutout(meta.Augmenter):
             fill_per_channel=fill_per_channel
         )
 
-    def _augment_image_by_samples(self, image, x1, y1, x2, y2, squared,
+    @classmethod
+    def _augment_image_by_samples(cls, image, x1, y1, x2, y2, squared,
                                   fill_mode, cval, fill_per_channel,
                                   random_state):
         for i, x1_i in enumerate(x1):
