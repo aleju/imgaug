@@ -233,6 +233,11 @@ class Cartoon(meta.Augmenter):
     edges or also too many detected edges are probably the most significant
     drawbacks.
 
+    Supported dtypes
+    ----------------
+
+    See :func:`~imgaug.augmenters.artistic.stylize_cartoon`.
+
     Parameters
     ----------
     blur_ksize : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional

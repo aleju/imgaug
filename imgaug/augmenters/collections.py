@@ -65,6 +65,31 @@ class RandAugment(meta.Sequential):
         transformations to ensure that outputs are as similar as possible
         to the paper's implementation.)
 
+    Supported dtypes
+    ----------------
+
+    minimum of (
+        :class:`~imgaug.augmenters.flip.Fliplr`,
+        :class:`~imgaug.augmenters.size.KeepSizeByResize`,
+        :class:`~imgaug.augmenters.size.Crop`,
+        :class:`~imgaug.augmenters.meta.Sequential`,
+        :class:`~imgaug.augmenters.meta.SomeOf`,
+        :class:`~imgaug.augmenters.meta.Identity`,
+        :class:`~imgaug.augmenters.pillike.Autocontrast`,
+        :class:`~imgaug.augmenters.pillike.Equalize`,
+        :class:`~imgaug.augmenters.arithmetic.Invert`,
+        :class:`~imgaug.augmenters.pillike.Affine`,
+        :class:`~imgaug.augmenters.pillike.Posterize`,
+        :class:`~imgaug.augmenters.pillike.Solarize`,
+        :class:`~imgaug.augmenters.pillike.EnhanceColor`,
+        :class:`~imgaug.augmenters.pillike.EnhanceContrast`,
+        :class:`~imgaug.augmenters.pillike.EnhanceBrightness`,
+        :class:`~imgaug.augmenters.pillike.EnhanceSharpness`,
+        :class:`~imgaug.augmenters.arithmetic.Cutout`,
+        :class:`~imgaug.augmenters.pillike.FilterBlur`,
+        :class:`~imgaug.augmenters.pillike.FilterSmooth`
+    )
+
     Parameters
     ----------
     n : int or tuple of int or list of int or imgaug.parameters.StochasticParameter or None, optional
