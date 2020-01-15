@@ -2996,7 +2996,7 @@ class Dropout2d(meta.Augmenter):
 
     """
 
-    def __init__(self, p, nb_keep_channels=1,
+    def __init__(self, p=0.1, nb_keep_channels=1,
                  seed=None, name=None, **old_kwargs):
         super(Dropout2d, self).__init__(
             seed=seed, name=name, **old_kwargs)

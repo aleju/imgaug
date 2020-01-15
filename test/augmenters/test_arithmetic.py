@@ -2472,9 +2472,9 @@ class TestDropout2d(unittest.TestCase):
         reseed()
 
     def test___init___defaults(self):
-        aug = iaa.Dropout2d(p=0)
+        aug = iaa.Dropout2d()
         assert isinstance(aug.p, iap.Binomial)
-        assert np.isclose(aug.p.p.value, 1.0)
+        assert np.isclose(aug.p.p.value, 1-0.1)
         assert aug.nb_keep_channels == 1
 
     def test___init___p_is_float(self):
