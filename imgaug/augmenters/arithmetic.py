@@ -1997,10 +1997,10 @@ class AdditivePoissonNoise(AddElementwise):
     parameter of ``5.0`` to images.
     The samples are drawn per image and pixel.
 
-    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 10.0))
+    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 15.0))
 
     Adds poisson noise sampled from ``Poisson(x)`` to images, where ``x`` is
-    randomly sampled per image from the interval ``[0.0, 10.0]``.
+    randomly sampled per image from the interval ``[0.0, 15.0]``.
 
     >>> aug = iaa.AdditivePoissonNoise(lam=5.0, per_channel=True)
 
@@ -2008,19 +2008,19 @@ class AdditivePoissonNoise(AddElementwise):
     where the values are different per image and pixel *and* channel (e.g. a
     different one for red, green and blue channels for the same pixel).
 
-    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 10.0), per_channel=True)
+    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 15.0), per_channel=True)
 
     Adds poisson noise sampled from ``Poisson(x)`` to images,
-    with ``x`` being sampled from ``uniform(0.0, 10.0)`` per image and
+    with ``x`` being sampled from ``uniform(0.0, 15.0)`` per image and
     channel. This is the *recommended* configuration.
 
-    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 10.0), per_channel=0.5)
+    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 15.0), per_channel=0.5)
 
     Identical to the previous example, but the `per_channel` feature is only
     active for 50 percent of all images.
 
     """
-    def __init__(self, lam=0, per_channel=False,
+    def __init__(self, lam=(0.0, 15.0), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         lam2 = iap.handle_continuous_param(
             lam, "lam",
