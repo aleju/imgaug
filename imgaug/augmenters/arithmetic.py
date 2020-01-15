@@ -2237,7 +2237,7 @@ class MultiplyElementwise(meta.Augmenter):
 
     """
 
-    def __init__(self, mul=1.0, per_channel=False,
+    def __init__(self, mul=(0.8, 1.2), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(MultiplyElementwise, self).__init__(
             seed=seed, name=name, **old_kwargs)
