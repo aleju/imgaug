@@ -2742,8 +2742,7 @@ def _handle_dropout_probability_param(p, name):
     return p_param
 
 
-# TODO add similar cutout augmenter
-# TODO invert size_p and size_percent so that larger values denote larger
+# TODO invert size_px and size_percent so that larger values denote larger
 #      areas being dropped instead of the opposite way around
 class CoarseDropout(MultiplyElementwise):
     """
@@ -2888,8 +2887,8 @@ class CoarseDropout(MultiplyElementwise):
     for ``50`` percent of all images.
 
     """
-    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
+    def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
+                 per_channel=False, min_size=3,
                  seed=None, name=None, **old_kwargs):
         p_param = _handle_dropout_probability_param(p, "p")
 
@@ -2902,7 +2901,11 @@ class CoarseDropout(MultiplyElementwise):
                                               size_percent=size_percent,
                                               min_size=min_size)
         else:
-            raise Exception("Either size_px or size_percent must be set.")
+            # default if neither size_px nor size_percent is provided
+            # is size_px=(3, 8)
+            p_param = iap.FromLowerResolution(other_param=p_param,
+                                              size_px=(3, 8),
+                                              min_size=min_size)
 
         super(CoarseDropout, self).__init__(
             p_param,

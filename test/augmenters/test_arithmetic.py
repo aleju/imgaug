@@ -2450,12 +2450,9 @@ class TestCoarseDropout(unittest.TestCase):
         assert got_exception
 
     def test___init___size_px_and_size_percent_both_none(self):
-        got_exception = False
-        try:
-            _ = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
-        except Exception:
-            got_exception = True
-        assert got_exception
+        aug = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
+        assert np.isclose(aug.mul.size_px.a.value, 3)
+        assert np.isclose(aug.mul.size_px.b.value, 8)
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
