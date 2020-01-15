@@ -21,6 +21,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import random as iarandom
 from imgaug import parameters as iap
+from imgaug.testutils import runtest_pickleable_uint8_img
 
 # imagecorruptions cannot be installed in <=3.4 due to their
 # scikit-image requirement
@@ -245,6 +246,12 @@ class TestAugmenters(unittest.TestCase):
     @classmethod
     def _test_augmenter(cls, augmenter_name, func_expected,
                         dependent_on_seed):
+        # this test verifies:
+        # - called function seems to be the expected function
+        # - images produced by augmenter match images produced by function
+        # - a different seed (and sometimes severity) will lead to a
+        #   different image
+        # - augmenter can be pickled
         severity = 5
         aug_cls = getattr(iaa.imgcorruptlike, augmenter_name)
         image = np.mod(
@@ -252,8 +259,9 @@ class TestAugmenters(unittest.TestCase):
         ).reshape((32, 32, 3)).astype(np.uint8)
 
         rng = iarandom.RNG(1)
-        # replay sampling of severities, not really necessary here as we
-        # use a deterministic value, but still done for good style
+        # Replay sampling of severities.
+        # Even for deterministic values this is required as currently
+        # there is an advance() at the end of each draw_samples().
         _ = iap.Deterministic(1).draw_samples((1,), rng)
 
         # As for the functions above, we can't just change the seed value
@@ -277,6 +285,10 @@ class TestAugmenters(unittest.TestCase):
         assert np.array_equal(image_aug1, image_aug_exp)
         assert np.array_equal(image_aug2, image_aug_exp)
         assert not np.array_equal(image_aug3, image_aug2)
+
+        # pickling test
+        aug = aug_cls(severity=(1, 5))
+        runtest_pickleable_uint8_img(aug, shape=(32, 32, 3))
 
     def test_gaussian_noise(self):
         self._test_augmenter("GaussianNoise",

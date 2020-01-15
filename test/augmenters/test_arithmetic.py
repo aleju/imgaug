@@ -2152,6 +2152,18 @@ class TestCutout(unittest.TestCase):
         assert params[5] is aug.cval
         assert params[6] is aug.fill_per_channel
 
+    def test_pickleable(self):
+        aug = iaa.Cutout(
+            nb_iterations=1,
+            position=(0.5, 0.5),
+            size=0.1,
+            squared=0.6,
+            fill_mode=["gaussian", "constant"],
+            cval=(0, 255),
+            fill_per_channel=0.5
+        )
+        runtest_pickleable_uint8_img(aug)
+
 
 # this is mostly copy-pasted cutout code from
 # https://github.com/uoguelph-mlrg/Cutout/blob/master/util/cutout.py
@@ -5662,6 +5674,10 @@ class TestSolarize(unittest.TestCase):
             .astype(np.uint8).reshape((2, 2, 1))
         assert observed.dtype.name == "uint8"
         assert np.array_equal(observed, expected)
+
+    def test_pickleable(self):
+        aug = iaa.pillike.Solarize(p=1.0, threshold=(100, 110))
+        runtest_pickleable_uint8_img(aug)
 
 
 class TestContrastNormalization(unittest.TestCase):
