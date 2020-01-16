@@ -1702,11 +1702,9 @@ class TranslateX(Affine):
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
-        # we don't test here if both are not-None at the same time, because
-        # that is already checked in Affine
-        assert percent is not None or px is not None, (
-            "Expected either `percent` to be not-None or "
-            "`px` to be not-None, but both were None.")
+        if percent is None and px is None:
+            percent = (-0.25, 0.25)
+
         super(TranslateX, self).__init__(
             translate_percent=({"x": percent} if percent is not None else None),
             translate_px=({"x": px} if px is not None else None),
@@ -1783,11 +1781,9 @@ class TranslateY(Affine):
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
-        # we don't test here if both are not-None at the same time, because
-        # that is already checked in Affine
-        assert percent is not None or px is not None, (
-            "Expected either `percent` to be not-None or "
-            "`px` to be not-None, but both were None.")
+        if percent is None and px is None:
+            percent = (-0.25, 0.25)
+
         super(TranslateY, self).__init__(
             translate_percent=({"y": percent} if percent is not None else None),
             translate_px=({"y": px} if px is not None else None),
