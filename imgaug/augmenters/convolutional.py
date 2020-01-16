@@ -480,7 +480,7 @@ class EdgeDetect(Convolve):
     blending factor between ``0%`` and ``100%``.
 
     """
-    def __init__(self, alpha=0,
+    def __init__(self, alpha=(0.0, 0.75),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
