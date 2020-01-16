@@ -604,7 +604,7 @@ class DirectedEdgeDetect(Convolve):
     and ``30%``.
 
     """
-    def __init__(self, alpha=0, direction=(0.0, 1.0),
+    def __init__(self, alpha=(0.0, 0.75), direction=(0.0, 1.0),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
