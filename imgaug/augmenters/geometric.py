@@ -2852,8 +2852,9 @@ class PiecewiseAffine(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0,
-                 mode="constant", absolute_scale=False, polygon_recoverer=None,
+    def __init__(self, scale=(0.0, 0.04), nb_rows=(2, 4), nb_cols=(2, 4),
+                 order=1, cval=0, mode="constant", absolute_scale=False,
+                 polygon_recoverer=None,
                  seed=None, name=None, **old_kwargs):
         super(PiecewiseAffine, self).__init__(
             seed=seed, name=name, **old_kwargs)
