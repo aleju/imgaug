@@ -433,7 +433,7 @@ class GaussianBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, sigma=0,
+    def __init__(self, sigma=(0.0, 3.0),
                  seed=None, name=None, **old_kwargs):
         super(GaussianBlur, self).__init__(
             seed=seed, name=name, **old_kwargs)
