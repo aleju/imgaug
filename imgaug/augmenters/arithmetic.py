@@ -4345,7 +4345,7 @@ class Solarize(Invert):
     per image. The thresholding operation happens per channel.
 
     """
-    def __init__(self, p, per_channel=False, min_value=None, max_value=None,
+    def __init__(self, p=1, per_channel=False, min_value=None, max_value=None,
                  threshold=(128-64, 128+64), invert_above_threshold=True,
                  seed=None, name=None, **old_kwargs):
         super(Solarize, self).__init__(
