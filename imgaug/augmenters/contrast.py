@@ -645,7 +645,7 @@ class LogContrast(_ContrastFuncWrapper):
     *and* channel.
 
     """
-    def __init__(self, gain=1, per_channel=False,
+    def __init__(self, gain=(0.4, 1.6), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         # TODO add inv parameter?
         params1d = [iap.handle_continuous_param(
