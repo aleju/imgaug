@@ -2202,6 +2202,9 @@ class AddToHueAndSaturation(meta.Augmenter):
                  seed=None, name=None, **old_kwargs):
         super(AddToHueAndSaturation, self).__init__(
             seed=seed, name=name, **old_kwargs)
+        if value is None and value_hue is None and value_saturation is None:
+            value_hue = (-40, 40)
+            value_saturation = (-40, 40)
 
         self.value = self._handle_value_arg(value, value_hue, value_saturation)
         self.value_hue = self._handle_value_hue_arg(value_hue)
