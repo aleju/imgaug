@@ -861,7 +861,7 @@ class Fliplr(meta.Augmenter):
 
     """
 
-    def __init__(self, p=0, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=1, seed=None, name=None, **old_kwargs):
         super(Fliplr, self).__init__(
             seed=seed, name=name, **old_kwargs)
         self.p = iap.handle_probability_param(p, "p")
@@ -962,7 +962,7 @@ class Flipud(meta.Augmenter):
 
     """
 
-    def __init__(self, p=0, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=1, seed=None, name=None, **old_kwargs):
         super(Flipud, self).__init__(
             seed=seed, name=name, **old_kwargs)
         self.p = iap.handle_probability_param(p, "p")
