@@ -4822,13 +4822,10 @@ class TestCoarsePepper(unittest.TestCase):
             got_exception = True
         assert got_exception
 
-    def test_size_px_or_size_percent_not_none(self):
-        got_exception = False
-        try:
-            _ = iaa.CoarsePepper(p=0.5, size_px=None, size_percent=None)
-        except Exception:
-            got_exception = True
-        assert got_exception
+    def test___init___size_px_and_size_percent_both_none(self):
+        aug = iaa.CoarsePepper(p=0.5, size_px=None, size_percent=None)
+        assert np.isclose(aug.mask.size_px.a.value, 3)
+        assert np.isclose(aug.mask.size_px.b.value, 8)
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)

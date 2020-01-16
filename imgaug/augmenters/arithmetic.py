@@ -4048,8 +4048,8 @@ class CoarsePepper(ReplaceElementwise):
 
     """
 
-    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
+    def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
+                 per_channel=False, min_size=3,
                  seed=None, name=None, **old_kwargs):
         mask = iap.handle_probability_param(
             p, "p", tuple_to_uniform=True, list_to_choice=True)
@@ -4061,7 +4061,8 @@ class CoarsePepper(ReplaceElementwise):
             mask_low = iap.FromLowerResolution(
                 other_param=mask, size_percent=size_percent, min_size=min_size)
         else:
-            raise Exception("Either size_px or size_percent must be set.")
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=(3, 8), min_size=min_size)
 
         replacement01 = iap.ForceSign(
             iap.Beta(0.5, 0.5) - 0.5,
