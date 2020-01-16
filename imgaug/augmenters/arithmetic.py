@@ -4487,7 +4487,7 @@ class JpegCompression(meta.Augmenter):
     setting of ``1`` to ``30``.
 
     """
-    def __init__(self, compression=50,
+    def __init__(self, compression=(0, 100),
                  seed=None, name=None, **old_kwargs):
         super(JpegCompression, self).__init__(
             seed=seed, name=name, **old_kwargs)
