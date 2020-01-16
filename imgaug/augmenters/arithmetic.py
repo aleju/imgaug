@@ -4195,7 +4195,7 @@ class Invert(meta.Augmenter):
         ]
     ]
 
-    def __init__(self, p=0, per_channel=False, min_value=None, max_value=None,
+    def __init__(self, p=1, per_channel=False, min_value=None, max_value=None,
                  threshold=None, invert_above_threshold=0.5,
                  seed=None, name=None, **old_kwargs):
         super(Invert, self).__init__(
