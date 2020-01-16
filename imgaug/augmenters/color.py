@@ -2801,7 +2801,7 @@ class Grayscale(ChangeColorspace):
 
     """
 
-    def __init__(self, alpha=0, from_colorspace=CSPACE_RGB,
+    def __init__(self, alpha=1, from_colorspace=CSPACE_RGB,
                  seed=None, name=None, **old_kwargs):
         super(Grayscale, self).__init__(
             to_colorspace=CSPACE_GRAY,
