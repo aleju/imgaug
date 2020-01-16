@@ -1901,7 +1901,7 @@ class MultiplyHue(MultiplyHueAndSaturation):
 
     """
 
-    def __init__(self, mul=(-1.0, 1.0), from_colorspace="RGB",
+    def __init__(self, mul=(-3.0, 3.0), from_colorspace="RGB",
                  seed=None, name=None, **old_kwargs):
         super(MultiplyHue, self).__init__(
             mul_hue=mul,
