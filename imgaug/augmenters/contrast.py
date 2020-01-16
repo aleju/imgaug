@@ -477,7 +477,7 @@ class GammaContrast(_ContrastFuncWrapper):
 
     """
 
-    def __init__(self, gamma=1, per_channel=False,
+    def __init__(self, gamma=(0.7, 1.7), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         params1d = [iap.handle_continuous_param(
             gamma, "gamma", value_range=None, tuple_to_uniform=True,
