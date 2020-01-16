@@ -1204,7 +1204,7 @@ class CLAHE(meta.Augmenter):
     HLS = color_lib.CSPACE_HLS
     Lab = color_lib.CSPACE_Lab
 
-    def __init__(self, clip_limit=40, tile_grid_size_px=8,
+    def __init__(self, clip_limit=(0.1, 8), tile_grid_size_px=(3, 12),
                  tile_grid_size_px_min=3,
                  from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,
