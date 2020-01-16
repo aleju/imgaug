@@ -734,7 +734,7 @@ class MedianBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, k=1, seed=None, name=None, **old_kwargs):
+    def __init__(self, k=(1, 7), seed=None, name=None, **old_kwargs):
         super(MedianBlur, self).__init__(
             seed=seed, name=name, **old_kwargs)
 
