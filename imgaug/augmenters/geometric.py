@@ -1900,7 +1900,7 @@ class ShearX(Affine):
 
     """
 
-    def __init__(self, shear, order=1, cval=0, mode="constant",
+    def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ShearX, self).__init__(
@@ -1955,7 +1955,7 @@ class ShearY(Affine):
 
     """
 
-    def __init__(self, shear, order=1, cval=0, mode="constant",
+    def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ShearY, self).__init__(
