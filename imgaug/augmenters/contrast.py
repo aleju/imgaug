@@ -715,7 +715,7 @@ class LinearContrast(_ContrastFuncWrapper):
     *and* channel.
 
     """
-    def __init__(self, alpha=1, per_channel=False,
+    def __init__(self, alpha=(0.6, 1.4), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         params1d = [
             iap.handle_continuous_param(
