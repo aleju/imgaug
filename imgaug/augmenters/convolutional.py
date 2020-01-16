@@ -392,7 +392,7 @@ class Emboss(Convolve):
     using a random blending factor between ``0%`` and ``100%``.
 
     """
-    def __init__(self, alpha=0, strength=1,
+    def __init__(self, alpha=(0.0, 1.0), strength=(0.25, 1.0),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
