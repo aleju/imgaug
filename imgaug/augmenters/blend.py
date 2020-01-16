@@ -385,7 +385,7 @@ class BlendAlpha(meta.Augmenter):
 
     """
 
-    def __init__(self, factor=0, foreground=None, background=None,
+    def __init__(self, factor=(0.0, 1.0), foreground=None, background=None,
                  per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(BlendAlpha, self).__init__(
