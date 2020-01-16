@@ -290,7 +290,7 @@ class Sharpen(Convolve):
     (as in the above example).
 
     """
-    def __init__(self, alpha=0, lightness=1,
+    def __init__(self, alpha=(0.0, 0.2), lightness=(0.8, 1.2),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
