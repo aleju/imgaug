@@ -3930,7 +3930,7 @@ class Pepper(ReplaceElementwise):
 
     """
 
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.05), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         replacement01 = iap.ForceSign(
             iap.Beta(0.5, 0.5) - 0.5,
