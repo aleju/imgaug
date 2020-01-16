@@ -2007,7 +2007,7 @@ class RemoveSaturation(MultiplySaturation):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.RemoveSaturation()
+    >>> aug = iaa.RemoveSaturation((0.0, 1.0))
 
     Create an augmenter that decreases saturation by varying degrees.
 
@@ -2023,7 +2023,7 @@ class RemoveSaturation(MultiplySaturation):
 
     """
 
-    def __init__(self, mul=(0.0, 1.0), from_colorspace=CSPACE_RGB,
+    def __init__(self, mul=1, from_colorspace=CSPACE_RGB,
                  seed=None, name=None, **old_kwargs):
         mul = iap.Subtract(
             1.0,
