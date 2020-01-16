@@ -952,7 +952,7 @@ class AllChannelsCLAHE(meta.Augmenter):
 
     """
 
-    def __init__(self, clip_limit=40, tile_grid_size_px=8,
+    def __init__(self, clip_limit=(0.1, 8), tile_grid_size_px=(3, 12),
                  tile_grid_size_px_min=3, per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(AllChannelsCLAHE, self).__init__(
