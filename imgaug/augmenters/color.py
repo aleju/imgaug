@@ -1759,6 +1759,10 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
     def __init__(self, mul=None, mul_hue=None, mul_saturation=None,
                  per_channel=False, from_colorspace="RGB",
                  seed=None, name=None, **old_kwargs):
+        if mul is None and mul_hue is None and mul_saturation is None:
+            mul_hue = (0.5, 1.5)
+            mul_saturation = (0.0, 1.7)
+
         if mul is not None:
             assert mul_hue is None, (
                 "`mul_hue` may not be set if `mul` is set. "
