@@ -886,7 +886,7 @@ class BilateralBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250),
+    def __init__(self, d=(1, 9), sigma_color=(10, 250), sigma_space=(10, 250),
                  seed=None, name=None, **old_kwargs):
         # pylint: disable=invalid-name
         super(BilateralBlur, self).__init__(
