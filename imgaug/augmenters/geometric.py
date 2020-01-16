@@ -1845,7 +1845,7 @@ class Rotate(Affine):
 
     """
 
-    def __init__(self, rotate, order=1, cval=0, mode="constant",
+    def __init__(self, rotate=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(Rotate, self).__init__(
