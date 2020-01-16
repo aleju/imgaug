@@ -1559,7 +1559,7 @@ class ScaleX(Affine):
 
     """
 
-    def __init__(self, scale, order=1, cval=0, mode="constant",
+    def __init__(self, scale=(0.5, 1.5), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ScaleX, self).__init__(
@@ -1624,7 +1624,7 @@ class ScaleY(Affine):
 
     """
 
-    def __init__(self, scale, order=1, cval=0, mode="constant",
+    def __init__(self, scale=(0.5, 1.5), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ScaleY, self).__init__(
