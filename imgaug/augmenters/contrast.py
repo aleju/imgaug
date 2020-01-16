@@ -499,6 +499,9 @@ class SigmoidContrast(_ContrastFuncWrapper):
     Values in the range ``gain=(5, 20)`` and ``cutoff=(0.25, 0.75)`` seem to
     be sensible.
 
+    A combination of ``gain=5.5`` and ``cutof=0.45`` is fairly close to
+    the identity function.
+
     Supported dtypes
     ----------------
 
@@ -564,7 +567,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
     sampled once per image *and* channel.
 
     """
-    def __init__(self, gain=10, cutoff=0.5, per_channel=False,
+    def __init__(self, gain=(5, 6), cutoff=(0.3, 0.6), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         # TODO add inv parameter?
         params1d = [
