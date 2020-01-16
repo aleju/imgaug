@@ -1019,7 +1019,7 @@ class MotionBlur(iaa_convolutional.Convolve):
 
     """
 
-    def __init__(self, k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1,
+    def __init__(self, k=(3, 7), angle=(0, 360), direction=(-1.0, 1.0), order=1,
                  seed=None, name=None, **old_kwargs):
         # TODO allow (1, None) and set to identity matrix if k == 1
         k_param = iap.handle_discrete_param(
