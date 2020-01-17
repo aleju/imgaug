@@ -1149,12 +1149,23 @@ class Affine(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
-                 rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
+    def __init__(self, scale=None, translate_percent=None, translate_px=None,
+                 rotate=None, shear=None, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(Affine, self).__init__(
             seed=seed, name=name, **old_kwargs)
+
+        params = [scale, translate_percent, translate_px, rotate, shear]
+        if all([p is None for p in params]):
+            scale = {"x": (0.9, 1.1), "y": (0.9, 1.1)}
+            translate_percent = {"x": (-0.1, 0.1), "y": (-0.1, 0.1)}
+            rotate = (-15, 15)
+            shear = {"x": (-10, 10), "y": (-10, 10)}
+        else:
+            scale = scale if scale is not None else 1.0
+            rotate = rotate if rotate is not None else 0.0
+            shear = shear if shear is not None else 0.0
 
         assert backend in ["auto", "skimage", "cv2"], (
             "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
