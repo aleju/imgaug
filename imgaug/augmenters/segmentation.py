@@ -743,7 +743,7 @@ class UniformVoronoi(Voronoi):
 
     """
 
-    def __init__(self, n_points, p_replace=1.0, max_size=128,
+    def __init__(self, n_points=(50, 500), p_replace=(0.5, 1.0), max_size=128,
                  interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(UniformVoronoi, self).__init__(
