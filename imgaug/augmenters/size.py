@@ -2514,6 +2514,9 @@ class Crop(CropAndPad):
                 "Expected None or int or float or StochasticParameter or "
                 "list or tuple, got %s." % (type(value),))
 
+        if px is None and percent is None:
+            percent = (0.0, 0.1)
+
         px = recursive_negate(px)
         percent = recursive_negate(percent)
 
