@@ -4042,7 +4042,8 @@ class ElasticTransformation(meta.Augmenter):
         5: cv2.INTER_CUBIC
     }
 
-    def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
+    def __init__(self, alpha=(0.0, 40.0), sigma=(4.0, 8.0), order=3, cval=0,
+                 mode="constant",
                  polygon_recoverer="auto",
                  seed=None, name=None, **old_kwargs):
         super(ElasticTransformation, self).__init__(
