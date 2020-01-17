@@ -3380,8 +3380,8 @@ class PerspectiveTransform(meta.Augmenter):
         "constant": cv2.BORDER_CONSTANT
     }
 
-    def __init__(self, scale=0, cval=0, mode="constant", keep_size=True,
-                 fit_output=False, polygon_recoverer="auto",
+    def __init__(self, scale=(0.0, 0.06), cval=0, mode="constant",
+                 keep_size=True, fit_output=False, polygon_recoverer="auto",
                  seed=None, name=None, **old_kwargs):
         super(PerspectiveTransform, self).__init__(
             seed=seed, name=name, **old_kwargs)
