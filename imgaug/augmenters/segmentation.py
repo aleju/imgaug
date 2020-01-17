@@ -199,8 +199,8 @@ class Superpixels(meta.Augmenter):
 
     """
 
-    def __init__(self, p_replace=0, n_segments=100, max_size=128,
-                 interpolation="linear",
+    def __init__(self, p_replace=(0.5, 1.0), n_segments=(50, 120),
+                 max_size=128, interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(Superpixels, self).__init__(
             seed=seed, name=name, **old_kwargs)
