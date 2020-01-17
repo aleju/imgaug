@@ -4690,7 +4690,7 @@ class Rot90(meta.Augmenter):
 
     """
 
-    def __init__(self, k, keep_size=True,
+    def __init__(self, k=1, keep_size=True,
                  seed=None, name=None, **old_kwargs):
         super(Rot90, self).__init__(
             seed=seed, name=name, **old_kwargs)
