@@ -1335,8 +1335,7 @@ class TestRemoveSaturation(unittest.TestCase):
         multiply = aug.children[0].children[0]
         assert isinstance(multiply.mul, iap.Subtract)
         assert np.isclose(multiply.mul.other_param.value, 1.0)
-        assert np.isclose(multiply.mul.val.a.value, 0.0)
-        assert np.isclose(multiply.mul.val.b.value, 1.0)
+        assert np.isclose(multiply.mul.val.value, 1.0)
         assert aug.from_colorspace == iaa.CSPACE_RGB
 
     def test___init___custom(self):
@@ -1462,8 +1461,8 @@ class TestAddToHueAndSaturation(unittest.TestCase):
     def test___init___per_channel(self):
         aug = iaa.AddToHueAndSaturation(per_channel=0.5)
         assert aug.value is None
-        assert aug.value_hue is None
-        assert aug.value_saturation is None
+        assert aug.value_hue is not None
+        assert aug.value_saturation is not None
         assert isinstance(aug.per_channel, iap.Binomial)
         assert np.isclose(aug.per_channel.p.value, 0.5)
 
