@@ -897,7 +897,8 @@ class RegularGridVoronoi(Voronoi):
 
     """
 
-    def __init__(self, n_rows, n_cols, p_drop_points=0.4, p_replace=1.0,
+    def __init__(self, n_rows=(10, 30), n_cols=(10, 30),
+                 p_drop_points=(0.0, 0.5), p_replace=(0.5, 1.0),
                  max_size=128, interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(RegularGridVoronoi, self).__init__(
