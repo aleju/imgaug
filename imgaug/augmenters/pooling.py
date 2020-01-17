@@ -400,7 +400,7 @@ class MaxPooling(_AbstractPoolingBase):
 
     # TODO add floats as ksize denoting fractions of image sizes
     #      (note possible overlap with fractional kernel sizes here)
-    def __init__(self, kernel_size, keep_size=True,
+    def __init__(self, kernel_size=(1, 5), keep_size=True,
                  seed=None, name=None, **old_kwargs):
         super(MaxPooling, self).__init__(
             kernel_size=kernel_size, keep_size=keep_size,
