@@ -5513,7 +5513,7 @@ class Jigsaw(meta.Augmenter):
 
     Parameters
     ----------
-    nb_rows : int or list of int or tuple of int or imgaug.parameters.StochasticParameter
+    nb_rows : int or list of int or tuple of int or imgaug.parameters.StochasticParameter, optional
         How many rows the jigsaw pattern should have.
 
             * If a single ``int``, then that value will be used for all images.
@@ -5524,7 +5524,7 @@ class Jigsaw(meta.Augmenter):
             * If ``StochasticParameter``, then that parameter is queried per
               image to sample the value to use.
 
-    nb_cols : int or list of int or tuple of int or imgaug.parameters.StochasticParameter
+    nb_cols : int or list of int or tuple of int or imgaug.parameters.StochasticParameter, optional
         How many cols the jigsaw pattern should have.
 
             * If a single ``int``, then that value will be used for all images.
@@ -5580,7 +5580,8 @@ class Jigsaw(meta.Augmenter):
 
     """
 
-    def __init__(self, nb_rows, nb_cols, max_steps=2, allow_pad=True,
+    def __init__(self, nb_rows=(3, 10), nb_cols=(3, 10), max_steps=1,
+                 allow_pad=True,
                  seed=None, name=None, **old_kwargs):
         super(Jigsaw, self).__init__(
             seed=seed, name=name, **old_kwargs)
