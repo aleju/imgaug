@@ -1,4 +1,4 @@
-# Better default values #?
+# Better default values #582
 
 **[breaking]** Most augmenters had previously default values that
 made them equivalent to identify functions. Users had to explicitly
@@ -11,18 +11,20 @@ should now produce decent augmentations.
 
 A few augmenters were set to always-on, maximum-strength
 augmentations. This is the case for:
+
 * `Grayscale` (always fully grayscales images, use
   `Grayscale((0.0, 1.0))` for random strengths)
 * `RemoveSaturation` (same as `Grayscale`)
 * `Fliplr` (always flips images, use `Fliplr(0.5)` for 50%
-  probability).
-* `Flipud` (same as for `Fliplr`)
+  probability)
+* `Flipud` (same as `Fliplr`)
 * `TotalDropout` (always drops everything, use
-  `TotalDropout(0.1)` to drop everything for 10% of all images).
+  `TotalDropout(0.1)` to drop everything for 10% of all images)
 * `Invert` (always inverts images, use `Invert(0.1)` to invert
   10% of all images)
 * `Rot90` (always rotates exactly once by 90 degrees,
   use `Rot90((0, 4))` for any rotation)
+
 These settings seemed to better match user-expectations.
 Such maximum-strength settings however were not chosen for all
 augmenters. Some exceptions where one might expect that are e.g.
@@ -40,7 +42,7 @@ adjusted. It is currently still the default behaviour of all
 augmenters to affect all channels in the same way and to resize
 their outputs back to the input sizes.
 
-The changes to default values are listed below.
+The exact changes to default values are listed below.
 
 **imgaug.arithmetic**
   
