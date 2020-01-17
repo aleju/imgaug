@@ -1764,6 +1764,9 @@ class CropAndPad(meta.Augmenter):
         super(CropAndPad, self).__init__(
             seed=seed, name=name, **old_kwargs)
 
+        if px is None and percent is None:
+            percent = (-0.1, 0.1)
+
         self.mode, self.all_sides, self.top, self.right, self.bottom, \
             self.left = self._handle_px_and_percent_args(px, percent)
 
