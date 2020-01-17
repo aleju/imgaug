@@ -4,6 +4,7 @@ import os
 import warnings
 import sys
 import itertools
+import copy
 from abc import ABCMeta, abstractmethod
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
@@ -3010,7 +3011,6 @@ class TestAugmenter_augment_batch(unittest.TestCase):
             assert np.array_equal(image_aug, image_cp + 1)
 
 
-
 class TestAugmenter_augment_batch_(unittest.TestCase):
     def setUp(self):
         reseed()
@@ -3133,6 +3133,89 @@ class TestAugmenter_augment_batch_(unittest.TestCase):
                            kpsoi_cp.to_xy_array()[:, 0] + 1)
         assert np.allclose(kpsoi_aug.to_xy_array()[:, 1],
                            kpsoi_cp.to_xy_array()[:, 1] + 3)
+
+    def test_call_changes_global_rng_state(self):
+        state_before = copy.deepcopy(iarandom.get_global_rng().state)
+        aug = iaa.Rot90(k=(0, 3))
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        batch = ia.UnnormalizedBatch(images=[image])
+
+        _batch_aug = aug.augment_batch_(batch)
+
+        state_after = iarandom.get_global_rng().state
+        assert repr(state_before) != repr(state_after)
+
+    def test_multiple_calls_produce_not_the_same_results(self):
+        aug = iaa.Rot90(k=(0, 3))
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        nb_images = 1000
+        batch1 = ia.UnnormalizedBatch(images=[image] * nb_images)
+        batch2 = ia.UnnormalizedBatch(images=[image] * nb_images)
+        batch3 = ia.UnnormalizedBatch(images=[image] * nb_images)
+
+        batch_aug1 = aug.augment_batch_(batch1)
+        batch_aug2 = aug.augment_batch_(batch2)
+        batch_aug3 = aug.augment_batch_(batch3)
+
+        assert batch_aug1 is not batch_aug2
+        assert batch_aug1 is not batch_aug2
+        assert batch_aug2 is not batch_aug3
+
+        nb_equal = [0, 0, 0]
+        for image_aug1, image_aug2, image_aug3 in zip(batch_aug1.images_aug,
+                                                      batch_aug2.images_aug,
+                                                      batch_aug3.images_aug):
+            nb_equal[0] += int(np.array_equal(image_aug1, image_aug2))
+            nb_equal[1] += int(np.array_equal(image_aug1, image_aug3))
+            nb_equal[2] += int(np.array_equal(image_aug2, image_aug3))
+
+        assert nb_equal[0] < (0.25 + 0.1) * nb_images
+        assert nb_equal[1] < (0.25 + 0.1) * nb_images
+        assert nb_equal[2] < (0.25 + 0.1) * nb_images
+
+    def test_calls_affect_other_augmenters_with_global_rng(self):
+        # with calling aug1
+        iarandom.seed(1)
+        aug1 = iaa.Rot90(k=(0, 3))
+        aug2 = iaa.Add((0, 255))
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        nb_images = 50
+        batch1 = ia.UnnormalizedBatch(images=[image] * 1)
+        batch2 = ia.UnnormalizedBatch(images=[image] * nb_images)
+
+        batch_aug11 = aug1.augment_batch_(batch1)
+        batch_aug12 = aug2.augment_batch_(batch2)
+
+        # with calling aug1, repetition (to see that seed() works)
+        iarandom.seed(1)
+        aug1 = iaa.Rot90(k=(0, 3))
+        aug2 = iaa.Add((0, 255))
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        nb_images = 50
+        batch1 = ia.UnnormalizedBatch(images=[image] * 1)
+        batch2 = ia.UnnormalizedBatch(images=[image] * nb_images)
+
+        batch_aug21 = aug1.augment_batch_(batch1)
+        batch_aug22 = aug2.augment_batch_(batch2)
+
+        # without calling aug1
+        iarandom.seed(1)
+        aug2 = iaa.Add((0, 255))
+        image = np.arange(4*4).astype(np.uint8).reshape((4, 4))
+        nb_images = 50
+        batch2 = ia.UnnormalizedBatch(images=[image] * nb_images)
+
+        batch_aug32 = aug2.augment_batch_(batch2)
+
+        # comparison
+        assert np.array_equal(
+            np.array(batch_aug12.images_aug, dtype=np.uint8),
+            np.array(batch_aug22.images_aug, dtype=np.uint8)
+        )
+        assert not np.array_equal(
+            np.array(batch_aug12.images_aug, dtype=np.uint8),
+            np.array(batch_aug32.images_aug, dtype=np.uint8)
+        )
 
 
 class TestAugmenter_augment_segmentation_maps(unittest.TestCase):
