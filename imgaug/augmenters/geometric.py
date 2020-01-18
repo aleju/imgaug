@@ -3765,11 +3765,13 @@ class PerspectiveTransform(meta.Augmenter):
             # (i.e. top-down view) of the image, again specifying points
             # in the top-left, top-right, bottom-right, and bottom-left
             # order
+            # do not use width-1 or height-1 here, as for e.g. width=3, height=2
+            # the bottom right coordinate is at (3.0, 2.0) and not (2.0, 1.0)
             dst = np.array([
                 [0, 0],
-                [max_width - 1, 0],
-                [max_width - 1, max_height - 1],
-                [0, max_height - 1]
+                [max_width, 0],
+                [max_width, max_height],
+                [0, max_height]
             ], dtype=np.float32)
 
             # compute the perspective transform matrix and then apply it
@@ -3814,11 +3816,13 @@ class PerspectiveTransform(meta.Augmenter):
     @classmethod
     def _expand_transform(cls, matrix, shape):
         height, width = shape
+        # do not use width-1 or height-1 here, as for e.g. width=3, height=2
+        # the bottom right coordinate is at (3.0, 2.0) and not (2.0, 1.0)
         rect = np.array([
             [0, 0],
-            [width - 1, 0],
-            [width - 1, height - 1],
-            [0, height - 1]], dtype=np.float32)
+            [width, 0],
+            [width, height],
+            [0, height]], dtype=np.float32)
         dst = cv2.perspectiveTransform(np.array([rect]), matrix)[0]
 
         # get min x, y over transformed 4 points
@@ -3828,7 +3832,7 @@ class PerspectiveTransform(meta.Augmenter):
         dst = np.around(dst, decimals=0)
 
         matrix_expanded = cv2.getPerspectiveTransform(rect, dst)
-        max_width, max_height = dst.max(axis=0) + 1
+        max_width, max_height = dst.max(axis=0)
         return matrix_expanded, max_width, max_height
 
     def get_parameters(self):
