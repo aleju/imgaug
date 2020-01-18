@@ -3461,6 +3461,12 @@ class PerspectiveTransform(meta.Augmenter):
                 type(mode),))
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
+        # Advance once, because below we always use random_state.copy() and
+        # hence the sampling calls actually don't change random_state's state.
+        # Without this, every call of the augmenter would produce the same
+        # results.
+        random_state.advance_()
+
         samples_images = self._draw_samples(batch.get_rowwise_shapes(),
                                             random_state.copy())
 

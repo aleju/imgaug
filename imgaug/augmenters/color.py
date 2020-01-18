@@ -2942,6 +2942,10 @@ class _AbstractColorQuantization(meta.Augmenter):
                 # TODO quite hacky to recover the sampled to_colorspace here
                 #      by accessing _draw_samples(). Would be better to have
                 #      an inverse augmentation method in ChangeColorspace.
+
+                # We use random_state.copy() in this method, but that is not
+                # expected to cause unchanged an random_state, because
+                # _augment_batch_() uses an un-copied one for _draw_samples()
                 cs = ChangeColorspace(
                     from_colorspace=self.from_colorspace,
                     to_colorspace=self.to_colorspace,

@@ -5596,6 +5596,18 @@ class TestPerspectiveTransform(unittest.TestCase):
         same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
         assert (same / img_aug_mask.size) >= 0.99
 
+    def test_consecutive_calls_produce_different_results(self):
+        # PerspectiveTransform works with random_state.copy(), so we
+        # test explicitly that it doesn't always use the same samples
+        aug = iaa.PerspectiveTransform((0.0, 0.2))
+        image = np.mod(np.arange(16*16), 255).astype(np.uint8).reshape((16, 16))
+        nb_same = 0
+        last_image = aug(image=image)
+        for _ in np.arange(100):
+            image_aug = aug(image=image)
+            nb_same += int(np.array_equal(image_aug, last_image))
+        assert nb_same <= 1
+
     def test_heatmaps_smaller_than_image_without_keep_size(self):
         # without keep_size, different heatmap size
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
