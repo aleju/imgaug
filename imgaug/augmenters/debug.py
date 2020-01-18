@@ -310,6 +310,23 @@ def draw_debug_image(images, heatmaps=None, segmentation_maps=None,
                      line_strings=None):
     """Generate a debug image grid of a single batch and various datatypes.
 
+    Supported dtypes
+    ----------------
+
+        * ``uint8``: yes; tested
+        * ``uint16``: ?
+        * ``uint32``: ?
+        * ``uint64``: ?
+        * ``int8``: ?
+        * ``int16``: ?
+        * ``int32``: ?
+        * ``int64``: ?
+        * ``float16``: ?
+        * ``float32``: ?
+        * ``float64``: ?
+        * ``float128``: ?
+        * ``bool``: ?
+
     Parameters
     ----------
     images : ndarray or list of ndarray
@@ -1030,6 +1047,11 @@ class _SaveDebugImage(meta.Augmenter):
 
 class SaveDebugImageEveryNBatches(_SaveDebugImage):
     """Visualize data in batches and save corresponding plots to a folder.
+
+    Supported dtypes
+    ----------------
+
+    See :func:`~imgaug.augmenters.debug.draw_debug_image`.
 
     Parameters
     ----------

@@ -436,7 +436,7 @@ class MinPooling(_AbstractPoolingBase):
     Supported dtypes
     ----------------
 
-    See :func:`~imgaug.imgaug.pool`.
+    See :func:`~imgaug.imgaug.min_pool`.
 
     Attributes
     ----------
@@ -550,7 +550,7 @@ class MedianPooling(_AbstractPoolingBase):
     Supported dtypes
     ----------------
 
-    See :func:`~imgaug.imgaug.pool`.
+    See :func:`~imgaug.imgaug.median_pool`.
 
     Attributes
     ----------

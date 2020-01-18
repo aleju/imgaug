@@ -5521,7 +5521,7 @@ class Jigsaw(meta.Augmenter):
     Supported dtypes
     ----------------
 
-    See :func:`apply_jigsaw`.
+    See :func:`~imgaug.augmenters.geometric.apply_jigsaw`.
 
     Parameters
     ----------

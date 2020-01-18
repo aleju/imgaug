@@ -848,7 +848,12 @@ class _KelvinToRGBTable(object):
 
 
 def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
-    """Change the temperature of images to given values in Kelvin.
+    """Change in-place the temperature of images to given values in Kelvin.
+
+    Supported dtypes
+    ----------------
+
+    See :class:`~imgaug.augmenters.color.change_colorspace_`.
 
     Parameters
     ----------
@@ -861,15 +866,15 @@ def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
         the interval ``(1000, 4000)``.
 
     from_colorspaces : str or list of str, optional
-        The source colorspace. Analogous to `to_colorspace`. Defaults
-        to ``RGB``.
+        The source colorspace.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
+        Defaults to ``RGB``.
 
     Returns
     -------
     ndarray or list of ndarray
-        Images with target colorspaces. *Can* contain the same array instances
-        as were originally provided (i.e. changed inplace). Grayscale images
-        will still have three channels.
+        Images with target color temperatures.
+        The input array(s) might have been changed in-place.
 
     """
     # we return here early, because we validate below the first kelvin value
@@ -939,7 +944,34 @@ def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
 
 
 def change_color_temperature(image, kelvin, from_colorspace=CSPACE_RGB):
-    # TODO is image[...] a view?
+    """Change the temperature of an image to a given value in Kelvin.
+
+    Supported dtypes
+    ----------------
+
+    See :class:`~imgaug.augmenters.color.change_color_temperatures_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        The image which's color temperature is supposed to be changed.
+        Expected to be of shape ``(H,W,3)`` array.
+
+    kelvin : number
+        The temperature in Kelvin. Expected value range is in
+        the interval ``(1000, 4000)``.
+
+    from_colorspace : str, optional
+        The source colorspace.
+        See :func:`~imgaug.augmenters.color.change_colorspaces_`.
+        Defaults to ``RGB``.
+
+    Returns
+    -------
+    ndarray
+        Image with target color temperature.
+
+    """
     return change_color_temperatures_(image[np.newaxis, ...],
                                       [kelvin],
                                       from_colorspaces=[from_colorspace])[0]
@@ -1972,6 +2004,11 @@ class RemoveSaturation(MultiplySaturation):
 
     This augmenter is the same as ``MultiplySaturation((0.0, 1.0))``.
 
+    Supported dtypes
+    ----------------
+
+    See :class:`~imgaug.augmenters.color.MultiplySaturation`.
+
     Parameters
     ----------
     mul : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
@@ -2815,6 +2852,11 @@ class ChangeColorTemperature(meta.Augmenter):
 
     Basic method to change color temperatures taken from
     https://stackoverflow.com/a/11888449
+
+    Supported dtypes
+    ----------------
+
+    See :func:`~imgaug.augmenters.color.change_color_temperatures_`.
 
     Parameters
     ----------
