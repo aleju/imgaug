@@ -1,7 +1,7 @@
 # Better default values #582
 
 **[breaking]** Most augmenters had previously default values that
-made them equivalent to identify functions. Users had to explicitly
+made them equivalent to identity functions. Users had to explicitly
 change the defaults to proper values in order to "activate"
 augmentations. To simplify the usage of the library, the default
 values of most augmenters were changed to medium-strength
@@ -22,17 +22,17 @@ augmentations. This is the case for:
   `TotalDropout(0.1)` to drop everything for 10% of all images)
 * `Invert` (always inverts images, use `Invert(0.1)` to invert
   10% of all images)
-* `Rot90` (always rotates exactly once by 90 degrees,
-  use `Rot90((0, 4))` for any rotation)
+* `Rot90` (always rotates exactly once clockwise by 90 degrees,
+  use `Rot90((0, 3))` for any rotation)
 
 These settings seemed to better match user-expectations.
 Such maximum-strength settings however were not chosen for all
-augmenters. Some exceptions where one might expect that are e.g.
-`Superpixels` (replaces only some superpixels with cellwise average
-colors), `UniformVoronoi` (also only replaces some cells),
-`Sharpen` (alpha-blends with variable strength, the same is
-the case for `Emboss`, `EdgeDetect` and `DirectedEdgeDetect`)
-and `CLAHE` (variable clip limits).
+augmenters where one might expect them. The defaults are set to
+varying strengths for, e.g.  `Superpixels` (replaces only some
+superpixels with cellwise average colors), `UniformVoronoi` (also
+only replaces some cells), `Sharpen` (alpha-blends with variable
+strength, the same is the case for `Emboss`, `EdgeDetect` and
+`DirectedEdgeDetect`) and `CLAHE` (variable clip limits).
 
 *Note*: Some of the new default values will cause issues with
 non-`uint8` inputs.
@@ -67,25 +67,25 @@ The exact changes to default values are listed below.
     * `size_px`: `None` -> `(3, 8)`
     * `min_size`: `4` -> `3`
     * Default for `size_px` is only used if neither `size_percent`
-      not `size_px` is provided by the user.
+      nor `size_px` is provided by the user.
   * `CoarseSaltAndPepper`:
     * `p`: `0.0` -> `(0.02, 0.1)`
     * `size_px`: `None` -> `(3, 8)`
     * `min_size`: `4` -> `3`
     * Default for `size_px` is only used if neither `size_percent`
-      not `size_px` is provided by the user.
+      nor `size_px` is provided by the user.
   * `CoarseSalt`:
     * `p`: `0.0` -> `(0.02, 0.1)`
     * `size_px`: `None` -> `(3, 8)`
     * `min_size`: `4` -> `3`
     * Default for `size_px` is only used if neither `size_percent`
-      not `size_px` is provided by the user.
+      nor `size_px` is provided by the user.
   * `CoarsePepper`:
     * `p`: `0.0` -> `(0.02, 0.1)`
     * `size_px`: `None` -> `(3, 8)`
     * `min_size`: `4` -> `3`
     * Default for `size_px` is only used if neither `size_percent`
-      not `size_px` is provided by the user.
+      nor `size_px` is provided by the user.
   * `SaltAndPepper`:
     * `p`: `0.0` -> `(0.0, 0.03)`
   * `Salt`:
