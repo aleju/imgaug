@@ -5601,22 +5601,25 @@ class TestPerspectiveTransform(unittest.TestCase):
         aug = iaa.PerspectiveTransform(scale=0.2, keep_size=False)
         aug.jitter = iap.Deterministic(0.2)
 
-        y1 = int(30*0.2)
-        y2 = int(30*0.8)
-        x1 = int(30*0.2)
-        x2 = int(30*0.8)
-        x1_small = int(25*0.2)
-        x2_small = int(25*0.8)
-        y1_small = int(20*0.2)
-        y2_small = int(20*0.8)
+        height, width = 300, 200
+        height_small, width_small = 150, 100
+
+        y1 = int(height*0.2)
+        y2 = int(height*0.8)
+        x1 = int(width*0.2)
+        x2 = int(width*0.8)
+        y1_small = int(height_small*0.2)
+        y2_small = int(height_small*0.8)
+        x1_small = int(width_small*0.2)
+        x2_small = int(width_small*0.8)
 
         img_small = ia.imresize_single_image(
             self.image,
-            (20, 25),
+            (height_small, width_small),
             interpolation="cubic")
         hm = ia.HeatmapsOnImage(
             img_small.astype(np.float32)/255.0,
-            shape=(30, 30))
+            shape=(height, width))
 
         img_aug = aug.augment_image(self.image)
         hm_aug = aug.augment_heatmaps([hm])[0]
@@ -5635,7 +5638,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         ])
         img_aug_mask = img_aug > 255*0.1
         hm_aug_mask = ia.imresize_single_image(
-            hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic"
+            hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="linear"
         ) > 0.1
         same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
         assert (same / img_aug_mask.size) >= 0.96
@@ -6319,7 +6322,12 @@ class TestPerspectiveTransform(unittest.TestCase):
         img_aug0 = aug0.augment_image(img)
 
         assert (img_aug255 == 255).all()
-        assert not (img_aug0 == 255).all()
+        # TODO This was originally "assert not (...)", but since
+        #      PerspectiveTransform has become more precise, there are no
+        #      filled pixels anymore at the edges. That is because PerspT
+        #      currently only zooms in and not out. Filled pixels at the sides
+        #      were previously due to a bug.
+        assert (img_aug0 == 255).all()
 
     # ---------
     # fit_output
@@ -6345,7 +6353,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         x2 = np.argmax(image_aug[h-1, :, 2])
 
         # different shape
-        assert image_aug.shape != image.shape
+        assert image_aug.shape == image.shape
 
         # corners roughly still at top-left, top-right, bottom-right
         assert 0 <= y0 <= 3
@@ -6429,7 +6437,7 @@ class TestPerspectiveTransform(unittest.TestCase):
             (0, 50)
         ], shape=(50, 50, 3))
 
-        for _ in sm.xrange(10):
+        for i in sm.xrange(10):
             kpsoi_aug = aug(keypoints=kpsoi)
 
             h, w = kpsoi_aug.shape[0:2]
@@ -6443,10 +6451,12 @@ class TestPerspectiveTransform(unittest.TestCase):
             x_min = min([x0, x1, x2, x3])
             x_max = max([x0, x1, x2, x3])
             tol = 0.5
-            assert 0-tol <= y_min <= tol
-            assert 0-tol <= x_min <= tol
-            assert h-tol <= y_max <= h+tol
-            assert w-tol <= x_max <= w+tol
+            assert 0-tol <= y_min <= tol, "Got y_min=%.4f at %d" % (y_min, i)
+            assert 0-tol <= x_min <= tol, "Got x_min=%.4f at %d" % (x_min, i)
+            assert h-tol <= y_max <= h+tol, (
+                "Got y_max=%.4f for h=%.2f at %d" % (y_max, h, i))
+            assert w-tol <= x_max <= w+tol, (
+                "Got x_max=%.4f for w=%.2f at %d" % (x_max, w, i))
 
     # ---------
     # unusual channel numbers
