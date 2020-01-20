@@ -7,7 +7,7 @@ long_description = """A library for image augmentation in machine learning exper
 neural networks. Supports the augmentation of images, keypoints/landmarks, bounding boxes, heatmaps and segmentation
 maps in a variety of different ways."""
 
-install_requires = [
+INSTALL_REQUIRES = [
     "six",
     "numpy>=1.15",
     "scipy",
@@ -19,7 +19,7 @@ install_requires = [
     "Shapely",
 ]
 
-alternative_install_requires = {"opencv-python-headless": "opencv-python"}
+ALT_INSTALL_REQUIRES = {"opencv-python-headless": "opencv-python"}
 
 
 def check_alternative_installation(install_require, alternative_install_require):
@@ -48,7 +48,7 @@ def get_install_requirements(main_requires, alternative_requires):
     return new_install_requires
 
 
-install_requires = get_install_requirements(install_requires, alternative_install_requires)
+INSTALL_REQUIRES = get_install_requirements(INSTALL_REQUIRES, ALT_INSTALL_REQUIRES)
 
 setup(
     name="imgaug",
@@ -57,7 +57,7 @@ setup(
     author_email="kontakt@ajung.name",
     url="https://github.com/aleju/imgaug",
     download_url="https://github.com/aleju/imgaug/archive/0.3.0.tar.gz",
-    install_requires=install_requires,
+    install_requires=INSTALL_REQUIRES,
     packages=find_packages(),
     include_package_data=True,
     package_data={
