@@ -1223,7 +1223,7 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
     This uses by default DejaVuSans as its font, which is included in this
     library.
 
-    dtype support::
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no
@@ -1310,7 +1310,7 @@ def draw_text(img, y, x, text, color=(0, 255, 0), size=25):
 def imresize_many_images(images, sizes=None, interpolation=None):
     """Resize each image in a list or array to a specified size.
 
-    dtype support::
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -1583,7 +1583,7 @@ def _assert_two_or_three_dims(shape):
 def imresize_single_image(image, sizes, interpolation=None):
     """Resize a single image.
 
-    dtype support::
+    **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.imresize_many_images`.
 
@@ -1623,7 +1623,7 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
          preserve_dtype=True, cval=None):
     """Resize an array by pooling values within blocks.
 
-    dtype support::
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -1752,7 +1752,7 @@ def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
     Defaults to ``pad_mode="reflect"`` to ensure that padded values do not
     affect the average.
 
-    dtype support::
+    **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.pool`.
 
@@ -1799,7 +1799,7 @@ def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
     Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
     the maximum, even if the dtype was something else than ``uint8``.
 
-    dtype support::
+    **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.pool`.
 
@@ -1846,7 +1846,7 @@ def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
     Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
     the minimum, even if the dtype was something else than ``uint8``.
 
-    dtype support::
+    **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.pool`.
 
@@ -1890,7 +1890,7 @@ def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
     Defaults to ``pad_mode="reflect"`` to ensure that padded values do not
     affect the average.
 
-    dtype support::
+    **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.pool`.
 
@@ -1938,7 +1938,7 @@ def draw_grid(images, rows=None, cols=None):
     Calling this function with four images of the same shape and ``rows=4``,
     ``cols=1`` is analogous to calling :func:`numpy.vstack` on the images.
 
-    dtype support::
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -2039,7 +2039,7 @@ def show_grid(images, rows=None, cols=None):
 
     This will show a window of the results of :func:`~imgaug.imgaug.draw_grid`.
 
-    dtype support::
+    **Supported dtypes**:
 
         minimum of (
             :func:`~imgaug.imgaug.draw_grid`,
@@ -2065,7 +2065,7 @@ def show_grid(images, rows=None, cols=None):
 def imshow(image, backend=IMSHOW_BACKEND_DEFAULT):
     """Show an image in a window.
 
-    dtype support::
+    **Supported dtypes**:
 
         * ``uint8``: yes; not tested
         * ``uint16``: ?
@@ -2156,7 +2156,7 @@ def _normalize_cv2_input_arr_(arr):
 def apply_lut(image, table):
     """Map an input image to a new one using a lookup table.
 
-    dtype support::
+    **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.apply_lut_`.
 
@@ -2182,7 +2182,7 @@ def apply_lut(image, table):
 def apply_lut_(image, table):
     """Map an input image in-place to a new one using a lookup table.
 
-    dtype support::
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no

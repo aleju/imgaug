@@ -233,8 +233,7 @@ class Cartoon(meta.Augmenter):
     edges or also too many detected edges are probably the most significant
     drawbacks.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.artistic.stylize_cartoon`.
 

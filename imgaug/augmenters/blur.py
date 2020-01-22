@@ -32,8 +32,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
 
     This operation *may* change the input image in-place.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (backend="auto"):
 
@@ -287,8 +286,7 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
 
         This function is quite slow.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -388,8 +386,7 @@ def _compute_gaussian_blur_ksize(sigma):
 class GaussianBlur(meta.Augmenter):
     """Augmenter to blur images using gaussian kernels.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See ``~imgaug.augmenters.blur.blur_gaussian_(backend="auto")``.
 
@@ -469,8 +466,7 @@ class AverageBlur(meta.Augmenter):
     The padding behaviour around the image borders is cv2's
     ``BORDER_REFLECT_101``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -675,8 +671,7 @@ class MedianBlur(meta.Augmenter):
     Median blurring can be used to remove small dirt from images.
     At larger kernel sizes, its effects have some similarity with Superpixels.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: ?
@@ -798,8 +793,7 @@ class BilateralBlur(meta.Augmenter):
     http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html#bilateralfilter
     for more information regarding the parameters.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; not tested
         * ``uint16``: ?
@@ -941,8 +935,7 @@ class BilateralBlur(meta.Augmenter):
 class MotionBlur(iaa_convolutional.Convolve):
     """Blur images in a way that fakes camera or object movements.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.convolutional.Convolve`.
 
@@ -1094,8 +1087,7 @@ class MeanShiftBlur(meta.Augmenter):
 
         This augmenter is quite slow.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.blur.blur_mean_shift_`.
 

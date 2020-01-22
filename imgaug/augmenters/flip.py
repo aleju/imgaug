@@ -679,8 +679,7 @@ _FLIPLR_DTYPES_CV2 = {"uint8", "uint16", "int8", "int16"}
 def fliplr(arr):
     """Flip an image-like array horizontally.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -765,8 +764,7 @@ def _fliplr_cv2(arr):
 def flipud(arr):
     """Flip an image-like array vertically.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -828,8 +826,7 @@ class Fliplr(meta.Augmenter):
         So, to flip *all* input images use ``Fliplr(1.0)`` and *not* just
         ``Fliplr()``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.flip.fliplr`.
 
@@ -930,8 +927,7 @@ class Flipud(meta.Augmenter):
         So, to flip *all* input images use ``Flipud(1.0)`` and *not* just
         ``Flipud()``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.flip.flipud`.
 

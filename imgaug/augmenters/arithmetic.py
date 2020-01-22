@@ -62,8 +62,7 @@ def add_scalar(image, value):
 
     This method ensures that ``uint8`` does not overflow during the addition.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: limited; tested (1)
@@ -210,8 +209,7 @@ def add_elementwise(image, values):
 
     This method ensures that ``uint8`` does not overflow during the addition.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: limited; tested (1)
@@ -333,8 +331,7 @@ def multiply_scalar(image, multiplier):
     This method ensures that ``uint8`` does not overflow during the
     multiplication.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: limited; tested (1)
@@ -500,8 +497,7 @@ def multiply_elementwise(image, multipliers):
 
     This method ensures that ``uint8`` does not overflow during the addition.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: limited; tested (1)
@@ -646,8 +642,7 @@ def cutout(image, x1, y1, x2, y2,
         in the interval ``[0.0, 1.0]`` and hence sample values from a
         gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
@@ -706,8 +701,7 @@ def cutout_(image, x1, y1, x2, y2,
         gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
 
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     minimum of (
         :func:`~imgaug.augmenters.arithmetic._fill_rectangle_gaussian_`,
@@ -788,8 +782,7 @@ def _fill_rectangle_gaussian_(image, x1, y1, x2, y2, cval, per_channel,
                               random_state):
     """Fill a rectangular image area with samples from a gaussian.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -857,8 +850,7 @@ def _fill_rectangle_constant_(image, x1, y1, x2, y2, cval, per_channel,
     in `cval` does not match the number of channels in `image`, it may
     be tiled up to the number of channels.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -897,8 +889,7 @@ def _fill_rectangle_constant_(image, x1, y1, x2, y2, cval, per_channel,
 def replace_elementwise_(image, mask, replacements):
     """Replace components in an image array with new values.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -1010,8 +1001,7 @@ def invert(image, min_value=None, max_value=None, threshold=None,
            invert_above_threshold=True):
     """Invert an array.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.invert_`.
 
@@ -1047,8 +1037,7 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
             invert_above_threshold=True):
     """Invert an array in-place.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (min_value=None and max_value=None):
 
@@ -1310,8 +1299,7 @@ def _generate_table_for_invert_uint8(min_value, max_value, threshold,
 def solarize(image, threshold=128):
     """Invert pixel values above a threshold.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`solarize_`.
 
@@ -1340,8 +1328,7 @@ def solarize_(image, threshold=128):
     This function performs the same transformation as
     :func:`PIL.ImageOps.solarize`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See ``invert_(min_value=None and max_value=None)``.
 
@@ -1368,8 +1355,7 @@ def solarize_(image, threshold=128):
 def compress_jpeg(image, compression):
     """Compress an image using jpeg compression.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: ?
@@ -1471,8 +1457,7 @@ class Add(meta.Augmenter):
     """
     Add a value to all pixels in an image.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.add_scalar`.
 
@@ -1607,8 +1592,7 @@ class AddElementwise(meta.Augmenter):
     and *per pixel* (and optionally per channel), i.e. intensities of
     neighbouring pixels may be increased/decreased by different amounts.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.add_elementwise`.
 
@@ -1722,8 +1706,7 @@ class AdditiveGaussianNoise(AddElementwise):
     different noise values to neighbouring pixels and is comparable
     to ``AddElementwise``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.AddElementwise`.
 
@@ -1836,8 +1819,7 @@ class AdditiveLaplaceNoise(AddElementwise):
     different noise values to neighbouring pixels and is comparable
     to ``AddElementwise``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.AddElementwise`.
 
@@ -1949,8 +1931,7 @@ class AdditivePoissonNoise(AddElementwise):
     different noise values to neighbouring pixels and is comparable
     to ``AddElementwise``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.AddElementwise`.
 
@@ -2040,8 +2021,7 @@ class Multiply(meta.Augmenter):
 
     This augmenter can be used to make images lighter or darker.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.multiply_scalar`.
 
@@ -2173,8 +2153,7 @@ class MultiplyElementwise(meta.Augmenter):
     image* (and optionally channel), this augmenter samples the multipliers
     to use per image and *per pixel* (and optionally per channel).
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.multiply_elementwise`.
 
@@ -2326,8 +2305,7 @@ class Cutout(meta.Augmenter):
         in the interval ``[0.0, 1.0]`` and hence sample values from a
         gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
@@ -2628,8 +2606,7 @@ class Dropout(MultiplyElementwise):
     """
     Set a fraction of pixels in images to zero.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.MultiplyElementwise`.
 
@@ -2763,8 +2740,7 @@ class CoarseDropout(MultiplyElementwise):
     ``CoarseDropout`` can drop multiple rectangles (with some correlation
     between the sizes of these rectangles).
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.MultiplyElementwise`.
 
@@ -2926,8 +2902,7 @@ class Dropout2d(meta.Augmenter):
         It does so if and only if *all* channels of an image are dropped.
         If ``nb_keep_channels >= 1`` then that never happens.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3109,8 +3084,7 @@ class TotalDropout(meta.Augmenter):
         maps to zero and removes all coordinate-based data (e.g. it removes
         all bounding boxes on images that were filled with zeros).
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3242,8 +3216,7 @@ class ReplaceElementwise(meta.Augmenter):
     """
     Replace pixels in an image with new values.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.replace_elementwise_`.
 
@@ -3402,8 +3375,7 @@ class SaltAndPepper(ReplaceElementwise):
     """
     Replace pixels in images with salt/pepper noise (white/black-ish colors).
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.ReplaceElementwise`.
 
@@ -3473,8 +3445,7 @@ class ImpulseNoise(SaltAndPepper):
     This is identical to ``SaltAndPepper``, except that `per_channel` is
     always set to ``True``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.SaltAndPepper`.
 
@@ -3531,8 +3502,7 @@ class CoarseSaltAndPepper(ReplaceElementwise):
     TODO replace dtype support with uint8 only, because replacement is
          geared towards that value range
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.ReplaceElementwise`.
 
@@ -3672,8 +3642,7 @@ class Salt(ReplaceElementwise):
     This augmenter is similar to ``SaltAndPepper``, but adds no pepper noise to
     images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.ReplaceElementwise`.
 
@@ -3744,8 +3713,7 @@ class CoarseSalt(ReplaceElementwise):
 
     See also the similar ``CoarseSaltAndPepper``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.ReplaceElementwise`.
 
@@ -3881,8 +3849,7 @@ class Pepper(ReplaceElementwise):
     This augmenter is similar to ``Dropout``, but slower and the black pixels
     are not uniformly black.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.ReplaceElementwise`.
 
@@ -3951,8 +3918,7 @@ class CoarsePepper(ReplaceElementwise):
     """
     Replace rectangular areas in images with black-ish pixel noise.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.arithmetic.ReplaceElementwise`.
 
@@ -4089,8 +4055,7 @@ class Invert(meta.Augmenter):
     ``v`` a value. Then the distance of ``v`` to ``m`` is ``d=abs(v-m)`` and
     the new value is given by ``v'=M-d``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.invert_`.
 
@@ -4301,8 +4266,7 @@ class Solarize(Invert):
 
     See :class:`Invert` for more details.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`Invert`.
 
@@ -4441,8 +4405,7 @@ class JpegCompression(meta.Augmenter):
     the images with JPEG compression and then reloads them into arrays). It
     does not return the raw JPEG file content.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.compress_jpeg`.
 

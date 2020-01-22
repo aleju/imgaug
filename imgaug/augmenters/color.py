@@ -185,8 +185,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
 
         Output grayscale images will still have three channels.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no
@@ -322,8 +321,7 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
 
         Output grayscale images will still have three channels.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
@@ -850,8 +848,7 @@ class _KelvinToRGBTable(object):
 def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
     """Change in-place the temperature of images to given values in Kelvin.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.change_colorspace_`.
 
@@ -946,8 +943,7 @@ def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
 def change_color_temperature(image, kelvin, from_colorspace=CSPACE_RGB):
     """Change the temperature of an image to a given value in Kelvin.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.change_color_temperatures_`.
 
@@ -996,8 +992,7 @@ class WithColorspace(meta.Augmenter):
     child augmenters C and finally changes the colorspace back from B to A.
     See also ChangeColorspace() for more.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
@@ -1104,8 +1099,7 @@ class WithBrightnessChannels(meta.Augmenter):
     it reintegrates the augmented channel into the full image and converts
     back to the input colorspace.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
@@ -1285,8 +1279,7 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.WithBrightnessChannels`.
 
@@ -1383,8 +1376,7 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.MultiplyAndAddToBrightness`.
 
@@ -1445,8 +1437,7 @@ class AddToBrightness(MultiplyAndAddToBrightness):
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.MultiplyAndAddToBrightness`.
 
@@ -1522,8 +1513,7 @@ class WithHueAndSaturation(meta.Augmenter):
     is applied to the hue channel's values, followed by a mapping from
     ``[0, 255]`` to ``[0, 180]`` (and finally the colorspace conversion).
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspaces_`.
 
@@ -1688,8 +1678,7 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
 
     This augmenter is a wrapper around ``WithHueAndSaturation``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.WithHueAndSaturation`.
 
@@ -1888,8 +1877,7 @@ class MultiplyHue(MultiplyHueAndSaturation):
 
     This augmenter is a shortcut for ``MultiplyHueAndSaturation(mul_hue=...)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.MultiplyHueAndSaturation`.
 
@@ -1952,8 +1940,7 @@ class MultiplySaturation(MultiplyHueAndSaturation):
     This augmenter is a shortcut for
     ``MultiplyHueAndSaturation(mul_saturation=...)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.MultiplyHueAndSaturation`.
 
@@ -2008,8 +1995,7 @@ class RemoveSaturation(MultiplySaturation):
 
     This augmenter is the same as ``MultiplySaturation((0.0, 1.0))``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.MultiplySaturation`.
 
@@ -2145,8 +2131,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
     TODO add float support
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
@@ -2453,8 +2438,7 @@ class AddToHue(AddToHueAndSaturation):
 
     This augmenter is a shortcut for ``AddToHueAndSaturation(value_hue=...)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.AddToHueAndSaturation`.
 
@@ -2520,8 +2504,7 @@ class AddToSaturation(AddToHueAndSaturation):
     This augmenter is a shortcut for
     ``AddToHueAndSaturation(value_saturation=...)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.AddToHueAndSaturation`.
 
@@ -2587,8 +2570,7 @@ class ChangeColorspace(meta.Augmenter):
         This augmenter tries to project the colorspace value range on
         0-255. It outputs dtype=uint8 images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
@@ -2787,8 +2769,7 @@ class Grayscale(ChangeColorspace):
 
     TODO check dtype support
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_colorspace_`.
 
@@ -2860,8 +2841,7 @@ class ChangeColorTemperature(meta.Augmenter):
     Basic method to change color temperatures taken from
     https://stackoverflow.com/a/11888449
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.change_color_temperatures_`.
 
@@ -3068,8 +3048,7 @@ class KMeansColorQuantization(_AbstractColorQuantization):
         images have 4 channels, it is assumed that the 4th channel is an alpha
         channel and it will not be quantized.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (image size <= max_size):
 
@@ -3221,8 +3200,7 @@ def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
         internal RNG and imgaug's global RNG. This is necessary in order
         to ensure that the k-means clustering happens deterministically.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no
@@ -3339,8 +3317,7 @@ class UniformColorQuantization(_AbstractColorQuantization):
         images have 4 channels, it is assumed that the 4th channel is an alpha
         channel and it will not be quantized.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (image size <= max_size):
 
@@ -3485,8 +3462,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
         images have 4 channels, it is assumed that the 4th channel is an alpha
         channel and it will not be quantized.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (image size <= max_size):
 
@@ -3607,8 +3583,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
 class Posterize(UniformColorQuantizationToNBits):
     """Alias for :class:`UniformColorQuantizationToNBits`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.UniformColorQuantizationToNBits`.
 
@@ -3626,8 +3601,7 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
 
     See :func:`quantize_uniform_` for details.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.quantize_uniform_`.
 
@@ -3663,8 +3637,7 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
     the target number of bins (roughly matches number of colors) after
     quantization.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no
@@ -3807,8 +3780,7 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
 
     See :func:`quantize_uniform_to_n_bits` for details.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.quantize_uniform_to_n_bits_`.
 
@@ -3843,8 +3815,7 @@ def quantize_uniform_to_n_bits_(arr, nb_bits):
     This function produces the same outputs as :func:`PIL.ImageOps.posterize`,
     but is significantly faster.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.quantize_uniform_`.
 
@@ -3889,8 +3860,7 @@ def posterize(arr, nb_bits):
     This function is an alias for :func:`quantize_uniform_to_n_bits` and was
     added for users familiar with the same function in PIL.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.color.quantize_uniform_to_n_bits`.
 

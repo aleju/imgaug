@@ -2988,8 +2988,7 @@ class Sequential(Augmenter, list):
         >>> aug = iaa.Fliplr(0.5)
         >>> image_aug = aug.augment_image(image)
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3148,8 +3147,7 @@ class SomeOf(Augmenter, list):
     child multiple times) due to implementation difficulties in connection
     with deterministic augmenters.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3405,8 +3403,7 @@ class SomeOf(Augmenter, list):
 class OneOf(SomeOf):
     """Augmenter that always executes exactly one of its children.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`imgaug.augmenters.meta.SomeOf`.
 
@@ -3472,8 +3469,7 @@ class Sometimes(Augmenter):
     Let ``N`` be the number of input images (or other entities).
     Then (on average) ``p*N`` images of ``I`` will be augmented using ``C``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3621,8 +3617,7 @@ class WithChannels(Augmenter):
     The result of the augmentation will be merged back into the original
     images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3845,8 +3840,7 @@ class Identity(Augmenter):
     This augmenter is useful e.g. during validation/testing as it allows
     to re-use the training code without actually performing any augmentation.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -3899,8 +3893,7 @@ class Noop(Identity):
     It is recommended to now use :class:`Identity`. :class:`Noop` might be
     deprecated in the future.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.meta.Identity`.
 
@@ -3933,8 +3926,7 @@ class Lambda(Augmenter):
 
     This is useful to add missing functions to a list of augmenters.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -4252,8 +4244,7 @@ class AssertLambda(Lambda):
     This is useful to ensure that generic assumption about the input data
     are actually the case and error out early otherwise.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -4394,8 +4385,7 @@ class _AssertLambdaCallback(object):
 class AssertShape(Lambda):
     """Assert that inputs have a specified shape.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -4660,8 +4650,7 @@ class _AssertShapeLineStringsCheck(object):
 class ChannelShuffle(Augmenter):
     """Randomize the order of channels in input images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -4758,8 +4747,7 @@ class ChannelShuffle(Augmenter):
 def shuffle_channels(image, random_state, channels=None):
     """Randomize the order of (color) channels in an image.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; indirectly tested (1)
@@ -4832,8 +4820,7 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
     augmentable's area that is outside of the image, e.g. for a bounding box
     that has half of its area outside of the image it would be ``0.5``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -4934,8 +4921,7 @@ class ClipCBAsToImagePlanes(Augmenter):
     it removes any single points outside of the image plane. Any augmentable
     that is completely outside of the image plane will be removed.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
