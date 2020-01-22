@@ -90,7 +90,7 @@ def _ensure_valid_shape(image, func_name):
 def solarize_(image, threshold=128):
     """Invert all array components above a threshold in-place.
 
-    This function has identical outputs to :func:`~PIL.ImageOps.solarize`.
+    This function has identical outputs to ``PIL.ImageOps.solarize``.
     It does however work in-place.
 
     Supported dtypes
@@ -121,7 +121,7 @@ def solarize_(image, threshold=128):
 def solarize(image, threshold=128):
     """Invert all array components above a threshold.
 
-    This function has identical outputs to :func:`~PIL.ImageOps.solarize`.
+    This function has identical outputs to ``PIL.ImageOps.solarize``.
 
     Supported dtypes
     ----------------
@@ -149,7 +149,7 @@ def solarize(image, threshold=128):
 def posterize_(image, bits):
     """Reduce the number of bits for each color channel in-place.
 
-    This function has identical outputs to :func:`~PIL.ImageOps.posterize`.
+    This function has identical outputs to ``PIL.ImageOps.posterize``.
     It does however work in-place.
 
     Supported dtypes
@@ -179,7 +179,7 @@ def posterize_(image, bits):
 def posterize(image, bits):
     """Reduce the number of bits for each color channel.
 
-    This function has identical outputs to :func:`~PIL.ImageOps.posterize`.
+    This function has identical outputs to ``PIL.ImageOps.posterize``.
 
     Supported dtypes
     ----------------
@@ -210,7 +210,7 @@ def equalize(image, mask=None):
     See :func:`~imgaug.augmenters.pillike.equalize_` for details.
 
     This function is identical in inputs and outputs to
-    :func:`~PIL.ImageOps.equalize`.
+    ``PIL.ImageOps.equalize``.
 
     Supported dtypes
     ----------------
@@ -247,7 +247,7 @@ def equalize_(image, mask=None):
     This function applies a non-linear mapping to the input image, in order
     to create a uniform distribution of grayscale values in the output image.
 
-    This function has identical outputs to :func:`~PIL.ImageOps.equalize`.
+    This function has identical outputs to ``PIL.ImageOps.equalize``.
     It does however work in-place.
 
     Supported dtypes
@@ -359,7 +359,7 @@ def autocontrast(image, cutoff=0, ignore=None):
     and remaps the image so that the darkest pixel becomes black (``0``), and
     the lightest becomes white (``255``).
 
-    This function has identical outputs to :func:`~PIL.ImageOps.autocontrast`.
+    This function has identical outputs to ``PIL.ImageOps.autocontrast``.
     The speed is almost identical.
 
     Supported dtypes
@@ -543,7 +543,7 @@ def enhance_color(image, factor):
     """Change the strength of colors in an image.
 
     This function has identical outputs to
-    :class:`~PIL.ImageEnhance.Color`.
+    ``PIL.ImageEnhance.Color``.
 
     Supported dtypes
     ----------------
@@ -585,7 +585,7 @@ def enhance_contrast(image, factor):
     """Change the contrast of an image.
 
     This function has identical outputs to
-    :class:`~PIL.ImageEnhance.Contrast`.
+    ``PIL.ImageEnhance.Contrast``.
 
     Supported dtypes
     ----------------
@@ -628,7 +628,7 @@ def enhance_brightness(image, factor):
     """Change the brightness of images.
 
     This function has identical outputs to
-    :class:`~PIL.ImageEnhance.Brightness`.
+    ``PIL.ImageEnhance.Brightness``.
 
     Supported dtypes
     ----------------
@@ -670,7 +670,7 @@ def enhance_sharpness(image, factor):
     """Change the sharpness of an image.
 
     This function has identical outputs to
-    :class:`~PIL.ImageEnhance.Sharpness`.
+    ``PIL.ImageEnhance.Sharpness``.
 
     Supported dtypes
     ----------------
@@ -1168,7 +1168,7 @@ def warp_affine(image,
     """Apply an affine transformation to an image.
 
     This function has identical outputs to
-    :func:`~PIL.Image.transform` with ``method=PIL.Image.AFFINE``.
+    ``PIL.Image.transform`` with ``method=PIL.Image.AFFINE``.
 
     Supported dtypes
     ----------------
@@ -1351,7 +1351,7 @@ class Posterize(colorlib.Posterize):
 class Equalize(meta.Augmenter):
     """Equalize the image histogram.
 
-    This augmenter has identical outputs to :func:`~PIL.ImageOps.equalize`.
+    This augmenter has identical outputs to ``PIL.ImageOps.equalize``.
 
     Supported dtypes
     ----------------
@@ -1397,7 +1397,7 @@ class Equalize(meta.Augmenter):
 class Autocontrast(contrastlib._ContrastFuncWrapper):
     """Adjust contrast by cutting off ``p%`` of lowest/highest histogram values.
 
-    This augmenter has identical outputs to :func:`~PIL.ImageOps.autocontrast`.
+    This augmenter has identical outputs to ``PIL.ImageOps.autocontrast``.
 
     See :func:`~imgaug.augmenters.pillike.autocontrast` for more details.
 
@@ -1502,7 +1502,7 @@ class _EnhanceBase(meta.Augmenter):
 class EnhanceColor(_EnhanceBase):
     """Convert images to grayscale.
 
-    This augmenter has identical outputs to :class:`~PIL.ImageEnhance.Color`.
+    This augmenter has identical outputs to ``PIL.ImageEnhance.Color``.
 
     Supported dtypes
     ----------------
@@ -1555,7 +1555,7 @@ class EnhanceColor(_EnhanceBase):
 class EnhanceContrast(_EnhanceBase):
     """Change the contrast of images.
 
-    This augmenter has identical outputs to :class:`~PIL.ImageEnhance.Contrast`.
+    This augmenter has identical outputs to ``PIL.ImageEnhance.Contrast``.
 
     Supported dtypes
     ----------------
@@ -1610,7 +1610,7 @@ class EnhanceBrightness(_EnhanceBase):
     """Change the brightness of images.
 
     This augmenter has identical outputs to
-    :class:`~PIL.ImageEnhance.Brightness`.
+    ``PIL.ImageEnhance.Brightness``.
 
     Supported dtypes
     ----------------
@@ -1664,7 +1664,7 @@ class EnhanceSharpness(_EnhanceBase):
     """Change the sharpness of images.
 
     This augmenter has identical outputs to
-    :class:`~PIL.ImageEnhance.Sharpness`.
+    ``PIL.ImageEnhance.Sharpness``.
 
     Supported dtypes
     ----------------
@@ -1736,7 +1736,7 @@ class FilterBlur(_FilterBase):
     """Apply a blur filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.BLUR``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.BLUR``.
 
     Supported dtypes
     ----------------
@@ -1773,7 +1773,7 @@ class FilterSmooth(_FilterBase):
     """Apply a smoothening filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.SMOOTH``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.SMOOTH``.
 
     Supported dtypes
     ----------------
@@ -1810,7 +1810,7 @@ class FilterSmoothMore(_FilterBase):
     """Apply a strong smoothening filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.BLUR``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.BLUR``.
 
     Supported dtypes
     ----------------
@@ -1848,7 +1848,7 @@ class FilterEdgeEnhance(_FilterBase):
     """Apply an edge enhance filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel
+    calling ``PIL.Image.filter`` with kernel
     ``PIL.ImageFilter.EDGE_ENHANCE``.
 
     Supported dtypes
@@ -1887,7 +1887,7 @@ class FilterEdgeEnhanceMore(_FilterBase):
     """Apply a strong edge enhancement filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel
+    calling ``PIL.Image.filter`` with kernel
     ``PIL.ImageFilter.EDGE_ENHANCE_MORE``.
 
     Supported dtypes
@@ -1926,7 +1926,7 @@ class FilterFindEdges(_FilterBase):
     """Apply a edge detection kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel
+    calling ``PIL.Image.filter`` with kernel
     ``PIL.ImageFilter.FIND_EDGES``.
 
     Supported dtypes
@@ -1964,7 +1964,7 @@ class FilterContour(_FilterBase):
     """Apply a contour detection filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.CONTOUR``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.CONTOUR``.
 
     Supported dtypes
     ----------------
@@ -2002,7 +2002,7 @@ class FilterEmboss(_FilterBase):
     """Apply an emboss filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.EMBOSS``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.EMBOSS``.
 
     Supported dtypes
     ----------------
@@ -2039,7 +2039,7 @@ class FilterSharpen(_FilterBase):
     """Apply a sharpening filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.SHARPEN``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.SHARPEN``.
 
     Supported dtypes
     ----------------
@@ -2076,7 +2076,7 @@ class FilterDetail(_FilterBase):
     """Apply a detail enhancement filter kernel to images.
 
     This augmenter has identical outputs to
-    calling :func:`~PIL.Image.filter` with kernel ``PIL.ImageFilter.DETAIL``.
+    calling ``PIL.Image.filter`` with kernel ``PIL.ImageFilter.DETAIL``.
 
     Supported dtypes
     ----------------
@@ -2114,7 +2114,7 @@ class Affine(geometric.Affine):
     """Apply PIL-like affine transformations to images.
 
     This augmenter has identical outputs to
-    :func:`~PIL.Image.transform` with parameter ``method=PIL.Image.AFFINE``.
+    ``PIL.Image.transform`` with parameter ``method=PIL.Image.AFFINE``.
 
     .. warning::
 
