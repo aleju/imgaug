@@ -941,7 +941,7 @@ def apply_elastic_transform(image, severity=1, seed=None):
 #                            {"__init__": __init__})
 #
 #     augmenter_class.__doc__ = """
-#     Wrapper around function :func:`imagecorruption.%s`.
+#     Wrapper around ``imagecorruptions.corruptions.%s``.
 #
 #     Supported dtypes
 #     ----------------
@@ -968,7 +968,7 @@ def apply_elastic_transform(image, severity=1, seed=None):
 #     >>> import imgaug.augmenters as iaa
 #     >>> aug = iaa.%s(severity=2)
 #
-#     Create an augmenter around :func:`imagecorruption.%s`. Apply it to
+#     Create an augmenter around ``imagecorruptions.corruptions.%s``. Apply it to
 #     images using e.g. ``aug(images=[image1, image2, ...])``.
 #
 #     """ % (func_name, func_name, class_name, func_name)
@@ -1013,7 +1013,7 @@ class _ImgcorruptAugmenterBase(meta.Augmenter):
 
 class GaussianNoise(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.gaussian_noise`.
+    Wrapper around ``imagecorruptions.corruptions.gaussian_noise``.
 
     .. note::
 
@@ -1045,7 +1045,8 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.GaussianNoise(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.gaussian_noise`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.gaussian_noise``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1059,7 +1060,7 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
 
 class ShotNoise(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.shot_noise`.
+    Wrapper around ``imagecorruptions.shot_noise``.
 
     .. note::
 
@@ -1091,7 +1092,8 @@ class ShotNoise(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.ShotNoise(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.shot_noise`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.shot_noise``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1105,7 +1107,7 @@ class ShotNoise(_ImgcorruptAugmenterBase):
 
 class ImpulseNoise(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.impulse_noise`.
+    Wrapper around ``imagecorruptions.corruptions.impulse_noise``.
 
     .. note::
 
@@ -1137,7 +1139,8 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.ImpulseNoise(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.impulse_noise`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.impulse_noise``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1151,7 +1154,7 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
 
 class SpeckleNoise(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.speckle_noise`.
+    Wrapper around ``imagecorruptions.corruptions.speckle_noise``.
 
     .. note::
 
@@ -1183,7 +1186,8 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.SpeckleNoise(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.speckle_noise`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.speckle_noise``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1197,7 +1201,7 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
 
 class GaussianBlur(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.gaussian_blur`.
+    Wrapper around ``imagecorruptions.corruptions.gaussian_blur``.
 
     .. note::
 
@@ -1229,7 +1233,8 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.GaussianBlur(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.gaussian_blur`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.gaussian_blur``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1243,7 +1248,7 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
 
 class GlassBlur(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.glass_blur`.
+    Wrapper around ``imagecorruptions.corruptions.glass_blur``.
 
     .. note::
 
@@ -1275,7 +1280,8 @@ class GlassBlur(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.GlassBlur(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.glass_blur`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.glass_blur``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1289,7 +1295,7 @@ class GlassBlur(_ImgcorruptAugmenterBase):
 
 class DefocusBlur(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.defocus_blur`.
+    Wrapper around ``imagecorruptions.corruptions.defocus_blur``.
 
     .. note::
 
@@ -1321,7 +1327,8 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.DefocusBlur(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.defocus_blur`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.defocus_blur``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1335,7 +1342,7 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
 
 class MotionBlur(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.motion_blur`.
+    Wrapper around ``imagecorruptions.corruptions.motion_blur``.
 
     .. note::
 
@@ -1367,7 +1374,8 @@ class MotionBlur(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.MotionBlur(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.motion_blur`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.motion_blur``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1381,7 +1389,7 @@ class MotionBlur(_ImgcorruptAugmenterBase):
 
 class ZoomBlur(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.zoom_blur`.
+    Wrapper around ``imagecorruptions.corruptions.zoom_blur``.
 
     .. note::
 
@@ -1413,7 +1421,8 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.ZoomBlur(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.zoom_blur`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.zoom_blur``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1427,7 +1436,7 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
 
 class Fog(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.fog`.
+    Wrapper around ``imagecorruptions.corruptions.fog``.
 
     .. note::
 
@@ -1459,7 +1468,8 @@ class Fog(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Fog(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.fog`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.fog``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1473,7 +1483,7 @@ class Fog(_ImgcorruptAugmenterBase):
 
 class Frost(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.frost`.
+    Wrapper around ``imagecorruptions.corruptions.frost``.
 
     .. note::
 
@@ -1505,7 +1515,8 @@ class Frost(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Frost(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.frost`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.frost``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1519,7 +1530,7 @@ class Frost(_ImgcorruptAugmenterBase):
 
 class Snow(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.snow`.
+    Wrapper around ``imagecorruptions.corruptions.snow``.
 
     .. note::
 
@@ -1551,7 +1562,8 @@ class Snow(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Snow(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.snow`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.snow``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1565,7 +1577,7 @@ class Snow(_ImgcorruptAugmenterBase):
 
 class Spatter(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.spatter`.
+    Wrapper around ``imagecorruptions.corruptions.spatter``.
 
     .. note::
 
@@ -1597,7 +1609,8 @@ class Spatter(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Spatter(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.spatter`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.spatter``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1611,7 +1624,7 @@ class Spatter(_ImgcorruptAugmenterBase):
 
 class Contrast(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.contrast`.
+    Wrapper around ``imagecorruptions.corruptions.contrast``.
 
     .. note::
 
@@ -1643,7 +1656,8 @@ class Contrast(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Contrast(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.contrast`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.contrast``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1657,7 +1671,7 @@ class Contrast(_ImgcorruptAugmenterBase):
 
 class Brightness(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.brightness`.
+    Wrapper around ``imagecorruptions.corruptions.brightness``.
 
     .. note::
 
@@ -1689,7 +1703,8 @@ class Brightness(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Brightness(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.brightness`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.brightness``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1703,7 +1718,7 @@ class Brightness(_ImgcorruptAugmenterBase):
 
 class Saturate(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.saturate`.
+    Wrapper around ``imagecorruptions.corruptions.saturate``.
 
     .. note::
 
@@ -1735,7 +1750,8 @@ class Saturate(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Saturate(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.saturate`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.saturate``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1749,7 +1765,7 @@ class Saturate(_ImgcorruptAugmenterBase):
 
 class JpegCompression(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.jpeg_compression`.
+    Wrapper around ``imagecorruptions.corruptions.jpeg_compression``.
 
     .. note::
 
@@ -1781,7 +1797,8 @@ class JpegCompression(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.JpegCompression(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.jpeg_compression`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.jpeg_compression``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1795,7 +1812,7 @@ class JpegCompression(_ImgcorruptAugmenterBase):
 
 class Pixelate(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.pixelate`.
+    Wrapper around ``imagecorruptions.corruptions.pixelate``.
 
     .. note::
 
@@ -1827,7 +1844,8 @@ class Pixelate(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.Pixelate(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.pixelate`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.pixelate``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
@@ -1841,7 +1859,7 @@ class Pixelate(_ImgcorruptAugmenterBase):
 
 class ElasticTransform(_ImgcorruptAugmenterBase):
     """
-    Wrapper around function :func:`imagecorruption.elastic_transform`.
+    Wrapper around ``imagecorruptions.corruptions.elastic_transform``.
 
     .. warning::
 
@@ -1877,7 +1895,8 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.imgcorruptlike.ElasticTransform(severity=2)
 
-    Create an augmenter around :func:`imagecorruption.elastic_transform`.
+    Create an augmenter around
+    ``imagecorruptions.corruptions.elastic_transform``.
     Apply it to images using e.g. ``aug(images=[image1, image2, ...])``.
 
     """
