@@ -1301,7 +1301,7 @@ def solarize(image, threshold=128):
 
     **Supported dtypes**:
 
-    See :func:`solarize_`.
+    See :func:`~imgaug.augmenters.arithmetic.solarize_`.
 
     Parameters
     ----------
@@ -1330,7 +1330,7 @@ def solarize_(image, threshold=128):
 
     **Supported dtypes**:
 
-    See ``invert_(min_value=None and max_value=None)``.
+    See ``~imgaug.augmenters.arithmetic.invert_(min_value=None and max_value=None)``.
 
     Parameters
     ----------
@@ -4268,7 +4268,7 @@ class Solarize(Invert):
 
     **Supported dtypes**:
 
-    See :class:`Invert`.
+    See :class:`~imgaug.augmenters.arithmetic.Invert`.
 
     Parameters
     ----------

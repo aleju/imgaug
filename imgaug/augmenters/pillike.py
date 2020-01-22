@@ -210,7 +210,7 @@ def equalize(image, mask=None):
 
     **Supported dtypes**:
 
-    See :func:`~imgaug.augmenters.pillike.pil_equalize_`.
+    See :func:`~imgaug.augmenters.pillike.equalize_`.
 
     Parameters
     ----------
@@ -1267,7 +1267,7 @@ class Solarize(arithmetic.Invert):
 
     **Supported dtypes**:
 
-    See :class:`~imgaug.augmenters.arithmetic.Invert`.
+    See ``~imgaug.augmenters.arithmetic.invert_(min_value=None and max_value=None)``.
 
     Parameters
     ----------
