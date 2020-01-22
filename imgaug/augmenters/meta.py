@@ -3873,6 +3873,13 @@ class Identity(Augmenter):
     **old_kwargs
         Outdated parameters. Avoid using these.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Identity()
+
+    Create an augmenter that does not change inputs.
+
     """
 
     def __init__(self, seed=None, name=None, **old_kwargs):
@@ -3907,6 +3914,13 @@ class Noop(Identity):
 
     **old_kwargs
         Outdated parameters. Avoid using these.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.Noop()
+
+    Create an augmenter that does not change inputs.
 
     """
 

@@ -1909,6 +1909,14 @@ class ShearX(Affine):
     **old_kwargs
         Outdated parameters. Avoid using these.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ShearX((-20, 20))
+
+    Create an augmenter that shears images along the x-axis by random amounts
+    between ``-20`` and ``20`` degrees.
+
     """
 
     def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
@@ -1963,6 +1971,14 @@ class ShearY(Affine):
 
     **old_kwargs
         Outdated parameters. Avoid using these.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ShearY((-20, 20))
+
+    Create an augmenter that shears images along the y-axis by random amounts
+    between ``-20`` and ``20`` degrees.
 
     """
 

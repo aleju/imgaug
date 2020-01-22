@@ -554,6 +554,21 @@ class BlendAlphaMask(meta.Augmenter):
     **old_kwargs
         Outdated parameters. Avoid using these.
 
+    Examples
+    --------
+
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.BlendAlphaMask(
+    >>>     iaa.InvertMaskGen(0.5, iaa.VerticalLinearGradientMaskGen()),
+    >>>     iaa.Sequential([
+    >>>         iaa.Clouds(),
+    >>>         iaa.WithChannels([1, 2], iaa.Multiply(0.5))
+    >>>     ])
+    >>> )
+
+    Create an augmenter that sometimes adds clouds at the bottom and sometimes
+    at the top of the image.
+
     """
 
     # Currently the mode is only used for keypoint augmentation.
@@ -848,12 +863,12 @@ class BlendAlphaElementwise(BlendAlphaMask):
     the opacity has a fixed value of ``0.5`` and is hence identical for all
     pixels.
 
-    >>> aug = iaa.BlendAlphaElementwise((0, 1.0), iaa.Grayscale(1.0))
+    >>> aug = iaa.BlendAlphaElementwise((0, 1.0), iaa.AddToHue(100))
 
-    Same as in the previous example, but the alpha factor is sampled uniformly
-    from the interval ``[0.0, 1.0]`` once per pixel, thereby removing a random
-    fraction of all colors from each pixel. This is equivalent to
-    ``iaa.Grayscale((0.0, 1.0))``.
+    Same as in the previous example, but here with hue-shift instead
+    of grayscaling and additionally the alpha factor is sampled uniformly
+    from the interval ``[0.0, 1.0]`` once per pixel, thereby shifting the
+    hue by a random fraction for each pixel.
 
     >>> aug = iaa.BlendAlphaElementwise(
     >>>     (0.0, 1.0),
@@ -1563,9 +1578,9 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.BlendAlphaHorizontalLinearGradient(iaa.Grayscale(1.0))
+    >>> aug = iaa.BlendAlphaHorizontalLinearGradient(iaa.AddToHue((-100, 100)))
 
-    Create an augmenter that removes more color towards the right of the
+    Create an augmenter that randomizes the hue towards the right of the
     image.
 
     >>> aug = iaa.BlendAlphaHorizontalLinearGradient(
@@ -1575,7 +1590,7 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
     Create an augmenter that replaces pixels towards the right with darker
     and darker values. However it always keeps at least
     20% (``1.0 - max_value``) of the original pixel value on the far right
-    and always replaces at least 20% on the far left (``min_value=0.2``)
+    and always replaces at least 20% on the far left (``min_value=0.2``).
 
     >>> aug = iaa.BlendAlphaHorizontalLinearGradient(
     >>>     iaa.AveragePooling(11),
@@ -1673,9 +1688,9 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.BlendAlphaVerticalLinearGradient(iaa.Grayscale(1.0))
+    >>> aug = iaa.BlendAlphaVerticalLinearGradient(iaa.AddToHue((-100, 100)))
 
-    Create an augmenter that removes more color towards the bottom of the
+    Create an augmenter that randomizes the hue towards the bottom of the
     image.
 
     >>> aug = iaa.BlendAlphaVerticalLinearGradient(
@@ -1685,7 +1700,7 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
     Create an augmenter that replaces pixels towards the bottom with darker
     and darker values. However it always keeps at least
     20% (``1.0 - max_value``) of the original pixel value on the far bottom
-    and always replaces at least 20% on the far top (``min_value=0.2``)
+    and always replaces at least 20% on the far top (``min_value=0.2``).
 
     >>> aug = iaa.BlendAlphaVerticalLinearGradient(
     >>>     iaa.AveragePooling(11),
@@ -1810,7 +1825,6 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
     per image. The resulting effect is similar to
     :class:`~imgaug.augmenters.arithmetic.CoarseDropout`.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaRegularGrid(nb_rows=2, nb_cols=2,
     >>>                                 foreground=iaa.Multiply(0.0),
     >>>                                 background=iaa.AveragePooling(8),
@@ -1905,12 +1919,12 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
     --------
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaCheckerboard(nb_rows=2, nb_cols=(1, 4),
-    >>>                                  foreground=iaa.Grayscale(1.0))
+    >>>                                  foreground=iaa.AddToHue((-100, 100)))
 
     Create an augmenter that places a ``HxW`` grid on each image, where
     ``H`` (rows) is always ``2`` and ``W`` is randomly and uniformly sampled
-    from the interval ``[1, 4]``. Half of the cells in the grid are
-    grayscaled, the other half is unaltered.
+    from the interval ``[1, 4]``. For half of the cells in the grid the hue
+    is randomly modified, the other half of the cells is unaltered.
 
     """
 
@@ -2000,9 +2014,9 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
     --------
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaSegMapClassIds(
-    >>>     [1, 3], foreground=iaa.Grayscale(1.0))
+    >>>     foreground=iaa.AddToHue((-100, 100)))
 
-    Create an augmenter that removes color wherever the segmentation maps
+    Create an augmenter that randomizes the hue wherever the segmentation maps
     contain the classes ``1`` or ``3``.
 
     >>> aug = iaa.BlendAlphaSegMapClassIds(
@@ -2119,14 +2133,12 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
     Create an augmenter that removes color within bounding boxes having the
     label ``person``.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaBoundingBoxes(["person", "car"],
     >>>                                   foreground=iaa.AddToHue((-255, 255)))
 
     Create an augmenter that randomizes the hue within bounding boxes that
     have the label ``person`` or ``car``.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaBoundingBoxes(["person", "car"],
     >>>                                   foreground=iaa.AddToHue((-255, 255)),
     >>>                                   nb_sample_labels=1)
@@ -2137,7 +2149,6 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
     ``nb_sample_classes`` would be ``>1``, it could still lead to only one
     *unique* label being sampled.
 
-    >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaBoundingBoxes(None,
     >>>                                   background=iaa.Multiply(0.0))
 
