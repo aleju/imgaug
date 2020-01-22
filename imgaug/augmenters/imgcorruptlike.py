@@ -1830,9 +1830,13 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
     """
     Wrapper around function :func:`imagecorruption.elastic_transform`.
 
-    .. note::
+    .. warning::
 
-        This augmenter only affects images. Other data is not changed.
+        This augmenter can currently only transform image-data.
+        Batches containing heatmaps, segmentation maps and
+        coordinate-based augmentables will be rejected with an error.
+        Use :class:`~imgaug.augmenters.geometric.ElasticTransformation` if
+        you have to transform such inputs.
 
     Supported dtypes
     ----------------
@@ -1870,3 +1874,13 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
         super(ElasticTransform, self).__init__(
             apply_elastic_transform, severity,
             seed=seed, name=name, **old_kwargs)
+
+    def _augment_batch_(self, batch, random_state, parents, hooks):
+        cols = batch.get_column_names()
+        assert len(cols) == 0 or (len(cols) == 1 and "images" in cols), (
+            "imgcorruptlike.ElasticTransform can currently only process image "
+            "data. Got a batch containing: %s. Use "
+            "imgaug.augmenters.geometric.ElasticTransformation for "
+            "batches containing non-image data." % (", ".join(cols),))
+        return super(ElasticTransform, self)._augment_batch_(
+            batch, random_state, parents, hooks)
