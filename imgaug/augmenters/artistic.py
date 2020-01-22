@@ -36,6 +36,22 @@ def stylize_cartoon(image, blur_ksize=3, segmentation_size=1.0,
     This method is loosely based on the one proposed in
     https://stackoverflow.com/a/11614479/3760780
 
+    **Supported dtypes**:
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: no
+        * ``int16``: no
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: no
+        * ``float32``: no
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: no
+
     Parameters
     ----------
     image : ndarray
