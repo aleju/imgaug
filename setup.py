@@ -1,3 +1,4 @@
+# pylint: disable=C0114
 import re
 
 from pkg_resources import get_distribution, DistributionNotFound
