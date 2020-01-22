@@ -2116,7 +2116,7 @@ class Affine(geometric.Affine):
     This augmenter has identical outputs to
     :func:`~PIL.Image.transform` with parameter ``method=PIL.Image.AFFINE``.
 
-    .. note::
+    .. warning::
 
         This augmenter can currently only transform image-data.
         Batches containing heatmaps, segmentation maps and
