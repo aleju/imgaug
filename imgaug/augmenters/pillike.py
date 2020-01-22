@@ -66,6 +66,10 @@ from . import size as sizelib
 from .. import parameters as iap
 
 
+# TODO some of the augmenters in this module broke on numpy arrays as
+#      image inputs (as opposed to lists of arrays) without any test failing
+#      add appropriate tests for that
+
 _EQUALIZE_USE_PIL_BELOW = 64*64  # H*W
 
 
@@ -1380,7 +1384,7 @@ class Equalize(meta.Augmenter):
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=no-self-use
-        if batch.images:
+        if batch.images is not None:
             for image in batch.images:
                 image[...] = equalize_(image)
         return batch
@@ -1483,9 +1487,8 @@ class _EnhanceBase(meta.Augmenter):
             return batch
 
         factors = self._draw_samples(len(batch.images), random_state)
-        if batch.images:
-            for image, factor in zip(batch.images, factors):
-                image[...] = self.func(image, factor)
+        for image, factor in zip(batch.images, factors):
+            image[...] = self.func(image, factor)
         return batch
 
     def _draw_samples(self, nb_rows, random_state):
@@ -1719,10 +1722,7 @@ class _FilterBase(meta.Augmenter):
         self.func = func
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
-        if batch.images is None:
-            return batch
-
-        if batch.images:
+        if batch.images is not None:
             for image in batch.images:
                 image[...] = self.func(image)
         return batch
