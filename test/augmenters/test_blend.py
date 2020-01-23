@@ -32,6 +32,7 @@ from imgaug.testutils import (
     runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+from imgaug.augmentables.batches import _BatchInAugmentation
 
 
 class Test_blend_alpha(unittest.TestCase):
@@ -2222,7 +2223,7 @@ class TestBlendAlphaBoundingBoxes(unittest.TestCase):
 class TestStochasticParameterMaskGen(unittest.TestCase):
     @classmethod
     def _test_draw_masks_nhwc(cls, shape):
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=np.zeros(shape, dtype=np.uint8)
         )
         values = np.float32([
@@ -2251,7 +2252,7 @@ class TestStochasticParameterMaskGen(unittest.TestCase):
         bb = ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
         bbsoi1 = ia.BoundingBoxesOnImage([bb], shape=(2, 3, 3))
         bbsoi2 = ia.BoundingBoxesOnImage([], shape=(3, 3, 3))
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             bounding_boxes=[bbsoi1, bbsoi2]
         )
         # sampling for shape of bbsoi1 will cover row1 and row2, then
@@ -2276,7 +2277,7 @@ class TestStochasticParameterMaskGen(unittest.TestCase):
 
     def test_per_channel(self):
         for per_channel in [True, iap.Deterministic(0.51)]:
-            batch = ia.BatchInAugmentation(
+            batch = _BatchInAugmentation(
                 images=np.zeros((1, 2, 3, 2), dtype=np.uint8)
             )
             values = np.float32([
@@ -2308,7 +2309,7 @@ class TestStochasticParameterMaskGen(unittest.TestCase):
         for per_channel in [False, True]:
             for shape in shapes:
                 with self.subTest(per_channel=per_channel, shape=shape):
-                    batch = ia.BatchInAugmentation(
+                    batch = _BatchInAugmentation(
                         images=[np.zeros(shape, dtype=np.uint8)]
                     )
                     param = iap.Deterministic(1.0)
@@ -2364,7 +2365,7 @@ class TestSomeColorsMaskGen(unittest.TestCase):
             [128, 128, 255]
         ]).reshape((9, 1, 3))
         image = np.tile(image, (9, 50, 1))
-        batch = ia.BatchInAugmentation(images=[image])
+        batch = _BatchInAugmentation(images=[image])
         gen = iaa.SomeColorsMaskGen(nb_bins=256, smoothness=0,
                                     alpha=[0, 1])
         expected_mask_sums = np.arange(1 + image.shape[0]) * image.shape[1]
@@ -2401,7 +2402,7 @@ class TestSomeColorsMaskGen(unittest.TestCase):
             [128, 255, 128],
             [128, 128, 255]
         ]).reshape((1, 9, 3))
-        batch = ia.BatchInAugmentation(images=[image])
+        batch = _BatchInAugmentation(images=[image])
         gen = iaa.SomeColorsMaskGen(alpha=0.0)
 
         mask = gen.draw_masks(batch)[0]
@@ -2420,7 +2421,7 @@ class TestSomeColorsMaskGen(unittest.TestCase):
             [128, 255, 128],
             [128, 128, 255]
         ]).reshape((1, 9, 3))
-        batch = ia.BatchInAugmentation(images=[image])
+        batch = _BatchInAugmentation(images=[image])
         gen = iaa.SomeColorsMaskGen(alpha=1.0)
 
         mask = gen.draw_masks(batch)[0]
@@ -2440,7 +2441,7 @@ class TestSomeColorsMaskGen(unittest.TestCase):
             [128, 255, 128],
             [128, 128, 255]
         ]).reshape((1, 9, 3))
-        batch = ia.BatchInAugmentation(images=[image])
+        batch = _BatchInAugmentation(images=[image])
         mock_cc.return_value = np.copy(image)
         gen = iaa.SomeColorsMaskGen(alpha=1.0, from_colorspace=iaa.CSPACE_BGR)
 
@@ -2585,7 +2586,7 @@ class TestSomeColorsMaskGen(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                batch = ia.BatchInAugmentation(images=[image])
+                batch = _BatchInAugmentation(images=[image])
                 gen = iaa.SomeColorsMaskGen()
 
                 mask = gen.draw_masks(batch)[0]
@@ -2596,7 +2597,7 @@ class TestSomeColorsMaskGen(unittest.TestCase):
     def test_batch_contains_no_images(self):
         hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
                                  shape=(10, 10, 3))
-        batch = ia.BatchInAugmentation(heatmaps=[hms])
+        batch = _BatchInAugmentation(heatmaps=[hms])
         gen = iaa.SomeColorsMaskGen()
 
         with self.assertRaises(AssertionError):
@@ -2621,7 +2622,7 @@ class TestHorizontalLinearGradientMaskGen(unittest.TestCase):
     def test_draw_masks(self):
         image1 = np.zeros((5, 100, 3), dtype=np.uint8)
         image2 = np.zeros((7, 200, 3), dtype=np.uint8)
-        batch = ia.BatchInAugmentation(images=[image1, image2])
+        batch = _BatchInAugmentation(images=[image1, image2])
 
         gen = iaa.HorizontalLinearGradientMaskGen(min_value=0.1,
                                                   max_value=0.75,
@@ -2709,7 +2710,7 @@ class TestHorizontalLinearGradientMaskGen(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                batch = ia.BatchInAugmentation(images=[image])
+                batch = _BatchInAugmentation(images=[image])
                 gen = iaa.HorizontalLinearGradientMaskGen()
 
                 mask = gen.draw_masks(batch)[0]
@@ -2720,7 +2721,7 @@ class TestHorizontalLinearGradientMaskGen(unittest.TestCase):
     def test_batch_contains_no_images(self):
         hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
                                  shape=(10, 10, 3))
-        batch = ia.BatchInAugmentation(heatmaps=[hms])
+        batch = _BatchInAugmentation(heatmaps=[hms])
         gen = iaa.HorizontalLinearGradientMaskGen(min_value=0.25,
                                                   max_value=0.75,
                                                   start_at=0.5,
@@ -2753,7 +2754,7 @@ class TestVerticalLinearGradientMaskGen(unittest.TestCase):
         image2 = np.zeros((7, 200, 3), dtype=np.uint8)
         image1 = image1.transpose((1, 0, 2))
         image2 = image2.transpose((1, 0, 2))
-        batch = ia.BatchInAugmentation(images=[image1, image2])
+        batch = _BatchInAugmentation(images=[image1, image2])
 
         gen = iaa.VerticalLinearGradientMaskGen(min_value=0.1,
                                                 max_value=0.75,
@@ -2794,7 +2795,7 @@ class TestRegularGridMaskGen(unittest.TestCase):
             alpha=iap.DeterministicList([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7,
                                          0.8, 0.9, 1.0]))
         image = np.zeros((6, 8, 3), dtype=np.uint8)
-        batch = ia.BatchInAugmentation(images=[image, image])
+        batch = _BatchInAugmentation(images=[image, image])
 
         masks = gen.draw_masks(batch, random_state=1)
 
@@ -2820,7 +2821,7 @@ class TestRegularGridMaskGen(unittest.TestCase):
             nb_cols=2,
             alpha=[0.1, 0.9])
         image = np.zeros((2, 4, 3), dtype=np.uint8)
-        batch = ia.BatchInAugmentation(images=[image, image])
+        batch = _BatchInAugmentation(images=[image, image])
 
         expected1 = np.full((2, 4), 0.1, dtype=np.float32)
         expected2 = np.full((2, 4), 0.1, dtype=np.float32)
@@ -2979,7 +2980,7 @@ class TestRegularGridMaskGen(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                batch = ia.BatchInAugmentation(images=[image])
+                batch = _BatchInAugmentation(images=[image])
                 gen = iaa.RegularGridMaskGen(2, 2)
 
                 mask = gen.draw_masks(batch)[0]
@@ -2990,7 +2991,7 @@ class TestRegularGridMaskGen(unittest.TestCase):
     def test_batch_contains_no_images(self):
         hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
                                  shape=(6, 8, 3))
-        batch = ia.BatchInAugmentation(heatmaps=[hms])
+        batch = _BatchInAugmentation(heatmaps=[hms])
         gen = iaa.CheckerboardMaskGen(nb_rows=3, nb_cols=2)
         mask = gen.draw_masks(batch, random_state=1)[0]
 
@@ -3014,7 +3015,7 @@ class TestCheckerboardMaskGen(unittest.TestCase):
         gen = iaa.CheckerboardMaskGen(nb_rows=2,
                                       nb_cols=iap.DeterministicList([1, 4]))
         image = np.zeros((6, 8, 3), dtype=np.uint8)
-        batch = ia.BatchInAugmentation(images=[image, image])
+        batch = _BatchInAugmentation(images=[image, image])
 
         masks = gen.draw_masks(batch, random_state=1)
 
@@ -3123,7 +3124,7 @@ class TestCheckerboardMaskGen(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                batch = ia.BatchInAugmentation(images=[image])
+                batch = _BatchInAugmentation(images=[image])
                 gen = iaa.CheckerboardMaskGen(2, 2)
 
                 mask = gen.draw_masks(batch)[0]
@@ -3134,7 +3135,7 @@ class TestCheckerboardMaskGen(unittest.TestCase):
     def test_batch_contains_no_images(self):
         hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
                                  shape=(6, 8, 3))
-        batch = ia.BatchInAugmentation(heatmaps=[hms])
+        batch = _BatchInAugmentation(heatmaps=[hms])
         gen = iaa.CheckerboardMaskGen(nb_rows=3, nb_cols=2)
         mask = gen.draw_masks(batch, random_state=1)[0]
 
@@ -3175,7 +3176,7 @@ class TestSegMapClassIdsMaskGen(unittest.TestCase):
         segmap_arr[0, 0, 1] = 3
         segmap_arr[1, 1, 1] = 3
         segmap = ia.SegmentationMapsOnImage(segmap_arr, shape=(3, 2, 3))
-        batch = ia.BatchInAugmentation(segmentation_maps=[segmap])
+        batch = _BatchInAugmentation(segmentation_maps=[segmap])
         gen = iaa.SegMapClassIdsMaskGen([2, 3])
 
         mask = gen.draw_masks(batch, random_state=1)[0]
@@ -3196,7 +3197,7 @@ class TestSegMapClassIdsMaskGen(unittest.TestCase):
         segmap_arr[0, 0, 1] = 3
         segmap_arr[1, 1, 1] = 3
         segmap = ia.SegmentationMapsOnImage(segmap_arr, shape=(3, 2, 3))
-        batch = ia.BatchInAugmentation(segmentation_maps=[segmap])
+        batch = _BatchInAugmentation(segmentation_maps=[segmap])
         gen = iaa.SegMapClassIdsMaskGen([2, 3], nb_sample_classes=1)
 
         expected_class_2 = np.float32([
@@ -3285,7 +3286,7 @@ class TestSegMapClassIdsMaskGen(unittest.TestCase):
                     segmap_arr = np.zeros(segmap_shape, dtype=np.int32)
                     segmap = ia.SegmentationMapsOnImage(segmap_arr,
                                                         shape=image_shape)
-                    batch = ia.BatchInAugmentation(segmentation_maps=[segmap])
+                    batch = _BatchInAugmentation(segmentation_maps=[segmap])
 
                     gen = iaa.SegMapClassIdsMaskGen(1)
                     mask = gen.draw_masks(batch)[0]
@@ -3296,7 +3297,7 @@ class TestSegMapClassIdsMaskGen(unittest.TestCase):
     def test_batch_contains_no_segmaps(self):
         hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
                                  shape=(10, 10, 3))
-        batch = ia.BatchInAugmentation(heatmaps=[hms])
+        batch = _BatchInAugmentation(heatmaps=[hms])
         gen = iaa.SegMapClassIdsMaskGen(class_ids=[1])
 
         with self.assertRaises(AssertionError):
@@ -3333,7 +3334,7 @@ class TestBoundingBoxesMaskGen(unittest.TestCase):
                ia.BoundingBox(x1=2, y1=2, x2=10, y2=10, label="bb3")]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(10, 14, 3))
 
-        batch = ia.BatchInAugmentation(bounding_boxes=[bbsoi])
+        batch = _BatchInAugmentation(bounding_boxes=[bbsoi])
         gen = iaa.BoundingBoxesMaskGen()
 
         mask = gen.draw_masks(batch, random_state=1)[0]
@@ -3352,7 +3353,7 @@ class TestBoundingBoxesMaskGen(unittest.TestCase):
                ia.BoundingBox(x1=2, y1=2, x2=10, y2=10, label="bb3")]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(10, 14, 3))
 
-        batch = ia.BatchInAugmentation(bounding_boxes=[bbsoi])
+        batch = _BatchInAugmentation(bounding_boxes=[bbsoi])
         gen = iaa.BoundingBoxesMaskGen(["bb1", "bb2"])
 
         mask = gen.draw_masks(batch, random_state=1)[0]
@@ -3370,7 +3371,7 @@ class TestBoundingBoxesMaskGen(unittest.TestCase):
                ia.BoundingBox(x1=2, y1=2, x2=10, y2=10, label="bb3")]
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=(10, 14, 3))
 
-        batch = ia.BatchInAugmentation(bounding_boxes=[bbsoi])
+        batch = _BatchInAugmentation(bounding_boxes=[bbsoi])
         gen = iaa.BoundingBoxesMaskGen(
             iap.DeterministicList(["bb1", "bb2"]),
             nb_sample_labels=3)
@@ -3416,7 +3417,7 @@ class TestBoundingBoxesMaskGen(unittest.TestCase):
                        ia.BoundingBox(x1=-3, y1=4, x2=20, y2=8, label="bb2"),
                        ia.BoundingBox(x1=2, y1=2, x2=10, y2=10, label="bb3")]
                 bbsoi = ia.BoundingBoxesOnImage(bbs, shape=shape)
-                batch = ia.BatchInAugmentation(bounding_boxes=[bbsoi])
+                batch = _BatchInAugmentation(bounding_boxes=[bbsoi])
                 gen = iaa.BoundingBoxesMaskGen("bb1")
 
                 mask = gen.draw_masks(batch)[0]
@@ -3428,7 +3429,7 @@ class TestBoundingBoxesMaskGen(unittest.TestCase):
     def test_batch_contains_no_bounding_boxes(self):
         hms = ia.HeatmapsOnImage(np.zeros((5, 5), dtype=np.float32),
                                  shape=(10, 10, 3))
-        batch = ia.BatchInAugmentation(heatmaps=[hms])
+        batch = _BatchInAugmentation(heatmaps=[hms])
         gen = iaa.SegMapClassIdsMaskGen(class_ids=[1])
 
         with self.assertRaises(AssertionError):
@@ -3447,7 +3448,7 @@ class InvertMaskGen(unittest.TestCase):
 
     def test_draw_masks(self):
         image = np.zeros((1, 20), dtype=np.uint8)
-        batch = ia.BatchInAugmentation(images=[image] * 200)
+        batch = _BatchInAugmentation(images=[image] * 200)
 
         child = iaa.HorizontalLinearGradientMaskGen(min_value=0.0,
                                                     max_value=1.0,
@@ -3487,7 +3488,7 @@ class InvertMaskGen(unittest.TestCase):
         for shape in shapes:
             with self.subTest(shape=shape):
                 image = np.zeros(shape, dtype=np.uint8)
-                batch = ia.BatchInAugmentation(images=[image])
+                batch = _BatchInAugmentation(images=[image])
                 child = iaa.HorizontalLinearGradientMaskGen()
                 gen = iaa.InvertMaskGen(0.5, child)
 
