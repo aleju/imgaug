@@ -1,7 +1,20 @@
 """
 Augmenters that wrap methods from ``imagecorruptions`` package.
 
-See https://github.com/bethgelab/imagecorruptions for the package.
+See `https://github.com/bethgelab/imagecorruptions`_ for the package.
+
+The package is derived from `https://github.com/hendrycks/robustness`_.
+The corresponding `paper <https://arxiv.org/abs/1807.01697>`_ is::
+
+    Hendrycks, Dan and Dietterich, Thomas G.
+    Benchmarking Neural Network Robustness to Common Corruptions and
+    Surface Variations
+
+with the `newer version <https://arxiv.org/abs/1903.12261>`_ being::
+
+    Hendrycks, Dan and Dietterich, Thomas G.
+    Benchmarking Neural Network Robustness to Common Corruptions and
+    Perturbations
 
 List of augmenters:
 
