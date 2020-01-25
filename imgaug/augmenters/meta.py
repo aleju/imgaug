@@ -280,20 +280,24 @@ class Augmenter(object):
         Instead, instantiate the augmenter and then use
         :func:`~imgaug.augmenters.Augmenter.to_deterministic`.
 
-    **old_kwargs
-        Catch-all for deprecated parameters that should not be used anymore.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     """
 
-    def __init__(self, seed=None, name=None, **old_kwargs):
+    def __init__(self, seed=None, name=None,
+                 random_state="deprecated",
+                 deterministic="deprecated"):
         """Create a new Augmenter instance."""
         super(Augmenter, self).__init__()
-
-        valid_old_kwargs = {"random_state", "deterministic"}
-        for key in old_kwargs:
-            assert key in valid_old_kwargs, (
-                "Got an unknown parameter `%s` in "
-                "`imgaug.augmenters.meta.Augmenter`." % (key,))
 
         assert name is None or ia.is_string(name), (
             "Expected name to be None or string-like, got %s." % (
@@ -303,23 +307,23 @@ class Augmenter(object):
         else:
             self.name = name
 
-        deterministic = False
-        if "deterministic" in old_kwargs:
+        if deterministic != "deprecated":
             ia.warn_deprecated(
                 "The parameter `deterministic` is deprecated "
                 "in `imgaug.augmenters.meta.Augmenter`. Use "
                 "`.to_deterministic()` to switch into deterministic mode.",
                 stacklevel=4)
-            deterministic = old_kwargs["deterministic"]
+            assert ia.is_single_bool(deterministic), (
+                "Expected deterministic to be a boolean, got %s." % (
+                    type(deterministic),))
+        else:
+            deterministic = False
 
-        assert ia.is_single_bool(deterministic), (
-            "Expected deterministic to be a boolean, got %s." % (
-                type(deterministic),))
         self.deterministic = deterministic
 
-        if "random_state" in old_kwargs:
+        if random_state != "deprecated":
             assert seed is None, "Cannot set both `seed` and `random_state`."
-            seed = old_kwargs["random_state"]
+            seed = random_state
 
         if deterministic and seed is None:
             # Usually if None is provided, the global RNG will be used.
@@ -3019,8 +3023,16 @@ class Sequential(Augmenter, list):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3053,8 +3065,12 @@ class Sequential(Augmenter, list):
     """
 
     def __init__(self, children=None, random_order=False,
-                 seed=None, name=None, **old_kwargs):
-        Augmenter.__init__(self, seed=seed, name=name, **old_kwargs)
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
+        Augmenter.__init__(
+            self,
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         if children is None:
             list.__init__(self, [])
@@ -3196,8 +3212,16 @@ class SomeOf(Augmenter, list):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3239,8 +3263,12 @@ class SomeOf(Augmenter, list):
     """
 
     def __init__(self, n=None, children=None, random_order=False,
-                 seed=None, name=None, **old_kwargs):
-        Augmenter.__init__(self, seed=seed, name=name, **old_kwargs)
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
+        Augmenter.__init__(
+            self,
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         # TODO use handle_children_list() here?
         if children is None:
@@ -3418,8 +3446,16 @@ class OneOf(SomeOf):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3451,12 +3487,14 @@ class OneOf(SomeOf):
     """
 
     def __init__(self, children,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(OneOf, self).__init__(
             n=1,
             children=children,
             random_order=False,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class Sometimes(Augmenter):
@@ -3510,8 +3548,16 @@ class Sometimes(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3528,9 +3574,11 @@ class Sometimes(Augmenter):
     """
 
     def __init__(self, p=0.5, then_list=None, else_list=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(Sometimes, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.p = iap.handle_probability_param(p, "p")
 
@@ -3650,8 +3698,16 @@ class WithChannels(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3664,9 +3720,11 @@ class WithChannels(Augmenter):
     """
 
     def __init__(self, channels=None, children=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(WithChannels, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         # TODO change this to a stochastic parameter
         if channels is None:
@@ -3864,8 +3922,16 @@ class Identity(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3876,8 +3942,12 @@ class Identity(Augmenter):
 
     """
 
-    def __init__(self, seed=None, name=None, **old_kwargs):
-        super(Identity, self).__init__(seed=seed, name=name, **old_kwargs)
+    def __init__(self,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
+        super(Identity, self).__init__(
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         return batch
@@ -3905,8 +3975,16 @@ class Noop(Identity):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -3917,8 +3995,12 @@ class Noop(Identity):
 
     """
 
-    def __init__(self, seed=None, name=None, **old_kwargs):
-        super(Noop, self).__init__(seed=seed, name=name, **old_kwargs)
+    def __init__(self,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
+        super(Noop, self).__init__(
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class Lambda(Augmenter):
@@ -4043,8 +4125,16 @@ class Lambda(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -4089,8 +4179,11 @@ class Lambda(Augmenter):
                  func_segmentation_maps=None, func_keypoints=None,
                  func_bounding_boxes="keypoints", func_polygons="keypoints",
                  func_line_strings="keypoints",
-                 seed=None, name=None, **old_kwargs):
-        super(Lambda, self).__init__(seed=seed, name=name, **old_kwargs)
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
+        super(Lambda, self).__init__(
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.func_images = func_images
         self.func_heatmaps = func_heatmaps
         self.func_segmentation_maps = func_segmentation_maps
@@ -4338,8 +4431,16 @@ class AssertLambda(Lambda):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     """
 
@@ -4347,7 +4448,8 @@ class AssertLambda(Lambda):
                  func_segmentation_maps=None, func_keypoints=None,
                  func_bounding_boxes=None, func_polygons=None,
                  func_line_strings=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         def _default(var, augmentable_name):
             return (
                 _AssertLambdaCallback(var, augmentable_name=augmentable_name)
@@ -4364,7 +4466,8 @@ class AssertLambda(Lambda):
             func_bounding_boxes=_default(func_bounding_boxes, "bounding_boxes"),
             func_polygons=_default(func_polygons, "polygons"),
             func_line_strings=_default(func_line_strings, "line_strings"),
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class _AssertLambdaCallback(object):
@@ -4472,8 +4575,16 @@ class AssertShape(Lambda):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -4502,7 +4613,8 @@ class AssertShape(Lambda):
                  check_segmentation_maps=True, check_keypoints=True,
                  check_bounding_boxes=True, check_polygons=True,
                  check_line_strings=True,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         assert len(shape) == 4, (
             "Expected shape to have length 4, got %d with shape: %s." % (
                 len(shape), str(shape)))
@@ -4526,7 +4638,8 @@ class AssertShape(Lambda):
                                    check_polygons),
             func_line_strings=_default(_AssertShapeLineStringsCheck(shape),
                                        check_line_strings),
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
     @classmethod
     def _compare(cls, observed, expected, dimension, image_index):
@@ -4688,8 +4801,16 @@ class ChannelShuffle(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -4708,9 +4829,11 @@ class ChannelShuffle(Augmenter):
     """
 
     def __init__(self, p=1.0, channels=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(ChannelShuffle, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.p = iap.handle_probability_param(p, "p")
         valid_channels = (
             channels is None
@@ -4849,8 +4972,16 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -4890,9 +5021,11 @@ class RemoveCBAsByOutOfImageFraction(Augmenter):
     """
 
     def __init__(self, fraction,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(RemoveCBAsByOutOfImageFraction, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.fraction = fraction
 
@@ -4945,8 +5078,16 @@ class ClipCBAsToImagePlanes(Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -4962,9 +5103,12 @@ class ClipCBAsToImagePlanes(Augmenter):
 
     """
 
-    def __init__(self, seed=None, name=None, **old_kwargs):
+    def __init__(self,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(ClipCBAsToImagePlanes, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         for column in batch.columns:

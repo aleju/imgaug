@@ -32,9 +32,11 @@ from ..augmentables.batches import _BatchInAugmentation
 class _ContrastFuncWrapper(meta.Augmenter):
     def __init__(self, func, params1d, per_channel, dtypes_allowed=None,
                  dtypes_disallowed=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(_ContrastFuncWrapper, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.func = func
         self.params1d = params1d
         self.per_channel = iap.handle_probability_param(per_channel,
@@ -453,8 +455,16 @@ class GammaContrast(_ContrastFuncWrapper):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -473,7 +483,8 @@ class GammaContrast(_ContrastFuncWrapper):
     """
 
     def __init__(self, gamma=(0.7, 1.7), per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         params1d = [iap.handle_continuous_param(
             gamma, "gamma", value_range=None, tuple_to_uniform=True,
             list_to_choice=True)]
@@ -484,7 +495,8 @@ class GammaContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class SigmoidContrast(_ContrastFuncWrapper):
@@ -540,8 +552,16 @@ class SigmoidContrast(_ContrastFuncWrapper):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -562,7 +582,8 @@ class SigmoidContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, gain=(5, 6), cutoff=(0.3, 0.6), per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         # TODO add inv parameter?
         params1d = [
             iap.handle_continuous_param(
@@ -580,7 +601,8 @@ class SigmoidContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class LogContrast(_ContrastFuncWrapper):
@@ -620,8 +642,16 @@ class LogContrast(_ContrastFuncWrapper):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -639,7 +669,8 @@ class LogContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, gain=(0.4, 1.6), per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         # TODO add inv parameter?
         params1d = [iap.handle_continuous_param(
             gain, "gain", value_range=(0, None), tuple_to_uniform=True,
@@ -652,7 +683,8 @@ class LogContrast(_ContrastFuncWrapper):
                             "int8", "int16", "int32", "int64",
                             "float16", "float32", "float64"],
             dtypes_disallowed=["float96", "float128", "float256", "bool"],
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class LinearContrast(_ContrastFuncWrapper):
@@ -689,8 +721,16 @@ class LinearContrast(_ContrastFuncWrapper):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -708,7 +748,8 @@ class LinearContrast(_ContrastFuncWrapper):
 
     """
     def __init__(self, alpha=(0.6, 1.4), per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         params1d = [
             iap.handle_continuous_param(
                 alpha, "alpha", value_range=None, tuple_to_uniform=True,
@@ -723,7 +764,8 @@ class LinearContrast(_ContrastFuncWrapper):
                             "float16", "float32", "float64"],
             dtypes_disallowed=["uint64", "int64", "float96", "float128",
                                "float256", "bool"],
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 # TODO maybe offer the other contrast augmenters also wrapped in this, similar
@@ -918,8 +960,16 @@ class AllChannelsCLAHE(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -945,9 +995,11 @@ class AllChannelsCLAHE(meta.Augmenter):
 
     def __init__(self, clip_limit=(0.1, 8), tile_grid_size_px=(3, 12),
                  tile_grid_size_px_min=3, per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(AllChannelsCLAHE, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.clip_limit = iap.handle_continuous_param(
             clip_limit, "clip_limit", value_range=(0+1e-4, None),
@@ -1141,8 +1193,16 @@ class CLAHE(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1198,9 +1258,11 @@ class CLAHE(meta.Augmenter):
                  tile_grid_size_px_min=3,
                  from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(CLAHE, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.all_channel_clahe = AllChannelsCLAHE(
             clip_limit=clip_limit,
@@ -1292,8 +1354,16 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1310,9 +1380,11 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
     strengths. This leads to random strengths of the contrast adjustment.
 
     """
-    def __init__(self, seed=None, name=None, **old_kwargs):
+    def __init__(self, seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(AllChannelsHistogramEqualization, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
@@ -1417,8 +1489,16 @@ class HistogramEqualization(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1452,9 +1532,11 @@ class HistogramEqualization(meta.Augmenter):
 
     def __init__(self, from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(HistogramEqualization, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.all_channel_histogram_equalization = \
             AllChannelsHistogramEqualization(

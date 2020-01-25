@@ -80,8 +80,16 @@ class Convolve(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -113,9 +121,11 @@ class Convolve(meta.Augmenter):
     """
 
     def __init__(self, matrix=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(Convolve, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         if matrix is None:
             self.matrix = None
@@ -269,8 +279,16 @@ class Sharpen(Convolve):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -289,7 +307,8 @@ class Sharpen(Convolve):
 
     """
     def __init__(self, alpha=(0.0, 0.2), lightness=(0.8, 1.2),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -301,7 +320,8 @@ class Sharpen(Convolve):
 
         super(Sharpen, self).__init__(
             matrix=matrix_gen,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class _SharpeningMatrixGenerator(object):
@@ -376,8 +396,16 @@ class Emboss(Convolve):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -390,7 +418,8 @@ class Emboss(Convolve):
 
     """
     def __init__(self, alpha=(0.0, 1.0), strength=(0.25, 1.0),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -402,7 +431,8 @@ class Emboss(Convolve):
 
         super(Emboss, self).__init__(
             matrix=matrix_gen,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class _EmbossMatrixGenerator(object):
@@ -463,8 +493,16 @@ class EdgeDetect(Convolve):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -477,7 +515,8 @@ class EdgeDetect(Convolve):
 
     """
     def __init__(self, alpha=(0.0, 0.75),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -486,7 +525,8 @@ class EdgeDetect(Convolve):
 
         super(EdgeDetect, self).__init__(
             matrix=matrix_gen,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class _EdgeDetectMatrixGenerator(object):
@@ -569,8 +609,16 @@ class DirectedEdgeDetect(Convolve):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -600,7 +648,8 @@ class DirectedEdgeDetect(Convolve):
 
     """
     def __init__(self, alpha=(0.0, 0.75), direction=(0.0, 1.0),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
             value_range=(0, 1.0), tuple_to_uniform=True, list_to_choice=True)
@@ -613,7 +662,8 @@ class DirectedEdgeDetect(Convolve):
 
         super(DirectedEdgeDetect, self).__init__(
             matrix=matrix_gen,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class _DirectedEdgeDetectMatrixGenerator(object):

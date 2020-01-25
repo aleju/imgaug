@@ -86,8 +86,16 @@ class FastSnowyLandscape(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -127,9 +135,11 @@ class FastSnowyLandscape(meta.Augmenter):
     def __init__(self, lightness_threshold=(100, 255),
                  lightness_multiplier=(1.0, 4.0),
                  from_colorspace=colorlib.CSPACE_RGB,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(FastSnowyLandscape, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.lightness_threshold = iap.handle_continuous_param(
             lightness_threshold, "lightness_threshold",
@@ -320,8 +330,16 @@ class CloudLayer(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     """
 
@@ -329,9 +347,11 @@ class CloudLayer(meta.Augmenter):
                  intensity_coarse_scale, alpha_min, alpha_multiplier,
                  alpha_size_px_max, alpha_freq_exponent, sparsity,
                  density_multiplier,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(CloudLayer, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.intensity_mean = iap.handle_continuous_param(
             intensity_mean, "intensity_mean")
         self.intensity_freq_exponent = intensity_freq_exponent
@@ -515,8 +535,16 @@ class Clouds(meta.SomeOf):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -527,7 +555,9 @@ class Clouds(meta.SomeOf):
 
     """
 
-    def __init__(self, seed=None, name=None, **old_kwargs):
+    def __init__(self,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         layers = [
             CloudLayer(
                 intensity_mean=(196, 255),
@@ -540,7 +570,8 @@ class Clouds(meta.SomeOf):
                 sparsity=(0.8, 1.0),
                 density_multiplier=(0.5, 1.0),
                 seed=seed,
-                **old_kwargs
+                random_state=random_state,
+                deterministic=deterministic
             ),
             CloudLayer(
                 intensity_mean=(196, 255),
@@ -553,7 +584,8 @@ class Clouds(meta.SomeOf):
                 sparsity=(1.0, 1.4),
                 density_multiplier=(0.8, 1.5),
                 seed=seed,
-                **old_kwargs
+                random_state=random_state,
+                deterministic=deterministic
             )
         ]
 
@@ -561,7 +593,8 @@ class Clouds(meta.SomeOf):
             (1, 2),
             children=layers,
             random_order=False,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 # TODO add vertical gradient alpha to have fog only at skylevel/groundlevel
@@ -605,8 +638,16 @@ class Fog(CloudLayer):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -617,7 +658,9 @@ class Fog(CloudLayer):
 
     """
 
-    def __init__(self, seed=None, name=None, **old_kwargs):
+    def __init__(self,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(Fog, self).__init__(
             intensity_mean=(220, 255),
             intensity_freq_exponent=(-2.0, -1.5),
@@ -628,7 +671,8 @@ class Fog(CloudLayer):
             alpha_freq_exponent=(-4.0, -2.0),
             sparsity=0.9,
             density_multiplier=(0.4, 0.9),
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 # TODO add examples and add these to the overview docs
@@ -788,17 +832,27 @@ class SnowflakesLayer(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     """
 
     def __init__(self, density, density_uniformity, flake_size,
                  flake_size_uniformity, angle, speed, blur_sigma_fraction,
                  blur_sigma_limits=(0.5, 3.75),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(SnowflakesLayer, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.density = density
         self.density_uniformity = iap.handle_continuous_param(
             density_uniformity, "density_uniformity", value_range=(0.0, 1.0))
@@ -1109,8 +1163,16 @@ class Snowflakes(meta.SomeOf):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1132,7 +1194,8 @@ class Snowflakes(meta.SomeOf):
     def __init__(self, density=(0.005, 0.075), density_uniformity=(0.3, 0.9),
                  flake_size=(0.2, 0.7), flake_size_uniformity=(0.4, 0.8),
                  angle=(-30, 30), speed=(0.007, 0.03),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         layer = SnowflakesLayer(
             density=density,
             density_uniformity=density_uniformity,
@@ -1142,14 +1205,16 @@ class Snowflakes(meta.SomeOf):
             speed=speed,
             blur_sigma_fraction=(0.0001, 0.001),
             seed=seed,
-            **old_kwargs
+            random_state=random_state,
+            deterministic=deterministic
         )
 
         super(Snowflakes, self).__init__(
             (1, 3),
             children=[layer.deepcopy() for _ in range(3)],
             random_order=False,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class RainLayer(SnowflakesLayer):
@@ -1207,20 +1272,30 @@ class RainLayer(SnowflakesLayer):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     """
 
     def __init__(self, density, density_uniformity, drop_size,
                  drop_size_uniformity, angle, speed, blur_sigma_fraction,
                  blur_sigma_limits=(0.5, 3.75),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(RainLayer, self).__init__(
             density, density_uniformity, drop_size,
             drop_size_uniformity, angle, speed, blur_sigma_fraction,
             blur_sigma_limits=blur_sigma_limits,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
     @classmethod
     def _blur(cls, noise, sigma):
@@ -1303,8 +1378,16 @@ class Rain(meta.SomeOf):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1326,7 +1409,8 @@ class Rain(meta.SomeOf):
     def __init__(self, nb_iterations=(1, 3),
                  drop_size=(0.01, 0.02),
                  speed=(0.04, 0.20),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         layer = RainLayer(
             density=(0.03, 0.14),
             density_uniformity=(0.8, 1.0),
@@ -1336,11 +1420,13 @@ class Rain(meta.SomeOf):
             speed=speed,
             blur_sigma_fraction=(0.001, 0.001),
             seed=seed,
-            **old_kwargs
+            random_state=random_state,
+            deterministic=deterministic
         )
 
         super(Rain, self).__init__(
             nb_iterations,
             children=[layer.deepcopy() for _ in range(3)],
             random_order=False,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)

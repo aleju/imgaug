@@ -330,8 +330,16 @@ class BlendAlpha(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -385,9 +393,11 @@ class BlendAlpha(meta.Augmenter):
 
     def __init__(self, factor=(0.0, 1.0), foreground=None, background=None,
                  per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlpha, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.factor = iap.handle_continuous_param(
             factor, "factor", value_range=(0, 1.0), tuple_to_uniform=True,
@@ -548,8 +558,16 @@ class BlendAlphaMask(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -580,9 +598,11 @@ class BlendAlphaMask(meta.Augmenter):
 
     def __init__(self, mask_generator,
                  foreground=None, background=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlphaMask, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.mask_generator = mask_generator
 
@@ -844,8 +864,16 @@ class BlendAlphaElementwise(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -902,15 +930,16 @@ class BlendAlphaElementwise(BlendAlphaMask):
 
     def __init__(self, factor=(0.0, 1.0), foreground=None, background=None,
                  per_channel=False,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         factor = iap.handle_continuous_param(
             factor, "factor", value_range=(0, 1.0), tuple_to_uniform=True,
             list_to_choice=True)
         mask_gen = StochasticParameterMaskGen(factor, per_channel)
         super(BlendAlphaElementwise, self).__init__(
             mask_gen, foreground, background,
-            seed=seed, name=name, **old_kwargs
-        )
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
     @property
     def factor(self):
@@ -1045,8 +1074,16 @@ class BlendAlphaSimplexNoise(BlendAlphaElementwise):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1091,7 +1128,8 @@ class BlendAlphaSimplexNoise(BlendAlphaElementwise):
                  size_px_max=(2, 16), upscale_method=None,
                  iterations=(1, 3), aggregation_method="max",
                  sigmoid=True, sigmoid_thresh=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         upscale_method_default = iap.Choice(["nearest", "linear", "cubic"],
                                             p=[0.05, 0.6, 0.35])
         sigmoid_thresh_default = iap.Normal(0.0, 5.0)
@@ -1125,8 +1163,8 @@ class BlendAlphaSimplexNoise(BlendAlphaElementwise):
         super(BlendAlphaSimplexNoise, self).__init__(
             factor=noise, foreground=foreground, background=background,
             per_channel=per_channel,
-            seed=seed, name=name, **old_kwargs
-        )
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaFrequencyNoise(BlendAlphaElementwise):
@@ -1274,8 +1312,16 @@ class BlendAlphaFrequencyNoise(BlendAlphaElementwise):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1329,7 +1375,8 @@ class BlendAlphaFrequencyNoise(BlendAlphaElementwise):
                  per_channel=False, size_px_max=(4, 16), upscale_method=None,
                  iterations=(1, 3), aggregation_method=["avg", "max"],
                  sigmoid=0.5, sigmoid_thresh=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         # pylint: disable=dangerous-default-value
         upscale_method_default = iap.Choice(["nearest", "linear", "cubic"],
                                             p=[0.05, 0.6, 0.35])
@@ -1365,8 +1412,8 @@ class BlendAlphaFrequencyNoise(BlendAlphaElementwise):
         super(BlendAlphaFrequencyNoise, self).__init__(
             factor=noise, foreground=foreground, background=background,
             per_channel=per_channel,
-            seed=seed, name=name, **old_kwargs
-        )
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaSomeColors(BlendAlphaMask):
@@ -1440,8 +1487,16 @@ class BlendAlphaSomeColors(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1487,7 +1542,8 @@ class BlendAlphaSomeColors(BlendAlphaMask):
                  nb_bins=(5, 15), smoothness=(0.1, 0.3),
                  alpha=[0.0, 1.0], rotation_deg=(0, 360),
                  from_colorspace="RGB",
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         # pylint: disable=dangerous-default-value
         super(BlendAlphaSomeColors, self).__init__(
             SomeColorsMaskGen(
@@ -1499,7 +1555,8 @@ class BlendAlphaSomeColors(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
@@ -1564,8 +1621,16 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1598,7 +1663,8 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
     def __init__(self, foreground=None, background=None,
                  min_value=(0.0, 0.2), max_value=(0.8, 1.0),
                  start_at=(0.0, 0.2), end_at=(0.8, 1.0),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlphaHorizontalLinearGradient, self).__init__(
             HorizontalLinearGradientMaskGen(
                 min_value=min_value,
@@ -1608,7 +1674,8 @@ class BlendAlphaHorizontalLinearGradient(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
@@ -1673,8 +1740,16 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1714,7 +1789,8 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
     def __init__(self, foreground=None, background=None,
                  min_value=(0.0, 0.2), max_value=(0.8, 1.0),
                  start_at=(0.0, 0.2), end_at=(0.8, 1.0),
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlphaVerticalLinearGradient, self).__init__(
             VerticalLinearGradientMaskGen(
                 min_value=min_value,
@@ -1724,7 +1800,8 @@ class BlendAlphaVerticalLinearGradient(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaRegularGrid(BlendAlphaMask):
@@ -1798,8 +1875,16 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1829,7 +1914,8 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
     def __init__(self, nb_rows, nb_cols,
                  foreground=None, background=None,
                  alpha=[0.0, 1.0],
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         # pylint: disable=dangerous-default-value
         super(BlendAlphaRegularGrid, self).__init__(
             RegularGridMaskGen(
@@ -1839,7 +1925,8 @@ class BlendAlphaRegularGrid(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaCheckerboard(BlendAlphaMask):
@@ -1901,8 +1988,16 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -1919,7 +2014,8 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
 
     def __init__(self, nb_rows, nb_cols,
                  foreground=None, background=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlphaCheckerboard, self).__init__(
             CheckerboardMaskGen(
                 nb_rows=nb_rows,
@@ -1927,7 +2023,8 @@ class BlendAlphaCheckerboard(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaSegMapClassIds(BlendAlphaMask):
@@ -1995,8 +2092,16 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -2038,7 +2143,8 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
                  class_ids,
                  foreground=None, background=None,
                  nb_sample_classes=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlphaSegMapClassIds, self).__init__(
             SegMapClassIdsMaskGen(
                 class_ids=class_ids,
@@ -2046,7 +2152,8 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 class BlendAlphaBoundingBoxes(BlendAlphaMask):
@@ -2109,8 +2216,16 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -2154,7 +2269,8 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
                  labels,
                  foreground=None, background=None,
                  nb_sample_labels=None,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(BlendAlphaBoundingBoxes, self).__init__(
             BoundingBoxesMaskGen(
                 labels=labels,
@@ -2162,7 +2278,8 @@ class BlendAlphaBoundingBoxes(BlendAlphaMask):
             ),
             foreground=foreground,
             background=background,
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
 
 @six.add_metaclass(ABCMeta)
@@ -3485,14 +3602,14 @@ class InvertMaskGen(IBatchwiseMaskGenerator):
                        "Parameter 'first' was renamed to 'foreground'. "
                        "Parameter 'second' was renamed to 'background'.")
 def Alpha(factor=0, first=None, second=None, per_channel=False,
-          seed=None, name=None, **old_kwargs):
+          seed=None, name=None, random_state="deprecated", deterministic="deprecated"):
     # pylint: disable=invalid-name
     return BlendAlpha(
         factor=factor,
         foreground=first,
         background=second,
         per_channel=per_channel,
-        seed=seed, name=name, **old_kwargs)
+        seed=seed, name=name, random_state=random_state, deterministic=deterministic)
 
 
 @ia.deprecated(alt_func="AlphaElementwise",
@@ -3502,7 +3619,7 @@ def Alpha(factor=0, first=None, second=None, per_channel=False,
                        "Parameter 'first' was renamed to 'foreground'. "
                        "Parameter 'second' was renamed to 'background'.")
 def AlphaElementwise(factor=0, first=None, second=None, per_channel=False,
-                     seed=None, name=None, **old_kwargs):
+                     seed=None, name=None, random_state="deprecated", deterministic="deprecated"):
     """See :class:`BlendAlpha`."""
     # pylint: disable=invalid-name
     return BlendAlphaElementwise(
@@ -3510,7 +3627,7 @@ def AlphaElementwise(factor=0, first=None, second=None, per_channel=False,
         foreground=first,
         background=second,
         per_channel=per_channel,
-        seed=seed, name=name, **old_kwargs)
+        seed=seed, name=name, random_state=random_state, deterministic=deterministic)
 
 
 @ia.deprecated(alt_func="BlendAlphaSimplexNoise",
@@ -3523,7 +3640,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
                       size_px_max=(2, 16), upscale_method=None,
                       iterations=(1, 3), aggregation_method="max",
                       sigmoid=True, sigmoid_thresh=None,
-                      seed=None, name=None, **old_kwargs):
+                      seed=None, name=None, random_state="deprecated", deterministic="deprecated"):
     """See :class:`BlendAlphaSimplexNoise`."""
     # pylint: disable=invalid-name
     return BlendAlphaSimplexNoise(
@@ -3536,7 +3653,7 @@ def SimplexNoiseAlpha(first=None, second=None, per_channel=False,
         aggregation_method=aggregation_method,
         sigmoid=sigmoid,
         sigmoid_thresh=sigmoid_thresh,
-        seed=seed, name=name, **old_kwargs)
+        seed=seed, name=name, random_state=random_state, deterministic=deterministic)
 
 
 @ia.deprecated(alt_func="BlendAlphaFrequencyNoise",
@@ -3550,7 +3667,7 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None,
                         upscale_method=None,
                         iterations=(1, 3), aggregation_method=["avg", "max"],
                         sigmoid=0.5, sigmoid_thresh=None,
-                        seed=None, name=None, **old_kwargs):
+                        seed=None, name=None, random_state="deprecated", deterministic="deprecated"):
     """See :class:`BlendAlphaFrequencyNoise`."""
     # pylint: disable=invalid-name, dangerous-default-value
     return BlendAlphaFrequencyNoise(
@@ -3564,4 +3681,4 @@ def FrequencyNoiseAlpha(exponent=(-4, 4), first=None, second=None,
         aggregation_method=aggregation_method,
         sigmoid=sigmoid,
         sigmoid_thresh=sigmoid_thresh,
-        seed=seed, name=name, **old_kwargs)
+        seed=seed, name=name, random_state=random_state, deterministic=deterministic)

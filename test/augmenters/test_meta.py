@@ -2126,11 +2126,6 @@ class TestAugmenter(unittest.TestCase):
         aug = _DummyAugmenter(seed=123)
         assert aug.random_state.equals(iarandom.RNG(123))
 
-    def test___init__unknown_parameter(self):
-        with self.assertRaises(AssertionError) as ctx:
-            _aug = _DummyAugmenter(foo="bar")
-            assert "unknown parameter" in str(ctx.exception)
-
     def test_augment_images_called_probably_with_single_image(self):
         aug = _DummyAugmenter()
         with warnings.catch_warnings(record=True) as caught_warnings:
