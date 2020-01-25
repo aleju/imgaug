@@ -2225,8 +2225,8 @@ class Affine(geometric.Affine):
     def _augment_batch_(self, batch, random_state, parents, hooks):
         cols = batch.get_column_names()
         assert len(cols) == 0 or (len(cols) == 1 and "images" in cols), (
-            "PILAffine can currently only process image data. Got a batch "
-            "containing: %s. Use imgaug.augmenters.geometric.Affine for "
+            "pillike.Affine can currently only process image data. Got a "
+            "batch containing: %s. Use imgaug.augmenters.geometric.Affine for "
             "batches containing non-image data." % (", ".join(cols),))
 
         return super(Affine, self)._augment_batch_(
