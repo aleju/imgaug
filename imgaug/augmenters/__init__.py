@@ -1,6 +1,7 @@
 """Combination of all augmenters, related classes and related functions."""
 # pylint: disable=unused-import
 from __future__ import absolute_import
+from imgaug.augmenters.base import *
 from imgaug.augmenters.arithmetic import *
 from imgaug.augmenters.artistic import *
 from imgaug.augmenters.blend import *
