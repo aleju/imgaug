@@ -6707,6 +6707,17 @@ class TestKeepSizeByResize(unittest.TestCase):
         assert observed.dtype.type == np.uint8
         assert np.allclose(observed, expected)
 
+    def test_images_input_is_single_array(self):
+        # input is single array, children turn in into list of arrays()
+        # => must be combined to a single output array
+        images = np.zeros((10, 100, 100), dtype=np.uint8)
+        aug = iaa.KeepSizeByResize(iaa.Crop((0, 40), keep_size=False))
+
+        images_aug = aug(images=images)
+
+        assert images.dtype.name == "uint8"
+        assert images.shape == (10, 100, 100)
+
     def test_keypoints_interpolation_is_cubic(self):
         aug = iaa.KeepSizeByResize(self.children, interpolation="cubic")
         kpsoi = self.kpsoi

@@ -4479,7 +4479,9 @@ class KeepSizeByResize(meta.Augmenter):
             # note here that NO_RESIZE can have led to different shapes
             nb_shapes = len({image.shape for image in result})
             if nb_shapes == 1:
-                result = np.array(result, dtype=images.dtype)
+                # images.dtype does not necessarily work anymore, children
+                # might have turned 'images' into list
+                result = np.array(result, dtype=result[0].dtype)
 
         return result
 
