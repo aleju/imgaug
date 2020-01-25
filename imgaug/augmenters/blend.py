@@ -2002,6 +2002,7 @@ class BlendAlphaSegMapClassIds(BlendAlphaMask):
     --------
     >>> import imgaug.augmenters as iaa
     >>> aug = iaa.BlendAlphaSegMapClassIds(
+    >>>     [1, 3],
     >>>     foreground=iaa.AddToHue((-100, 100)))
 
     Create an augmenter that randomizes the hue wherever the segmentation maps
