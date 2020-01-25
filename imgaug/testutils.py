@@ -10,6 +10,8 @@ import copy
 import warnings
 import tempfile
 import shutil
+import re
+import sys
 
 import numpy as np
 import six.moves as sm
@@ -191,3 +193,151 @@ class TemporaryDirectory(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         shutil.rmtree(self.name)
+
+
+# Copied from
+# https://github.com/python/cpython/blob/master/Lib/unittest/case.py
+# at commit 293dd23 (Nov 19, 2019).
+# Required at least to enable assertWarns() in python <3.2.
+def _is_subtype(expected, basetype):
+    if isinstance(expected, tuple):
+        return all(_is_subtype(e, basetype) for e in expected)
+    return isinstance(expected, type) and issubclass(expected, basetype)
+
+
+# Copied from
+# https://github.com/python/cpython/blob/master/Lib/unittest/case.py
+# at commit 293dd23 (Nov 19, 2019).
+# Required at least to enable assertWarns() in python <3.2.
+class _BaseTestCaseContext:
+    def __init__(self, test_case):
+        self.test_case = test_case
+
+    def _raiseFailure(self, standardMsg):
+        # pylint: disable=invalid-name, protected-access, no-member
+        msg = self.test_case._formatMessage(self.msg, standardMsg)
+        raise self.test_case.failureException(msg)
+
+
+# Copied from
+# https://github.com/python/cpython/blob/master/Lib/unittest/case.py
+# at commit 293dd23 (Nov 19, 2019).
+# Required at least to enable assertWarns() in python <3.2.
+class _AssertRaisesBaseContext(_BaseTestCaseContext):
+
+    def __init__(self, expected, test_case, expected_regex=None):
+        _BaseTestCaseContext.__init__(self, test_case)
+        self.expected = expected
+        self.test_case = test_case
+        if expected_regex is not None:
+            expected_regex = re.compile(expected_regex)
+        self.expected_regex = expected_regex
+        self.obj_name = None
+        self.msg = None
+
+    # pylint: disable=inconsistent-return-statements
+    def handle(self, name, args, kwargs):
+        """
+        If args is empty, assertRaises/Warns is being used as a
+        context manager, so check for a 'msg' kwarg and return self.
+        If args is not empty, call a callable passing positional and keyword
+        arguments.
+        """
+        # pylint: disable=no-member, self-cls-assignment, not-context-manager
+        try:
+            if not _is_subtype(self.expected, self._base_type):
+                raise TypeError('%s() arg 1 must be %s' %
+                                (name, self._base_type_str))
+            if not args:
+                self.msg = kwargs.pop('msg', None)
+                if kwargs:
+                    raise TypeError('%r is an invalid keyword argument for '
+                                    'this function' % (next(iter(kwargs)),))
+                return self
+
+            callable_obj = args[0]
+            args = args[1:]
+
+            try:
+                self.obj_name = callable_obj.__name__
+            except AttributeError:
+                self.obj_name = str(callable_obj)
+            with self:
+                callable_obj(*args, **kwargs)
+        finally:
+            # bpo-23890: manually break a reference cycle
+            self = None
+    # pylint: enable=inconsistent-return-statements
+
+
+# Copied from
+# https://github.com/python/cpython/blob/master/Lib/unittest/case.py
+# at commit 293dd23 (Nov 19, 2019).
+# Required at least to enable assertWarns() in python <3.2.
+class _AssertWarnsContext(_AssertRaisesBaseContext):
+    """A context manager used to implement TestCase.assertWarns* methods."""
+
+    _base_type = Warning
+    _base_type_str = 'a warning type or tuple of warning types'
+
+    def __enter__(self):
+        # The __warningregistry__'s need to be in a pristine state for tests
+        # to work properly.
+        # pylint: disable=invalid-name, attribute-defined-outside-init
+        for v in sys.modules.values():
+            if getattr(v, '__warningregistry__', None):
+                v.__warningregistry__ = {}
+        self.warnings_manager = warnings.catch_warnings(record=True)
+        self.warnings = self.warnings_manager.__enter__()
+        warnings.simplefilter("always", self.expected)
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        # pylint: disable=invalid-name, attribute-defined-outside-init
+        self.warnings_manager.__exit__(exc_type, exc_value, tb)
+        if exc_type is not None:
+            # let unexpected exceptions pass through
+            return
+        try:
+            exc_name = self.expected.__name__
+        except AttributeError:
+            exc_name = str(self.expected)
+        first_matching = None
+        for m in self.warnings:
+            w = m.message
+            if not isinstance(w, self.expected):
+                continue
+            if first_matching is None:
+                first_matching = w
+            if (self.expected_regex is not None and
+                    not self.expected_regex.search(str(w))):
+                continue
+            # store warning for later retrieval
+            self.warning = w
+            self.filename = m.filename
+            self.lineno = m.lineno
+            return
+        # Now we simply try to choose a helpful failure message
+        if first_matching is not None:
+            self._raiseFailure('"{}" does not match "{}"'.format(
+                self.expected_regex.pattern, str(first_matching)))
+        if self.obj_name:
+            self._raiseFailure("{} not triggered by {}".format(exc_name,
+                                                               self.obj_name))
+        else:
+            self._raiseFailure("{} not triggered".format(exc_name))
+
+
+# Partially copied from
+# https://github.com/python/cpython/blob/master/Lib/unittest/case.py
+# at commit 293dd23 (Nov 19, 2019).
+# Required at least to enable assertWarns() in python <3.2.
+def assertWarns(testcase, expected_warning, *args, **kwargs):
+    """Context with same functionality as ``assertWarns`` in ``unittest``.
+
+    Note that ``assertWarns`` is only available in python 3.2+.
+
+    """
+    # pylint: disable=invalid-name
+    context = _AssertWarnsContext(expected_warning, testcase)
+    return context.handle('assertWarns', args, kwargs)

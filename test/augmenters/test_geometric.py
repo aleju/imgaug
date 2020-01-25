@@ -28,7 +28,7 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.testutils import (
     array_equal_lists, keypoints_equal, reseed, assert_cbaois_equal,
-    runtest_pickleable_uint8_img)
+    runtest_pickleable_uint8_img, assertWarns)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters.geometric as geometriclib
@@ -2984,34 +2984,38 @@ class TestAffine_other_dtypes(unittest.TestCase):
 
 class TestAffine_other(unittest.TestCase):
     def test_unusual_channel_numbers(self):
-        nb_channels_lst = [4, 5, 512, 513]
-        orders = [0, 1, 3]
-        backends = ["auto", "skimage", "cv2"]
-        for nb_channels, order, backend in itertools.product(nb_channels_lst,
-                                                             orders, backends):
-            with self.subTest(nb_channels=nb_channels, order=order,
-                              backend=backend):
-                aug = iaa.Affine(translate_px={"x": -1}, mode="constant",
-                                 cval=255, order=order, backend=backend)
+        with assertWarns(self, iaa.SuspiciousSingleImageShapeWarning):
+            nb_channels_lst = [4, 5, 512, 513]
+            orders = [0, 1, 3]
+            backends = ["auto", "skimage", "cv2"]
+            gen = itertools.product(nb_channels_lst, orders, backends)
+            for nb_channels, order, backend in gen:
+                with self.subTest(nb_channels=nb_channels, order=order,
+                                  backend=backend):
+                    aug = iaa.Affine(translate_px={"x": -1}, mode="constant",
+                                     cval=255, order=order, backend=backend)
 
-                image = np.full((3, 3, nb_channels), 128, dtype=np.uint8)
-                heatmap_arr = np.full((3, 3, nb_channels), 0.5,
-                                      dtype=np.float32)
-                heatmap = ia.HeatmapsOnImage(heatmap_arr, shape=image.shape)
+                    image = np.full((3, 3, nb_channels), 128, dtype=np.uint8)
+                    heatmap_arr = np.full((3, 3, nb_channels), 0.5,
+                                          dtype=np.float32)
+                    heatmap = ia.HeatmapsOnImage(heatmap_arr, shape=image.shape)
 
-                image_aug, heatmap_aug = aug(image=image, heatmaps=heatmap)
-                hm_aug_arr = heatmap_aug.arr_0to1
+                    image_aug, heatmap_aug = aug(image=image, heatmaps=heatmap)
+                    hm_aug_arr = heatmap_aug.arr_0to1
 
-                assert image_aug.shape == (3, 3, nb_channels)
-                assert heatmap_aug.arr_0to1.shape == (3, 3, nb_channels)
-                assert heatmap_aug.shape == image.shape
-                assert np.allclose(image_aug[:, 0:2, :], 128, rtol=0, atol=2)
-                assert np.allclose(image_aug[:, 2:3, 0:3], 255, rtol=0, atol=2)
-                assert np.allclose(image_aug[:, 2:3, 3:], 255, rtol=0, atol=2)
-                assert np.allclose(hm_aug_arr[:, 0:2, :], 0.5, rtol=0,
-                                   atol=0.025)
-                assert np.allclose(hm_aug_arr[:, 2:3, :], 0.0, rtol=0,
-                                   atol=0.025)
+                    assert image_aug.shape == (3, 3, nb_channels)
+                    assert heatmap_aug.arr_0to1.shape == (3, 3, nb_channels)
+                    assert heatmap_aug.shape == image.shape
+                    assert np.allclose(image_aug[:, 0:2, :], 128, rtol=0,
+                                       atol=2)
+                    assert np.allclose(image_aug[:, 2:3, 0:3], 255, rtol=0,
+                                       atol=2)
+                    assert np.allclose(image_aug[:, 2:3, 3:], 255, rtol=0,
+                                       atol=2)
+                    assert np.allclose(hm_aug_arr[:, 0:2, :], 0.5, rtol=0,
+                                       atol=0.025)
+                    assert np.allclose(hm_aug_arr[:, 2:3, :], 0.0, rtol=0,
+                                       atol=0.025)
 
     def test_zero_sized_axes(self):
         shapes = [
@@ -9305,24 +9309,25 @@ class TestWithPolarWarping(unittest.TestCase):
         assert overlap_2_add < 0.01
 
     def test_unusual_channel_numbers(self):
-        shapes = [
-            (5, 5, 4),
-            (5, 5, 5),
-            (5, 5, 512),
-            (5, 5, 513)
-        ]
+        with assertWarns(self, iaa.SuspiciousSingleImageShapeWarning):
+            shapes = [
+                (5, 5, 4),
+                (5, 5, 5),
+                (5, 5, 512),
+                (5, 5, 513)
+            ]
 
-        for shape in shapes:
-            with self.subTest(shape=shape):
-                image = np.zeros(shape, dtype=np.uint8)
-                aug = iaa.WithPolarWarping(iaa.Noop())
+            for shape in shapes:
+                with self.subTest(shape=shape):
+                    image = np.zeros(shape, dtype=np.uint8)
+                    aug = iaa.WithPolarWarping(iaa.Noop())
 
-                image_aug = aug(image=image)
+                    image_aug = aug(image=image)
 
-                shape_expected = tuple([shape[1], shape[0]] + list(shape[2:]))
-                assert np.all(image_aug == 0)
-                assert image_aug.dtype.name == "uint8"
-                assert image_aug.shape == shape_expected
+                    shape_expected = tuple([shape[1], shape[0]] + list(shape[2:]))
+                    assert np.all(image_aug == 0)
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape_expected
 
     def test_zero_sized_axes(self):
         shapes = [
@@ -9346,9 +9351,9 @@ class TestWithPolarWarping(unittest.TestCase):
                 aug = iaa.WithPolarWarping(iaa.Noop())
 
                 aug_det = aug.to_deterministic()
-                image_aug = aug(image=image)
-                kpsoi_aug = aug(keypoints=kpsoi)
-                sm_aug = aug(segmentation_maps=sm)
+                image_aug = aug_det(image=image)
+                kpsoi_aug = aug_det(keypoints=kpsoi)
+                sm_aug = aug_det(segmentation_maps=sm)
 
                 assert image_aug.dtype.name == "uint8"
                 assert image_aug.shape == shape

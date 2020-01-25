@@ -32,7 +32,7 @@ from imgaug import random as iarandom
 from imgaug.augmenters import contrast as contrast_lib
 from imgaug.augmentables import batches as iabatches
 from imgaug.testutils import (ArgCopyingMagicMock, keypoints_equal, reseed,
-                              runtest_pickleable_uint8_img)
+                              runtest_pickleable_uint8_img, assertWarns)
 from imgaug.augmentables.batches import _BatchInAugmentation
 
 
@@ -1058,7 +1058,8 @@ class TestAllChannelsCLAHE(unittest.TestCase):
         img1000d[0, 1, :] = 100
         img1000d[0, 2, :] = 110
         for _ in sm.xrange(100):
-            img_aug = aug.augment_image(img1000d)
+            with assertWarns(self, iaa.SuspiciousSingleImageShapeWarning):
+                img_aug = aug.augment_image(img1000d)
             assert img_aug.dtype.name == "uint8"
 
             maxs = np.max(img_aug, axis=(0, 1))

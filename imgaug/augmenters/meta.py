@@ -38,6 +38,7 @@ from imgaug.augmentables.batches import (Batch, UnnormalizedBatch,
                                          _BatchInAugmentation)
 from .. import parameters as iap
 from .. import random as iarandom
+from . import base as iabase
 
 
 @ia.deprecated("imgaug.dtypes.clip_")
@@ -758,9 +759,15 @@ class Augmenter(object):
             The corresponding augmented image.
 
         """
+        assert ia.is_np_array(image), (
+            "Expected to get a single numpy array of shape (H,W) or (H,W,C) "
+            "for `image`. Got instead type %d. Use `augment_images(images)` "
+            "to augment a list of multiple images." % (
+                type(image).__name__),)
         assert image.ndim in [2, 3], (
             "Expected image to have shape (height, width, [channels]), "
             "got shape %s." % (image.shape,))
+        iabase._warn_on_suspicious_single_image_shape(image)
         return self.augment_images([image], hooks=hooks)[0]
 
     def augment_images(self, images, parents=None, hooks=None):
@@ -811,19 +818,7 @@ class Augmenter(object):
         gaussian blurring to them.
 
         """
-        # TODO place that warning somehow in augment_batch()
-        if ia.is_np_array(images):
-            if images.ndim == 3 and images.shape[-1] in [1, 3]:
-                ia.warn(
-                    "You provided a numpy array of shape %s as input to "
-                    "augment_images(), which was interpreted as "
-                    "(N, H, W). The last dimension however has value 1 or "
-                    "3, which indicates that you provided a single image "
-                    "with shape (H, W, C) instead. If that is the case, "
-                    "you should use augment_image(image) or "
-                    "augment_images([image]), otherwise you will not get "
-                    "the expected augmentations." % (images.shape,))
-
+        iabase._warn_on_suspicious_multi_image_shapes(images)
         return self.augment_batch_(
             UnnormalizedBatch(images=images),
             parents=parents,
@@ -1923,8 +1918,10 @@ class Augmenter(object):
                 "You may only provide the argument 'image' OR 'images' to "
                 "augment(), not both of them.")
             images = [kwargs["image"]]
+            iabase._warn_on_suspicious_single_image_shape(images[0])
         else:
             images = kwargs.get("images", None)
+            iabase._warn_on_suspicious_multi_image_shapes(images)
 
         # Decide whether to return the final tuple in the order of the kwargs
         # keys or the default order based on python version. Only 3.6+ uses

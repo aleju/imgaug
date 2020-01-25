@@ -24,7 +24,7 @@ import PIL.ImageFilter
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import random as iarandom
-from imgaug.testutils import reseed, runtest_pickleable_uint8_img
+from imgaug.testutils import reseed, runtest_pickleable_uint8_img, assertWarns
 
 
 def _test_shape_hw(func):
@@ -1059,7 +1059,8 @@ class TestAutocontrast(unittest.TestCase):
         mock_auto.return_value = image[..., 0]
         aug = iaa.pillike.Autocontrast((0, 30), per_channel=True)
 
-        _image_aug = aug(image=image)
+        with assertWarns(self, iaa.SuspiciousSingleImageShapeWarning):
+            _image_aug = aug(image=image)
 
         assert mock_auto.call_count == 100
         cutoffs = []
@@ -1084,7 +1085,8 @@ class TestAutocontrast(unittest.TestCase):
         image = image.astype(np.uint8)
         aug = iaa.pillike.Autocontrast(10, per_channel=True)
 
-        image_aug = aug(image=image)
+        with assertWarns(self, iaa.SuspiciousSingleImageShapeWarning):
+            image_aug = aug(image=image)
 
         assert np.min(image_aug) < 50
         assert np.max(image_aug) > 150
