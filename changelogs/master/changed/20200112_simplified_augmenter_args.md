@@ -1,4 +1,4 @@
-# Simplified Standard Parameters of Augmenters #567
+# Simplified Standard Parameters of Augmenters #567 #594
 
 Changed the standard parameters shared by all augmenters to a
 reduced and more self-explanatory set. Previously, all augmenters
@@ -26,6 +26,8 @@ The old parameter `random_state` is still accepted, but will
 likely be deprecated in the future.
 
 **[breaking]** This patch breaks if one relied on the order of
-`name` and `random_state` instead of their names. These parameters
-are now in inverted order, i.e. `(..., seed=None, name=None, ...)`
-as seeds are much more commonly used than names.
+`name`, `random_state` and `deterministic`. The new order is now
+`seed=..., name=..., random_state=..., deterministic=...` (with the
+latter two parameters being outdated or deprecated)
+as opposed to previously
+`name=..., deterministic=..., random_state=...`.
