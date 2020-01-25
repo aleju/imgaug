@@ -34,3 +34,24 @@ def _warn_on_suspicious_multi_image_shapes(images):
                 "will be interpreted as multiple images of shape (H, W) "
                 "during augmentation." % (images.shape,),
                 category=SuspiciousMultiImageShapeWarning)
+
+
+def _warn_on_suspicious_single_image_shape(image):
+    if image is None:
+        return
+
+    # Check if it looks like (N, H, W) instead of (H, W, C).
+    # We don't react to (1, 1, C) though, mostly because that is used in many
+    # unittests.
+    if image.ndim == 3 and image.shape[-1] >= 32 and image.shape[0:2] != (1, 1):
+        ia.warn(
+            "You provided a numpy array of shape %s as a "
+            "single-image augmentation input, which was interpreted as "
+            "(H, W, C). The last dimension however has a size of >=32, "
+            "which indicates that you provided a multi-image array "
+            "with shape (N, H, W) instead. If that is the case, "
+            "you should use e.g. augmenter(imageS=<your input>) or "
+            "augment_imageS(<your input>). Otherwise your multi-image "
+            "input will be interpreted as a single image during "
+            "augmentation." % (image.shape,),
+            category=SuspiciousSingleImageShapeWarning)
