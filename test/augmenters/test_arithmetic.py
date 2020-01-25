@@ -2450,12 +2450,9 @@ class TestCoarseDropout(unittest.TestCase):
         assert got_exception
 
     def test___init___size_px_and_size_percent_both_none(self):
-        got_exception = False
-        try:
-            _ = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
-        except Exception:
-            got_exception = True
-        assert got_exception
+        aug = iaa.CoarseDropout(p=0.5, size_px=None, size_percent=None)
+        assert np.isclose(aug.mul.size_px.a.value, 3)
+        assert np.isclose(aug.mul.size_px.b.value, 8)
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
@@ -2475,9 +2472,9 @@ class TestDropout2d(unittest.TestCase):
         reseed()
 
     def test___init___defaults(self):
-        aug = iaa.Dropout2d(p=0)
+        aug = iaa.Dropout2d()
         assert isinstance(aug.p, iap.Binomial)
-        assert np.isclose(aug.p.p.value, 1.0)
+        assert np.isclose(aug.p.p.value, 1-0.1)
         assert aug.nb_keep_channels == 1
 
     def test___init___p_is_float(self):
@@ -4590,12 +4587,10 @@ class TestCoarseSaltAndPepper(unittest.TestCase):
             got_exception = True
         assert got_exception
 
-        got_exception = False
-        try:
-            _ = iaa.CoarseSaltAndPepper(p=0.5, size_px=None, size_percent=None)
-        except Exception:
-            got_exception = True
-        assert got_exception
+    def test___init___size_px_and_size_percent_both_none(self):
+        aug = iaa.CoarseSaltAndPepper(p=0.5, size_px=None, size_percent=None)
+        assert np.isclose(aug.mask.size_px.a.value, 3)
+        assert np.isclose(aug.mask.size_px.b.value, 8)
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
@@ -4710,13 +4705,10 @@ class TestCoarseSalt(unittest.TestCase):
             got_exception = True
         assert got_exception
 
-    def test_size_px_or_size_percent_not_none(self):
-        got_exception = False
-        try:
-            _ = iaa.CoarseSalt(p=0.5, size_px=None, size_percent=None)
-        except Exception:
-            got_exception = True
-        assert got_exception
+    def test___init___size_px_and_size_percent_both_none(self):
+        aug = iaa.CoarseSalt(p=0.5, size_px=None, size_percent=None)
+        assert np.isclose(aug.mask.size_px.a.value, 3)
+        assert np.isclose(aug.mask.size_px.b.value, 8)
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
@@ -4830,13 +4822,10 @@ class TestCoarsePepper(unittest.TestCase):
             got_exception = True
         assert got_exception
 
-    def test_size_px_or_size_percent_not_none(self):
-        got_exception = False
-        try:
-            _ = iaa.CoarsePepper(p=0.5, size_px=None, size_percent=None)
-        except Exception:
-            got_exception = True
-        assert got_exception
+    def test___init___size_px_and_size_percent_both_none(self):
+        aug = iaa.CoarsePepper(p=0.5, size_px=None, size_percent=None)
+        assert np.isclose(aug.mask.size_px.a.value, 3)
+        assert np.isclose(aug.mask.size_px.b.value, 8)
 
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)

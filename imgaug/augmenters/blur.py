@@ -433,7 +433,7 @@ class GaussianBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, sigma=0,
+    def __init__(self, sigma=(0.0, 3.0),
                  seed=None, name=None, **old_kwargs):
         super(GaussianBlur, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -547,7 +547,7 @@ class AverageBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, k=1, seed=None, name=None, **old_kwargs):
+    def __init__(self, k=(1, 7), seed=None, name=None, **old_kwargs):
         super(AverageBlur, self).__init__(
             seed=seed, name=name, **old_kwargs)
 
@@ -734,7 +734,7 @@ class MedianBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, k=1, seed=None, name=None, **old_kwargs):
+    def __init__(self, k=(1, 7), seed=None, name=None, **old_kwargs):
         super(MedianBlur, self).__init__(
             seed=seed, name=name, **old_kwargs)
 
@@ -886,7 +886,7 @@ class BilateralBlur(meta.Augmenter):
 
     """
 
-    def __init__(self, d=1, sigma_color=(10, 250), sigma_space=(10, 250),
+    def __init__(self, d=(1, 9), sigma_color=(10, 250), sigma_space=(10, 250),
                  seed=None, name=None, **old_kwargs):
         # pylint: disable=invalid-name
         super(BilateralBlur, self).__init__(
@@ -1019,7 +1019,7 @@ class MotionBlur(iaa_convolutional.Convolve):
 
     """
 
-    def __init__(self, k=5, angle=(0, 360), direction=(-1.0, 1.0), order=1,
+    def __init__(self, k=(3, 7), angle=(0, 360), direction=(-1.0, 1.0), order=1,
                  seed=None, name=None, **old_kwargs):
         # TODO allow (1, None) and set to identity matrix if k == 1
         k_param = iap.handle_discrete_param(

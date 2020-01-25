@@ -1149,12 +1149,23 @@ class Affine(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=1.0, translate_percent=None, translate_px=None,
-                 rotate=0.0, shear=0.0, order=1, cval=0, mode="constant",
+    def __init__(self, scale=None, translate_percent=None, translate_px=None,
+                 rotate=None, shear=None, order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(Affine, self).__init__(
             seed=seed, name=name, **old_kwargs)
+
+        params = [scale, translate_percent, translate_px, rotate, shear]
+        if all([p is None for p in params]):
+            scale = {"x": (0.9, 1.1), "y": (0.9, 1.1)}
+            translate_percent = {"x": (-0.1, 0.1), "y": (-0.1, 0.1)}
+            rotate = (-15, 15)
+            shear = {"x": (-10, 10), "y": (-10, 10)}
+        else:
+            scale = scale if scale is not None else 1.0
+            rotate = rotate if rotate is not None else 0.0
+            shear = shear if shear is not None else 0.0
 
         assert backend in ["auto", "skimage", "cv2"], (
             "Expected 'backend' to be \"auto\", \"skimage\" or \"cv2\", "
@@ -1559,7 +1570,7 @@ class ScaleX(Affine):
 
     """
 
-    def __init__(self, scale, order=1, cval=0, mode="constant",
+    def __init__(self, scale=(0.5, 1.5), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ScaleX, self).__init__(
@@ -1624,7 +1635,7 @@ class ScaleY(Affine):
 
     """
 
-    def __init__(self, scale, order=1, cval=0, mode="constant",
+    def __init__(self, scale=(0.5, 1.5), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ScaleY, self).__init__(
@@ -1702,11 +1713,9 @@ class TranslateX(Affine):
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
-        # we don't test here if both are not-None at the same time, because
-        # that is already checked in Affine
-        assert percent is not None or px is not None, (
-            "Expected either `percent` to be not-None or "
-            "`px` to be not-None, but both were None.")
+        if percent is None and px is None:
+            percent = (-0.25, 0.25)
+
         super(TranslateX, self).__init__(
             translate_percent=({"x": percent} if percent is not None else None),
             translate_px=({"x": px} if px is not None else None),
@@ -1783,11 +1792,9 @@ class TranslateY(Affine):
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
-        # we don't test here if both are not-None at the same time, because
-        # that is already checked in Affine
-        assert percent is not None or px is not None, (
-            "Expected either `percent` to be not-None or "
-            "`px` to be not-None, but both were None.")
+        if percent is None and px is None:
+            percent = (-0.25, 0.25)
+
         super(TranslateY, self).__init__(
             translate_percent=({"y": percent} if percent is not None else None),
             translate_px=({"y": px} if px is not None else None),
@@ -1849,7 +1856,7 @@ class Rotate(Affine):
 
     """
 
-    def __init__(self, rotate, order=1, cval=0, mode="constant",
+    def __init__(self, rotate=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(Rotate, self).__init__(
@@ -1904,7 +1911,7 @@ class ShearX(Affine):
 
     """
 
-    def __init__(self, shear, order=1, cval=0, mode="constant",
+    def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ShearX, self).__init__(
@@ -1959,7 +1966,7 @@ class ShearY(Affine):
 
     """
 
-    def __init__(self, shear, order=1, cval=0, mode="constant",
+    def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None, **old_kwargs):
         super(ShearY, self).__init__(
@@ -2856,8 +2863,9 @@ class PiecewiseAffine(meta.Augmenter):
 
     """
 
-    def __init__(self, scale=0, nb_rows=4, nb_cols=4, order=1, cval=0,
-                 mode="constant", absolute_scale=False, polygon_recoverer=None,
+    def __init__(self, scale=(0.0, 0.04), nb_rows=(2, 4), nb_cols=(2, 4),
+                 order=1, cval=0, mode="constant", absolute_scale=False,
+                 polygon_recoverer=None,
                  seed=None, name=None, **old_kwargs):
         super(PiecewiseAffine, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -3383,8 +3391,8 @@ class PerspectiveTransform(meta.Augmenter):
         "constant": cv2.BORDER_CONSTANT
     }
 
-    def __init__(self, scale=0, cval=0, mode="constant", keep_size=True,
-                 fit_output=False, polygon_recoverer="auto",
+    def __init__(self, scale=(0.0, 0.06), cval=0, mode="constant",
+                 keep_size=True, fit_output=False, polygon_recoverer="auto",
                  seed=None, name=None, **old_kwargs):
         super(PerspectiveTransform, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -4055,7 +4063,8 @@ class ElasticTransformation(meta.Augmenter):
         5: cv2.INTER_CUBIC
     }
 
-    def __init__(self, alpha=0, sigma=0, order=3, cval=0, mode="constant",
+    def __init__(self, alpha=(0.0, 40.0), sigma=(4.0, 8.0), order=3, cval=0,
+                 mode="constant",
                  polygon_recoverer="auto",
                  seed=None, name=None, **old_kwargs):
         super(ElasticTransformation, self).__init__(
@@ -4703,7 +4712,7 @@ class Rot90(meta.Augmenter):
 
     """
 
-    def __init__(self, k, keep_size=True,
+    def __init__(self, k=1, keep_size=True,
                  seed=None, name=None, **old_kwargs):
         super(Rot90, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -5525,7 +5534,7 @@ class Jigsaw(meta.Augmenter):
 
     Parameters
     ----------
-    nb_rows : int or list of int or tuple of int or imgaug.parameters.StochasticParameter
+    nb_rows : int or list of int or tuple of int or imgaug.parameters.StochasticParameter, optional
         How many rows the jigsaw pattern should have.
 
             * If a single ``int``, then that value will be used for all images.
@@ -5536,7 +5545,7 @@ class Jigsaw(meta.Augmenter):
             * If ``StochasticParameter``, then that parameter is queried per
               image to sample the value to use.
 
-    nb_cols : int or list of int or tuple of int or imgaug.parameters.StochasticParameter
+    nb_cols : int or list of int or tuple of int or imgaug.parameters.StochasticParameter, optional
         How many cols the jigsaw pattern should have.
 
             * If a single ``int``, then that value will be used for all images.
@@ -5592,7 +5601,8 @@ class Jigsaw(meta.Augmenter):
 
     """
 
-    def __init__(self, nb_rows, nb_cols, max_steps=2, allow_pad=True,
+    def __init__(self, nb_rows=(3, 10), nb_cols=(3, 10), max_steps=1,
+                 allow_pad=True,
                  seed=None, name=None, **old_kwargs):
         super(Jigsaw, self).__init__(
             seed=seed, name=name, **old_kwargs)

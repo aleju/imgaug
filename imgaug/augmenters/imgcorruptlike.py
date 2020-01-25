@@ -1050,7 +1050,7 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(GaussianNoise, self).__init__(
             apply_gaussian_noise, severity,
@@ -1096,7 +1096,7 @@ class ShotNoise(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(ShotNoise, self).__init__(
             apply_shot_noise, severity,
@@ -1142,7 +1142,7 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(ImpulseNoise, self).__init__(
             apply_impulse_noise, severity,
@@ -1188,7 +1188,7 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(SpeckleNoise, self).__init__(
             apply_speckle_noise, severity,
@@ -1234,7 +1234,7 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(GaussianBlur, self).__init__(
             apply_gaussian_blur, severity,
@@ -1280,7 +1280,7 @@ class GlassBlur(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(GlassBlur, self).__init__(
             apply_glass_blur, severity,
@@ -1326,7 +1326,7 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(DefocusBlur, self).__init__(
             apply_defocus_blur, severity,
@@ -1372,7 +1372,7 @@ class MotionBlur(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(MotionBlur, self).__init__(
             apply_motion_blur, severity,
@@ -1418,7 +1418,7 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(ZoomBlur, self).__init__(
             apply_zoom_blur, severity,
@@ -1464,7 +1464,7 @@ class Fog(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Fog, self).__init__(
             apply_fog, severity,
@@ -1510,7 +1510,7 @@ class Frost(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Frost, self).__init__(
             apply_frost, severity,
@@ -1556,7 +1556,7 @@ class Snow(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Snow, self).__init__(
             apply_snow, severity,
@@ -1602,7 +1602,7 @@ class Spatter(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Spatter, self).__init__(
             apply_spatter, severity,
@@ -1648,7 +1648,7 @@ class Contrast(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Contrast, self).__init__(
             apply_contrast, severity,
@@ -1694,7 +1694,7 @@ class Brightness(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Brightness, self).__init__(
             apply_brightness, severity,
@@ -1740,7 +1740,7 @@ class Saturate(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Saturate, self).__init__(
             apply_saturate, severity,
@@ -1786,7 +1786,7 @@ class JpegCompression(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(JpegCompression, self).__init__(
             apply_jpeg_compression, severity,
@@ -1832,7 +1832,7 @@ class Pixelate(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(Pixelate, self).__init__(
             apply_pixelate, severity,
@@ -1882,7 +1882,7 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
 
     """
 
-    def __init__(self, severity=1,
+    def __init__(self, severity=(1, 5),
                  seed=None, name=None, **old_kwargs):
         super(ElasticTransform, self).__init__(
             apply_elastic_transform, severity,

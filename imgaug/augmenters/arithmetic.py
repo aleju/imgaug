@@ -1536,7 +1536,7 @@ class Add(meta.Augmenter):
 
     """
 
-    def __init__(self, value=0, per_channel=False,
+    def __init__(self, value=(-20, 20), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(Add, self).__init__(seed=seed, name=name, **old_kwargs)
 
@@ -1671,7 +1671,7 @@ class AddElementwise(meta.Augmenter):
 
     """
 
-    def __init__(self, value=0, per_channel=False,
+    def __init__(self, value=(-20, 20), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(AddElementwise, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -1799,7 +1799,7 @@ class AdditiveGaussianNoise(AddElementwise):
     active for 50 percent of all images.
 
     """
-    def __init__(self, loc=0, scale=0, per_channel=False,
+    def __init__(self, loc=0, scale=(0, 15), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         loc2 = iap.handle_continuous_param(
             loc, "loc", value_range=None, tuple_to_uniform=True,
@@ -1815,6 +1815,7 @@ class AdditiveGaussianNoise(AddElementwise):
             seed=seed, name=name, **old_kwargs)
 
 
+# TODO add tests
 # TODO rename to AddLaplaceNoise?
 class AdditiveLaplaceNoise(AddElementwise):
     """
@@ -1912,7 +1913,7 @@ class AdditiveLaplaceNoise(AddElementwise):
     active for 50 percent of all images.
 
     """
-    def __init__(self, loc=0, scale=0, per_channel=False,
+    def __init__(self, loc=0, scale=(0, 15), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         loc2 = iap.handle_continuous_param(
             loc, "loc", value_range=None, tuple_to_uniform=True,
@@ -1929,6 +1930,7 @@ class AdditiveLaplaceNoise(AddElementwise):
             seed=seed, name=name, **old_kwargs)
 
 
+# TODO add tests
 # TODO rename to AddPoissonNoise?
 class AdditivePoissonNoise(AddElementwise):
     """
@@ -1995,10 +1997,10 @@ class AdditivePoissonNoise(AddElementwise):
     parameter of ``5.0`` to images.
     The samples are drawn per image and pixel.
 
-    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 10.0))
+    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 15.0))
 
     Adds poisson noise sampled from ``Poisson(x)`` to images, where ``x`` is
-    randomly sampled per image from the interval ``[0.0, 10.0]``.
+    randomly sampled per image from the interval ``[0.0, 15.0]``.
 
     >>> aug = iaa.AdditivePoissonNoise(lam=5.0, per_channel=True)
 
@@ -2006,19 +2008,19 @@ class AdditivePoissonNoise(AddElementwise):
     where the values are different per image and pixel *and* channel (e.g. a
     different one for red, green and blue channels for the same pixel).
 
-    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 10.0), per_channel=True)
+    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 15.0), per_channel=True)
 
     Adds poisson noise sampled from ``Poisson(x)`` to images,
-    with ``x`` being sampled from ``uniform(0.0, 10.0)`` per image and
+    with ``x`` being sampled from ``uniform(0.0, 15.0)`` per image and
     channel. This is the *recommended* configuration.
 
-    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 10.0), per_channel=0.5)
+    >>> aug = iaa.AdditivePoissonNoise(lam=(0.0, 15.0), per_channel=0.5)
 
     Identical to the previous example, but the `per_channel` feature is only
     active for 50 percent of all images.
 
     """
-    def __init__(self, lam=0, per_channel=False,
+    def __init__(self, lam=(0.0, 15.0), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         lam2 = iap.handle_continuous_param(
             lam, "lam",
@@ -2101,7 +2103,7 @@ class Multiply(meta.Augmenter):
 
     """
 
-    def __init__(self, mul=1.0, per_channel=False,
+    def __init__(self, mul=(0.8, 1.2), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(Multiply, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -2235,7 +2237,7 @@ class MultiplyElementwise(meta.Augmenter):
 
     """
 
-    def __init__(self, mul=1.0, per_channel=False,
+    def __init__(self, mul=(0.8, 1.2), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(MultiplyElementwise, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -2695,7 +2697,7 @@ class Dropout(MultiplyElementwise):
     active for ``50`` percent of all images.
 
     """
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.05), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         p_param = _handle_dropout_probability_param(p, "p")
 
@@ -2740,8 +2742,7 @@ def _handle_dropout_probability_param(p, name):
     return p_param
 
 
-# TODO add similar cutout augmenter
-# TODO invert size_p and size_percent so that larger values denote larger
+# TODO invert size_px and size_percent so that larger values denote larger
 #      areas being dropped instead of the opposite way around
 class CoarseDropout(MultiplyElementwise):
     """
@@ -2886,8 +2887,8 @@ class CoarseDropout(MultiplyElementwise):
     for ``50`` percent of all images.
 
     """
-    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
+    def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
+                 per_channel=False, min_size=3,
                  seed=None, name=None, **old_kwargs):
         p_param = _handle_dropout_probability_param(p, "p")
 
@@ -2900,7 +2901,11 @@ class CoarseDropout(MultiplyElementwise):
                                               size_percent=size_percent,
                                               min_size=min_size)
         else:
-            raise Exception("Either size_px or size_percent must be set.")
+            # default if neither size_px nor size_percent is provided
+            # is size_px=(3, 8)
+            p_param = iap.FromLowerResolution(other_param=p_param,
+                                              size_px=(3, 8),
+                                              min_size=min_size)
 
         super(CoarseDropout, self).__init__(
             p_param,
@@ -2991,7 +2996,7 @@ class Dropout2d(meta.Augmenter):
 
     """
 
-    def __init__(self, p, nb_keep_channels=1,
+    def __init__(self, p=0.1, nb_keep_channels=1,
                  seed=None, name=None, **old_kwargs):
         super(Dropout2d, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -3164,7 +3169,7 @@ class TotalDropout(meta.Augmenter):
 
     """
 
-    def __init__(self, p, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=1, seed=None, name=None, **old_kwargs):
         super(TotalDropout, self).__init__(
             seed=seed, name=name, **old_kwargs)
         self.p = _handle_dropout_probability_param(p, "p")
@@ -3451,7 +3456,7 @@ class SaltAndPepper(ReplaceElementwise):
     noise.
 
     """
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.03), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(SaltAndPepper, self).__init__(
             mask=p,
@@ -3505,7 +3510,7 @@ class ImpulseNoise(SaltAndPepper):
     Replace ``10%`` of all pixels with impulse noise.
 
     """
-    def __init__(self, p=0, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=(0.0, 0.03), seed=None, name=None, **old_kwargs):
         super(ImpulseNoise, self).__init__(
             p=p,
             per_channel=True,
@@ -3634,8 +3639,8 @@ class CoarseSaltAndPepper(ReplaceElementwise):
     independently per image channel.
 
     """
-    def __init__(self, p=0, size_px=None, size_percent=None,
-                 per_channel=False, min_size=4,
+    def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
+                 per_channel=False, min_size=3,
                  seed=None, name=None, **old_kwargs):
         mask = iap.handle_probability_param(
             p, "p", tuple_to_uniform=True, list_to_choice=True)
@@ -3647,7 +3652,8 @@ class CoarseSaltAndPepper(ReplaceElementwise):
             mask_low = iap.FromLowerResolution(
                 other_param=mask, size_percent=size_percent, min_size=min_size)
         else:
-            raise Exception("Either size_px or size_percent must be set.")
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=(3, 8), min_size=min_size)
 
         replacement = iap.Beta(0.5, 0.5) * 255
 
@@ -3715,7 +3721,7 @@ class Salt(ReplaceElementwise):
 
     """
 
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.03), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         replacement01 = iap.ForceSign(
             iap.Beta(0.5, 0.5) - 0.5,
@@ -3835,8 +3841,8 @@ class CoarseSalt(ReplaceElementwise):
 
     """
 
-    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
+    def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
+                 per_channel=False, min_size=3,
                  seed=None, name=None, **old_kwargs):
         mask = iap.handle_probability_param(
             p, "p", tuple_to_uniform=True, list_to_choice=True)
@@ -3848,7 +3854,8 @@ class CoarseSalt(ReplaceElementwise):
             mask_low = iap.FromLowerResolution(
                 other_param=mask, size_percent=size_percent, min_size=min_size)
         else:
-            raise Exception("Either size_px or size_percent must be set.")
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=(3, 8), min_size=min_size)
 
         replacement01 = iap.ForceSign(
             iap.Beta(0.5, 0.5) - 0.5,
@@ -3923,7 +3930,7 @@ class Pepper(ReplaceElementwise):
 
     """
 
-    def __init__(self, p=0, per_channel=False,
+    def __init__(self, p=(0.0, 0.05), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         replacement01 = iap.ForceSign(
             iap.Beta(0.5, 0.5) - 0.5,
@@ -4041,8 +4048,8 @@ class CoarsePepper(ReplaceElementwise):
 
     """
 
-    def __init__(self, p=0, size_px=None, size_percent=None, per_channel=False,
-                 min_size=4,
+    def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
+                 per_channel=False, min_size=3,
                  seed=None, name=None, **old_kwargs):
         mask = iap.handle_probability_param(
             p, "p", tuple_to_uniform=True, list_to_choice=True)
@@ -4054,7 +4061,8 @@ class CoarsePepper(ReplaceElementwise):
             mask_low = iap.FromLowerResolution(
                 other_param=mask, size_percent=size_percent, min_size=min_size)
         else:
-            raise Exception("Either size_px or size_percent must be set.")
+            mask_low = iap.FromLowerResolution(
+                other_param=mask, size_px=(3, 8), min_size=min_size)
 
         replacement01 = iap.ForceSign(
             iap.Beta(0.5, 0.5) - 0.5,
@@ -4187,7 +4195,7 @@ class Invert(meta.Augmenter):
         ]
     ]
 
-    def __init__(self, p=0, per_channel=False, min_value=None, max_value=None,
+    def __init__(self, p=1, per_channel=False, min_value=None, max_value=None,
                  threshold=None, invert_above_threshold=0.5,
                  seed=None, name=None, **old_kwargs):
         super(Invert, self).__init__(
@@ -4337,7 +4345,7 @@ class Solarize(Invert):
     per image. The thresholding operation happens per channel.
 
     """
-    def __init__(self, p, per_channel=False, min_value=None, max_value=None,
+    def __init__(self, p=1, per_channel=False, min_value=None, max_value=None,
                  threshold=(128-64, 128+64), invert_above_threshold=True,
                  seed=None, name=None, **old_kwargs):
         super(Solarize, self).__init__(
@@ -4479,7 +4487,7 @@ class JpegCompression(meta.Augmenter):
     setting of ``1`` to ``30``.
 
     """
-    def __init__(self, compression=50,
+    def __init__(self, compression=(0, 100),
                  seed=None, name=None, **old_kwargs):
         super(JpegCompression, self).__init__(
             seed=seed, name=name, **old_kwargs)

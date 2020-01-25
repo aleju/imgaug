@@ -1764,6 +1764,9 @@ class CropAndPad(meta.Augmenter):
         super(CropAndPad, self).__init__(
             seed=seed, name=name, **old_kwargs)
 
+        if px is None and percent is None:
+            percent = (-0.1, 0.1)
+
         self.mode, self.all_sides, self.top, self.right, self.bottom, \
             self.left = self._handle_px_and_percent_args(px, percent)
 
@@ -2334,6 +2337,9 @@ class Pad(CropAndPad):
                 "Expected None or int or float or StochasticParameter or "
                 "list or tuple, got %s." % (type(value),))
 
+        if px is None and percent is None:
+            percent = (0.0, 0.1)
+
         px = recursive_validate(px)
         percent = recursive_validate(percent)
 
@@ -2507,6 +2513,9 @@ class Crop(CropAndPad):
             raise Exception(
                 "Expected None or int or float or StochasticParameter or "
                 "list or tuple, got %s." % (type(value),))
+
+        if px is None and percent is None:
+            percent = (0.0, 0.1)
 
         px = recursive_negate(px)
         percent = recursive_negate(percent)

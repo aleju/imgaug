@@ -3122,9 +3122,9 @@ class TestTranslateX(unittest.TestCase):
         assert aug.fit_output is False
 
     def test___init___both_none(self):
-        with self.assertRaises(AssertionError) as ctx:
-            _aug = iaa.TranslateX()
-        assert "but both were None" in str(ctx.exception)
+        aug = iaa.TranslateX()
+        assert np.isclose(aug.translate[0].a.value, -0.25)
+        assert np.isclose(aug.translate[0].b.value, 0.25)
 
     def test_integrationtest_translate_percent(self):
         image = np.full((50, 50), 255, dtype=np.uint8)
@@ -3172,9 +3172,9 @@ class TestTranslateY(unittest.TestCase):
         assert aug.fit_output is False
 
     def test___init___both_none(self):
-        with self.assertRaises(AssertionError) as ctx:
-            _aug = iaa.TranslateY()
-        assert "but both were None" in str(ctx.exception)
+        aug = iaa.TranslateY()
+        assert np.isclose(aug.translate[1].a.value, -0.25)
+        assert np.isclose(aug.translate[1].b.value, 0.25)
 
     def test_integrationtest_translate_percent(self):
         image = np.full((50, 50), 255, dtype=np.uint8)
@@ -9736,7 +9736,7 @@ class TestJigsaw(unittest.TestCase):
         aug = iaa.Jigsaw(nb_rows=1, nb_cols=2)
         assert aug.nb_rows.value == 1
         assert aug.nb_cols.value == 2
-        assert aug.max_steps.value == 2
+        assert aug.max_steps.value == 1
         assert aug.allow_pad is True
 
     def test___init___custom(self):

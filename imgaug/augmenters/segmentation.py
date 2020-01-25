@@ -199,8 +199,8 @@ class Superpixels(meta.Augmenter):
 
     """
 
-    def __init__(self, p_replace=0, n_segments=100, max_size=128,
-                 interpolation="linear",
+    def __init__(self, p_replace=(0.5, 1.0), n_segments=(50, 120),
+                 max_size=128, interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(Superpixels, self).__init__(
             seed=seed, name=name, **old_kwargs)
@@ -743,7 +743,7 @@ class UniformVoronoi(Voronoi):
 
     """
 
-    def __init__(self, n_points, p_replace=1.0, max_size=128,
+    def __init__(self, n_points=(50, 500), p_replace=(0.5, 1.0), max_size=128,
                  interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(UniformVoronoi, self).__init__(
@@ -897,7 +897,8 @@ class RegularGridVoronoi(Voronoi):
 
     """
 
-    def __init__(self, n_rows, n_cols, p_drop_points=0.4, p_replace=1.0,
+    def __init__(self, n_rows=(10, 30), n_cols=(10, 30),
+                 p_drop_points=(0.0, 0.5), p_replace=(0.5, 1.0),
                  max_size=128, interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(RegularGridVoronoi, self).__init__(
@@ -928,8 +929,8 @@ class RelativeRegularGridVoronoi(Voronoi):
         In contrast to the other voronoi augmenters, this one uses
         ``None`` as the default value for `max_size`, i.e. the color averaging
         is always performed at full resolution. This enables the augmenter to
-        make most use of the added points for larger images. It does however
-        slow down the augmentation process.
+        make use of the additional points on larger images. It does
+        however slow down the augmentation process.
 
     Supported dtypes
     ----------------
@@ -1069,8 +1070,9 @@ class RelativeRegularGridVoronoi(Voronoi):
 
     """
 
-    def __init__(self, n_rows_frac, n_cols_frac, p_drop_points=0.4,
-                 p_replace=1.0, max_size=None, interpolation="linear",
+    def __init__(self, n_rows_frac=(0.05, 0.15), n_cols_frac=(0.05, 0.15),
+                 p_drop_points=(0.0, 0.5), p_replace=(0.5, 1.0),
+                 max_size=None, interpolation="linear",
                  seed=None, name=None, **old_kwargs):
         super(RelativeRegularGridVoronoi, self).__init__(
             points_sampler=DropoutPointsSampler(

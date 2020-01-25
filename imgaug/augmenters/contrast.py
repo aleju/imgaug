@@ -477,7 +477,7 @@ class GammaContrast(_ContrastFuncWrapper):
 
     """
 
-    def __init__(self, gamma=1, per_channel=False,
+    def __init__(self, gamma=(0.7, 1.7), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         params1d = [iap.handle_continuous_param(
             gamma, "gamma", value_range=None, tuple_to_uniform=True,
@@ -498,6 +498,9 @@ class SigmoidContrast(_ContrastFuncWrapper):
 
     Values in the range ``gain=(5, 20)`` and ``cutoff=(0.25, 0.75)`` seem to
     be sensible.
+
+    A combination of ``gain=5.5`` and ``cutof=0.45`` is fairly close to
+    the identity function.
 
     Supported dtypes
     ----------------
@@ -564,7 +567,7 @@ class SigmoidContrast(_ContrastFuncWrapper):
     sampled once per image *and* channel.
 
     """
-    def __init__(self, gain=10, cutoff=0.5, per_channel=False,
+    def __init__(self, gain=(5, 6), cutoff=(0.3, 0.6), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         # TODO add inv parameter?
         params1d = [
@@ -642,7 +645,7 @@ class LogContrast(_ContrastFuncWrapper):
     *and* channel.
 
     """
-    def __init__(self, gain=1, per_channel=False,
+    def __init__(self, gain=(0.4, 1.6), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         # TODO add inv parameter?
         params1d = [iap.handle_continuous_param(
@@ -712,7 +715,7 @@ class LinearContrast(_ContrastFuncWrapper):
     *and* channel.
 
     """
-    def __init__(self, alpha=1, per_channel=False,
+    def __init__(self, alpha=(0.6, 1.4), per_channel=False,
                  seed=None, name=None, **old_kwargs):
         params1d = [
             iap.handle_continuous_param(
@@ -949,7 +952,7 @@ class AllChannelsCLAHE(meta.Augmenter):
 
     """
 
-    def __init__(self, clip_limit=40, tile_grid_size_px=8,
+    def __init__(self, clip_limit=(0.1, 8), tile_grid_size_px=(3, 12),
                  tile_grid_size_px_min=3, per_channel=False,
                  seed=None, name=None, **old_kwargs):
         super(AllChannelsCLAHE, self).__init__(
@@ -1201,7 +1204,7 @@ class CLAHE(meta.Augmenter):
     HLS = color_lib.CSPACE_HLS
     Lab = color_lib.CSPACE_Lab
 
-    def __init__(self, clip_limit=40, tile_grid_size_px=8,
+    def __init__(self, clip_limit=(0.1, 8), tile_grid_size_px=(3, 12),
                  tile_grid_size_px_min=3,
                  from_colorspace=color_lib.CSPACE_RGB,
                  to_colorspace=color_lib.CSPACE_Lab,

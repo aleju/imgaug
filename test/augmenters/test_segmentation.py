@@ -866,7 +866,6 @@ class TestRegularGridVoronoi(unittest.TestCase):
             seed=rs,
             name=None
         )
-        assert np.isclose(aug.points_sampler.p_drop.p.value, 1-0.4)
         assert aug.points_sampler.other_points_sampler.n_rows.value == 10
         assert isinstance(aug.points_sampler.other_points_sampler.n_cols,
                           iap.DiscreteUniform)
@@ -931,7 +930,6 @@ class TestRelativeRegularGridVoronoi(unittest.TestCase):
         )
 
         ps = aug.points_sampler
-        assert np.isclose(aug.points_sampler.p_drop.p.value, 1-0.4)
         assert np.isclose(ps.other_points_sampler.n_rows_frac.value, 0.1)
         assert isinstance(ps.other_points_sampler.n_cols_frac, iap.Uniform)
         assert np.isclose(ps.other_points_sampler.n_cols_frac.a.value, 0.1)

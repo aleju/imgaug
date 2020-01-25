@@ -1791,6 +1791,10 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
     def __init__(self, mul=None, mul_hue=None, mul_saturation=None,
                  per_channel=False, from_colorspace="RGB",
                  seed=None, name=None, **old_kwargs):
+        if mul is None and mul_hue is None and mul_saturation is None:
+            mul_hue = (0.5, 1.5)
+            mul_saturation = (0.0, 1.7)
+
         if mul is not None:
             assert mul_hue is None, (
                 "`mul_hue` may not be set if `mul` is set. "
@@ -1929,7 +1933,7 @@ class MultiplyHue(MultiplyHueAndSaturation):
 
     """
 
-    def __init__(self, mul=(-1.0, 1.0), from_colorspace="RGB",
+    def __init__(self, mul=(-3.0, 3.0), from_colorspace="RGB",
                  seed=None, name=None, **old_kwargs):
         super(MultiplyHue, self).__init__(
             mul_hue=mul,
@@ -2040,7 +2044,7 @@ class RemoveSaturation(MultiplySaturation):
     Examples
     --------
     >>> import imgaug.augmenters as iaa
-    >>> aug = iaa.RemoveSaturation()
+    >>> aug = iaa.RemoveSaturation((0.0, 1.0))
 
     Create an augmenter that decreases saturation by varying degrees.
 
@@ -2056,7 +2060,7 @@ class RemoveSaturation(MultiplySaturation):
 
     """
 
-    def __init__(self, mul=(0.0, 1.0), from_colorspace=CSPACE_RGB,
+    def __init__(self, mul=1, from_colorspace=CSPACE_RGB,
                  seed=None, name=None, **old_kwargs):
         mul = iap.Subtract(
             1.0,
@@ -2235,6 +2239,9 @@ class AddToHueAndSaturation(meta.Augmenter):
                  seed=None, name=None, **old_kwargs):
         super(AddToHueAndSaturation, self).__init__(
             seed=seed, name=name, **old_kwargs)
+        if value is None and value_hue is None and value_saturation is None:
+            value_hue = (-40, 40)
+            value_saturation = (-40, 40)
 
         self.value = self._handle_value_arg(value, value_hue, value_saturation)
         self.value_hue = self._handle_value_hue_arg(value_hue)
@@ -2831,7 +2838,7 @@ class Grayscale(ChangeColorspace):
 
     """
 
-    def __init__(self, alpha=0, from_colorspace=CSPACE_RGB,
+    def __init__(self, alpha=1, from_colorspace=CSPACE_RGB,
                  seed=None, name=None, **old_kwargs):
         super(Grayscale, self).__init__(
             to_colorspace=CSPACE_GRAY,

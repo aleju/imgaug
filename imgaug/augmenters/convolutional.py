@@ -290,7 +290,7 @@ class Sharpen(Convolve):
     (as in the above example).
 
     """
-    def __init__(self, alpha=0, lightness=1,
+    def __init__(self, alpha=(0.0, 0.2), lightness=(0.8, 1.2),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
@@ -392,7 +392,7 @@ class Emboss(Convolve):
     using a random blending factor between ``0%`` and ``100%``.
 
     """
-    def __init__(self, alpha=0, strength=1,
+    def __init__(self, alpha=(0.0, 1.0), strength=(0.25, 1.0),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
@@ -480,7 +480,7 @@ class EdgeDetect(Convolve):
     blending factor between ``0%`` and ``100%``.
 
     """
-    def __init__(self, alpha=0,
+    def __init__(self, alpha=(0.0, 0.75),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
@@ -604,7 +604,7 @@ class DirectedEdgeDetect(Convolve):
     and ``30%``.
 
     """
-    def __init__(self, alpha=0, direction=(0.0, 1.0),
+    def __init__(self, alpha=(0.0, 0.75), direction=(0.0, 1.0),
                  seed=None, name=None, **old_kwargs):
         alpha_param = iap.handle_continuous_param(
             alpha, "alpha",
