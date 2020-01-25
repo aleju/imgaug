@@ -214,6 +214,7 @@ class _BaseTestCaseContext:
         self.test_case = test_case
 
     def _raiseFailure(self, standardMsg):
+        # pylint: disable=invalid-name, protected-access, no-member
         msg = self.test_case._formatMessage(self.msg, standardMsg)
         raise self.test_case.failureException(msg)
 
@@ -234,6 +235,7 @@ class _AssertRaisesBaseContext(_BaseTestCaseContext):
         self.obj_name = None
         self.msg = None
 
+    # pylint: disable=inconsistent-return-statements
     def handle(self, name, args, kwargs):
         """
         If args is empty, assertRaises/Warns is being used as a
@@ -241,6 +243,7 @@ class _AssertRaisesBaseContext(_BaseTestCaseContext):
         If args is not empty, call a callable passing positional and keyword
         arguments.
         """
+        # pylint: disable=no-member, self-cls-assignment, not-context-manager
         try:
             if not _is_subtype(self.expected, self._base_type):
                 raise TypeError('%s() arg 1 must be %s' %
@@ -264,6 +267,7 @@ class _AssertRaisesBaseContext(_BaseTestCaseContext):
         finally:
             # bpo-23890: manually break a reference cycle
             self = None
+    # pylint: enable=inconsistent-return-statements
 
 
 # Copied from
@@ -279,6 +283,7 @@ class _AssertWarnsContext(_AssertRaisesBaseContext):
     def __enter__(self):
         # The __warningregistry__'s need to be in a pristine state for tests
         # to work properly.
+        # pylint: disable=invalid-name, attribute-defined-outside-init
         for v in sys.modules.values():
             if getattr(v, '__warningregistry__', None):
                 v.__warningregistry__ = {}
@@ -288,6 +293,7 @@ class _AssertWarnsContext(_AssertRaisesBaseContext):
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
+        # pylint: disable=invalid-name, attribute-defined-outside-init
         self.warnings_manager.__exit__(exc_type, exc_value, tb)
         if exc_type is not None:
             # let unexpected exceptions pass through
@@ -304,7 +310,7 @@ class _AssertWarnsContext(_AssertRaisesBaseContext):
             if first_matching is None:
                 first_matching = w
             if (self.expected_regex is not None and
-                not self.expected_regex.search(str(w))):
+                    not self.expected_regex.search(str(w))):
                 continue
             # store warning for later retrieval
             self.warning = w
@@ -314,7 +320,7 @@ class _AssertWarnsContext(_AssertRaisesBaseContext):
         # Now we simply try to choose a helpful failure message
         if first_matching is not None:
             self._raiseFailure('"{}" does not match "{}"'.format(
-                     self.expected_regex.pattern, str(first_matching)))
+                self.expected_regex.pattern, str(first_matching)))
         if self.obj_name:
             self._raiseFailure("{} not triggered by {}".format(exc_name,
                                                                self.obj_name))
