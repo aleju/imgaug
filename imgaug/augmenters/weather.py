@@ -31,8 +31,7 @@ class FastSnowyLandscape(meta.Augmenter):
     This augmenter is based on the method proposed in
     https://medium.freecodecamp.org/image-augmentation-make-it-rain-make-it-snow-how-to-modify-a-photo-with-machine-learning-163c0cb3843f?gi=bca4a13e634c
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: no (1)
@@ -187,8 +186,7 @@ class FastSnowyLandscape(meta.Augmenter):
 class CloudLayer(meta.Augmenter):
     """Add a single layer of clouds to an image.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
@@ -488,8 +486,7 @@ class Clouds(meta.SomeOf):
     This augmenter seems to be fairly robust w.r.t. the image size. Tested
     with ``96x128``, ``192x256`` and ``960x1280``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)
@@ -579,8 +576,7 @@ class Fog(CloudLayer):
     This augmenter seems to be fairly robust w.r.t. the image size. Tested
     with ``96x128``, ``192x256`` and ``960x1280``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)
@@ -641,8 +637,7 @@ class Fog(CloudLayer):
 class SnowflakesLayer(meta.Augmenter):
     """Add a single layer of falling snowflakes to images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
@@ -982,8 +977,7 @@ class Snowflakes(meta.SomeOf):
     :class:`~imgaug.augmenters.weather.SnowflakesLayer`. It executes 1 to 3
     layers per image.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)
@@ -1161,8 +1155,7 @@ class Snowflakes(meta.SomeOf):
 class RainLayer(SnowflakesLayer):
     """Add a single layer of falling raindrops to images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; indirectly tested (1)
         * ``uint16``: no
@@ -1275,8 +1268,7 @@ class Rain(meta.SomeOf):
         look like snowflakes. For larger images, you may want to increase
         the `drop_size` to e.g. ``(0.10, 0.20)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; tested
         * ``uint16``: no (1)

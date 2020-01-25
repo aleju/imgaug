@@ -358,8 +358,7 @@ def apply_jigsaw(arr, destinations):
     This function will split the image into ``rows x cols`` cells and
     move each cell to the target index given in `destinations`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
@@ -727,8 +726,7 @@ class Affine(meta.Augmenter):
         For performance reasons, there is no explicit validation of whether
         the aspect ratios are similar.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (backend="skimage", order in [0, 1]):
 
@@ -1523,8 +1521,7 @@ class ScaleX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1588,8 +1585,7 @@ class ScaleY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1654,8 +1650,7 @@ class TranslateX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1733,8 +1728,7 @@ class TranslateY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1812,8 +1806,7 @@ class Rotate(Affine):
     This is a wrapper around :class:`Affine`.
     It is the same as ``Affine(rotate=<value>)``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1874,8 +1867,7 @@ class ShearX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1909,6 +1901,14 @@ class ShearX(Affine):
     **old_kwargs
         Outdated parameters. Avoid using these.
 
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ShearX((-20, 20))
+
+    Create an augmenter that shears images along the x-axis by random amounts
+    between ``-20`` and ``20`` degrees.
+
     """
 
     def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
@@ -1929,8 +1929,7 @@ class ShearY(Affine):
 
     This is a wrapper around :class:`Affine`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
 
@@ -1963,6 +1962,14 @@ class ShearY(Affine):
 
     **old_kwargs
         Outdated parameters. Avoid using these.
+
+    Examples
+    --------
+    >>> import imgaug.augmenters as iaa
+    >>> aug = iaa.ShearY((-20, 20))
+
+    Create an augmenter that shears images along the y-axis by random amounts
+    between ``-20`` and ``20`` degrees.
 
     """
 
@@ -2007,8 +2014,7 @@ class AffineCv2(meta.Augmenter):
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: ?
@@ -2753,8 +2759,7 @@ class PiecewiseAffine(meta.Augmenter):
         which will make it significantly slower for such inputs than other
         augmenters. See :ref:`performance`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested (1)
@@ -3240,8 +3245,7 @@ class PerspectiveTransform(meta.Augmenter):
     Code partially from
     http://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (keep_size=False):
 
@@ -3902,8 +3906,7 @@ class ElasticTransformation(meta.Augmenter):
         which will make it significantly slower for such inputs than other
         augmenters. See :ref:`performance`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested (1)
         * ``uint16``: yes; tested (1)
@@ -4380,8 +4383,7 @@ class ElasticTransformation(meta.Augmenter):
     def _map_coordinates(cls, image, dx, dy, order=1, cval=0, mode="constant"):
         """Remap pixels in an image according to x/y shift maps.
 
-        Supported dtypes
-        ----------------
+        **Supported dtypes**:
 
         if (backend="scipy" and order=0):
 
@@ -4624,8 +4626,7 @@ class Rot90(meta.Augmenter):
     This could also be achieved using ``Affine``, but ``Rot90`` is
     significantly more efficient.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (keep_size=False):
 
@@ -4897,8 +4898,7 @@ class WithPolarWarping(meta.Augmenter):
         recovery are currently ``PerspectiveTransform``, ``PiecewiseAffine``
         and ``ElasticTransformation``.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -5527,8 +5527,7 @@ class Jigsaw(meta.Augmenter):
         heatmaps, segmentation maps and keypoints. Other augmentables,
         i.e. bounding boxes, polygons and line strings, will result in errors.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.geometric.apply_jigsaw`.
 

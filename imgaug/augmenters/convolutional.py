@@ -34,8 +34,7 @@ class Convolve(meta.Augmenter):
     """
     Apply a convolution to input images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; tested
@@ -232,8 +231,7 @@ class Sharpen(Convolve):
     """
     Sharpen images and alpha-blend the result with the original input images.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.convolutional.Convolve`.
 
@@ -341,8 +339,7 @@ class Emboss(Convolve):
     The embossed version pronounces highlights and shadows,
     letting the image look as if it was recreated on a metal plate ("embossed").
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.convolutional.Convolve`.
 
@@ -442,8 +439,7 @@ class EdgeDetect(Convolve):
     """
     Generate a black & white edge image and alpha-blend it with the input image.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.convolutional.Convolve`.
 
@@ -535,8 +531,7 @@ class DirectedEdgeDetect(Convolve):
     The result of applying the kernel is a black (non-edges) and white (edges)
     image. That image is alpha-blended with the input image.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.convolutional.Convolve`.
 

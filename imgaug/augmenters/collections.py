@@ -65,8 +65,7 @@ class RandAugment(meta.Sequential):
         transformations to ensure that outputs are as similar as possible
         to the paper's implementation.)
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     minimum of (
         :class:`~imgaug.augmenters.flip.Fliplr`,

@@ -37,8 +37,7 @@ def _ensure_image_max_size(image, max_size, interpolation):
     This downscales to `max_size` if any side violates that maximum.
     The other side is downscaled too so that the aspect ratio is maintained.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :func:`~imgaug.imgaug.imresize_single_image`.
 
@@ -77,8 +76,7 @@ class Superpixels(meta.Augmenter):
 
         This augmenter is fairly slow. See :ref:`performance`.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (image size <= max_size):
 
@@ -456,8 +454,7 @@ class Voronoi(meta.Augmenter):
     This code is very loosely based on
     https://codegolf.stackexchange.com/questions/50299/draw-an-image-as-a-voronoi-map/50345#50345
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     if (image size <= max_size):
 
@@ -650,8 +647,7 @@ class UniformVoronoi(Voronoi):
     each image. The cell coordinates are sampled uniformly using the image
     height and width as maxima.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
@@ -766,8 +762,7 @@ class RegularGridVoronoi(Voronoi):
     to randomize the grid. Each image pixel then belongs to the voronoi
     cell with the closest coordinate.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
@@ -932,8 +927,7 @@ class RelativeRegularGridVoronoi(Voronoi):
         make use of the additional points on larger images. It does
         however slow down the augmentation process.
 
-    Supported dtypes
-    ----------------
+    **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.segmentation.Voronoi`.
 
