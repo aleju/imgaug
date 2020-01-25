@@ -1,4 +1,4 @@
-# Simplified Standard Parameters of Augmenters #567 #594
+# Simplified Standard Parameters of Augmenters #567 #595
 
 Changed the standard parameters shared by all augmenters to a
 reduced and more self-explanatory set. Previously, all augmenters
