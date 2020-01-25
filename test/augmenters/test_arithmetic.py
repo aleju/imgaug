@@ -25,7 +25,7 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
-                              runtest_pickleable_uint8_img)
+                              runtest_pickleable_uint8_img, assertWarns)
 import imgaug.augmenters.arithmetic as arithmetic_lib
 import imgaug.augmenters.contrast as contrast_lib
 
@@ -3047,25 +3047,26 @@ class TestTotalDropout(unittest.TestCase):
                 assert images_aug.shape == shape
 
     def test_zero_sized_axes(self):
-        shapes = [
-            (5, 0, 0),
-            (5, 0, 1),
-            (5, 1, 0),
-            (5, 0, 1, 0),
-            (5, 1, 0, 0),
-            (5, 0, 1, 1),
-            (5, 1, 0, 1)
-        ]
+        with assertWarns(self, iaa.SuspiciousMultiImageShapeWarning):
+            shapes = [
+                (5, 0, 0),
+                (5, 0, 1),
+                (5, 1, 0),
+                (5, 0, 1, 0),
+                (5, 1, 0, 0),
+                (5, 0, 1, 1),
+                (5, 1, 0, 1)
+            ]
 
-        for shape in shapes:
-            with self.subTest(shape=shape):
-                images = np.full(shape, 255, dtype=np.uint8)
-                aug = iaa.TotalDropout(1.0)
+            for shape in shapes:
+                with self.subTest(shape=shape):
+                    images = np.full(shape, 255, dtype=np.uint8)
+                    aug = iaa.TotalDropout(1.0)
 
-                images_aug = aug(images=images)
+                    images_aug = aug(images=images)
 
-                assert images_aug.dtype.name == "uint8"
-                assert images_aug.shape == images.shape
+                    assert images_aug.dtype.name == "uint8"
+                    assert images_aug.shape == images.shape
 
     def test_other_dtypes_bool(self):
         image = np.full((1, 1, 10), 1, dtype=bool)
