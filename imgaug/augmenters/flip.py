@@ -841,8 +841,16 @@ class Fliplr(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -858,9 +866,12 @@ class Fliplr(meta.Augmenter):
 
     """
 
-    def __init__(self, p=1, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=1,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(Fliplr, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -942,8 +953,16 @@ class Flipud(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -958,9 +977,12 @@ class Flipud(meta.Augmenter):
 
     """
 
-    def __init__(self, p=1, seed=None, name=None, **old_kwargs):
+    def __init__(self, p=1,
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(Flipud, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
         self.p = iap.handle_probability_param(p, "p")
 
     def _augment_batch_(self, batch, random_state, parents, hooks):

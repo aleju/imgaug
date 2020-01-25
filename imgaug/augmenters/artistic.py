@@ -317,8 +317,16 @@ class Cartoon(meta.Augmenter):
     name : None or str, optional
         See :func:`~imgaug.augmenters.meta.Augmenter.__init__`.
 
-    **old_kwargs
-        Outdated parameters. Avoid using these.
+    random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
+        Old name for parameter `seed`.
+        Its usage will not yet cause a deprecation warning,
+        but it is still recommended to use `seed` now.
+        Outdated since 0.4.0.
+
+    deterministic : bool, optional
+        Deprecated since 0.4.0.
+        See method ``to_deterministic()`` for an alternative and for
+        details about what the "deterministic mode" actually does.
 
     Examples
     --------
@@ -337,9 +345,11 @@ class Cartoon(meta.Augmenter):
     def __init__(self, blur_ksize=(1, 5), segmentation_size=(0.8, 1.2),
                  saturation=(1.5, 2.5), edge_prevalence=(0.9, 1.1),
                  from_colorspace=colorlib.CSPACE_RGB,
-                 seed=None, name=None, **old_kwargs):
+                 seed=None, name=None,
+                 random_state="deprecated", deterministic="deprecated"):
         super(Cartoon, self).__init__(
-            seed=seed, name=name, **old_kwargs)
+            seed=seed, name=name,
+            random_state=random_state, deterministic=deterministic)
 
         self.blur_ksize = iap.handle_continuous_param(
             blur_ksize, "blur_ksize", value_range=(0, None),
