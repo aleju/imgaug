@@ -26,7 +26,7 @@ from . import meta
 from . import color as color_lib
 from .. import parameters as iap
 from .. import dtypes as iadt
-from ..augmentables import batches as iabatches
+from ..augmentables.batches import _BatchInAugmentation
 
 
 class _ContrastFuncWrapper(meta.Augmenter):
@@ -1238,7 +1238,8 @@ class CLAHE(meta.Augmenter):
                                         random_state_derived):
             # pylint: disable=protected-access
             # TODO would .augment_batch() be sufficient here?
-            batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
+            batch_imgs = _BatchInAugmentation(
+                images=images_normalized)
             return self.all_channel_clahe._augment_batch_(
                 batch_imgs, random_state_derived, parents + [self],
                 hooks
@@ -1491,7 +1492,8 @@ class HistogramEqualization(meta.Augmenter):
                                                          random_state_derived):
             # pylint: disable=protected-access
             # TODO would .augment_batch() be sufficient here
-            batch_imgs = iabatches.BatchInAugmentation(images=images_normalized)
+            batch_imgs = _BatchInAugmentation(
+                images=images_normalized)
             return self.all_channel_histogram_equalization._augment_batch_(
                 batch_imgs, random_state_derived, parents + [self],
                 hooks

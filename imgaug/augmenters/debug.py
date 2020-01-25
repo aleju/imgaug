@@ -907,7 +907,7 @@ class _IImageDestination(object):
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.BatchInAugmentation
+        batch : imgaug.augmentables.batches._BatchInAugmentation
             A batch to which the next ``receive()`` call may correspond.
 
         """
@@ -968,7 +968,7 @@ class _IBatchwiseSchedule(object):
 
         Parameters
         ----------
-        batch : BatchInAugmentation
+        batch : _BatchInAugmentation
             Batch for which to evaluate the condition.
 
         Returns

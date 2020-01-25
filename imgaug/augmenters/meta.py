@@ -35,7 +35,7 @@ import six.moves as sm
 
 import imgaug as ia
 from imgaug.augmentables.batches import (Batch, UnnormalizedBatch,
-                                         BatchInAugmentation)
+                                         _BatchInAugmentation)
 from .. import parameters as iap
 from .. import random as iarandom
 
@@ -559,14 +559,14 @@ class Augmenter(object):
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch or imgaug.augmentables.batch.BatchInAugmentation
+        batch : imgaug.augmentables.batches.Batch or imgaug.augmentables.batches.UnnormalizedBatch or imgaug.augmentables.batch._BatchInAugmentation
             A single batch to augment.
 
             If :class:`imgaug.augmentables.batches.UnnormalizedBatch`
             or :class:`imgaug.augmentables.batches.Batch`, then the ``*_aug``
             attributes may be modified in-place, while the ``*_unaug``
             attributes will not be modified.
-            If :class:`imgaug.augmentables.batches.BatchInAugmentation`,
+            If :class:`imgaug.augmentables.batches._BatchInAugmentation`,
             then all attributes may be modified in-place.
 
         parents : None or list of imgaug.augmenters.Augmenter, optional
@@ -586,11 +586,11 @@ class Augmenter(object):
         """
         # this chain of if/elses would be more beautiful if it was
         # (1st) UnnormalizedBatch, (2nd) Batch, (3rd) BatchInAugmenation.
-        # We check for BatchInAugmentation first as it is expected to be the
+        # We check for _BatchInAugmentation first as it is expected to be the
         # most common input (due to child calls).
         batch_unnorm = None
         batch_norm = None
-        if isinstance(batch, BatchInAugmentation):
+        if isinstance(batch, _BatchInAugmentation):
             batch_inaug = batch
         elif isinstance(batch, UnnormalizedBatch):
             batch_unnorm = batch
@@ -601,7 +601,7 @@ class Augmenter(object):
             batch_inaug = batch_norm.to_batch_in_augmentation()
         else:
             raise ValueError(
-                "Expected UnnormalizedBatch, Batch or BatchInAugmentation, "
+                "Expected UnnormalizedBatch, Batch or _BatchInAugmentation, "
                 "got %s." % (type(batch).__name__,))
 
         columns = batch_inaug.columns
@@ -684,7 +684,7 @@ class Augmenter(object):
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.BatchInAugmentation
+        batch : imgaug.augmentables.batches._BatchInAugmentation
             The normalized batch to augment. May be changed in-place.
 
         random_state : imgaug.random.RNG
@@ -699,7 +699,7 @@ class Augmenter(object):
 
         Returns
         ----------
-        imgaug.augmentables.batches.BatchInAugmentation
+        imgaug.augmentables.batches._BatchInAugmentation
             The augmented batch.
 
         """

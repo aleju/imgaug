@@ -2181,7 +2181,7 @@ class IBatchwiseMaskGenerator(object):
 
         Parameters
         ----------
-        batch : imgaug.augmentables.batches.BatchInAugmentation
+        batch : imgaug.augmentables.batches._BatchInAugmentation
             Shape of the mask to sample.
 
         random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional

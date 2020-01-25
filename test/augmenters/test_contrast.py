@@ -33,6 +33,7 @@ from imgaug.augmenters import contrast as contrast_lib
 from imgaug.augmentables import batches as iabatches
 from imgaug.testutils import (ArgCopyingMagicMock, keypoints_equal, reseed,
                               runtest_pickleable_uint8_img)
+from imgaug.augmentables.batches import _BatchInAugmentation
 
 
 class TestGammaContrast(unittest.TestCase):
@@ -1300,7 +1301,7 @@ class TestCLAHE(unittest.TestCase):
         ]
         img = np.uint8(img)
 
-        mocked_batch = iabatches.BatchInAugmentation(
+        mocked_batch = _BatchInAugmentation(
             images=[img[..., np.newaxis] + 2])
 
         def _side_effect(image, _to_colorspace, _from_colorspace):
@@ -1584,7 +1585,7 @@ class TestCLAHE(unittest.TestCase):
                 mock_all_channel_clahe
                 ._augment_batch_
                 .call_args_list[0][0][0],
-                iabatches.BatchInAugmentation)
+                _BatchInAugmentation)
 
             assert (
                 len(mock_all_channel_clahe
@@ -1697,7 +1698,7 @@ class TestCLAHE(unittest.TestCase):
                 mock_all_channel_clahe
                 ._augment_batch_
                 .call_args_list[0][0][0],
-                iabatches.BatchInAugmentation)
+                _BatchInAugmentation)
 
             assert (
                 len(

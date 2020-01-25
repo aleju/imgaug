@@ -20,6 +20,7 @@ import numpy as np
 import imgaug as ia
 import imgaug.augmenters as iaa
 from imgaug.testutils import reseed
+from imgaug.augmentables.batches import _BatchInAugmentation
 
 
 ATTR_NAMES = ["images", "heatmaps", "segmentation_maps", "keypoints",
@@ -270,7 +271,7 @@ class TestBatch(unittest.TestCase):
 
         batch_inaug = batch.to_batch_in_augmentation()
 
-        assert isinstance(batch_inaug, ia.BatchInAugmentation)
+        assert isinstance(batch_inaug, _BatchInAugmentation)
         assert ia.is_np_array(batch_inaug.images)
         assert batch_inaug.images.shape == (1, 2, 2, 3)
         assert batch_inaug.get_column_names() == ["images"]
@@ -318,7 +319,7 @@ class TestBatch(unittest.TestCase):
 
         batch_inaug = batch.to_batch_in_augmentation()
 
-        assert isinstance(batch_inaug, ia.BatchInAugmentation)
+        assert isinstance(batch_inaug, _BatchInAugmentation)
         assert ia.is_np_array(batch_inaug.images)
         assert batch_inaug.images.shape == (1, 2, 2, 3)
         assert isinstance(batch_inaug.heatmaps[0], ia.HeatmapsOnImage)
@@ -335,7 +336,7 @@ class TestBatch(unittest.TestCase):
 
     def test_fill_from_batch_in_augmentation(self):
         batch = ia.Batch(images=1)
-        batch_inaug = ia.BatchInAugmentation(
+        batch_inaug = _BatchInAugmentation(
             images=2,
             heatmaps=3,
             segmentation_maps=4,
@@ -479,9 +480,9 @@ class TestBatch(unittest.TestCase):
 # TODO test __init__
 #      test apply_propagation_hooks_
 #      test invert_apply_propagation_hooks_
-class TestBatchInAugmentation(unittest.TestCase):
+class Test_BatchInAugmentation(unittest.TestCase):
     def test_empty__all_columns_none(self):
-        batch = ia.BatchInAugmentation()
+        batch = _BatchInAugmentation()
         assert batch.empty
 
     def test_empty__with_columns_set(self):
@@ -495,15 +496,15 @@ class TestBatchInAugmentation(unittest.TestCase):
             {"line_strings": [8]}
         ]
         for kwargs_i in kwargs:
-            batch = ia.BatchInAugmentation(**kwargs_i)
+            batch = _BatchInAugmentation(**kwargs_i)
             assert not batch.empty
 
     def test_nb_rows__when_empty(self):
-        batch = ia.BatchInAugmentation()
+        batch = _BatchInAugmentation()
         assert batch.nb_rows == 0
 
     def test_nb_rows__with_empty_column(self):
-        batch = ia.BatchInAugmentation(images=[])
+        batch = _BatchInAugmentation(images=[])
         assert batch.nb_rows == 0
 
     def test_nb_rows__with_columns_set(self):
@@ -517,19 +518,19 @@ class TestBatchInAugmentation(unittest.TestCase):
             {"line_strings": [0]}
         ]
         for kwargs_i in kwargs:
-            batch = ia.BatchInAugmentation(**kwargs_i)
+            batch = _BatchInAugmentation(**kwargs_i)
             assert batch.nb_rows == 1
 
     def test_nb_rows__with_two_columns(self):
-        batch = ia.BatchInAugmentation(images=[0, 0], keypoints=[0, 0])
+        batch = _BatchInAugmentation(images=[0, 0], keypoints=[0, 0])
         assert batch.nb_rows == 2
 
     def test_columns__when_empty(self):
-        batch = ia.BatchInAugmentation()
+        batch = _BatchInAugmentation()
         assert len(batch.columns) == 0
 
     def test_columns__with_empty_column(self):
-        batch = ia.BatchInAugmentation(images=[])
+        batch = _BatchInAugmentation(images=[])
 
         columns = batch.columns
 
@@ -546,13 +547,13 @@ class TestBatchInAugmentation(unittest.TestCase):
             {"line_strings": [0]}
         ]
         for kwargs_i in kwargs:
-            batch = ia.BatchInAugmentation(**kwargs_i)
+            batch = _BatchInAugmentation(**kwargs_i)
             columns = batch.columns
             assert len(columns) == 1
             assert columns[0].name == list(kwargs_i.keys())[0]
 
     def test_columns__with_two_columns(self):
-        batch = ia.BatchInAugmentation(images=[0, 0], keypoints=[1, 1])
+        batch = _BatchInAugmentation(images=[0, 0], keypoints=[1, 1])
 
         columns = batch.columns
 
@@ -563,16 +564,16 @@ class TestBatchInAugmentation(unittest.TestCase):
         assert columns[1].value == [1, 1]
 
     def test_get_column_names__with_two_columns(self):
-        batch = ia.BatchInAugmentation(images=[0, 0], keypoints=[1, 1])
+        batch = _BatchInAugmentation(images=[0, 0], keypoints=[1, 1])
         assert batch.get_column_names() == ["images", "keypoints"]
 
     def test_get_rowwise_shapes__images_is_single_array(self):
-        batch = ia.BatchInAugmentation(images=np.zeros((2, 3, 4, 1)))
+        batch = _BatchInAugmentation(images=np.zeros((2, 3, 4, 1)))
         shapes = batch.get_rowwise_shapes()
         assert shapes == [(3, 4, 1), (3, 4, 1)]
 
     def test_get_rowwise_shapes__images_is_multiple_arrays(self):
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=[np.zeros((3, 4, 1)), np.zeros((4, 5, 1))]
         )
         shapes = batch.get_rowwise_shapes()
@@ -622,12 +623,12 @@ class TestBatchInAugmentation(unittest.TestCase):
             {"line_strings": line_strings}
         ]
         for kwargs_i in kwargs:
-            batch = ia.BatchInAugmentation(**kwargs_i)
+            batch = _BatchInAugmentation(**kwargs_i)
             shapes = batch.get_rowwise_shapes()
             assert shapes == [(1, 2, 3)]
 
     def test_subselect_rows_by_indices__none_selected(self):
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=np.zeros((3, 3, 4, 1)),
             keypoints=[
                 ia.KeypointsOnImage(
@@ -651,7 +652,7 @@ class TestBatchInAugmentation(unittest.TestCase):
         assert batch_sub.keypoints is None
 
     def test_subselect_rows_by_indices__two_of_three_selected(self):
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=np.zeros((3, 3, 4, 1)),
             keypoints=[
                 ia.KeypointsOnImage(
@@ -682,7 +683,7 @@ class TestBatchInAugmentation(unittest.TestCase):
         images[0, ...] = 0
         images[1, ...] = 1
         images[2, ...] = 2
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=images,
             keypoints=[
                 ia.KeypointsOnImage(
@@ -719,7 +720,7 @@ class TestBatchInAugmentation(unittest.TestCase):
         images[0, ...] = 0
         images[1, ...] = 1
         images[2, ...] = 2
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=images,
             keypoints=[
                 ia.KeypointsOnImage(
@@ -763,7 +764,7 @@ class TestBatchInAugmentation(unittest.TestCase):
 
         hooks = ia.HooksImages(propagator=propagator)
 
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=np.zeros((3, 3, 4, 1), dtype=np.uint8),
             keypoints=[
                 ia.KeypointsOnImage(
@@ -794,13 +795,13 @@ class TestBatchInAugmentation(unittest.TestCase):
         assert batch.keypoints[0].keypoints[0].x == 10
 
     def test_to_batch_in_augmentation(self):
-        batch = ia.BatchInAugmentation(images=1)
+        batch = _BatchInAugmentation(images=1)
         batch_inaug = batch.to_batch_in_augmentation()
         assert batch_inaug is batch
 
     def test_fill_from_batch_in_augmentation(self):
-        batch = ia.BatchInAugmentation(images=1)
-        batch_inaug = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(images=1)
+        batch_inaug = _BatchInAugmentation(
             images=2,
             heatmaps=3,
             segmentation_maps=4,
@@ -830,7 +831,7 @@ class TestBatchInAugmentation(unittest.TestCase):
         batch_before_aug.polygons_unaug = 5
         batch_before_aug.line_strings_unaug = 6
 
-        batch_inaug = ia.BatchInAugmentation(
+        batch_inaug = _BatchInAugmentation(
             images=10,
             heatmaps=20,
             segmentation_maps=30,
@@ -859,7 +860,7 @@ class TestBatchInAugmentation(unittest.TestCase):
         assert batch.line_strings_aug == 70
 
     def test_deepcopy(self):
-        batch = ia.BatchInAugmentation(
+        batch = _BatchInAugmentation(
             images=np.full((1,), 0, dtype=np.uint8),
             heatmaps=np.full((1,), 1, dtype=np.uint8),
             segmentation_maps=np.full((1,), 2, dtype=np.uint8),

@@ -44,6 +44,7 @@ from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
 from imgaug.augmentables.polys import _ConcavePolygonRecoverer
+from imgaug.augmentables.batches import _BatchInAugmentation
 
 
 IS_PY36_OR_HIGHER = (sys.version_info[0] == 3 and sys.version_info[1] >= 6)
@@ -3074,7 +3075,7 @@ class TestAugmenter_augment_batch_(unittest.TestCase):
 
         aug = _InplaceDummyAugmenterImgsArray(1)
 
-        batch = ia.BatchInAugmentation(images=images)
+        batch = _BatchInAugmentation(images=images)
         batch_aug = aug.augment_batch_(batch)
         image_aug = batch_aug.images[0, :, :, :]
 
