@@ -758,6 +758,11 @@ class Augmenter(object):
             The corresponding augmented image.
 
         """
+        assert ia.is_np_array(image), (
+            "Expected to get a single numpy array of shape (H,W) or (H,W,C) "
+            "for `image`. Got instead type %d. Use `augment_images(images)` "
+            "to augment a list of multiple images." % (
+                type(image).__name__),)
         assert image.ndim in [2, 3], (
             "Expected image to have shape (height, width, [channels]), "
             "got shape %s." % (image.shape,))
