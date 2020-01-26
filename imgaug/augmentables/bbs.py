@@ -646,7 +646,7 @@ class BoundingBox(object):
         """
         return self.deepcopy().clip_out_of_image_(image)
 
-    def shift_(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
+    def shift_(self, x=0, y=0):
         """Move this bounding box along the x/y-axis in-place.
 
         The origin ``(0, 0)`` is at the top left of the image.
@@ -663,26 +663,6 @@ class BoundingBox(object):
             Value to be added to all y-coordinates. Positive values shift
             towards the bottom images.
 
-        top : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            top (towards the bottom).
-
-        right : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            right (towards the left).
-
-        bottom : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            bottom (towards the top).
-
-        left : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            left (towards the right).
-
         Returns
         -------
         imgaug.augmentables.bbs.BoundingBox
@@ -690,8 +670,6 @@ class BoundingBox(object):
             The object may have been modified in-place.
 
         """
-        x, y = _normalize_shift_args(
-            x, y, top=top, right=right, bottom=bottom, left=left)
         self.x1 += x
         self.x2 += x
         self.y1 += y
@@ -740,7 +718,9 @@ class BoundingBox(object):
 
         """
         # pylint: disable=redefined-outer-name
-        return self.deepcopy().shift_(x, y, top, right, bottom, left)
+        x, y = _normalize_shift_args(
+            x, y, top=top, right=right, bottom=bottom, left=left)
+        return self.deepcopy().shift_(x, y)
 
     def draw_label_on_image(self, image, color=(0, 255, 0),
                             color_text=None, color_bg=None, alpha=1.0, size=1,
@@ -1906,7 +1886,7 @@ class BoundingBoxesOnImage(IAugmentable):
         """
         return self.deepcopy().clip_out_of_image_()
 
-    def shift_(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
+    def shift_(self, x=0, y=0):
         """Move all BBs along the x/y-axis in-place.
 
         The origin ``(0, 0)`` is at the top left of the image.
@@ -1923,26 +1903,6 @@ class BoundingBoxesOnImage(IAugmentable):
             Value to be added to all y-coordinates. Positive values shift
             towards the bottom images.
 
-        top : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            top (towards the bottom).
-
-        right : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            right (towads the left).
-
-        bottom : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            bottom (towards the top).
-
-        left : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            left (towards the right).
-
         Returns
         -------
         imgaug.augmentables.bbs.BoundingBoxesOnImage
@@ -1951,9 +1911,7 @@ class BoundingBoxesOnImage(IAugmentable):
 
         """
         for i, bb in enumerate(self.bounding_boxes):
-            self.bounding_boxes[i] = bb.shift_(x=x, y=y,
-                                               top=top, right=right,
-                                               bottom=bottom, left=left)
+            self.bounding_boxes[i] = bb.shift_(x=x, y=y)
         return self
 
     def shift(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
@@ -1997,9 +1955,9 @@ class BoundingBoxesOnImage(IAugmentable):
             Shifted bounding boxes.
 
         """
-        return self.deepcopy().shift_(x=x, y=y,
-                                      top=top, right=right,
-                                      bottom=bottom, left=left)
+        x, y = _normalize_shift_args(
+            x, y, top=top, right=right, bottom=bottom, left=left)
+        return self.deepcopy().shift_(x=x, y=y)
 
     def to_keypoints_on_image(self):
         """Convert the bounding boxes to one ``KeypointsOnImage`` instance.

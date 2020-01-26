@@ -348,7 +348,7 @@ def _normalize_shift_args(x, y, top=None, right=None, bottom=None, left=None):
     if any([v is not None for v in [top, right, bottom, left]]):
         ia.warn_deprecated(
             "Got one of the arguments `top` (%s), `right` (%s), "
-            "`bottom` (%s), `left` (%s) in a shift() or shift_() call."
+            "`bottom` (%s), `left` (%s) in a shift() call. "
             "These are deprecated. Use `x` and `y` instead." % (
                 top, right, bottom, left),
             stacklevel=3)

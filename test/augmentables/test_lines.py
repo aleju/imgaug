@@ -81,6 +81,26 @@ class TestLineString_shift_(unittest.TestCase):
         assert ls_shift.coords_almost_equals(
             [(0+1, 0+2), (1+1, 0+2), (2+1, 1+2)])
 
+    def test_inplaceness(self):
+        ls = ia.LineString([(0, 0), (1, 0)])
+        ls2 = self._func(ls, y=0)
+        if self._is_inplace:
+            assert ls is ls2
+        else:
+            assert ls is not ls2
+
+
+class TestLineString_shift(TestLineString_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, ls, *args, **kwargs):
+        def _func_impl():
+            return ls.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
     def test_shift_by_positive_args(self):
         ls = LineString([(0, 0), (1, 0), (2, 1)])
         assert self._func(ls.deepcopy(), top=1).coords_almost_equals(
@@ -115,26 +135,6 @@ class TestLineString_shift_(unittest.TestCase):
         assert self._func(
             ls.deepcopy(), top=1, right=2, bottom=3, left=4
         ).coords_almost_equals([])
-
-    def test_inplaceness(self):
-        ls = ia.LineString([(0, 0), (1, 0)])
-        ls2 = self._func(ls, top=0, right=0, bottom=0, left=0)
-        if self._is_inplace:
-            assert ls is ls2
-        else:
-            assert ls is not ls2
-
-
-class TestLineString_shift(TestLineString_shift_):
-    @property
-    def _is_inplace(self):
-        return False
-
-    def _func(self, ls, *args, **kwargs):
-        def _func_impl():
-            return ls.shift(*args, **kwargs)
-
-        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 class TestLineString(unittest.TestCase):
@@ -2105,6 +2105,30 @@ class TestLineStringsOnImage_shift_(unittest.TestCase):
         )
         assert observed.shape == (100, 100, 3)
 
+    def test_inplaceness(self):
+        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
+        ls2 = LineString([(10, 10)])
+        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
+
+        lsoi2 = self._func(lsoi, y=1)
+
+        if self._is_inplace:
+            assert lsoi is lsoi2
+        else:
+            assert lsoi is not lsoi2
+
+
+class TestLineStringsOnImage_shift(TestLineStringsOnImage_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, lsoi, *args, **kwargs):
+        def _func_impl():
+            return lsoi.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
     def test_shift_with_two_simple_line_strings(self):
         ls1 = LineString([(0, 0), (1, 0), (2, 1)])
         ls2 = LineString([(10, 10)])
@@ -2129,32 +2153,6 @@ class TestLineStringsOnImage_shift_(unittest.TestCase):
 
         assert len(observed.line_strings) == 0
         assert observed.shape == (100, 100, 3)
-
-    def test_inplaceness(self):
-        ls1 = LineString([(0, 0), (1, 0), (2, 1)])
-        ls2 = LineString([(10, 10)])
-        lsoi = LineStringsOnImage([ls1, ls2], shape=(100, 100, 3))
-
-        lsoi2 = self._func(lsoi, top=1, right=2, bottom=3, left=4)
-
-        if self._is_inplace:
-            assert lsoi is lsoi2
-        else:
-            assert lsoi is not lsoi2
-
-
-class TestLineStringsOnImage_shift(TestLineStringsOnImage_shift_):
-    @property
-    def _is_inplace(self):
-        return False
-
-    def _func(self, lsoi, *args, **kwargs):
-        def _func_impl():
-            return lsoi.shift(*args, **kwargs)
-
-        if len(lsoi.line_strings) == 0:
-            return _func_impl()
-        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 # TODO test to_keypoints_on_image()
