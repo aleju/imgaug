@@ -1,6 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import time
 import warnings
 import sys
 # unittest only added in 3.4 self.subTest()
@@ -14,8 +13,6 @@ try:
 except ImportError:
     import mock
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import shapely
@@ -888,6 +885,43 @@ class TestPolygon_shift_(unittest.TestCase):
         ]))
         assert poly_shifted.label == "test"
 
+    def test_inplaceness(self):
+        poly = self.poly
+        poly2 = self._func(poly, y=1)
+
+        if self._is_inplace:
+            assert poly is poly2
+        else:
+            assert poly is not poly2
+
+
+class TestPolygon_shift(TestPolygon_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, poly, *args, **kwargs):
+        def _func_impl():
+            return poly.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
+    def test_shift_does_not_work_inplace(self):
+        poly = self.poly
+        poly_shifted = self._func(poly, top=1)
+        assert np.allclose(poly.exterior, np.float32([
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1]
+        ]))
+        assert np.allclose(poly_shifted.exterior, np.float32([
+            [0, 1],
+            [1, 1],
+            [1, 2],
+            [0, 2]
+        ]))
+
     def test_shift_from_top(self):
         for v in [1, 0, -1, 0.5]:
             with self.subTest(top=v):
@@ -959,43 +993,6 @@ class TestPolygon_shift_(unittest.TestCase):
                     [0 + 2 * v, 1]
                 ]))
                 assert poly_shifted.label == "test"
-
-    def test_inplaceness(self):
-        poly = self.poly
-        poly2 = self._func(poly, top=1)
-
-        if self._is_inplace:
-            assert poly is poly2
-        else:
-            assert poly is not poly2
-
-
-class TestPolygon_shift(TestPolygon_shift_):
-    @property
-    def _is_inplace(self):
-        return False
-
-    def _func(self, poly, *args, **kwargs):
-        def _func_impl():
-            return poly.shift(*args, **kwargs)
-
-        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
-
-    def test_shift_does_not_work_inplace(self):
-        poly = self.poly
-        poly_shifted = self._func(poly, top=1)
-        assert np.allclose(poly.exterior, np.float32([
-            [0, 0],
-            [1, 0],
-            [1, 1],
-            [0, 1]
-        ]))
-        assert np.allclose(poly_shifted.exterior, np.float32([
-            [0, 1],
-            [1, 1],
-            [1, 2],
-            [0, 2]
-        ]))
 
 
 class TestPolygon_draw_on_image(unittest.TestCase):
@@ -2761,6 +2758,32 @@ class TestPolygonsOnImage_shift_(unittest.TestCase):
                            rtol=0, atol=1e-4)
         assert poly_oi_shifted.shape == (10, 11, 3)
 
+    def test_inplaceness(self):
+        poly_oi = ia.PolygonsOnImage(
+            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
+             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
+             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
+            shape=(10, 11, 3))
+
+        poly_oi_shifted = self._func(poly_oi, x=1)
+
+        if self._is_inplace:
+            assert poly_oi_shifted is poly_oi
+        else:
+            assert poly_oi_shifted is not poly_oi
+
+
+class TestPolygonsOnImage_shift(TestPolygonsOnImage_shift_):
+    @property
+    def _is_inplace(self):
+        return False
+
+    def _func(self, psoi, *args, **kwargs):
+        def _func_impl():
+            return psoi.shift(*args, **kwargs)
+
+        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
+
     def test_with_zero_polygons(self):
         # no polygons
         poly_oi = ia.PolygonsOnImage([], shape=(10, 11, 3))
@@ -2790,35 +2813,6 @@ class TestPolygonsOnImage_shift_(unittest.TestCase):
                             (200-3, 200+2), (100-3, 200+2)],
                            rtol=0, atol=1e-4)
         assert poly_oi_shifted.shape == (10, 11, 3)
-
-    def test_inplaceness(self):
-        poly_oi = ia.PolygonsOnImage(
-            [ia.Polygon([(1, 1), (8, 1), (8, 9), (1, 9)]),
-             ia.Polygon([(1, 1), (15, 1), (15, 9), (1, 9)]),
-             ia.Polygon([(100, 100), (200, 100), (200, 200), (100, 200)])],
-            shape=(10, 11, 3))
-
-        poly_oi_shifted = self._func(poly_oi, top=3, right=0, bottom=1,
-                                     left=-3)
-
-        if self._is_inplace:
-            assert poly_oi_shifted is poly_oi
-        else:
-            assert poly_oi_shifted is not poly_oi
-
-
-class TestPolygonsOnImage_shift(TestPolygonsOnImage_shift_):
-    @property
-    def _is_inplace(self):
-        return False
-
-    def _func(self, psoi, *args, **kwargs):
-        def _func_impl():
-            return psoi.shift(*args, **kwargs)
-
-        if len(psoi.polygons) == 0:
-            return _func_impl()
-        return wrap_shift_deprecation(_func_impl, *args, **kwargs)
 
 
 class TestPolygonsOnImage_subdivide_(unittest.TestCase):

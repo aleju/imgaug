@@ -19,8 +19,6 @@ except ImportError:
 
 import numpy as np
 import six.moves as sm
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 
 import imgaug as ia
 import imgaug.multicore as multicore

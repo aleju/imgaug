@@ -13,8 +13,6 @@ try:
 except ImportError:
     import mock
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import cv2
@@ -26,7 +24,7 @@ from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 import imgaug.augmenters.size as iaa_size
 from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
-                              assert_cbaois_equal, shift_cbaoi,
+                              assert_cbaois_equal,
                               runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
@@ -1592,7 +1590,7 @@ class TestPad(unittest.TestCase):
 
                 observed = getattr(aug, augf_name)(cbaoi)
 
-                expected = shift_cbaoi(cbaoi, left=left, top=top)
+                expected = cbaoi.shift(x=left, y=top)
                 expected.shape = tuple(image_padded_shape)
                 assert_cbaois_equal(observed, expected)
 
@@ -2335,7 +2333,7 @@ class TestPad(unittest.TestCase):
                 top_px = int(top * height)
                 left_px = int(left * width)
                 aug = iaa.Pad(percent=pad, keep_size=False)
-                cbaoi_moved = shift_cbaoi(cbaoi, left=left_px, top=top_px)
+                cbaoi_moved = cbaoi.shift(x=left_px, y=top_px)
                 cbaoi_moved.shape = (
                     int(height+top*height+bottom*height),
                     int(width+left*width+right*width)
@@ -3456,7 +3454,7 @@ class TestCrop(unittest.TestCase):
 
                 observed = getattr(aug, augf_name)(cbaoi)
 
-                expected = shift_cbaoi(cbaoi, left=-left_px, top=-top_px)
+                expected = cbaoi.shift(x=-left_px, y=-top_px)
                 expected.shape = tuple(
                     [expected.shape[0] - top_px - bottom_px,
                      expected.shape[1] - left_px - right_px]

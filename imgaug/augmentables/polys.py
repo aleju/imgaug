@@ -649,7 +649,7 @@ class Polygon(object):
 
         return polygons_reordered
 
-    def shift_(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
+    def shift_(self, x=0, y=0):
         """Move this polygon along the x/y-axis in-place.
 
         The origin ``(0, 0)`` is at the top left of the image.
@@ -666,26 +666,6 @@ class Polygon(object):
             Value to be added to all y-coordinates. Positive values shift
             towards the bottom images.
 
-        top : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            top (towards the bottom).
-
-        right : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            right (towards the left).
-
-        bottom : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            bottom (towards the top).
-
-        left : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift this object *from* the
-            left (towards the right).
-
         Returns
         -------
         imgaug.augmentables.polys.Polygon
@@ -693,8 +673,6 @@ class Polygon(object):
             The object may have been modified in-place.
 
         """
-        x, y = _normalize_shift_args(
-            x, y, top=top, right=right, bottom=bottom, left=left)
         self.exterior[:, 0] += x
         self.exterior[:, 1] += y
         return self
@@ -740,9 +718,9 @@ class Polygon(object):
             Shifted polygon.
 
         """
-        return self.deepcopy().shift_(x=x, y=y,
-                                      top=top, right=right,
-                                      bottom=bottom, left=left)
+        x, y = _normalize_shift_args(
+            x, y, top=top, right=right, bottom=bottom, left=left)
+        return self.deepcopy().shift_(x=x, y=y)
 
     # TODO separate this into draw_face_on_image() and draw_border_on_image()
     # TODO add tests for line thickness
@@ -1827,7 +1805,7 @@ class PolygonsOnImage(IAugmentable):
         """
         return self.copy().clip_out_of_image_()
 
-    def shift_(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
+    def shift_(self, x=0, y=0):
         """Move the polygons along the x/y-axis in-place.
 
         The origin ``(0, 0)`` is at the top left of the image.
@@ -1844,26 +1822,6 @@ class PolygonsOnImage(IAugmentable):
             Value to be added to all y-coordinates. Positive values shift
             towards the bottom images.
 
-        top : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            top (towards the bottom).
-
-        right : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            right (towads the left).
-
-        bottom : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            bottom (towards the top).
-
-        left : None or int, optional
-            Deprecated since 0.4.0.
-            Amount of pixels by which to shift all objects *from* the
-            left (towards the right).
-
         Returns
         -------
         imgaug.augmentables.polys.PolygonsOnImage
@@ -1871,9 +1829,7 @@ class PolygonsOnImage(IAugmentable):
 
         """
         for i, poly in enumerate(self.polygons):
-            self.polygons[i] = poly.shift_(x=x, y=y,
-                                           top=top, right=right,
-                                           bottom=bottom, left=left)
+            self.polygons[i] = poly.shift_(x=x, y=y)
         return self
 
     def shift(self, x=0, y=0, top=None, right=None, bottom=None, left=None):
@@ -1917,9 +1873,9 @@ class PolygonsOnImage(IAugmentable):
             Shifted polygons.
 
         """
-        return self.deepcopy().shift_(x=x, y=y,
-                                      top=top, right=right,
-                                      bottom=bottom, left=left)
+        x, y = _normalize_shift_args(
+            x, y, top=top, right=right, bottom=bottom, left=left)
+        return self.deepcopy().shift_(x=x, y=y)
 
     def subdivide_(self, points_per_edge):
         """Interpolate ``N`` points on each polygon.

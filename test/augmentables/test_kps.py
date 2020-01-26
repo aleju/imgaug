@@ -1,6 +1,5 @@
 from __future__ import print_function, division, absolute_import
 
-import time
 import sys
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
@@ -13,8 +12,6 @@ try:
 except ImportError:
     import mock
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import imgaug as ia
 

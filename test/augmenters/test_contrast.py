@@ -14,23 +14,17 @@ except ImportError:
     import mock
 import warnings
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import skimage
 import skimage.data
 import cv2
-import PIL.Image
-import PIL.ImageOps
 
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
-from imgaug import random as iarandom
 from imgaug.augmenters import contrast as contrast_lib
-from imgaug.augmentables import batches as iabatches
 from imgaug.testutils import (ArgCopyingMagicMock, keypoints_equal, reseed,
                               runtest_pickleable_uint8_img, assertWarns)
 from imgaug.augmentables.batches import _BatchInAugmentation

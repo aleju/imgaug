@@ -268,20 +268,6 @@ class Augmenter(object):
         If ``None``, ``UnnamedX`` will be used as the name, where ``X``
         is the Augmenter's class name.
 
-    deterministic : bool, optional
-        Whether the augmenter instance's random state will be saved before
-        augmenting a batch and then reset to that initial saved state
-        after the augmentation was finished. I.e. if set to ``True``,
-        each batch will be augmented in the same way (e.g. first image
-        might always be flipped horizontally, second image will never be
-        flipped etc.).
-        This is useful when you want to transform multiple batches
-        in the same way, or when you want to augment images and
-        corresponding data (e.g. keypoints or segmentation maps) on these
-        images. Usually, there is no need to set this variable by hand.
-        Instead, instantiate the augmenter and then use
-        :func:`~imgaug.augmenters.Augmenter.to_deterministic`.
-
     random_state : None or int or imgaug.random.RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState, optional
         Old name for parameter `seed`.
         Its usage will not yet cause a deprecation warning,
