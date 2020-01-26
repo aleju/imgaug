@@ -4008,7 +4008,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         matrix_expanded = cv2.getPerspectiveTransform(rect, dst)
         max_width, max_height = dst.max(axis=0)
-        return matrix_expanded, max_width, max_height
+        return matrix_expanded, int(max_width), int(max_height)
 
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
