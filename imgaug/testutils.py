@@ -70,13 +70,6 @@ def assert_cbaois_equal(observed, expected, max_distance=1e-4):
                     assert item_obs.is_valid
 
 
-# Added in 0.4.0.
-# TODO remove this function, no longer needed since shift interfaces were
-#      standardized
-def shift_cbaoi(cbaoi, x=0, y=0, top=0, right=0, bottom=0, left=0):
-    return cbaoi.shift(x=x+left-right, y=y+top-bottom)
-
-
 def create_random_images(size):
     return np.random.uniform(0, 255, size).astype(np.uint8)
 

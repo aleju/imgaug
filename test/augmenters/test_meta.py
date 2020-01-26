@@ -37,7 +37,7 @@ from imgaug import dtypes as iadt
 from imgaug import random as iarandom
 from imgaug.testutils import (create_random_images, create_random_keypoints,
                               array_equal_lists, keypoints_equal, reseed,
-                              assert_cbaois_equal, shift_cbaoi,
+                              assert_cbaois_equal,
                               runtest_pickleable_uint8_img,
                               TemporaryDirectory)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
@@ -6343,9 +6343,9 @@ class TestSomeOf(unittest.TestCase):
         augs = [iaa.Affine(translate_px={"x": 1}),
                 iaa.Affine(translate_px={"y": 1})]
 
-        cbaoi_x = shift_cbaoi(cbaoi, x=1)
-        cbaoi_y = shift_cbaoi(cbaoi, y=1)
-        cbaoi_xy = shift_cbaoi(cbaoi, x=1, y=1)
+        cbaoi_x = cbaoi.shift(x=1)
+        cbaoi_y = cbaoi.shift(y=1)
+        cbaoi_xy = cbaoi.shift(x=1, y=1)
 
         ns = [0, 1, 2, None]
         expecteds = [[cbaoi],
@@ -6465,9 +6465,9 @@ class TestSomeOf(unittest.TestCase):
             iaa.Affine(translate_px={"x": 1}, order=0),
             iaa.Affine(translate_px={"y": 1}, order=0)
         ]
-        cbaoi_x = shift_cbaoi(cbaoi, x=1)
-        cbaoi_y = shift_cbaoi(cbaoi, y=1)
-        cbaoi_xy = shift_cbaoi(cbaoi, x=1, y=1)
+        cbaoi_x = cbaoi.shift(x=1)
+        cbaoi_y = cbaoi.shift(y=1)
+        cbaoi_xy = cbaoi.shift(x=1, y=1)
 
         aug = iaa.SomeOf((0, 2), children=augs)
         seen = [False, False, False, False]

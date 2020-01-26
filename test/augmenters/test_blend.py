@@ -28,7 +28,7 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import blend
 from imgaug.testutils import (
-    keypoints_equal, reseed, assert_cbaois_equal, shift_cbaoi,
+    keypoints_equal, reseed, assert_cbaois_equal,
     runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
@@ -869,7 +869,7 @@ class TestBlendAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = shift_cbaoi(cbaoi, left=1)
+        expected = cbaoi.shift(x=1)
         assert_cbaois_equal(observed[0], expected)
 
     @classmethod
@@ -880,7 +880,7 @@ class TestBlendAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = shift_cbaoi(cbaoi, left=1)
+        expected = cbaoi.shift(x=1)
         assert_cbaois_equal(observed[0], expected)
 
     @classmethod
@@ -905,7 +905,7 @@ class TestBlendAlpha(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = shift_cbaoi(cbaoi, left=1)
+        expected = cbaoi.shift(x=1)
         assert_cbaois_equal(observed[0], expected)
 
     @classmethod
@@ -917,7 +917,7 @@ class TestBlendAlpha(unittest.TestCase):
             iaa.Affine(translate_px={"x": 1}),
             per_channel=True)
         expected_same = cbaoi.deepcopy()
-        expected_shifted = shift_cbaoi(cbaoi, left=1)
+        expected_shifted = cbaoi.shift(x=1)
         seen = [0, 0, 0]
         for _ in sm.xrange(200):
             observed = getattr(aug, augf_name)([cbaoi])[0]
@@ -1570,7 +1570,7 @@ class TestBlendAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = shift_cbaoi(cbaoi, left=1)
+        expected = cbaoi.shift(x=1)
         assert_cbaois_equal(observed[0], expected)
 
     @classmethod
@@ -1582,7 +1582,7 @@ class TestBlendAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = shift_cbaoi(cbaoi, left=1)
+        expected = cbaoi.shift(x=1)
         assert_cbaois_equal(observed[0], expected)
 
     @classmethod
@@ -1607,7 +1607,7 @@ class TestBlendAlphaElementwise(unittest.TestCase):
 
         observed = getattr(aug, augf_name)([cbaoi])
 
-        expected = shift_cbaoi(cbaoi, left=1)
+        expected = cbaoi.shift(x=1)
         assert_cbaois_equal(observed[0], expected)
 
     @classmethod
@@ -1620,7 +1620,7 @@ class TestBlendAlphaElementwise(unittest.TestCase):
             per_channel=True)
 
         expected_same = cbaoi.deepcopy()
-        expected_shifted = shift_cbaoi(cbaoi, left=1)
+        expected_shifted = cbaoi.shift(x=1)
 
         nb_iterations = 400
         seen = [0, 0, 0]

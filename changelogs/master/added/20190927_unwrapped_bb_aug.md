@@ -1,4 +1,4 @@
-# Unwrapped Bounding Box Augmentation #446
+# Unwrapped Bounding Box Augmentation #446 #599
 
 * Added property `coords` to `BoundingBox`. The property returns an `(N,2)`
   numpy array containing the coordinates of the top-left and bottom-right
@@ -17,7 +17,6 @@
 * Added method `Keypoint.coords_almost_equals(other)`.
 * Added method `Keypoint.almost_equals(other)`.
 * Added method `imgaug.testutils.assert_cbaois_equal()`.
-* Added method `imgaug.testutils.shift_cbaoi()`.
 * Added internal `_augment_bounding_boxes()` methods to various augmenters.
   This allows to individually control how bounding boxes are supposed to
   be augmented. Previously, the bounding box augmentation was a wrapper around
