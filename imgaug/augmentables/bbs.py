@@ -61,6 +61,8 @@ class BoundingBox(object):
     def coords(self):
         """Get the top-left and bottom-right coordinates as one array.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -227,6 +229,8 @@ class BoundingBox(object):
         This is intended for cases where the original image is resized.
         It cannot be used for more complex changes (e.g. padding, cropping).
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         from_shape : tuple of int or ndarray
@@ -279,6 +283,8 @@ class BoundingBox(object):
 
     def extend_(self, all_sides=0, top=0, right=0, bottom=0, left=0):
         """Extend the size of the bounding box along its sides in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -433,6 +439,8 @@ class BoundingBox(object):
     def compute_out_of_image_area(self, image):
         """Compute the area of the BB that is outside of the image plane.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         image : (H,W,...) ndarray or tuple of int
@@ -461,6 +469,8 @@ class BoundingBox(object):
         This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
         bounding box that is outside of the image plane, while ``A`` is the
         total area of the bounding box.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -584,6 +594,8 @@ class BoundingBox(object):
     def clip_out_of_image_(self, image):
         """Clip off parts of the BB box that are outside of the image in-place.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         image : (H,W,...) ndarray or tuple of int
@@ -639,6 +651,8 @@ class BoundingBox(object):
 
         The origin ``(0, 0)`` is at the top left of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         x : number, optional
@@ -650,22 +664,22 @@ class BoundingBox(object):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -700,22 +714,22 @@ class BoundingBox(object):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -735,6 +749,8 @@ class BoundingBox(object):
         """Draw a box showing the BB's label.
 
         The box is placed right above the BB's rectangle.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -804,6 +820,8 @@ class BoundingBox(object):
         """Draw the rectangle of the bounding box on an image.
 
         This method does not draw the label.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1112,6 +1130,8 @@ class BoundingBox(object):
     def to_polygon(self):
         """Convert this bounding box to a polygon covering the same area.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.polys.Polygon
@@ -1131,6 +1151,8 @@ class BoundingBox(object):
     # TODO also introduce similar area_almost_equals()
     def coords_almost_equals(self, other, max_distance=1e-4):
         """Estimate if this and another BB have almost identical coordinates.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1177,6 +1199,8 @@ class BoundingBox(object):
         :func:`~imgaug.augmentables.bbs.BoundingBox.coords_almost_equals` but
         additionally compares the labels.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         other : imgaug.augmentables.bbs.BoundingBox or iterable
@@ -1204,6 +1228,8 @@ class BoundingBox(object):
 
         This is the inverse of
         :func:`~imgaug.BoundingBoxesOnImage.to_xyxy_array`.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1315,6 +1341,8 @@ class BoundingBox(object):
     def __getitem__(self, indices):
         """Get the coordinate(s) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -1325,6 +1353,8 @@ class BoundingBox(object):
 
     def __iter__(self):
         """Iterate over the coordinates of this instance.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -1376,6 +1406,8 @@ class BoundingBoxesOnImage(IAugmentable):
     def items(self):
         """Get the bounding boxes in this container.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of BoundingBox
@@ -1387,6 +1419,8 @@ class BoundingBoxesOnImage(IAugmentable):
     @items.setter
     def items(self, value):
         """Set the bounding boxes in this container.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1438,6 +1472,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
     def on_(self, image):
         """Project BBs from one image (shape) to a another one in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1531,6 +1567,8 @@ class BoundingBoxesOnImage(IAugmentable):
     def from_point_soups(cls, xy, shape):
         """Convert an ``(N, 2P) or (N, P, 2) ndarray`` to a BBsOI instance.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         xy : (N, 2P) ndarray or (N, P, 2) array or iterable of iterable of number or iterable of iterable of iterable of number
@@ -1590,6 +1628,8 @@ class BoundingBoxesOnImage(IAugmentable):
     def to_xy_array(self):
         """Convert the ``BoundingBoxesOnImage`` object to an ``(N,2) ndarray``.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -1612,6 +1652,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
             This method will automatically flip x-coordinates if ``x1>x2``
             for a bounding box. (Analogous for y-coordinates.)
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1652,6 +1694,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
         See
         :func:`~imgaug.augmentables.bbs.BoundingBoxesOnImage.fill_from_xyxy_array_`.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1726,6 +1770,8 @@ class BoundingBoxesOnImage(IAugmentable):
     def remove_out_of_image_(self, fully=True, partly=False):
         """Remove in-place all BBs that are fully/partially outside of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fully : bool, optional
@@ -1778,6 +1824,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
         'OOI' is the abbreviation for 'out of image'.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fraction : number
@@ -1798,6 +1846,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
     def remove_out_of_image_fraction(self, fraction):
         """Remove all BBs with an out of image fraction of at least `fraction`.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1826,6 +1876,8 @@ class BoundingBoxesOnImage(IAugmentable):
     def clip_out_of_image_(self):
         """
         Clip off in-place all parts from all BBs that are outside of the image.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -1859,6 +1911,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
         The origin ``(0, 0)`` is at the top left of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         x : number, optional
@@ -1870,22 +1924,22 @@ class BoundingBoxesOnImage(IAugmentable):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -1918,22 +1972,22 @@ class BoundingBoxesOnImage(IAugmentable):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -1949,6 +2003,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
     def to_keypoints_on_image(self):
         """Convert the bounding boxes to one ``KeypointsOnImage`` instance.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -1983,6 +2039,8 @@ class BoundingBoxesOnImage(IAugmentable):
         This function writes in-place into this ``BoundingBoxesOnImage``
         instance.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         kpsoi : imgaug.augmentables.kps.KeypointsOnImages
@@ -2013,6 +2071,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
     def to_polygons_on_image(self):
         """Convert the bounding boxes to one ``PolygonsOnImage`` instance.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -2084,6 +2144,8 @@ class BoundingBoxesOnImage(IAugmentable):
     def __getitem__(self, indices):
         """Get the bounding box(es) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of imgaug.augmentables.bbs.BoundingBoxes
@@ -2094,6 +2156,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
     def __iter__(self):
         """Iterate over the bounding boxes in this container.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -2107,6 +2171,8 @@ class BoundingBoxesOnImage(IAugmentable):
 
     def __len__(self):
         """Get the number of items in this instance.
+
+        Added in 0.4.0.
 
         Returns
         -------

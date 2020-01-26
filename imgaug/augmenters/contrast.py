@@ -44,6 +44,7 @@ class _ContrastFuncWrapper(meta.Augmenter):
         self.dtypes_allowed = dtypes_allowed
         self.dtypes_disallowed = dtypes_disallowed
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -1011,6 +1012,7 @@ class AllChannelsCLAHE(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -1273,6 +1275,7 @@ class CLAHE(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
             from_colorspace, to_colorspace)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -1386,6 +1389,7 @@ class AllChannelsHistogramEqualization(meta.Augmenter):
             seed=seed, name=name,
             random_state=random_state, deterministic=deterministic)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -1545,6 +1549,7 @@ class HistogramEqualization(meta.Augmenter):
         self.intensity_channel_based_applier = _IntensityChannelBasedApplier(
             from_colorspace, to_colorspace)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch

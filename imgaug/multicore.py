@@ -29,6 +29,7 @@ elif sys.version_info[0] == 3:
 _CONTEXT = None
 
 
+# Added in 0.4.0.
 def _get_context_method():
     vinfo = sys.version_info
 
@@ -61,6 +62,7 @@ def _get_context_method():
     return method
 
 
+# Added in 0.4.0.
 def _set_context(method):
     # method=False indicates that multiprocessing module (i.e. no context)
     # should be used, e.g. because get_context() is not supported
@@ -69,14 +71,17 @@ def _set_context(method):
         else multiprocessing.get_context(method))
 
 
+# Added in 0.4.0.
 def _reset_context():
     globals()["_CONTEXT"] = None
 
 
+# Added in 0.4.0.
 def _autoset_context():
     _set_context(_get_context_method())
 
 
+# Added in 0.4.0.
 def _get_context():
     if _CONTEXT is None:
         _autoset_context()

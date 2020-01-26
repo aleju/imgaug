@@ -78,6 +78,7 @@ class _AbstractPoolingBase(meta.Augmenter):
             np.clip(kernel_sizes_w, 1, None)
         )
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None and self.keep_size:
             return batch
@@ -90,6 +91,7 @@ class _AbstractPoolingBase(meta.Augmenter):
             setattr(batch, column.attr_name, value_aug)
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         if not self.keep_size:
             images = list(images)
@@ -108,14 +110,17 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return images
 
+    # Added in 0.4.0.
     def _augment_heatmaps_by_samples(self, heatmaps, samples):
         return self._augment_hms_and_segmaps_by_samples(heatmaps, samples,
                                                         "arr_0to1")
 
+    # Added in 0.4.0.
     def _augment_segmentation_maps_by_samples(self, segmaps, samples):
         return self._augment_hms_and_segmaps_by_samples(segmaps, samples,
                                                         "arr")
 
+    # Added in 0.4.0.
     def _augment_hms_and_segmaps_by_samples(self, augmentables, samples,
                                             arr_attr_name):
         if self.keep_size:
@@ -144,6 +149,7 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return augmentables
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         if self.keep_size:
             return keypoints_on_images
@@ -161,17 +167,20 @@ class _AbstractPoolingBase(meta.Augmenter):
 
         return keypoints_on_images
 
+    # Added in 0.4.0.
     def _augment_polygons_by_samples(self, polygons_on_images, samples):
         func = functools.partial(self._augment_keypoints_by_samples,
                                  samples=samples)
         return self._apply_to_polygons_as_keypoints(polygons_on_images, func,
                                                     recoverer=None)
 
+    # Added in 0.4.0.
     def _augment_line_strings_by_samples(self, line_strings_on_images, samples):
         func = functools.partial(self._augment_keypoints_by_samples,
                                  samples=samples)
         return self._apply_to_cbaois_as_keypoints(line_strings_on_images, func)
 
+    # Added in 0.4.0.
     def _augment_bounding_boxes_by_samples(self, bounding_boxes_on_images,
                                            samples):
         func = functools.partial(self._augment_keypoints_by_samples,

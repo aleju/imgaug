@@ -394,9 +394,11 @@ def change_colorspaces_(images, to_colorspaces, from_colorspaces=CSPACE_RGB):
     return images
 
 
+# Added in 0.4.0.
 class _KelvinToRGBTableSingleton(object):
     _INSTANCE = None
 
+    # Added in 0.4.0.
     @classmethod
     def get_instance(cls):
         if cls._INSTANCE is None:
@@ -404,7 +406,9 @@ class _KelvinToRGBTableSingleton(object):
         return cls._INSTANCE
 
 
+# Added in 0.4.0.
 class _KelvinToRGBTable(object):
+    # Added in 0.4.0.
     def __init__(self):
         self.table = self.create_table()
 
@@ -414,6 +418,8 @@ class _KelvinToRGBTable(object):
         A single returned multiplier denotes the channelwise multipliers
         in the range ``[0.0, 1.0]`` to apply to an image to change its kelvin
         value to the desired one.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -446,6 +452,7 @@ class _KelvinToRGBTable(object):
 
         return multipliers
 
+    # Added in 0.4.0.
     @classmethod
     def create_table(cls):
         table = np.float32([
@@ -848,6 +855,8 @@ class _KelvinToRGBTable(object):
 def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
     """Change in-place the temperature of images to given values in Kelvin.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.change_colorspace_`.
@@ -942,6 +951,8 @@ def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
 
 def change_color_temperature(image, kelvin, from_colorspace=CSPACE_RGB):
     """Change the temperature of an image to a given value in Kelvin.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1056,6 +1067,7 @@ class WithColorspace(meta.Augmenter):
         self.from_colorspace = from_colorspace
         self.children = meta.handle_children_list(children, self.name, "then")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             # TODO this did not fail in the tests when there was only one
@@ -1111,6 +1123,8 @@ class WithBrightnessChannels(meta.Augmenter):
     channel and applies its child augmenters to this one channel. Afterwards,
     it reintegrates the augmented channel into the full image and converts
     back to the input colorspace.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1195,6 +1209,7 @@ class WithBrightnessChannels(meta.Augmenter):
 
     _VALID_COLORSPACES = set(_CSPACE_TO_CHANNEL_ID.keys())
 
+    # Added in 0.4.0.
     def __init__(self, children=None,
                  to_colorspace=[
                      CSPACE_YCrCb,
@@ -1217,6 +1232,7 @@ class WithBrightnessChannels(meta.Augmenter):
             valid_values=self._VALID_COLORSPACES)
         self.from_colorspace = from_colorspace
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             images_cvt = None
@@ -1248,6 +1264,7 @@ class WithBrightnessChannels(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _extract_brightness_channels(self, images, colorspaces):
         result = []
         for image, colorspace in zip(images, colorspaces):
@@ -1258,6 +1275,7 @@ class WithBrightnessChannels(meta.Augmenter):
             result.append(channel)
         return result
 
+    # Added in 0.4.0.
     def _invert_extract_brightness_channels(self, channels, images,
                                             colorspaces):
         for channel, image, colorspace in zip(channels, images, colorspaces):
@@ -1265,6 +1283,7 @@ class WithBrightnessChannels(meta.Augmenter):
             image[:, :, channel_id:channel_id+1] = channel
         return images
 
+    # Added in 0.4.0.
     def _to_deterministic(self):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
@@ -1272,14 +1291,17 @@ class WithBrightnessChannels(meta.Augmenter):
         aug.random_state = self.random_state.derive_rng_()
         return aug
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.to_colorspace, self.from_colorspace]
 
+    # Added in 0.4.0.
     def get_children_lists(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
+    # Added in 0.4.0.
     def __str__(self):
         return (
             "WithBrightnessChannels("
@@ -1301,6 +1323,8 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
 
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1354,6 +1378,7 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, mul=(0.7, 1.3), add=(-30, 30),
                  to_colorspace=[
                      CSPACE_YCrCb,
@@ -1383,6 +1408,7 @@ class MultiplyAndAddToBrightness(WithBrightnessChannels):
             seed=seed, name=name,
             random_state=random_state, deterministic=deterministic)
 
+    # Added in 0.4.0.
     def __str__(self):
         return (
             "MultiplyAndAddToBrightness("
@@ -1408,6 +1434,8 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
 
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1452,6 +1480,7 @@ class MultiplyBrightness(MultiplyAndAddToBrightness):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, mul=(0.7, 1.3),
                  to_colorspace=[
                      CSPACE_YCrCb,
@@ -1479,6 +1508,8 @@ class AddToBrightness(MultiplyAndAddToBrightness):
 
     This is a wrapper around :class:`WithBrightnessChannels` and hence
     performs internally the same projection to random colorspaces.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1523,6 +1554,7 @@ class AddToBrightness(MultiplyAndAddToBrightness):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, add=(-30, 30),
                  to_colorspace=[
                      CSPACE_YCrCb,
@@ -1641,6 +1673,7 @@ class WithHueAndSaturation(meta.Augmenter):
         # for Add or Multiply
         self._internal_dtype = np.int16
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             images_hs, images_hsv = self._images_to_hsv_(batch.images)
@@ -1653,6 +1686,7 @@ class WithHueAndSaturation(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _images_to_hsv_(self, images):
         if images is None:
             return None, None
@@ -1676,6 +1710,7 @@ class WithHueAndSaturation(meta.Augmenter):
             images_hs = np.stack(images_hs, axis=0)
         return images_hs, images_hsv
 
+    # Added in 0.4.0.
     def _hs_to_images_(self, images_hs, images_hsv):
         if images_hs is None:
             return None
@@ -2092,6 +2127,8 @@ class RemoveSaturation(MultiplySaturation):
 
     This augmenter is the same as ``MultiplySaturation((0.0, 1.0))``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.color.MultiplySaturation`.
@@ -2151,6 +2188,7 @@ class RemoveSaturation(MultiplySaturation):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, mul=1, from_colorspace=CSPACE_RGB,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -2398,6 +2436,7 @@ class AddToHueAndSaturation(meta.Augmenter):
 
         return samples_hue, samples_saturation
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -2872,6 +2911,7 @@ class ChangeColorspace(meta.Augmenter):
             (n_augmentables,), random_state=rss[1])
         return alphas, to_colorspaces
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -2993,10 +3033,12 @@ class ChangeColorTemperature(meta.Augmenter):
     in progressively darker blue tones.
 
     Color temperatures taken from
-    http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html
+    `<http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html>`_
 
     Basic method to change color temperatures taken from
-    https://stackoverflow.com/a/11888449
+    `<https://stackoverflow.com/a/11888449>`_
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3026,6 +3068,7 @@ class ChangeColorTemperature(meta.Augmenter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, kelvin=(1000, 11000), from_colorspace=CSPACE_RGB,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3038,6 +3081,7 @@ class ChangeColorTemperature(meta.Augmenter):
             list_to_choice=True)
         self.from_colorspace = from_colorspace
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             nb_rows = batch.nb_rows
@@ -3049,6 +3093,7 @@ class ChangeColorTemperature(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.kelvin, self.from_colorspace]
@@ -3092,6 +3137,7 @@ class _AbstractColorQuantization(meta.Augmenter):
 
         return counts
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -3341,7 +3387,11 @@ class KMeansColorQuantization(_AbstractColorQuantization):
 
     @property
     def n_colors(self):
-        """Alias for property ``counts``."""
+        """Alias for property ``counts``.
+
+        Added in 0.4.0.
+
+        """
         return self.counts
 
     def _quantize(self, image, counts):
@@ -3350,7 +3400,11 @@ class KMeansColorQuantization(_AbstractColorQuantization):
 
 @ia.deprecated("imgaug.augmenters.colors.quantize_kmeans")
 def quantize_colors_kmeans(image, n_colors, n_max_iter=10, eps=1.0):
-    """Outdated name of :func:`quantize_kmeans`."""
+    """Outdated name of :func:`quantize_kmeans`.
+
+    Deprecated since 0.4.0.
+
+    """
     return quantize_kmeans(arr=image, nb_clusters=n_colors,
                            nb_max_iter=n_max_iter, eps=eps)
 
@@ -3370,6 +3424,8 @@ def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
         This function currently changes the RNG state of both OpenCV's
         internal RNG and imgaug's global RNG. This is necessary in order
         to ensure that the k-means clustering happens deterministically.
+
+    Added in 0.4.0. (Previously called ``quantize_colors_kmeans()``.)
 
     **Supported dtypes**:
 
@@ -3614,7 +3670,11 @@ class UniformColorQuantization(_AbstractColorQuantization):
 
     @property
     def n_colors(self):
-        """Alias for property ``counts``."""
+        """Alias for property ``counts``.
+
+        Added in 0.4.0.
+
+        """
         return self.counts
 
     def _quantize(self, image, counts):
@@ -3642,6 +3702,8 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
         or to have 3 or 4 channels and use colorspace `from_colorspace`. If
         images have 4 channels, it is assumed that the 4th channel is an alpha
         channel and it will not be quantized.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3745,6 +3807,7 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self,
                  nb_bits=(1, 8),
                  from_colorspace=CSPACE_RGB,
@@ -3767,12 +3830,15 @@ class UniformColorQuantizationToNBits(_AbstractColorQuantization):
             seed=seed, name=name,
             random_state=random_state, deterministic=deterministic)
 
+    # Added in 0.4.0.
     def _quantize(self, image, counts):
         return quantize_uniform_to_n_bits_(image, counts)
 
 
 class Posterize(UniformColorQuantizationToNBits):
     """Alias for :class:`UniformColorQuantizationToNBits`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3783,7 +3849,11 @@ class Posterize(UniformColorQuantizationToNBits):
 
 @ia.deprecated("imgaug.augmenters.colors.quantize_uniform")
 def quantize_colors_uniform(image, n_colors):
-    """Outdated name for :func:`quantize_uniform`."""
+    """Outdated name for :func:`quantize_uniform`.
+
+    Deprecated since 0.4.0.
+
+    """
     return quantize_uniform(arr=image, nb_bins=n_colors)
 
 
@@ -3791,6 +3861,8 @@ def quantize_uniform(arr, nb_bins, to_bin_centers=True):
     """Quantize an array into N equally-sized bins.
 
     See :func:`quantize_uniform_` for details.
+
+    Added in 0.4.0. (Previously called ``quantize_colors_uniform()``.)
 
     **Supported dtypes**:
 
@@ -3827,6 +3899,8 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
     ``q = 256/N``, where ``v`` is a pixel intensity value and ``N`` is
     the target number of bins (roughly matches number of colors) after
     quantization.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3899,12 +3973,15 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
     return arr
 
 
+# Added in 0.4.0.
 class _QuantizeUniformCenterizedLUTTableSingleton(object):
     _INSTANCE = None
 
     @classmethod
     def get_instance(cls):
         """Get singleton instance of :class:`_QuantizeUniformLUTTable`.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -3917,6 +3994,7 @@ class _QuantizeUniformCenterizedLUTTableSingleton(object):
         return cls._INSTANCE
 
 
+# Added in 0.4.0.
 class _QuantizeUniformNotCenterizedLUTTableSingleton(object):
     """Table for :func:`quantize_uniform` with ``to_bin_centers=False``."""
     _INSTANCE = None
@@ -3924,6 +4002,8 @@ class _QuantizeUniformNotCenterizedLUTTableSingleton(object):
     @classmethod
     def get_instance(cls):
         """Get singleton instance of :class:`_QuantizeUniformLUTTable`.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -3936,14 +4016,20 @@ class _QuantizeUniformNotCenterizedLUTTableSingleton(object):
         return cls._INSTANCE
 
 
+# Added in 0.4.0.
 class _QuantizeUniformLUTTable(object):
     def __init__(self, centerize):
         self.table = self._generate_quantize_uniform_table(centerize)
 
     def get_for_nb_bins(self, nb_bins):
-        """Get LUT ndarray for a provided number of bins."""
+        """Get LUT ndarray for a provided number of bins.
+
+        Added in 0.4.0.
+
+        """
         return self.table[nb_bins, :]
 
+    # Added in 0.4.0.
     @classmethod
     def _generate_quantize_uniform_table(cls, centerize):
         # For simplicity, we generate here the tables for nb_bins=0 (results
@@ -3970,6 +4056,8 @@ def quantize_uniform_to_n_bits(arr, nb_bits):
     """Reduce each component in an array to a maximum number of bits.
 
     See :func:`quantize_uniform_to_n_bits` for details.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4005,6 +4093,8 @@ def quantize_uniform_to_n_bits_(arr, nb_bits):
 
     This function produces the same outputs as :func:`PIL.ImageOps.posterize`,
     but is significantly faster.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4050,6 +4140,8 @@ def posterize(arr, nb_bits):
 
     This function is an alias for :func:`quantize_uniform_to_n_bits` and was
     added for users familiar with the same function in PIL.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 

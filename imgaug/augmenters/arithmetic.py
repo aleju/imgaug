@@ -646,6 +646,8 @@ def cutout(image, x1, y1, x2, y2,
 
     See :func:`~imgaug.augmenters.arithmetic.cutout_`.
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     image : ndarray
@@ -700,6 +702,7 @@ def cutout_(image, x1, y1, x2, y2,
         in the interval ``[0.0, 1.0]`` and hence sample values from a
         gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
 
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -782,6 +785,8 @@ def _fill_rectangle_gaussian_(image, x1, y1, x2, y2, cval, per_channel,
                               random_state):
     """Fill a rectangular image area with samples from a gaussian.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -849,6 +854,8 @@ def _fill_rectangle_constant_(image, x1, y1, x2, y2, cval, per_channel,
     `cval` may be a single value or one per channel. If the number of items
     in `cval` does not match the number of channels in `image`, it may
     be tiled up to the number of channels.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1037,6 +1044,8 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
             invert_above_threshold=True):
     """Invert an array in-place.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     if (min_value=None and max_value=None):
@@ -1184,6 +1193,7 @@ def _invert_bool(arr, min_value, max_value):
     return ~arr
 
 
+# Added in 0.4.0.
 def _invert_uint8_(arr, min_value, max_value, threshold,
                    invert_above_threshold):
     table = _generate_table_for_invert_uint8(
@@ -1192,6 +1202,7 @@ def _invert_uint8_(arr, min_value, max_value, threshold,
     return arr
 
 
+# Added in 0.4.0.
 def _invert_uint16_or_larger_(arr, min_value, max_value):
     min_max_is_vr = (min_value == 0
                      and max_value == np.iinfo(arr.dtype).max)
@@ -1203,6 +1214,7 @@ def _invert_uint16_or_larger_(arr, min_value, max_value):
     )
 
 
+# Added in 0.4.0.
 def _invert_int_(arr, min_value, max_value):
     # note that for int dtypes the max value is
     #   (-1) * min_value - 1
@@ -1269,6 +1281,7 @@ def _invert_by_distance(arr, min_value, max_value):
     return arr_inv
 
 
+# Added in 0.4.0.
 def _generate_table_for_invert_uint8(min_value, max_value, threshold,
                                      invert_above_threshold):
     table = np.arange(256).astype(np.int32)
@@ -1299,6 +1312,8 @@ def _generate_table_for_invert_uint8(min_value, max_value, threshold,
 def solarize(image, threshold=128):
     """Invert pixel values above a threshold.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.arithmetic.solarize_`.
@@ -1327,6 +1342,8 @@ def solarize_(image, threshold=128):
 
     This function performs the same transformation as
     :func:`PIL.ImageOps.solarize`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1542,6 +1559,7 @@ class Add(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -1687,6 +1705,7 @@ class AddElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -2155,6 +2174,7 @@ class Multiply(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -2298,6 +2318,7 @@ class MultiplyElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -2336,7 +2357,9 @@ class MultiplyElementwise(meta.Augmenter):
         return [self.mul, self.per_channel]
 
 
+# Added in 0.4.0.
 class _CutoutSamples(object):
+    # Added in 0.4.0.
     def __init__(self, nb_iterations, pos_x, pos_y, size_h, size_w, squared,
                  fill_mode, cval, fill_per_channel):
         self.nb_iterations = nb_iterations
@@ -2375,6 +2398,8 @@ class Cutout(meta.Augmenter):
         Gaussian fill mode will assume that float input images contain values
         in the interval ``[0.0, 1.0]`` and hence sample values from a
         gaussian within that interval, i.e. from ``N(0.5, std=0.5/3)``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -2515,6 +2540,7 @@ class Cutout(meta.Augmenter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self,
                  nb_iterations=1,
                  position="uniform",
@@ -2544,6 +2570,7 @@ class Cutout(meta.Augmenter):
         self.fill_per_channel = iap.handle_probability_param(
             fill_per_channel, "fill_per_channel")
 
+    # Added in 0.4.0.
     @classmethod
     def _handle_fill_mode_param(cls, fill_mode):
         if ia.is_string(fill_mode):
@@ -2559,6 +2586,7 @@ class Cutout(meta.Augmenter):
                 type(fill_mode).__name__))
         return iap.Choice(fill_mode)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -2598,6 +2626,7 @@ class Cutout(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, images, random_state):
         rngs = random_state.duplicate(8)
         nb_rows = len(images)
@@ -2643,6 +2672,7 @@ class Cutout(meta.Augmenter):
             fill_per_channel=fill_per_channel
         )
 
+    # Added in 0.4.0.
     @classmethod
     def _augment_image_by_samples(cls, image, x1, y1, x2, y2, squared,
                                   fill_mode, cval, fill_per_channel,
@@ -2667,6 +2697,7 @@ class Cutout(meta.Augmenter):
                 seed=random_state)
         return image
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.nb_iterations, self.position, self.size, self.squared,
@@ -2767,6 +2798,7 @@ class Dropout(MultiplyElementwise):
             random_state=random_state, deterministic=deterministic)
 
 
+# Added in 0.4.0.
 def _handle_dropout_probability_param(p, name):
     if ia.is_single_number(p):
         p_param = iap.Binomial(1 - p)
@@ -2995,6 +3027,8 @@ class Dropout2d(meta.Augmenter):
         It does so if and only if *all* channels of an image are dropped.
         If ``nb_keep_channels >= 1`` then that never happens.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -3072,6 +3106,7 @@ class Dropout2d(meta.Augmenter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, p=0.1, nb_keep_channels=1,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3092,6 +3127,7 @@ class Dropout2d(meta.Augmenter):
         self._heatmaps_cval = 0.0
         self._segmentation_maps_cval = 0
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         imagewise_drop_channel_ids, all_dropped_ids = self._draw_samples(
             batch, random_state)
@@ -3128,6 +3164,7 @@ class Dropout2d(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         # maybe noteworthy here that the channel axis can have size 0,
         # e.g. (5, 5, 0)
@@ -3171,6 +3208,7 @@ class Dropout2d(meta.Augmenter):
 
         return imagewise_channels_to_drop, all_dropped_ids
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p, self.nb_keep_channels]
@@ -3186,6 +3224,8 @@ class TotalDropout(meta.Augmenter):
         This augmenter also sets the arrays of heatmaps and segmentation
         maps to zero and removes all coordinate-based data (e.g. it removes
         all bounding boxes on images that were filled with zeros).
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3254,6 +3294,7 @@ class TotalDropout(meta.Augmenter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, p=1,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3273,6 +3314,7 @@ class TotalDropout(meta.Augmenter):
         self._heatmaps_cval = 0.0
         self._segmentation_maps_cval = 0
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         drop_mask = self._draw_samples(batch, random_state)
         drop_ids = None
@@ -3310,17 +3352,20 @@ class TotalDropout(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         p = self.p.draw_samples((batch.nb_rows,), random_state=random_state)
         drop_mask = (p < 0.5)
         return drop_mask
 
+    # Added in 0.4.0.
     @classmethod
     def _generate_drop_ids_once(cls, drop_mask, drop_ids):
         if drop_ids is None:
             drop_ids = np.nonzero(drop_mask)[0]
         return drop_ids
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p]
@@ -3446,6 +3491,7 @@ class ReplaceElementwise(meta.Augmenter):
         self.per_channel = iap.handle_probability_param(per_channel,
                                                         "per_channel")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -3622,6 +3668,7 @@ class ImpulseNoise(SaltAndPepper):
     Replace ``10%`` of all pixels with impulse noise.
 
     """
+
     def __init__(self, p=(0.0, 0.03),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3761,6 +3808,7 @@ class CoarseSaltAndPepper(ReplaceElementwise):
     independently per image channel.
 
     """
+
     def __init__(self, p=(0.02, 0.1), size_px=None, size_percent=None,
                  per_channel=False, min_size=3,
                  seed=None, name=None,
@@ -4383,6 +4431,7 @@ class Invert(meta.Augmenter):
         self.invert_above_threshold = iap.handle_probability_param(
             invert_above_threshold, "invert_above_threshold")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -4410,6 +4459,7 @@ class Invert(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         nb_images = batch.nb_rows
         nb_channels = meta.estimate_max_number_of_channels(batch.images)
@@ -4447,7 +4497,9 @@ class Invert(meta.Augmenter):
                 self.threshold, self.invert_above_threshold]
 
 
+# Added in 0.4.0.
 class _InvertSamples(object):
+    # Added in 0.4.0.
     def __init__(self, p, per_channel, min_value, max_value,
                  threshold, invert_above_threshold):
         self.p = p
@@ -4466,6 +4518,8 @@ class Solarize(Invert):
     to ``True`` (i.e. only values above the threshold will be inverted).
 
     See :class:`Invert` for more details.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4542,6 +4596,8 @@ def ContrastNormalization(alpha=1.0, per_channel=False,
     dtype support:
 
         See ``imgaug.augmenters.contrast.LinearContrast``.
+
+    Deprecated since 0.3.0.
 
     Parameters
     ----------
@@ -4693,6 +4749,7 @@ class JpegCompression(meta.Augmenter):
             compression, "compression",
             value_range=(0, 100), tuple_to_uniform=True, list_to_choice=True)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch

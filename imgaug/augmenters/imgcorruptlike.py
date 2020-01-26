@@ -64,6 +64,8 @@ Example usage::
     Use e.g. ``iaa.imgcorruptlike.GaussianNoise(severity=2)(images=...)`` to
     create and apply a specific augmenter.
 
+Added in 0.4.0.
+
 """
 from __future__ import print_function, division, absolute_import
 
@@ -89,6 +91,7 @@ _MISSING_PACKAGE_ERROR_MSG = (
 )
 
 
+# Added in 0.4.0.
 def _clipped_zoom_no_scipy_warning(img, zoom_factor):
     from scipy.ndimage import zoom as scizoom
 
@@ -114,6 +117,8 @@ def _call_imgcorrupt_func(fname, seed, convert_to_pil, *args, **kwargs):
 
     The dtype support below is basically a placeholder to which the
     augmentation functions can point to decrease the amount of documentation.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -216,6 +221,8 @@ def get_corruption_names(subset="common"):
         corresponding augmentation functions, while ``get_corruption_names()``
         in ``imagecorruptions`` only returns the augmentation names.
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     subset : {'common', 'validation', 'all'}, optional.
@@ -261,6 +268,8 @@ def get_corruption_names(subset="common"):
 def apply_gaussian_noise(x, severity=1, seed=None):
     """Apply ``gaussian_noise`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -290,6 +299,8 @@ def apply_gaussian_noise(x, severity=1, seed=None):
 
 def apply_shot_noise(x, severity=1, seed=None):
     """Apply ``shot_noise`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -321,6 +332,8 @@ def apply_shot_noise(x, severity=1, seed=None):
 def apply_impulse_noise(x, severity=1, seed=None):
     """Apply ``impulse_noise`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -350,6 +363,8 @@ def apply_impulse_noise(x, severity=1, seed=None):
 
 def apply_speckle_noise(x, severity=1, seed=None):
     """Apply ``speckle_noise`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -381,6 +396,8 @@ def apply_speckle_noise(x, severity=1, seed=None):
 def apply_gaussian_blur(x, severity=1, seed=None):
     """Apply ``gaussian_blur`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -411,6 +428,8 @@ def apply_gaussian_blur(x, severity=1, seed=None):
 def apply_glass_blur(x, severity=1, seed=None):
     """Apply ``glass_blur`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -439,6 +458,7 @@ def apply_glass_blur(x, severity=1, seed=None):
                                  severity)
 
 
+# Added in 0.4.0.
 def _apply_glass_blur_imgaug(x, severity=1):
     # false positive on x_shape[0]
     # invalid name for dx, dy
@@ -501,6 +521,8 @@ def _apply_glass_blur_imgaug(x, severity=1):
 def apply_defocus_blur(x, severity=1, seed=None):
     """Apply ``defocus_blur`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -530,6 +552,8 @@ def apply_defocus_blur(x, severity=1, seed=None):
 
 def apply_motion_blur(x, severity=1, seed=None):
     """Apply ``motion_blur`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -561,6 +585,8 @@ def apply_motion_blur(x, severity=1, seed=None):
 def apply_zoom_blur(x, severity=1, seed=None):
     """Apply ``zoom_blur`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -590,6 +616,8 @@ def apply_zoom_blur(x, severity=1, seed=None):
 
 def apply_fog(x, severity=1, seed=None):
     """Apply ``fog`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -621,6 +649,8 @@ def apply_fog(x, severity=1, seed=None):
 def apply_frost(x, severity=1, seed=None):
     """Apply ``frost`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -650,6 +680,8 @@ def apply_frost(x, severity=1, seed=None):
 
 def apply_snow(x, severity=1, seed=None):
     """Apply ``snow`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -681,6 +713,8 @@ def apply_snow(x, severity=1, seed=None):
 def apply_spatter(x, severity=1, seed=None):
     """Apply ``spatter`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -710,6 +744,8 @@ def apply_spatter(x, severity=1, seed=None):
 
 def apply_contrast(x, severity=1, seed=None):
     """Apply ``contrast`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -741,6 +777,8 @@ def apply_contrast(x, severity=1, seed=None):
 def apply_brightness(x, severity=1, seed=None):
     """Apply ``brightness`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -770,6 +808,8 @@ def apply_brightness(x, severity=1, seed=None):
 
 def apply_saturate(x, severity=1, seed=None):
     """Apply ``saturate`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -801,6 +841,8 @@ def apply_saturate(x, severity=1, seed=None):
 def apply_jpeg_compression(x, severity=1, seed=None):
     """Apply ``jpeg_compression`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -831,6 +873,8 @@ def apply_jpeg_compression(x, severity=1, seed=None):
 def apply_pixelate(x, severity=1, seed=None):
     """Apply ``pixelate`` from ``imagecorruptions``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.imgcorruptlike._call_imgcorrupt_func`.
@@ -860,6 +904,8 @@ def apply_pixelate(x, severity=1, seed=None):
 
 def apply_elastic_transform(image, severity=1, seed=None):
     """Apply ``elastic_transform`` from ``imagecorruptions``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -955,6 +1001,7 @@ def apply_elastic_transform(image, severity=1, seed=None):
 #     return augmenter_class
 
 
+# Added in 0.4.0.
 class _ImgcorruptAugmenterBase(meta.Augmenter):
     def __init__(self, func, severity=1,
                  seed=None, name=None,
@@ -968,6 +1015,7 @@ class _ImgcorruptAugmenterBase(meta.Augmenter):
             severity, "severity", value_range=(1, 5), tuple_to_uniform=True,
             list_to_choice=True, allow_floats=False)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -980,6 +1028,7 @@ class _ImgcorruptAugmenterBase(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, nb_rows, random_state):
         severities = self.severity.draw_samples((nb_rows,),
                                                 random_state=random_state)
@@ -987,6 +1036,7 @@ class _ImgcorruptAugmenterBase(meta.Augmenter):
 
         return severities, seeds
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.severity]
@@ -999,6 +1049,8 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1039,6 +1091,7 @@ class GaussianNoise(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1055,6 +1108,8 @@ class ShotNoise(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1095,6 +1150,7 @@ class ShotNoise(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1111,6 +1167,8 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1151,6 +1209,7 @@ class ImpulseNoise(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1167,6 +1226,8 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1207,6 +1268,7 @@ class SpeckleNoise(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1223,6 +1285,8 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1263,6 +1327,7 @@ class GaussianBlur(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1279,6 +1344,8 @@ class GlassBlur(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1319,6 +1386,7 @@ class GlassBlur(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1335,6 +1403,8 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1375,6 +1445,7 @@ class DefocusBlur(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1391,6 +1462,8 @@ class MotionBlur(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1431,6 +1504,7 @@ class MotionBlur(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1447,6 +1521,8 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1487,6 +1563,7 @@ class ZoomBlur(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1503,6 +1580,8 @@ class Fog(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1543,6 +1622,7 @@ class Fog(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1559,6 +1639,8 @@ class Frost(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1599,6 +1681,7 @@ class Frost(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1615,6 +1698,8 @@ class Snow(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1655,6 +1740,7 @@ class Snow(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1671,6 +1757,8 @@ class Spatter(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1711,6 +1799,7 @@ class Spatter(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1727,6 +1816,8 @@ class Contrast(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1767,6 +1858,7 @@ class Contrast(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1783,6 +1875,8 @@ class Brightness(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1823,6 +1917,7 @@ class Brightness(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1839,6 +1934,8 @@ class Saturate(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1879,6 +1976,7 @@ class Saturate(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1895,6 +1993,8 @@ class JpegCompression(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1935,6 +2035,7 @@ class JpegCompression(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1951,6 +2052,8 @@ class Pixelate(_ImgcorruptAugmenterBase):
     .. note::
 
         This augmenter only affects images. Other data is not changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1991,6 +2094,7 @@ class Pixelate(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -2011,6 +2115,8 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
         coordinate-based augmentables will be rejected with an error.
         Use :class:`~imgaug.augmenters.geometric.ElasticTransformation` if
         you have to transform such inputs.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -2051,6 +2157,7 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, severity=(1, 5),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -2059,6 +2166,7 @@ class ElasticTransform(_ImgcorruptAugmenterBase):
             seed=seed, name=name,
             random_state=random_state, deterministic=deterministic)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         cols = batch.get_column_names()
         assert len(cols) == 0 or (len(cols) == 1 and "images" in cols), (

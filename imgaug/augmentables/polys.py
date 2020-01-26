@@ -145,6 +145,8 @@ class Polygon(object):
     def coords(self):
         """Alias for attribute ``exterior``.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -288,6 +290,8 @@ class Polygon(object):
         This is intended for cases where the original image is resized.
         It cannot be used for more complex changes (e.g. padding, cropping).
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         from_shape : tuple of int
@@ -378,6 +382,8 @@ class Polygon(object):
     def compute_out_of_image_area(self, image):
         """Compute the area of the BB that is outside of the image plane.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         image : (H,W,...) ndarray or tuple of int
@@ -404,6 +410,8 @@ class Polygon(object):
         This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
         polygon that is outside of the image plane, while ``A`` is the
         total area of the bounding box.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -646,6 +654,8 @@ class Polygon(object):
 
         The origin ``(0, 0)`` is at the top left of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         x : number, optional
@@ -657,22 +667,22 @@ class Polygon(object):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -705,22 +715,22 @@ class Polygon(object):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -1057,6 +1067,8 @@ class Polygon(object):
 
         See :func:`~imgaug.augmentables.lines.LineString.subdivide` for details.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         points_per_edge : int
@@ -1082,6 +1094,8 @@ class Polygon(object):
         """Derive a new polygon with ``N`` interpolated points per edge.
 
         See :func:`~imgaug.augmentables.lines.LineString.subdivide` for details.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1397,6 +1411,8 @@ class Polygon(object):
     def __getitem__(self, indices):
         """Get the coordinate(s) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -1407,6 +1423,8 @@ class Polygon(object):
 
     def __iter__(self):
         """Iterate over the coordinates of this instance.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -1463,6 +1481,8 @@ class PolygonsOnImage(IAugmentable):
     def items(self):
         """Get the polygons in this container.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of Polygon
@@ -1474,6 +1494,8 @@ class PolygonsOnImage(IAugmentable):
     @items.setter
     def items(self, value):
         """Set the polygons in this container.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1497,6 +1519,8 @@ class PolygonsOnImage(IAugmentable):
 
     def on_(self, image):
         """Project all polygons from one image shape to a new one in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1655,6 +1679,8 @@ class PolygonsOnImage(IAugmentable):
 
         'OOI' is the abbreviation for 'out of image'.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fully : bool, optional
@@ -1700,6 +1726,8 @@ class PolygonsOnImage(IAugmentable):
     def remove_out_of_image_fraction_(self, fraction):
         """Remove all Polys with an OOI fraction of ``>=fraction`` in-place.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fraction : number
@@ -1720,6 +1748,8 @@ class PolygonsOnImage(IAugmentable):
 
     def remove_out_of_image_fraction(self, fraction):
         """Remove all Polys with an out of image fraction of ``>=fraction``.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1755,6 +1785,8 @@ class PolygonsOnImage(IAugmentable):
             connected by areas that are outside of the image plane and hence
             will be clipped off, resulting in two or more unconnected polygon
             parts that are left in the image plane.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -1800,6 +1832,8 @@ class PolygonsOnImage(IAugmentable):
 
         The origin ``(0, 0)`` is at the top left of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         x : number, optional
@@ -1811,22 +1845,22 @@ class PolygonsOnImage(IAugmentable):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -1858,22 +1892,22 @@ class PolygonsOnImage(IAugmentable):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -1889,6 +1923,8 @@ class PolygonsOnImage(IAugmentable):
 
     def subdivide_(self, points_per_edge):
         """Interpolate ``N`` points on each polygon.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1908,6 +1944,8 @@ class PolygonsOnImage(IAugmentable):
     def subdivide(self, points_per_edge):
         """Interpolate ``N`` points on each polygon.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         points_per_edge : int
@@ -1923,6 +1961,8 @@ class PolygonsOnImage(IAugmentable):
 
     def to_xy_array(self):
         """Convert all polygon coordinates to one array of shape ``(N,2)``.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -1949,6 +1989,8 @@ class PolygonsOnImage(IAugmentable):
             This does not validate the new coordinates or repair the resulting
             polygons. If bad coordinates are provided, the result will be
             invalid polygons (e.g. self-intersections).
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1992,6 +2034,8 @@ class PolygonsOnImage(IAugmentable):
     def to_keypoints_on_image(self):
         """Convert the polygons to one ``KeypointsOnImage`` instance.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
@@ -2013,6 +2057,8 @@ class PolygonsOnImage(IAugmentable):
 
         This function writes in-place into this ``PolygonsOnImage``
         instance.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -2110,6 +2156,8 @@ class PolygonsOnImage(IAugmentable):
     def __getitem__(self, indices):
         """Get the polygon(s) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of imgaug.augmentables.polys.Polygon
@@ -2120,6 +2168,8 @@ class PolygonsOnImage(IAugmentable):
 
     def __iter__(self):
         """Iterate over the polygons in this container.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -2133,6 +2183,8 @@ class PolygonsOnImage(IAugmentable):
 
     def __len__(self):
         """Get the number of items in this instance.
+
+        Added in 0.4.0.
 
         Returns
         -------

@@ -4,6 +4,8 @@ List of augmenters:
 
     * :class:`RandAugment`
 
+Added in 0.4.0.
+
 """
 from __future__ import print_function, division, absolute_import
 
@@ -64,6 +66,8 @@ class RandAugment(meta.Sequential):
         process non-image data. (This augmenter uses PIL-based affine
         transformations to ensure that outputs are as similar as possible
         to the paper's implementation.)
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -180,6 +184,7 @@ class RandAugment(meta.Sequential):
     # N=2, M=9 is optimal for ImageNet with ResNet-50
     # N=2, M=28 is optimal for ImageNet with EfficientNet-B7
     # for cval they use [125, 122, 113]
+    # Added in 0.4.0.
     def __init__(self, n=2, m=(6, 12), cval=128,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -221,6 +226,7 @@ class RandAugment(meta.Sequential):
             random_state=random_state, deterministic=deterministic
         )
 
+    # Added in 0.4.0.
     @classmethod
     def _create_initial_augmenters_list(cls, m):
         # pylint: disable=invalid-name
@@ -241,6 +247,7 @@ class RandAugment(meta.Sequential):
             )
         ]
 
+    # Added in 0.4.0.
     @classmethod
     def _create_main_augmenters_list(cls, m, cval):
         # pylint: disable=invalid-name
@@ -327,6 +334,7 @@ class RandAugment(meta.Sequential):
             pillike.FilterSmooth()
         ]
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         someof = self[1]

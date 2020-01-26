@@ -286,6 +286,8 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
 
         This function is quite slow.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -453,6 +455,7 @@ class GaussianBlur(meta.Augmenter):
         # apply the blur
         self.eps = 1e-3
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -614,6 +617,7 @@ class AverageBlur(meta.Augmenter):
                 "Expected int, tuple/list with 2 entries or "
                 "StochasticParameter. Got %s." % (type(k),))
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -778,6 +782,7 @@ class MedianBlur(meta.Augmenter):
                 "Expected all values in iterable k to be odd, but at least "
                 "one was not. Add or subtract 1 to/from that value.")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -938,6 +943,7 @@ class BilateralBlur(meta.Augmenter):
             sigma_space, "sigma_space", value_range=(1, None),
             tuple_to_uniform=True, list_to_choice=True)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         if batch.images is None:
@@ -1085,13 +1091,16 @@ class MotionBlur(iaa_convolutional.Convolve):
             random_state=random_state, deterministic=deterministic)
 
 
+# Added in 0.4.0.
 class _MotionBlurMatrixGenerator(object):
+    # Added in 0.4.0.
     def __init__(self, k, angle, direction, order):
         self.k = k
         self.angle = angle
         self.direction = direction
         self.order = order
 
+    # Added in 0.4.0.
     def __call__(self, _image, nb_channels, random_state):
         # avoid cyclic import between blur and geometric
         from . import geometric as iaa_geometric
@@ -1138,6 +1147,8 @@ class MeanShiftBlur(meta.Augmenter):
     .. note::
 
         This augmenter is quite slow.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1194,6 +1205,8 @@ class MeanShiftBlur(meta.Augmenter):
     Create a mean shift blur augmenter.
 
     """
+
+    # Added in 0.4.0.
     def __init__(self, spatial_radius=(5.0, 40.0), color_radius=(5.0, 40.0),
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -1209,6 +1222,7 @@ class MeanShiftBlur(meta.Augmenter):
             value_range=(0.01, None), tuple_to_uniform=True,
             list_to_choice=True)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             samples = self._draw_samples(batch, random_state)
@@ -1221,6 +1235,7 @@ class MeanShiftBlur(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         nb_rows = batch.nb_rows
         return (
@@ -1230,6 +1245,7 @@ class MeanShiftBlur(meta.Augmenter):
                                                   random_state=random_state)
         )
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.spatial_window_radius, self.color_window_radius]

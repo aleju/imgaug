@@ -3,6 +3,8 @@
 This module is planned to contain :class:`imgaug.augmenters.meta.Augmenter`
 in the future.
 
+Added in 0.4.0.
+
 """
 import imgaug as ia
 
