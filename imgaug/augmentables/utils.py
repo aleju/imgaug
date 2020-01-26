@@ -334,15 +334,6 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
     return result
 
 
-# TODO remove this once all calls switched to _remove_out_of_image_fraction_()
-# Added in 0.4.0.
-def _remove_out_of_image_fraction(cbaoi, fraction, result_class):
-    items_clean = [
-        item for item in cbaoi.items
-        if item.compute_out_of_image_fraction(cbaoi.shape) < fraction]
-    return result_class(items_clean, shape=cbaoi.shape)
-
-
 # Added in 0.4.0.
 def _remove_out_of_image_fraction_(cbaoi, fraction):
     cbaoi.items = [
