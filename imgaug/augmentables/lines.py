@@ -644,9 +644,15 @@ class LineString(object):
             intersections_points = []
             for inter in intersections:
                 if isinstance(inter, shapely.geometry.linestring.LineString):
-                    inter_start = (inter.coords[0][0], inter.coords[0][1])
-                    inter_end = (inter.coords[-1][0], inter.coords[-1][1])
-                    intersections_points.extend([inter_start, inter_end])
+                    # Since shapely 1.7a2 (tested in python 3.8),
+                    # .intersection() apprently can return LINE STRING EMPTY
+                    # (i.e. .coords is an empty list). Before that, the result
+                    # of .intersection() was just []. Hence, we first check
+                    # the length here.
+                    if len(inter.coords) > 0:
+                        inter_start = (inter.coords[0][0], inter.coords[0][1])
+                        inter_end = (inter.coords[-1][0], inter.coords[-1][1])
+                        intersections_points.extend([inter_start, inter_end])
                 else:
                     assert isinstance(inter, shapely.geometry.point.Point), (
                         "Expected to find shapely.geometry.point.Point or "

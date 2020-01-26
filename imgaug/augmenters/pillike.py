@@ -1282,6 +1282,12 @@ def warp_affine(image,
     if 0 in image.shape:
         return np.copy(image)
 
+    fillcolor = fillcolor if fillcolor is not None else 0
+    if ia.is_iterable(fillcolor):
+        # make sure that iterable fillcolor contains only ints
+        # otherwise we get a deprecation warning in py3.8
+        fillcolor = tuple(map(int, fillcolor))
+
     image, is_hw1 = _ensure_valid_shape(
         image, "imgaug.augmenters.pillike.warp_affine()")
 
