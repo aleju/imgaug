@@ -47,6 +47,7 @@ class ArgCopyingMagicMock(mock.MagicMock):
             *args_copy, **kwargs_copy)
 
 
+# Added in 0.4.0.
 def assert_cbaois_equal(observed, expected, max_distance=1e-4):
     # pylint: disable=unidiomatic-typecheck
     if isinstance(observed, list) or isinstance(expected, list):
@@ -69,6 +70,7 @@ def assert_cbaois_equal(observed, expected, max_distance=1e-4):
                     assert item_obs.is_valid
 
 
+# Added in 0.4.0.
 # TODO remove this function, no longer needed since shift interfaces were
 #      standardized
 def shift_cbaoi(cbaoi, x=0, y=0, top=0, right=0, bottom=0, left=0):
@@ -142,6 +144,7 @@ def reseed(seed=0):
     random.seed(seed)
 
 
+# Added in 0.4.0.
 def runtest_pickleable_uint8_img(augmenter, shape=(15, 15, 3), iterations=3):
     image = np.mod(np.arange(int(np.prod(shape))), 256).astype(np.uint8)
     image = image.reshape(shape)
@@ -154,7 +157,11 @@ def runtest_pickleable_uint8_img(augmenter, shape=(15, 15, 3), iterations=3):
 
 
 def wrap_shift_deprecation(func, *args, **kwargs):
-    """Helper for tests of CBA shift() functions."""
+    """Helper for tests of CBA shift() functions.
+
+    Added in 0.4.0.
+
+    """
     # No deprecated arguments? Just call the functions directly.
     deprecated_kwargs = ["top", "right", "bottom", "left"]
     if not any([kwname in kwargs for kwname in deprecated_kwargs]):
@@ -182,6 +189,8 @@ class TemporaryDirectory(object):
     This context is available in ``tmpfile.TemporaryDirectory``, but only
     from 3.2+.
 
+    Added in 0.4.0.
+
     """
 
     def __init__(self, suffix="", prefix="tmp", dir=None):
@@ -199,6 +208,7 @@ class TemporaryDirectory(object):
 # https://github.com/python/cpython/blob/master/Lib/unittest/case.py
 # at commit 293dd23 (Nov 19, 2019).
 # Required at least to enable assertWarns() in python <3.2.
+# Added in 0.4.0.
 def _is_subtype(expected, basetype):
     if isinstance(expected, tuple):
         return all(_is_subtype(e, basetype) for e in expected)
@@ -209,10 +219,13 @@ def _is_subtype(expected, basetype):
 # https://github.com/python/cpython/blob/master/Lib/unittest/case.py
 # at commit 293dd23 (Nov 19, 2019).
 # Required at least to enable assertWarns() in python <3.2.
+# Added in 0.4.0.
 class _BaseTestCaseContext:
+    # Added in 0.4.0.
     def __init__(self, test_case):
         self.test_case = test_case
 
+    # Added in 0.4.0.
     def _raiseFailure(self, standardMsg):
         # pylint: disable=invalid-name, protected-access, no-member
         msg = self.test_case._formatMessage(self.msg, standardMsg)
@@ -223,8 +236,9 @@ class _BaseTestCaseContext:
 # https://github.com/python/cpython/blob/master/Lib/unittest/case.py
 # at commit 293dd23 (Nov 19, 2019).
 # Required at least to enable assertWarns() in python <3.2.
+# Added in 0.4.0.
 class _AssertRaisesBaseContext(_BaseTestCaseContext):
-
+    # Added in 0.4.0.
     def __init__(self, expected, test_case, expected_regex=None):
         _BaseTestCaseContext.__init__(self, test_case)
         self.expected = expected
@@ -235,6 +249,7 @@ class _AssertRaisesBaseContext(_BaseTestCaseContext):
         self.obj_name = None
         self.msg = None
 
+    # Added in 0.4.0.
     # pylint: disable=inconsistent-return-statements
     def handle(self, name, args, kwargs):
         """
@@ -274,12 +289,14 @@ class _AssertRaisesBaseContext(_BaseTestCaseContext):
 # https://github.com/python/cpython/blob/master/Lib/unittest/case.py
 # at commit 293dd23 (Nov 19, 2019).
 # Required at least to enable assertWarns() in python <3.2.
+# Added in 0.4.0.
 class _AssertWarnsContext(_AssertRaisesBaseContext):
     """A context manager used to implement TestCase.assertWarns* methods."""
 
     _base_type = Warning
     _base_type_str = 'a warning type or tuple of warning types'
 
+    # Added in 0.4.0.
     def __enter__(self):
         # The __warningregistry__'s need to be in a pristine state for tests
         # to work properly.
@@ -292,6 +309,7 @@ class _AssertWarnsContext(_AssertRaisesBaseContext):
         warnings.simplefilter("always", self.expected)
         return self
 
+    # Added in 0.4.0.
     def __exit__(self, exc_type, exc_value, tb):
         # pylint: disable=invalid-name, attribute-defined-outside-init
         self.warnings_manager.__exit__(exc_type, exc_value, tb)
@@ -336,6 +354,8 @@ def assertWarns(testcase, expected_warning, *args, **kwargs):
     """Context with same functionality as ``assertWarns`` in ``unittest``.
 
     Note that ``assertWarns`` is only available in python 3.2+.
+
+    Added in 0.4.0.
 
     """
     # pylint: disable=invalid-name

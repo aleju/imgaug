@@ -20,6 +20,7 @@ def copy_augmentables(augmentables):
     return result
 
 
+# Added in 0.4.0.
 def deepcopy_fast(obj):
     if obj is None:
         return None
@@ -63,6 +64,8 @@ def project_coords_(coords, from_shape, to_shape):
 
     This performs a relative projection, e.g. a point at ``60%`` of the old
     image width will be at ``60%`` of the new image width after projection.
+
+    Added in 0.4.0.
 
     Parameters
     ----------
@@ -270,6 +273,8 @@ def interpolate_points_by_max_distance(points, max_distance, closed=True):
 def convert_cbaois_to_kpsois(cbaois):
     """Convert coordinate-based augmentables to KeypointsOnImage instances.
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     cbaois : list of imgaug.augmentables.bbs.BoundingBoxesOnImage or list of imgaug.augmentables.bbs.PolygonsOnImage or list of imgaug.augmentables.bbs.LineStringsOnImage or imgaug.augmentables.bbs.BoundingBoxesOnImage or imgaug.augmentables.bbs.PolygonsOnImage or imgaug.augmentables.bbs.LineStringsOnImage
@@ -295,6 +300,8 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
     """Invert the output of :func:`convert_to_cbaois_to_kpsois` in-place.
 
     This function writes in-place into `cbaois`.
+
+    Added in 0.4.0.
 
     Parameters
     ----------
@@ -328,6 +335,7 @@ def invert_convert_cbaois_to_kpsois_(cbaois, kpsois):
 
 
 # TODO remove this once all calls switched to _remove_out_of_image_fraction_()
+# Added in 0.4.0.
 def _remove_out_of_image_fraction(cbaoi, fraction, result_class):
     items_clean = [
         item for item in cbaoi.items
@@ -335,6 +343,7 @@ def _remove_out_of_image_fraction(cbaoi, fraction, result_class):
     return result_class(items_clean, shape=cbaoi.shape)
 
 
+# Added in 0.4.0.
 def _remove_out_of_image_fraction_(cbaoi, fraction):
     cbaoi.items = [
         item for item in cbaoi.items
@@ -342,6 +351,7 @@ def _remove_out_of_image_fraction_(cbaoi, fraction):
     return cbaoi
 
 
+# Added in 0.4.0.
 def _normalize_shift_args(x, y, top=None, right=None, bottom=None, left=None):
     """Normalize ``shift()`` arguments to x, y and handle deprecated args."""
     if any([v is not None for v in [top, right, bottom, left]]):

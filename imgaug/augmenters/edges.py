@@ -414,6 +414,7 @@ class Canny(meta.Augmenter):
 
         return alpha_samples, hthresh_samples, sobel_samples
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch

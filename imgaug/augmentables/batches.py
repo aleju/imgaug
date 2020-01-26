@@ -157,6 +157,8 @@ class UnnormalizedBatch(object):
         data is contained in the batch that has to be augmented, visualized
         or something similar.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of str
@@ -221,6 +223,8 @@ class UnnormalizedBatch(object):
         ``*_aug`` attributes out if it and assigns them to this
         batch *in unnormalized form*. Hence, the datatypes of all ``*_aug``
         attributes will match the datatypes of the ``*_unaug`` attributes.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -400,6 +404,8 @@ class Batch(object):
         data is contained in the batch that has to be augmented, visualized
         or something similar.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of str
@@ -414,6 +420,8 @@ class Batch(object):
         This method does nothing and only exists to simplify interfaces
         that accept both :class:`UnnormalizedBatch` and :class:`Batch`.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.batches.Batch
@@ -424,6 +432,8 @@ class Batch(object):
 
     def to_batch_in_augmentation(self):
         """Convert this batch to a :class:`_BatchInAugmentation` instance.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -451,6 +461,8 @@ class Batch(object):
         """Set the columns in this batch to the column values of another batch.
 
         This method works in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -598,6 +610,7 @@ class Batch(object):
         return batch
 
 
+# Added in 0.4.0.
 class _BatchInAugmentationPropagationContext(object):
     def __init__(self, batch, augmenter, hooks, parents):
         self.batch = batch
@@ -626,6 +639,8 @@ class _BatchInAugmentation(object):
     :class:`Batch`. Data within the batch may be changed in-place. No initial
     copy is needed.
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     images : None or (N,H,W,C) ndarray or list of (H,W,C) ndarray
@@ -651,6 +666,7 @@ class _BatchInAugmentation(object):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, images=None, heatmaps=None, segmentation_maps=None,
                  keypoints=None, bounding_boxes=None, polygons=None,
                  line_strings=None, data=None):
@@ -668,6 +684,8 @@ class _BatchInAugmentation(object):
     def empty(self):
         """Estimate whether this batch is empty, i.e. contains no data.
 
+        Added in 0.4.0.
+
         Returns
         -------
         bool
@@ -683,6 +701,8 @@ class _BatchInAugmentation(object):
 
         Note that this method assumes that all columns have the same number
         of rows.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -703,6 +723,8 @@ class _BatchInAugmentation(object):
         Each column represents one datatype and its corresponding data,
         e.g. images or polygons.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of _AugmentableColumn
@@ -717,6 +739,8 @@ class _BatchInAugmentation(object):
         This method is intended for situations where one wants to know which
         data is contained in the batch that has to be augmented, visualized
         or something similar.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -735,6 +759,8 @@ class _BatchInAugmentation(object):
         This method assumes that all ``.shape`` attributes contain the same
         shape and that it is identical to the image's shape.
         It also assumes that there are no columns containing only ``None`` s.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -760,6 +786,8 @@ class _BatchInAugmentation(object):
 
     def subselect_rows_by_indices(self, indices):
         """Reduce this batch to a subset of rows based on their row indices.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -794,6 +822,8 @@ class _BatchInAugmentation(object):
         :func:`_BatchInAugmentation.subselect_rows_by_indices`.
 
         This method has to be executed on the batch *before* subselection.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -860,6 +890,8 @@ class _BatchInAugmentation(object):
     def propagation_hooks_ctx(self, augmenter, hooks, parents):
         """Start a context in which propagation hooks are applied.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         augmenter : imgaug.augmenters.meta.Augmenter
@@ -884,6 +916,8 @@ class _BatchInAugmentation(object):
         """Set columns in this batch to ``None`` based on a propagation hook.
 
         This method works in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -927,6 +961,8 @@ class _BatchInAugmentation(object):
 
         This method works in-place.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         noned_info : list of tuple of str
@@ -950,6 +986,8 @@ class _BatchInAugmentation(object):
         This method simply returns the batch itself. It exists for consistency
         with the other batch classes.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.batches._BatchInAugmentation
@@ -962,6 +1000,8 @@ class _BatchInAugmentation(object):
         """Set the columns in this batch to the column values of another batch.
 
         This method works in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -990,6 +1030,8 @@ class _BatchInAugmentation(object):
 
     def to_batch(self, batch_before_aug):
         """Convert this batch into a :class:`Batch` instance.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1027,6 +1069,8 @@ class _BatchInAugmentation(object):
 
     def deepcopy(self):
         """Copy this batch and all of its column values.
+
+        Added in 0.4.0.
 
         Returns
         -------

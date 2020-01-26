@@ -63,8 +63,10 @@ if _NP_VERSION[0] > 1 or _NP_VERSION[1] >= 17:
     # in 1.18 this was moved to numpy.random.BitGenerator
     # pylint: disable=invalid-name, no-member
     if _NP_VERSION[1] == 17:
+        # Added in 0.4.0.
         _BIT_GENERATOR_INTERFACE = np.random.bit_generator.BitGenerator
     else:
+        # Added in 0.4.0.
         _BIT_GENERATOR_INTERFACE = np.random.BitGenerator
     # pylint: enable=invalid-name, no-member
 
@@ -730,6 +732,8 @@ class RNG(object):
 
             This method is outdated in numpy. Use :func:`RNG.random` instead.
 
+        Added in 0.4.0.
+
         """
         return self.random(size=args)
 
@@ -746,6 +750,8 @@ class RNG(object):
             This method is outdated in numpy. Use :func:`RNG.integers`
             instead.
 
+        Added in 0.4.0.
+
         """
         return self.integers(low=low, high=high, size=size, dtype=dtype,
                              endpoint=False)
@@ -758,6 +764,8 @@ class RNG(object):
             This method is outdated in numpy. Use :func:`RNG.standard_normal`
             instead.
 
+        Added in 0.4.0.
+
         """
         return self.standard_normal(size=args)
 
@@ -768,6 +776,8 @@ class RNG(object):
 
             This method is outdated in numpy. Use :func:`RNG.integers`
             instead.
+
+        Added in 0.4.0.
 
         """
         if high is None:
@@ -782,6 +792,8 @@ class RNG(object):
             This method is outdated in numpy. Use :func:`RNG.uniform`
             instead.
 
+        Added in 0.4.0.
+
         """
         return self.uniform(0.0, 1.0, size=size)
 
@@ -792,6 +804,8 @@ class RNG(object):
 
             This method is outdated in numpy. Use :func:`RNG.integers`
             instead.
+
+        Added in 0.4.0.
 
         """
         import sys
@@ -1553,6 +1567,8 @@ class temporary_numpy_seed(object):
 
     The random state's internal state will be set back to the original one
     once the context finishes.
+
+    Added in 0.4.0.
 
     Parameters
     ----------

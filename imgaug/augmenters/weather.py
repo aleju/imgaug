@@ -158,6 +158,7 @@ class FastSnowyLandscape(meta.Augmenter):
             (nb_augmentables,), rss[0])
         return thresh_samples, lmul_samples
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -365,6 +366,7 @@ class CloudLayer(meta.Augmenter):
         self.density_multiplier = iap.handle_continuous_param(
             density_multiplier, "density_multiplier")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -873,6 +875,7 @@ class SnowflakesLayer(meta.Augmenter):
         # (height, width), same for all images
         self.gate_noise_size = (8, 8)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
             return batch
@@ -984,6 +987,7 @@ class SnowflakesLayer(meta.Augmenter):
             k=max(k, 3), angle=angle, direction=1.0, random_state=random_state)
         return blurer.augment_image(noise)
 
+    # Added in 0.4.0.
     @classmethod
     def _postprocess_noise(cls, noise_small_blur,
                            flake_size_uniformity_sample, nb_channels):
@@ -999,6 +1003,7 @@ class SnowflakesLayer(meta.Augmenter):
             noise_small_blur[..., np.newaxis], (1, 1, nb_channels))
         return noise_small_blur_rgb
 
+    # Added in 0.4.0.
     @classmethod
     def _blend(cls, image, speed_sample, noise_small_blur_rgb):
         # blend:
@@ -1220,6 +1225,8 @@ class Snowflakes(meta.SomeOf):
 class RainLayer(SnowflakesLayer):
     """Add a single layer of falling raindrops to images.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; indirectly tested (1)
@@ -1285,6 +1292,7 @@ class RainLayer(SnowflakesLayer):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, density, density_uniformity, drop_size,
                  drop_size_uniformity, angle, speed, blur_sigma_fraction,
                  blur_sigma_limits=(0.5, 3.75),
@@ -1297,10 +1305,12 @@ class RainLayer(SnowflakesLayer):
             seed=seed, name=name,
             random_state=random_state, deterministic=deterministic)
 
+    # Added in 0.4.0.
     @classmethod
     def _blur(cls, noise, sigma):
         return noise
 
+    # Added in 0.4.0.
     @classmethod
     def _postprocess_noise(cls, noise_small_blur,
                            flake_size_uniformity_sample, nb_channels):
@@ -1308,6 +1318,7 @@ class RainLayer(SnowflakesLayer):
             noise_small_blur[..., np.newaxis], (1, 1, nb_channels))
         return noise_small_blur_rgb
 
+    # Added in 0.4.0.
     @classmethod
     def _blend(cls, image, speed_sample, noise_small_blur_rgb):
         # We set the mean color based on the noise here. That's a pseudo-random
@@ -1342,6 +1353,8 @@ class Rain(meta.SomeOf):
         `speed` value to e.g. ``(0.1, 0.3)``, otherwise the drops tend to
         look like snowflakes. For larger images, you may want to increase
         the `drop_size` to e.g. ``(0.10, 0.20)``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1406,6 +1419,7 @@ class Rain(meta.SomeOf):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, nb_iterations=(1, 3),
                  drop_size=(0.01, 0.02),
                  speed=(0.04, 0.20),

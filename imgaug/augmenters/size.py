@@ -343,6 +343,7 @@ def _handle_position_parameter(position):
 
 
 # TODO this is the same as in imgaug.py, make DRY
+# Added in 0.4.0.
 def _assert_two_or_three_dims(shape):
     if hasattr(shape, "shape"):
         shape = shape.shape
@@ -355,6 +356,8 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     """Pad an image-like array on its top/right/bottom/left side.
 
     This function is a wrapper around :func:`numpy.pad`.
+
+    Added in 0.4.0. (Previously named ``imgaug.imgaug.pad()``.)
 
     **Supported dtypes**:
 
@@ -558,6 +561,8 @@ def pad_to_aspect_ratio(arr, aspect_ratio, mode="constant", cval=0,
     explanation of how the required padding amounts are distributed per
     image axis.
 
+    Added in 0.4.0. (Previously named ``imgaug.imgaug.pad_to_aspect_ratio()``.)
+
     **Supported dtypes**:
 
     See :func:`~imgaug.augmenters.size.pad`.
@@ -623,6 +628,8 @@ def pad_to_multiples_of(arr, height_multiple, width_multiple, mode="constant",
     See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
+
+    Added in 0.4.0. (Previously named ``imgaug.imgaug.pad_to_multiples_of()``.)
 
     **Supported dtypes**:
 
@@ -705,6 +712,9 @@ def compute_paddings_to_reach_aspect_ratio(arr, aspect_ratio):
     will always add such a left over pixel to the bottom (y-axis) or
     right (x-axis) side.
 
+    Added in 0.4.0. (Previously named
+    ``imgaug.imgaug.compute_paddings_to_reach_aspect_ratio()``.)
+
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
@@ -776,6 +786,8 @@ def compute_croppings_to_reach_aspect_ratio(arr, aspect_ratio):
     If an aspect ratio cannot be reached exactly, this function will return
     rather one pixel too few than one pixel too many.
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     arr : (H,W) ndarray or (H,W,C) ndarray or tuple of int
@@ -833,6 +845,9 @@ def compute_paddings_to_reach_multiples_of(arr, height_multiple,
     See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
+
+    Added in 0.4.0. (Previously named
+    ``imgaug.imgaug.compute_paddings_to_reach_multiples_of()``.)
 
     Parameters
     ----------
@@ -894,6 +909,8 @@ def compute_croppings_to_reach_multiples_of(arr, height_multiple,
     See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required cropping amounts are distributed per
     image axis.
+
+    Added in 0.4.0.
 
     Parameters
     ----------
@@ -959,6 +976,9 @@ def compute_paddings_to_reach_powers_of(arr, height_base, width_base,
     See :func:`~imgaug.imgaug.compute_paddings_for_aspect_ratio` for an
     explanation of how the required padding amounts are distributed per
     image axis.
+
+    Added in 0.4.0. (Previously named
+    ``imgaug.imgaug.compute_paddings_to_reach_exponents_of()``.)
 
     Parameters
     ----------
@@ -1035,6 +1055,8 @@ def compute_croppings_to_reach_powers_of(arr, height_base, width_base,
         croppings.
 
         For axes where ``1 <= S < B`` see parameter `allow_zero_exponent`.
+
+    Added in 0.4.0.
 
     Parameters
     ----------
@@ -1355,6 +1377,7 @@ class Resize(meta.Augmenter):
                 "got %s." % (type(interpolation),))
         return interpolation
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         nb_rows = batch.nb_rows
         samples = self._draw_samples(nb_rows, random_state)
@@ -1386,6 +1409,7 @@ class Resize(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         input_was_array = False
         input_dtype = None
@@ -1409,6 +1433,7 @@ class Resize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, arr_attr_name, samples):
         result = []
         samples_h, samples_w, samples_ip = samples
@@ -1435,6 +1460,7 @@ class Resize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
         samples_a, samples_b, _samples_ip = samples
@@ -1937,6 +1963,7 @@ class CropAndPad(meta.Augmenter):
                 "StochasticParameter, got type %s." % (type(percent),))
         return all_sides, top, right, bottom, left
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         shapes = batch.get_rowwise_shapes()
         samples = self._draw_samples(random_state, shapes)
@@ -1969,6 +1996,7 @@ class CropAndPad(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         result = []
         for i, image in enumerate(images):
@@ -1990,6 +2018,7 @@ class CropAndPad(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, pad_mode, pad_cval,
                                  samples):
         result = []
@@ -2013,6 +2042,7 @@ class CropAndPad(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         result = []
         for i, keypoints_on_image in enumerate(keypoints_on_images):
@@ -2725,6 +2755,7 @@ class PadToFixedSize(meta.Augmenter):
         self._pad_cval_heatmaps = 0.0
         self._pad_cval_segmentation_maps = 0
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # Providing the whole batch to _draw_samples() would not be necessary
         # for this augmenter. The number of rows would be sufficient. This
@@ -2758,6 +2789,7 @@ class PadToFixedSize(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         result = []
         sizes, pad_xs, pad_ys, pad_modes, pad_cvals = samples
@@ -2779,6 +2811,7 @@ class PadToFixedSize(meta.Augmenter):
         #      some might have been larger than desired height/width)
         return result
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, keypoints_on_images, samples):
         result = []
         sizes, pad_xs, pad_ys, _, _ = samples
@@ -2797,6 +2830,7 @@ class PadToFixedSize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, samples, pad_mode,
                                  pad_cval):
         sizes, pad_xs, pad_ys, pad_modes, pad_cvals = samples
@@ -2883,6 +2917,8 @@ class CenterPadToFixedSize(PadToFixedSize):
     all image sides, while :class:`~imgaug.augmenters.size.PadToFixedSize`
     by defaults spreads them randomly.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.size.PadToFixedSize`.
@@ -2929,6 +2965,7 @@ class CenterPadToFixedSize(PadToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width, height, pad_mode="constant", pad_cval=0,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3083,6 +3120,7 @@ class CropToFixedSize(meta.Augmenter):
         # (0.0, 1.0) crops left and bottom, (1.0, 0.0) crops right and top.
         self.position = _handle_position_parameter(position)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # Providing the whole batch to _draw_samples() would not be necessary
         # for this augmenter. The number of rows would be sufficient. This
@@ -3114,6 +3152,7 @@ class CropToFixedSize(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         result = []
         sizes, offset_xs, offset_ys = samples
@@ -3131,6 +3170,7 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, kpsois, samples):
         result = []
         sizes, offset_xs, offset_ys = samples
@@ -3148,6 +3188,7 @@ class CropToFixedSize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, samples):
         sizes, offset_xs, offset_ys = samples
         for i, (augmentable, size) in enumerate(zip(augmentables, sizes)):
@@ -3221,6 +3262,8 @@ class CenterCropToFixedSize(CropToFixedSize):
         respective axis. Hence, resulting images can be smaller than the
         provided axis sizes.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.size.CropToFixedSize`.
@@ -3260,6 +3303,7 @@ class CenterCropToFixedSize(CropToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width, height,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3278,6 +3322,8 @@ class CropToMultiplesOf(CropToFixedSize):
         interval ``[0 .. M]``, the axis will not be changed.
         As a result, this augmenter can still produce axis sizes that are
         not multiples of the given values.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3328,6 +3374,7 @@ class CropToMultiplesOf(CropToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_multiple, height_multiple, position="uniform",
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3338,6 +3385,7 @@ class CropToMultiplesOf(CropToFixedSize):
         self.width_multiple = width_multiple
         self.height_multiple = height_multiple
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         _sizes, offset_xs, offset_ys = super(
             CropToMultiplesOf, self
@@ -3363,6 +3411,7 @@ class CropToMultiplesOf(CropToFixedSize):
 
         return sizes, offset_xs, offset_ys
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_multiple, self.height_multiple, self.position]
@@ -3376,6 +3425,8 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
     equally over all image sides, while
     :class:`~imgaug.augmenters.size.CropToMultiplesOf` by default spreads
     them randomly.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3419,6 +3470,7 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_multiple, height_multiple,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3432,6 +3484,8 @@ class CenterCropToMultiplesOf(CropToMultiplesOf):
 
 class PadToMultiplesOf(PadToFixedSize):
     """Pad images until their height/width is a multiple of a value.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3488,6 +3542,7 @@ class PadToMultiplesOf(PadToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_multiple, height_multiple,
                  pad_mode="constant", pad_cval=0,
                  position="uniform",
@@ -3501,6 +3556,7 @@ class PadToMultiplesOf(PadToFixedSize):
         self.width_multiple = width_multiple
         self.height_multiple = height_multiple
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         _sizes, pad_xs, pad_ys, pad_modes, pad_cvals = super(
             PadToMultiplesOf, self
@@ -3526,6 +3582,7 @@ class PadToMultiplesOf(PadToFixedSize):
 
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_multiple, self.height_multiple,
@@ -3541,6 +3598,8 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
     equally over all image sides, while
     :class:`~imgaug.augmenters.size.PadToMultiplesOf` by default spreads them
     randomly.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3590,6 +3649,7 @@ class CenterPadToMultiplesOf(PadToMultiplesOf):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_multiple, height_multiple,
                  pad_mode="constant", pad_cval=0,
                  seed=None, name=None,
@@ -3618,6 +3678,8 @@ class CropToPowersOf(CropToFixedSize):
         If you have images with ``S < B^1``, it is recommended
         to combine this augmenter with a padding augmenter that pads each
         axis up to ``B``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3670,6 +3732,7 @@ class CropToPowersOf(CropToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_base, height_base, position="uniform",
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3680,6 +3743,7 @@ class CropToPowersOf(CropToFixedSize):
         self.width_base = width_base
         self.height_base = height_base
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         _sizes, offset_xs, offset_ys = super(
             CropToPowersOf, self
@@ -3705,6 +3769,7 @@ class CropToPowersOf(CropToFixedSize):
 
         return sizes, offset_xs, offset_ys
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_base, self.height_base, self.position]
@@ -3718,6 +3783,8 @@ class CenterCropToPowersOf(CropToPowersOf):
     equally over all image sides, while
     :class:`~imgaug.augmenters.size.CropToPowersOf` by default spreads them
     randomly.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3761,6 +3828,7 @@ class CenterCropToPowersOf(CropToPowersOf):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_base, height_base,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -3777,6 +3845,8 @@ class PadToPowersOf(PadToFixedSize):
     new size ``S'`` until ``S' = B^E`` is fulfilled, where ``B`` is a
     provided base (e.g. ``2``) and ``E`` is an exponent from the discrete
     interval ``[1 .. inf)``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3835,6 +3905,7 @@ class PadToPowersOf(PadToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_base, height_base,
                  pad_mode="constant", pad_cval=0,
                  position="uniform",
@@ -3848,6 +3919,7 @@ class PadToPowersOf(PadToFixedSize):
         self.width_base = width_base
         self.height_base = height_base
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         _sizes, pad_xs, pad_ys, pad_modes, pad_cvals = super(
             PadToPowersOf, self
@@ -3873,6 +3945,7 @@ class PadToPowersOf(PadToFixedSize):
 
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.width_base, self.height_base,
@@ -3887,6 +3960,8 @@ class CenterPadToPowersOf(PadToPowersOf):
     ``position="center"`` by default, which spreads the pad amounts equally
     over all image sides, while :class:`~imgaug.augmenters.size.PadToPowersOf`
     by default spreads them randomly.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -3936,6 +4011,7 @@ class CenterPadToPowersOf(PadToPowersOf):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, width_base, height_base,
                  pad_mode="constant", pad_cval=0,
                  seed=None, name=None,
@@ -3956,6 +4032,8 @@ class CropToAspectRatio(CropToFixedSize):
     operation is stopped once the desired aspect ratio is reached or the image
     side to crop reaches a size of ``1``. If any side of the image starts
     with a size of ``0``, the image will not be changed.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4000,6 +4078,7 @@ class CropToAspectRatio(CropToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, aspect_ratio, position="uniform",
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -4009,6 +4088,7 @@ class CropToAspectRatio(CropToFixedSize):
             random_state=random_state, deterministic=deterministic)
         self.aspect_ratio = aspect_ratio
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         _sizes, offset_xs, offset_ys = super(
             CropToAspectRatio, self
@@ -4037,6 +4117,7 @@ class CropToAspectRatio(CropToFixedSize):
 
         return sizes, offset_xs, offset_ys
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.aspect_ratio, self.position]
@@ -4050,6 +4131,8 @@ class CenterCropToAspectRatio(CropToAspectRatio):
     equally over all image sides, while
     :class:`~imgaug.augmenters.size.CropToAspectRatio` by default spreads
     them randomly.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4090,6 +4173,7 @@ class CenterCropToAspectRatio(CropToAspectRatio):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, aspect_ratio,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -4104,6 +4188,8 @@ class PadToAspectRatio(PadToFixedSize):
 
     This augmenter adds either rows or columns until the image reaches
     the desired aspect ratio given in ``width / height``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4154,6 +4240,7 @@ class PadToAspectRatio(PadToFixedSize):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, aspect_ratio, pad_mode="constant", pad_cval=0,
                  position="uniform",
                  seed=None, name=None,
@@ -4165,6 +4252,7 @@ class PadToAspectRatio(PadToFixedSize):
             random_state=random_state, deterministic=deterministic)
         self.aspect_ratio = aspect_ratio
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         _sizes, pad_xs, pad_ys, pad_modes, pad_cvals = super(
             PadToAspectRatio, self
@@ -4190,6 +4278,7 @@ class PadToAspectRatio(PadToFixedSize):
 
         return sizes, pad_xs, pad_ys, pad_modes, pad_cvals
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.aspect_ratio, self.pad_mode, self.pad_cval,
@@ -4204,6 +4293,8 @@ class CenterPadToAspectRatio(PadToAspectRatio):
     equally over all image sides, while
     :class:`~imgaug.augmenters.size.PadToAspectRatio` by default spreads them
     randomly.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4242,6 +4333,7 @@ class CenterPadToAspectRatio(PadToAspectRatio):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, aspect_ratio, pad_mode="constant", pad_cval=0,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -4259,6 +4351,8 @@ class CropToSquare(CropToAspectRatio):
     with ``aspect_ratio=1.0``.
 
     Images with axis sizes of ``0`` will not be altered.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4298,6 +4392,7 @@ class CropToSquare(CropToAspectRatio):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, position="uniform",
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -4322,6 +4417,8 @@ class CenterCropToSquare(CropToSquare):
     ``aspect_ratio=1.0, position="center"``.
 
     Images with axis sizes of ``0`` will not be altered.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4358,6 +4455,7 @@ class CenterCropToSquare(CropToSquare):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
         super(CenterCropToSquare, self).__init__(
@@ -4371,6 +4469,8 @@ class PadToSquare(PadToAspectRatio):
 
     This augmenter is identical to
     :class:`~imgaug.augmenters.size.PadToAspectRatio` with ``aspect_ratio=1.0``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4416,6 +4516,7 @@ class PadToSquare(PadToAspectRatio):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, pad_mode="constant", pad_cval=0, position="uniform",
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -4435,6 +4536,8 @@ class CenterPadToSquare(PadToSquare):
     by default spreads them randomly. This augmenter is thus also identical to
     :class:`~imgaug.augmenters.size.PadToAspectRatio` with
     ``aspect_ratio=1.0, position="center"``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -4469,6 +4572,7 @@ class CenterPadToSquare(PadToSquare):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, pad_mode="constant", pad_cval=0,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -4633,6 +4737,7 @@ class KeepSizeByResize(meta.Augmenter):
         self.interpolation_segmaps = _validate_param(interpolation_segmaps,
                                                      True)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         with batch.propagation_hooks_ctx(self, hooks, parents):
             images_were_array = None
@@ -4675,6 +4780,7 @@ class KeepSizeByResize(meta.Augmenter):
                     setattr(batch, augm_name, cbaois)
         return batch
 
+    # Added in 0.4.0.
     @classmethod
     def _keep_size_images(cls, images, shapes_orig, images_were_array,
                           samples):
@@ -4700,6 +4806,7 @@ class KeepSizeByResize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     @classmethod
     def _keep_size_maps(cls, augmentables, shapes_orig_images,
                         shapes_orig_arrs, interpolations):
@@ -4717,6 +4824,7 @@ class KeepSizeByResize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     @classmethod
     def _keep_size_keypoints(cls, kpsois_aug, shapes_orig, interpolations):
         result = []
@@ -4729,6 +4837,7 @@ class KeepSizeByResize(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     @classmethod
     def _get_shapes(cls, batch):
         result = dict()

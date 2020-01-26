@@ -323,6 +323,8 @@ class LineString(object):
         This is intended for cases where the original image is resized.
         It cannot be used for more complex changes (e.g. padding, cropping).
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         from_shape : tuple of int or ndarray
@@ -374,6 +376,8 @@ class LineString(object):
         This estimates ``f = A_ooi / A``, where ``A_ooi`` is the area of the
         polygon that is outside of the image plane, while ``A`` is the
         total area of the bounding box.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -665,6 +669,8 @@ class LineString(object):
 
         The origin ``(0, 0)`` is at the top left of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         x : number, optional
@@ -676,22 +682,22 @@ class LineString(object):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -724,22 +730,22 @@ class LineString(object):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             right (towards the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift this object *from* the
             left (towards the right).
 
@@ -1623,6 +1629,8 @@ class LineString(object):
     def __getitem__(self, indices):
         """Get the coordinate(s) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -1633,6 +1641,8 @@ class LineString(object):
 
     def __iter__(self):
         """Iterate over the coordinates of this instance.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -1707,6 +1717,8 @@ class LineStringsOnImage(IAugmentable):
     def items(self):
         """Get the line strings in this container.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of LineString
@@ -1718,6 +1730,8 @@ class LineStringsOnImage(IAugmentable):
     @items.setter
     def items(self, value):
         """Set the line strings in this container.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1741,6 +1755,8 @@ class LineStringsOnImage(IAugmentable):
 
     def on_(self, image):
         """Project the line strings from one image shape to a new one in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1926,6 +1942,8 @@ class LineStringsOnImage(IAugmentable):
         """
         Remove all LS that are fully/partially outside of an image in-place.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fully : bool, optional
@@ -1974,6 +1992,8 @@ class LineStringsOnImage(IAugmentable):
         """Remove all LS with an OOI fraction of at least `fraction` in-place.
 
         'OOI' is the abbreviation for 'out of image'.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -2030,6 +2050,8 @@ class LineStringsOnImage(IAugmentable):
             hence will be clipped off, resulting in two or more unconnected
             line string parts that are left in the image plane.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.lines.LineStringsOnImage
@@ -2074,6 +2096,8 @@ class LineStringsOnImage(IAugmentable):
 
         The origin ``(0, 0)`` is at the top left of the image.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         x : number, optional
@@ -2085,22 +2109,22 @@ class LineStringsOnImage(IAugmentable):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -2133,22 +2157,22 @@ class LineStringsOnImage(IAugmentable):
             towards the bottom images.
 
         top : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             top (towards the bottom).
 
         right : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             right (towads the left).
 
         bottom : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             bottom (towards the top).
 
         left : None or int, optional
-            **Deprecated.**
+            Deprecated since 0.4.0.
             Amount of pixels by which to shift all objects *from* the
             left (towards the right).
 
@@ -2164,6 +2188,8 @@ class LineStringsOnImage(IAugmentable):
 
     def to_xy_array(self):
         """Convert all line string coordinates to one array of shape ``(N,2)``.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -2184,6 +2210,8 @@ class LineStringsOnImage(IAugmentable):
             This currently expects that `xy` contains exactly as many
             coordinates as the line strings within this instance have corner
             points. Otherwise, an ``AssertionError`` will be raised.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -2228,6 +2256,8 @@ class LineStringsOnImage(IAugmentable):
     def to_keypoints_on_image(self):
         """Convert the line strings to one ``KeypointsOnImage`` instance.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
@@ -2251,6 +2281,8 @@ class LineStringsOnImage(IAugmentable):
 
         This function writes in-place into this ``LineStringsOnImage``
         instance.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -2348,6 +2380,8 @@ class LineStringsOnImage(IAugmentable):
     def __getitem__(self, indices):
         """Get the line string(s) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of imgaug.augmentables.lines.LineString
@@ -2358,6 +2392,8 @@ class LineStringsOnImage(IAugmentable):
 
     def __iter__(self):
         """Iterate over the line strings in this container.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -2371,6 +2407,8 @@ class LineStringsOnImage(IAugmentable):
 
     def __len__(self):
         """Get the number of items in this instance.
+
+        Added in 0.4.0.
 
         Returns
         -------

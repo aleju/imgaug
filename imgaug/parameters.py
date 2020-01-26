@@ -156,6 +156,7 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
             allowed_type, allowed_type, list_str, name, type(param),))
 
 
+# Added in 0.4.0.
 def handle_categorical_string_param(param, name, valid_values=None):
     if param == ia.ALL and valid_values is not None:
         return Choice(list(valid_values))
@@ -691,6 +692,8 @@ class DeterministicList(StochasticParameter):
     will (by default) be tiled until it is long enough (i.e. the sampling
     will start again at the first element, if necessary multiple times).
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     values : ndarray or iterable of number
@@ -698,6 +701,7 @@ class DeterministicList(StochasticParameter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, values):
         super(DeterministicList, self).__init__()
 
@@ -722,6 +726,7 @@ class DeterministicList(StochasticParameter):
             elif kind == "f":
                 self.values = self.values.astype(np.float32)
 
+    # Added in 0.4.0.
     def _draw_samples(self, size, random_state):
         nb_requested = int(np.prod(size))
         values = self.values
@@ -733,9 +738,11 @@ class DeterministicList(StochasticParameter):
             values = np.tile(values, (multiplier,))
         return values[:nb_requested].reshape(size)
 
+    # Added in 0.4.0.
     def __repr__(self):
         return self.__str__()
 
+    # Added in 0.4.0.
     def __str__(self):
         if self.values.dtype.kind == "f":
             values = ["%.4f" % (value,) for value in self.values]
@@ -1743,6 +1750,8 @@ class Discretize(StochasticParameter):
 
     round : bool, optional
         Whether to round before converting to integer dtype.
+
+        Added in 0.4.0.
 
     Examples
     --------

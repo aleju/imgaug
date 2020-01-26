@@ -358,6 +358,8 @@ def apply_jigsaw(arr, destinations):
     This function will split the image into ``rows x cols`` cells and
     move each cell to the target index given in `destinations`.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -447,6 +449,8 @@ def apply_jigsaw_to_coords(coords, destinations, image_shape):
     This is the same as :func:`apply_jigsaw`, but moves coordinates within
     the cells.
 
+    Added in 0.4.0.
+
     Parameters
     ----------
     coords : ndarray
@@ -507,6 +511,8 @@ def apply_jigsaw_to_coords(coords, destinations, image_shape):
 def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, seed,
                                  connectivity=4):
     """Generate a destination pattern for :func:`apply_jigsaw`.
+
+    Added in 0.4.0.
 
     Parameters
     ----------
@@ -588,6 +594,7 @@ class _AffineSamplingResult(object):
         self.mode = mode
         self.order = order
 
+    # Added in 0.4.0.
     def get_affine_parameters(self, idx, arr_shape, image_shape):
         scale_y = self.scale[1][idx]  # TODO 1 and 0 should be inverted here
         scale_x = self.scale[0][idx]
@@ -665,9 +672,11 @@ class _AffineSamplingResult(object):
             return _compute_affine_warp_output_shape(matrix, arr_shape)
         return matrix, arr_shape
 
+    # Added in 0.4.0.
     def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.0, 0.0)):
         return self.to_matrix(idx, arr_shape, arr_shape, fit_output, shift_add)
 
+    # Added in 0.4.0.
     def copy(self):
         return _AffineSamplingResult(
             scale=self.scale,
@@ -1292,6 +1301,7 @@ class Affine(meta.Augmenter):
                 "px"
             )
 
+    # Added in 0.4.0.
     @classmethod
     def _handle_shear_arg(cls, shear):
         # pylint: disable=no-else-return
@@ -1318,6 +1328,7 @@ class Affine(meta.Augmenter):
                 list_to_choice=True
             ), param_type
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch.nb_rows, random_state)
 
@@ -1417,6 +1428,7 @@ class Affine(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, samples,
                                  arr_attr_name, cval, mode, order, cval_dtype):
         nb_images = len(augmentables)
@@ -1531,6 +1543,8 @@ class ScaleX(Affine):
 
     This is a wrapper around :class:`Affine`.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
     See :class:`~imgaug.augmenters.geometric.Affine`.
@@ -1585,6 +1599,7 @@ class ScaleX(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, scale=(0.5, 1.5), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -1604,6 +1619,8 @@ class ScaleY(Affine):
     """Apply affine scaling on the y-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1659,6 +1676,7 @@ class ScaleY(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, scale=(0.5, 1.5), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -1679,6 +1697,8 @@ class TranslateX(Affine):
     """Apply affine translation on the x-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1743,6 +1763,7 @@ class TranslateX(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -1767,6 +1788,8 @@ class TranslateY(Affine):
     """Apply affine translation on the y-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1831,6 +1854,7 @@ class TranslateY(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, percent=None, px=None, order=1,
                  cval=0, mode="constant", fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -1855,6 +1879,8 @@ class Rotate(Affine):
 
     This is a wrapper around :class:`Affine`.
     It is the same as ``Affine(rotate=<value>)``.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1907,6 +1933,7 @@ class Rotate(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, rotate=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -1926,6 +1953,8 @@ class ShearX(Affine):
     """Apply affine shear on the x-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -1979,6 +2008,7 @@ class ShearX(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -1998,6 +2028,8 @@ class ShearY(Affine):
     """Apply affine shear on the y-axis to input data.
 
     This is a wrapper around :class:`Affine`.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -2051,6 +2083,7 @@ class ShearY(Affine):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, shear=(-30, 30), order=1, cval=0, mode="constant",
                  fit_output=False, backend="auto",
                  seed=None, name=None,
@@ -2093,6 +2126,8 @@ class AffineCv2(meta.Augmenter):
     Some transformations involve interpolations between several pixels
     of the input image to generate output pixel values. The parameter `order`
     deals with the method of interpolation used for this.
+
+    Deprecated since 0.4.0.
 
     **Supported dtypes**:
 
@@ -3007,6 +3042,7 @@ class PiecewiseAffine(meta.Augmenter):
         self._cval_heatmaps = 0
         self._cval_segmentation_maps = 0
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch.nb_rows, random_state)
 
@@ -3044,6 +3080,7 @@ class PiecewiseAffine(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         iadt.gate_dtypes(
             images,
@@ -3090,6 +3127,7 @@ class PiecewiseAffine(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, arr_attr_name, samples,
                                  cval, mode, order):
         result = augmentables
@@ -3130,6 +3168,7 @@ class PiecewiseAffine(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, kpsois, samples):
         # pylint: disable=pointless-string-statement
         result = []
@@ -3452,6 +3491,8 @@ class PerspectiveTransform(meta.Augmenter):
         This setting should not be set to ``True`` when using large `scale`
         values as it could lead to very large images.
 
+        Added in 0.4.0.
+
     polygon_recoverer : 'auto' or None or imgaug.augmentables.polygons._ConcavePolygonRecoverer, optional
         The class to use to repair invalid polygons.
         If ``"auto"``, a new instance of
@@ -3582,6 +3623,7 @@ class PerspectiveTransform(meta.Augmenter):
             "of int/strings or StochasticParameter, got %s." % (
                 type(mode),))
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # Advance once, because below we always use random_state.copy() and
         # hence the sampling calls actually don't change random_state's state.
@@ -3638,6 +3680,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
         iadt.gate_dtypes(
             images,
@@ -3709,6 +3752,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, arr_attr_name,
                                  samples, samples_images, cval, mode, flags):
         result = augmentables
@@ -3772,6 +3816,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, kpsois, samples_images):
         result = kpsois
 
@@ -3801,6 +3846,7 @@ class PerspectiveTransform(meta.Augmenter):
 
         return result
 
+    # Added in 0.4.0.
     def _draw_samples(self, shapes, random_state):
         # pylint: disable=invalid-name
         matrices = []
@@ -3941,6 +3987,7 @@ class PerspectiveTransform(meta.Augmenter):
         # return the ordered coordinates
         return pts_ordered
 
+    # Added in 0.4.0.
     @classmethod
     def _expand_transform(cls, matrix, shape):
         height, width = shape
@@ -4257,6 +4304,7 @@ class ElasticTransformation(meta.Augmenter):
         return _ElasticTransformationSamplingResult(
             rss[0:-5], alphas, sigmas, orders, cvals, modes)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         if batch.images is not None:
@@ -4309,6 +4357,7 @@ class ElasticTransformation(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _augment_image_by_samples(self, image, row_idx, samples, dx, dy):
         # pylint: disable=invalid-name
         min_value, _center_value, max_value = \
@@ -4329,6 +4378,7 @@ class ElasticTransformation(meta.Augmenter):
             image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
         return image_aug
 
+    # Added in 0.4.0.
     def _augment_hm_or_sm_by_samples(self, augmentable, row_idx, samples,
                                      dx, dy, arr_attr_name, cval, mode, order):
         # pylint: disable=invalid-name
@@ -4382,6 +4432,7 @@ class ElasticTransformation(meta.Augmenter):
 
         return augmentable
 
+    # Added in 0.4.0.
     def _augment_kpsoi_by_samples(self, kpsoi, row_idx, samples, dx, dy):
         # pylint: disable=misplaced-comparison-constant, invalid-name
         height, width = kpsoi.shape[0:2]
@@ -4444,6 +4495,7 @@ class ElasticTransformation(meta.Augmenter):
 
         return kpsoi
 
+    # Added in 0.4.0.
     def _augment_psoi_by_samples(self, psoi, row_idx, samples, dx, dy):
         # pylint: disable=invalid-name
         func = functools.partial(self._augment_kpsoi_by_samples,
@@ -4451,12 +4503,14 @@ class ElasticTransformation(meta.Augmenter):
         return self._apply_to_polygons_as_keypoints(
             psoi, func, recoverer=self.polygon_recoverer)
 
+    # Added in 0.4.0.
     def _augment_lsoi_by_samples(self, lsoi, row_idx, samples, dx, dy):
         # pylint: disable=invalid-name
         func = functools.partial(self._augment_kpsoi_by_samples,
                                  row_idx=row_idx, samples=samples, dx=dx, dy=dy)
         return self._apply_to_cbaois_as_keypoints(lsoi, func)
 
+    # Added in 0.4.0.
     def _augment_bbsoi_by_samples(self, bbsoi, row_idx, samples, dx, dy):
         # pylint: disable=invalid-name
         func = functools.partial(self._augment_kpsoi_by_samples,
@@ -4859,6 +4913,7 @@ class Rot90(meta.Augmenter):
     def _draw_samples(self, nb_images, random_state):
         return self.k.draw_samples((nb_images,), random_state=random_state)
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         ks = self._draw_samples(batch.nb_rows, random_state)
@@ -4910,6 +4965,7 @@ class Rot90(meta.Augmenter):
                 arrs_aug = np.array(arrs_aug, dtype=input_dtype)
         return arrs_aug
 
+    # Added in 0.4.0.
     def _augment_maps_by_samples(self, augmentables, arr_attr_name, ks):
         # pylint: disable=invalid-name
         arrs = [getattr(map_i, arr_attr_name) for map_i in augmentables]
@@ -4934,6 +4990,7 @@ class Rot90(meta.Augmenter):
             maps_aug.append(augmentable_i)
         return maps_aug
 
+    # Added in 0.4.0.
     def _augment_keypoints_by_samples(self, keypoints_on_images, ks):
         # pylint: disable=invalid-name
         result = []
@@ -5028,6 +5085,8 @@ class WithPolarWarping(meta.Augmenter):
         recovery are currently ``PerspectiveTransform``, ``PiecewiseAffine``
         and ``ElasticTransformation``.
 
+    Added in 0.4.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -5099,6 +5158,7 @@ class WithPolarWarping(meta.Augmenter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, children,
                  seed=None, name=None,
                  random_state="deprecated", deterministic="deprecated"):
@@ -5107,6 +5167,7 @@ class WithPolarWarping(meta.Augmenter):
             random_state=random_state, deterministic=deterministic)
         self.children = meta.handle_children_list(children, self.name, "then")
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
             iadt.gate_dtypes(
@@ -5142,6 +5203,7 @@ class WithPolarWarping(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     @classmethod
     def _convert_bbs_to_polygons_(cls, batch):
         batch_contained_polygons = batch.polygons is not None
@@ -5175,6 +5237,7 @@ class WithPolarWarping(meta.Augmenter):
 
         return batch, (True, batch_contained_polygons)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_convert_bbs_to_polygons_(cls, batch, inv_data):
         batch_contained_bbs, batch_contained_polygons = inv_data
@@ -5214,69 +5277,84 @@ class WithPolarWarping(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_images_(cls, images):
         return cls._warp_arrays(images, False)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_images_(cls, images_warped, inv_data):
         return cls._invert_warp_arrays(images_warped, False, inv_data)
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_heatmaps_(cls, heatmaps):
         return cls._warp_maps_(heatmaps, "arr_0to1", False)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_heatmaps_(cls, heatmaps_warped, inv_data):
         return cls._invert_warp_maps_(heatmaps_warped, "arr_0to1", False,
                                       inv_data)
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_segmentation_maps_(cls, segmentation_maps):
         return cls._warp_maps_(segmentation_maps, "arr", True)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_segmentation_maps_(cls, segmentation_maps_warped,
                                         inv_data):
         return cls._invert_warp_maps_(segmentation_maps_warped, "arr", True,
                                       inv_data)
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_keypoints_(cls, kpsois):
         return cls._warp_cbaois_(kpsois)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_keypoints_(cls, kpsois_warped, image_shapes_orig):
         return cls._invert_warp_cbaois_(kpsois_warped, image_shapes_orig)
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_bounding_boxes_(cls, bbsois):  # pylint: disable=useless-return
         assert bbsois is None, ("Expected BBs to have been converted "
                                 "to polygons.")
         return None
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_bounding_boxes_(cls, bbsois_warped, _image_shapes_orig):  # pylint: disable=useless-return
         assert bbsois_warped is None, ("Expected BBs to have been converted "
                                        "to polygons.")
         return None
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_polygons_(cls, psois):
         return cls._warp_cbaois_(psois)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_polygons_(cls, psois_warped, image_shapes_orig):
         return cls._invert_warp_cbaois_(psois_warped, image_shapes_orig)
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_line_strings_(cls, lsois):
         return cls._warp_cbaois_(lsois)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_line_strings_(cls, lsois_warped, image_shapes_orig):
         return cls._invert_warp_cbaois_(lsois_warped, image_shapes_orig)
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_arrays(cls, arrays, interpolation_nearest):
         if arrays is None:
@@ -5334,6 +5412,7 @@ class WithPolarWarping(meta.Augmenter):
             shapes_orig.append(arr.shape)
         return arrays_warped, shapes_orig
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_arrays(cls, arrays_warped, interpolation_nearest,
                             inv_data):
@@ -5396,6 +5475,7 @@ class WithPolarWarping(meta.Augmenter):
             arrays_inv.append(arr_inv)
         return arrays_inv
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_maps_(cls, maps, arr_attr_name, interpolation_nearest):
         if maps is None:
@@ -5424,6 +5504,7 @@ class WithPolarWarping(meta.Augmenter):
 
         return maps, (shapes_imgs_orig, warparr_inv_data, skipped)
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_maps_(cls, maps_warped, arr_attr_name,
                            interpolation_nearest, invert_data):
@@ -5450,6 +5531,7 @@ class WithPolarWarping(meta.Augmenter):
 
         return maps_warped
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_coords(cls, coords, image_shapes):
         if coords is None:
@@ -5477,6 +5559,7 @@ class WithPolarWarping(meta.Augmenter):
             coords_warped.append(coords_i_warped)
         return coords_warped, image_shapes
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_coords(cls, coords_warped, image_shapes_after_aug,
                             inv_data):
@@ -5505,6 +5588,7 @@ class WithPolarWarping(meta.Augmenter):
             coords_inv.append(coords_i_inv)
         return coords_inv
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_cbaois_(cls, cbaois):
         if cbaois is None:
@@ -5523,6 +5607,7 @@ class WithPolarWarping(meta.Augmenter):
 
         return cbaois, inv_data
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_warp_cbaois_(cls, cbaois_warped, image_shapes_orig):
         if cbaois_warped is None:
@@ -5543,6 +5628,7 @@ class WithPolarWarping(meta.Augmenter):
 
         return cbaois
 
+    # Added in 0.4.0.
     @classmethod
     def _warp_shape_tuples(cls, shapes):
         # pylint: disable=invalid-name
@@ -5567,6 +5653,7 @@ class WithPolarWarping(meta.Augmenter):
             result.append(tuple([height, width] + list(shape[2:])))
         return result
 
+    # Added in 0.4.0.
     @classmethod
     def warpPolarCoords(cls, src, dsize, center, maxRadius, flags):
         # See
@@ -5619,14 +5706,17 @@ class WithPolarWarping(meta.Augmenter):
 
             return np.concatenate([rho, phi], axis=1)
 
+    # Added in 0.4.0.
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return []
 
+    # Added in 0.4.0.
     def get_children_lists(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_children_lists`."""
         return [self.children]
 
+    # Added in 0.4.0.
     def _to_deterministic(self):
         aug = self.copy()
         aug.children = aug.children.to_deterministic()
@@ -5634,6 +5724,7 @@ class WithPolarWarping(meta.Augmenter):
         aug.random_state = self.random_state.derive_rng_()
         return aug
 
+    # Added in 0.4.0.
     def __str__(self):
         pattern = (
             "%s("
@@ -5666,6 +5757,8 @@ class Jigsaw(meta.Augmenter):
         This augmenter currently only supports augmentation of images,
         heatmaps, segmentation maps and keypoints. Other augmentables,
         i.e. bounding boxes, polygons and line strings, will result in errors.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -5748,6 +5841,7 @@ class Jigsaw(meta.Augmenter):
 
     """
 
+    # Added in 0.4.0.
     def __init__(self, nb_rows=(3, 10), nb_cols=(3, 10), max_steps=1,
                  allow_pad=True,
                  seed=None, name=None,
@@ -5767,6 +5861,7 @@ class Jigsaw(meta.Augmenter):
             tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
         self.allow_pad = allow_pad
 
+    # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         samples = self._draw_samples(batch, random_state)
 
@@ -5837,6 +5932,7 @@ class Jigsaw(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     def _draw_samples(self, batch, random_state):
         nb_images = batch.nb_rows
         nb_rows = self.nb_rows.draw_samples((nb_images,),
@@ -5856,6 +5952,7 @@ class Jigsaw(meta.Augmenter):
         samples = _JigsawSamples(nb_rows, nb_cols, max_steps, destinations)
         return samples
 
+    # Added in 0.4.0.
     @classmethod
     def _resize_maps(cls, batch):
         # skip computation of rowwise shapes
@@ -5870,6 +5967,7 @@ class Jigsaw(meta.Augmenter):
 
         return batch, (heatmaps_shapes_orig, sm_shapes_orig)
 
+    # Added in 0.4.0.
     @classmethod
     def _resize_maps_single_list(cls, augmentables, arr_attr_name,
                                  image_shapes):
@@ -5885,6 +5983,7 @@ class Jigsaw(meta.Augmenter):
             shapes_orig.append(shape_orig)
         return augms_resized, shapes_orig
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_resize_maps(cls, batch, shapes_orig):
         batch.heatmaps = cls._invert_resize_maps_single_list(
@@ -5894,6 +5993,7 @@ class Jigsaw(meta.Augmenter):
 
         return batch
 
+    # Added in 0.4.0.
     @classmethod
     def _invert_resize_maps_single_list(cls, augmentables, shapes_orig):
         if shapes_orig is None:
@@ -5904,11 +6004,14 @@ class Jigsaw(meta.Augmenter):
             augms_resized.append(augmentable.resize(shape_orig[0:2]))
         return augms_resized
 
+    # Added in 0.4.0.
     def get_parameters(self):
         return [self.nb_rows, self.nb_cols, self.max_steps, self.allow_pad]
 
 
+# Added in 0.4.0.
 class _JigsawSamples(object):
+    # Added in 0.4.0.
     def __init__(self, nb_rows, nb_cols, max_steps, destinations):
         self.nb_rows = nb_rows
         self.nb_cols = nb_cols

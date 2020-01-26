@@ -485,7 +485,7 @@ def seed(entropy=None, seedval=None):
         The seed value to use.
 
     seedval : None or int, optional
-        Deprecated.
+        Deprecated since 0.4.0.
 
     """
     assert entropy is not None or seedval is not None, (
@@ -2143,6 +2143,7 @@ def do_assert(condition, message="Assertion failed."):
         raise AssertionError(str(message))
 
 
+# Added in 0.4.0.
 def _normalize_cv2_input_arr_(arr):
     flags = arr.flags
     if not flags["OWNDATA"]:
@@ -2155,6 +2156,8 @@ def _normalize_cv2_input_arr_(arr):
 
 def apply_lut(image, table):
     """Map an input image to a new one using a lookup table.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 
@@ -2181,6 +2184,8 @@ def apply_lut(image, table):
 #      isn't right now
 def apply_lut_(image, table):
     """Map an input image in-place to a new one using a lookup table.
+
+    Added in 0.4.0.
 
     **Supported dtypes**:
 

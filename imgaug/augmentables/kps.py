@@ -88,6 +88,8 @@ class Keypoint(object):
     def coords(self):
         """Get the xy-coordinates as an ``(N,2)`` ndarray.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -127,6 +129,8 @@ class Keypoint(object):
     def xy(self):
         """Get the keypoint's x- and y-coordinate as a single array.
 
+        Added in 0.4.0.
+
         Returns
         -------
         ndarray
@@ -138,6 +142,8 @@ class Keypoint(object):
     @property
     def xy_int(self):
         """Get the keypoint's xy-coord, rounded to closest integer.
+
+        Added in 0.4.0.
 
         Returns
         -------
@@ -157,6 +163,8 @@ class Keypoint(object):
 
         This is intended for cases where the original image is resized.
         It cannot be used for more complex changes (e.g. padding, cropping).
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -207,6 +215,8 @@ class Keypoint(object):
     def is_out_of_image(self, image):
         """Estimate whether this point is outside of the given image plane.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         image : (H,W,...) ndarray or tuple of int
@@ -235,6 +245,8 @@ class Keypoint(object):
         plane) or ``0.0`` (point is inside the image plane). This method
         exists for consistency with other augmentables, e.g. bounding boxes.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         image : (H,W,...) ndarray or tuple of int
@@ -254,6 +266,8 @@ class Keypoint(object):
 
     def shift_(self, x=0, y=0):
         """Move the keypoint around on an image in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -475,6 +489,8 @@ class Keypoint(object):
     def coords_almost_equals(self, other, max_distance=1e-4):
         """Estimate if this and another KP have almost identical coordinates.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         other : imgaug.augmentables.kps.Keypoint or iterable
@@ -516,6 +532,8 @@ class Keypoint(object):
 
             This method is currently identical to ``coords_almost_equals``.
             It exists for consistency with ``BoundingBox`` and ``Polygons``.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -618,6 +636,8 @@ class KeypointsOnImage(IAugmentable):
     def items(self):
         """Get the keypoints in this container.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of Keypoint
@@ -629,6 +649,8 @@ class KeypointsOnImage(IAugmentable):
     @items.setter
     def items(self, value):
         """Set the keypoints in this container.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -676,6 +698,8 @@ class KeypointsOnImage(IAugmentable):
 
     def on_(self, image):
         """Project all keypoints from one image shape to a new one in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -773,6 +797,8 @@ class KeypointsOnImage(IAugmentable):
         This method exists for consistency with other augmentables, e.g.
         bounding boxes.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fraction : number
@@ -798,6 +824,8 @@ class KeypointsOnImage(IAugmentable):
         This method exists for consistency with other augmentables, e.g.
         bounding boxes.
 
+        Added in 0.4.0.
+
         Parameters
         ----------
         fraction : number
@@ -822,6 +850,8 @@ class KeypointsOnImage(IAugmentable):
         This method exists for consistency with other augmentables, e.g.
         bounding boxes.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
@@ -838,6 +868,8 @@ class KeypointsOnImage(IAugmentable):
         This method exists for consistency with other augmentables, e.g.
         bounding boxes.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
@@ -848,6 +880,8 @@ class KeypointsOnImage(IAugmentable):
 
     def shift_(self, x=0, y=0):
         """Move the keypoints on the x/y-axis in-place.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -979,6 +1013,8 @@ class KeypointsOnImage(IAugmentable):
             This currently expects that `xy` contains exactly as many
             coordinates as there are keypoints in this instance. Otherwise,
             an ``AssertionError`` will be raised.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1304,6 +1340,8 @@ class KeypointsOnImage(IAugmentable):
         This method exists for consistency with ``BoundingBoxesOnImage``,
         ``PolygonsOnImage`` and ``LineStringsOnImage``.
 
+        Added in 0.4.0.
+
         Returns
         -------
         imgaug.augmentables.kps.KeypointsOnImage
@@ -1317,6 +1355,8 @@ class KeypointsOnImage(IAugmentable):
 
         This function writes in-place into this ``KeypointsOnImage``
         instance.
+
+        Added in 0.4.0.
 
         Parameters
         ----------
@@ -1401,6 +1441,8 @@ class KeypointsOnImage(IAugmentable):
     def __getitem__(self, indices):
         """Get the keypoint(s) with given indices.
 
+        Added in 0.4.0.
+
         Returns
         -------
         list of imgaug.augmentables.kps.Keypoint
@@ -1411,6 +1453,8 @@ class KeypointsOnImage(IAugmentable):
 
     def __iter__(self):
         """Iterate over the keypoints in this container.
+
+        Added in 0.4.0.
 
         Yields
         ------
@@ -1424,6 +1468,8 @@ class KeypointsOnImage(IAugmentable):
 
     def __len__(self):
         """Get the number of items in this instance.
+
+        Added in 0.4.0.
 
         Returns
         -------
