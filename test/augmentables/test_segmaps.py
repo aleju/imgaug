@@ -1,7 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
 import itertools
-import time
 import warnings
 import sys
 # unittest only added in 3.4 self.subTest()
@@ -15,8 +14,6 @@ try:
 except ImportError:
     import mock
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug as ia

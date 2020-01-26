@@ -13,15 +13,10 @@ try:
 except ImportError:
     import mock
 import copy as copylib
-import warnings
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 import six.moves as sm
 import cv2
-import PIL.Image
-import PIL.ImageOps
 
 import imgaug as ia
 import imgaug.random as iarandom

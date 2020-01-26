@@ -13,8 +13,6 @@ try:
 except ImportError:
     import mock
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug.augmenters as iaa

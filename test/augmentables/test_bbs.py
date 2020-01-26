@@ -13,14 +13,12 @@ try:
 except ImportError:
     import mock
 
-import matplotlib
-matplotlib.use('Agg')  # fix execution of tests involving matplotlib on travis
 import numpy as np
 
 import imgaug as ia
 import imgaug.random as iarandom
 from imgaug.augmentables.bbs import _LabelOnImageDrawer
-from imgaug.testutils import reseed, wrap_shift_deprecation
+from imgaug.testutils import wrap_shift_deprecation
 
 
 class TestBoundingBox_project_(unittest.TestCase):
