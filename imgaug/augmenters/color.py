@@ -19,6 +19,7 @@ List of augmenters:
     * :class:`AddToSaturation`
     * :class:`ChangeColorspace`
     * :class:`Grayscale`
+    * :class:`ChangeColorTemperature`
     * :class:`KMeansColorQuantization`
     * :class:`UniformColorQuantization`
     * :class:`Posterize`
