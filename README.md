@@ -1192,54 +1192,6 @@ images_aug = aug(images=images)
 ```
 
 
-### Example: Hooks
-
-You can **dynamically deactivate augmenters** in an already defined sequence.
-We show this here by running a second array (`heatmaps`) through the pipeline,
-but only apply a subset of augmenters to that input.
-```python
-import numpy as np
-import imgaug as ia
-import imgaug.augmenters as iaa
-
-# Images and heatmaps, just arrays filled with value 30.
-# We define the heatmaps here as uint8 arrays as we are going to feed them
-# through the pipeline similar to normal images. In that way, every
-# augmenter is applied to them.
-images = np.full((16, 128, 128, 3), 30, dtype=np.uint8)
-heatmaps = np.full((16, 128, 128, 21), 30, dtype=np.uint8)
-
-# add vertical lines to see the effect of flip
-images[:, 16:128-16, 120:124, :] = 120
-heatmaps[:, 16:128-16, 120:124, :] = 120
-
-seq = iaa.Sequential([
-  iaa.Fliplr(0.5, name="Flipper"),
-  iaa.GaussianBlur((0, 3.0), name="GaussianBlur"),
-  iaa.Dropout(0.02, name="Dropout"),
-  iaa.AdditiveGaussianNoise(scale=0.01*255, name="MyLittleNoise"),
-  iaa.AdditiveGaussianNoise(loc=32, scale=0.0001*255, name="SomeOtherNoise"),
-  iaa.Affine(translate_px={"x": (-40, 40)}, name="Affine")
-])
-
-# change the activated augmenters for heatmaps,
-# we only want to execute horizontal flip, affine transformation and one of
-# the gaussian noises
-def activator_heatmaps(images, augmenter, parents, default):
-    if augmenter.name in ["GaussianBlur", "Dropout", "MyLittleNoise"]:
-        return False
-    else:
-        # default value for all other augmenters
-        return default
-hooks_heatmaps = ia.HooksImages(activator=activator_heatmaps)
-
-# call to_deterministic() once per batch, NOT only once at the start
-seq_det = seq.to_deterministic()
-images_aug = seq_det(images=images)
-heatmaps_aug = seq_det(images=heatmaps, hooks=hooks_heatmaps)
-```
-
-
 <a name="citation"/>
 
 ## Citation
