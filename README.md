@@ -1196,6 +1196,39 @@ images_aug = aug(images=images)
 
 ## Citation
 
+<!--
+Note: the table only lists people who have their real names (publicly)
+set in their github
+
+List of username-realname matching based on
+https://github.com/aleju/imgaug/graphs/contributors ordered by commits:
+
+wkentaro            Wada, Kentaro
+Erotemic            Crall, Jon
+stnk20              Tanaka, Satoshi
+jgraving            Graving, Jake
+creinders           Reinders, Christoph     (lastname not public on github, guessed from username)
+SarthakYadav        Yadav, Sarthak
+nektor211           ?
+joybanerjee08       Banerjee, Joy
+gaborvecsei         Vecsei, Gábor
+adamwkraft          Kraft, Adam
+ZhengRui            Rui, Zheng
+Borda               Borovec, Jirka
+vallentin           Vallentin, Christian
+ss18                Zhydenko, Semen
+kilsenp             Pfeiffer, Kilian
+kacper1095          ?
+ismaelfm            Fernández, Ismael
+fmder               De Rainville, François-Michel
+fchouteau           ?
+chi-hung            Weng, Chi-Hung
+apatsekin           ?
+abnera              Ayala-Acevedo, Abner
+RephaelMeudec       Meudec, Raphael
+Petemir             Laporte, Matias
+
+-->
 If this library has helped you during your research, feel free to cite it:
 ```latex
 @misc{imgaug,
@@ -1204,24 +1237,27 @@ If this library has helped you during your research, feel free to cite it:
             and Crall, Jon
             and Tanaka, Satoshi
             and Graving, Jake
+            and Reinders, Christoph
             and Yadav, Sarthak
             and Banerjee, Joy
             and Vecsei, Gábor
             and Kraft, Adam
+            and Rui, Zheng
             and Borovec, Jirka
             and Vallentin, Christian
             and Zhydenko, Semen
             and Pfeiffer, Kilian
             and Cook, Ben
             and Fernández, Ismael
-            and Weng Chi-Hung
+            and De Rainville, François-Michel
+            and Weng, Chi-Hung
             and Ayala-Acevedo, Abner
             and Meudec, Raphael
             and Laporte, Matias
             and others},
   title = {{imgaug}},
   howpublished = {\url{https://github.com/aleju/imgaug}},
-  year = {2019},
-  note = {Online; accessed 25-Sept-2019}
+  year = {2020},
+  note = {Online; accessed 01-Feb-2020}
 }
 ```
