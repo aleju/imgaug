@@ -200,8 +200,8 @@ The images below show examples for most augmentation techniques.
 
 Values written in the form `(a, b)` denote a uniform distribution,
 i.e. the value is randomly picked from the interval `[a, b]`.
-Line strings are supported by all augmenters, but are not explicitly visualized
-here.
+Line strings are supported by (almost) all augmenters, but are not explicitly
+visualized here.
 
 <table>
 
