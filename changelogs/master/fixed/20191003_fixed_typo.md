@@ -1,1 +1,1 @@
-* Fixed typo in image normalization.
+* Fixed typo in image normalization. #451

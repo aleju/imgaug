@@ -1,4 +1,4 @@
-# Removal of Coordinate-Based Augmentables Outside of the Image Plane
+# Removal of Coordinate-Based Augmentables Outside of the Image Plane #487
 
 * Added `Keypoint.is_out_of_image()`.
 
