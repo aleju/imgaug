@@ -102,8 +102,8 @@ It converts a set of input images into a new, much larger set of slightly altere
     * May be smaller/larger than their corresponding images. *No* extra lines of code needed for e.g. crop.
   * Keypoints/Landmarks (int/float coordinates)
   * Bounding Boxes (int/float coordinates)
-  * Polygons (int/float coordinates) (Beta)
-  * Line Strings (int/float coordinates) (Beta)
+  * Polygons (int/float coordinates)
+  * Line Strings (int/float coordinates)
 * Automatic alignment of sampled random values
   * Example: Rotate image and segmentation map on it by the same value sampled from `uniform(-10°, 45°)`. (0 extra lines of code.)
 * Probability distributions as parameters
