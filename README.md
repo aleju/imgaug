@@ -166,9 +166,9 @@ Example jupyter notebooks:
 
 More notebooks: [imgaug-doc/notebooks](https://github.com/aleju/imgaug-doc/tree/master/notebooks).
 
-Example ReadTheDocs pages (usually less up to date than the notebooks):
+Example ReadTheDocs pages:
 * [Quick example code on how to use the library](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html)
-* [Examples for some of the supported augmentation techniques](http://imgaug.readthedocs.io/en/latest/source/augmenters.html)
+* [Overview of all Augmenters](https://imgaug.readthedocs.io/en/latest/source/overview_of_augmenters.html)
 * [API](http://imgaug.readthedocs.io/en/latest/source/api.html)
 
 More RTD documentation: [imgaug.readthedocs.io](http://imgaug.readthedocs.io/en/latest/source/examples_basics.html).
