@@ -5921,8 +5921,10 @@ class Jigsaw(meta.Augmenter):
                                    "line_strings"]])
         if has_other_cbaoi:
             raise NotImplementedError(
-                "Jigsaw currently only supports augmentation of images "
-                "and keypoints.")
+                "Jigsaw currently only supports augmentation of images, "
+                "heatmaps, segmentation maps and keypoints. "
+                "Explicitly not supported are: bounding boxes, polygons "
+                "and line strings.")
 
         # We don't crop back to the original size, partly because it is
         # rather cumbersome to implement, partly because the padded
