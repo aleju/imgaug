@@ -447,8 +447,7 @@ visualized here.
 <td colspan="5">See also: <a href="https://imgaug.readthedocs.io/en/latest/source/overview/convolutional.html#convolve">Convolve</a></td>
 </tr>
 <tr>
-
-</tr>
+<td colspan="5"><strong>collections</strong></td></tr>
 <tr>
 <td colspan="5">See also: <a href="https://imgaug.readthedocs.io/en/latest/source/overview/debug.html#savedebugimageeverynbatches">SaveDebugImageEveryNBatches</a></td>
 </tr>
