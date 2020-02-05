@@ -1,4 +1,4 @@
-# Better default values #582
+# Improved Default Values of Augmenters #582
 
 **[breaking]** Most augmenters had previously default values that
 made them equivalent to identity functions. Users had to explicitly

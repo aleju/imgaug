@@ -1,4 +1,4 @@
-# Affine Shear on the Y-Axis
+# Affine Shear on the Y-Axis #482
 
 * [rarely breaking] Extended `Affine` to also support shearing on the
   y-axis (previously, only x-axis was possible). This feature can be used

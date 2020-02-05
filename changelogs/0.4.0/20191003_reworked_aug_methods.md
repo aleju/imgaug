@@ -14,7 +14,7 @@
   `imgaug.augmentables.batches.Batch`.
 * Added method `fill_from_augmented_normalized_batch_()` to
   `imgaug.augmentables.batches.UnnormalizedBatch`.
-* Added class `imgaug.augmentables.batches.BatchInAugmentation`.
+* Added class `imgaug.augmentables.batches._BatchInAugmentation`.
 * Added method `_augment_batch_()` in `imgaug.augmenters.meta.Augmenter`.
   This method is now called from `augment_batch_()`.
 * Changed `augment_images()` in `imgaug.augmenters.meta.Augmenter` to be
