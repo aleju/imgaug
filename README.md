@@ -863,7 +863,7 @@ print("Points 1", points_aug[0])
 print("Points 2", points_aug[1])
 ```
 Note that all coordinates in `imgaug` are subpixel-accurate, which is
-why `x=0.5, y=0.5` denotes the center of the pixel of the top left pixel.
+why `x=0.5, y=0.5` denotes the center of the top left pixel.
 
 
 ### Example: Augment Images and Bounding Boxes
