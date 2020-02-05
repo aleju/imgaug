@@ -3,8 +3,6 @@ include setup.cfg
 include LICENSE
 include MANIFEST.in
 include README.md
-include checks/README.md
 include requirements.txt
 recursive-include imgaug *.py *.jpg *.ttf *.png *.json
-recursive-include test *.py
-recursive-include checks *.py
+prune test
