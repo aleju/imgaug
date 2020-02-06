@@ -5,7 +5,6 @@ import math
 import numbers
 import sys
 import os
-import json
 import types
 import functools
 # collections.abc exists since 3.3 and is expected to be used for 3.8+
