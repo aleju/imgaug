@@ -20,6 +20,8 @@ _QUOKKA_DEPTH_MAP_HALFRES_FP = os.path.join(
 def _quokka_normalize_extract(extract):
     """Generate a normalized rectangle for the standard quokka image.
 
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
+
     Parameters
     ----------
     extract : 'square' or tuple of number or imgaug.augmentables.bbs.BoundingBox or imgaug.augmentables.bbs.BoundingBoxesOnImage
@@ -75,6 +77,8 @@ def _quokka_normalize_extract(extract):
 # TODO is this the same as the project functions in augmentables?
 def _compute_resized_shape(from_shape, to_shape):
     """Compute the intended new shape of an image-like array after resizing.
+
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
 
     Parameters
     ----------
@@ -153,6 +157,8 @@ def _compute_resized_shape(from_shape, to_shape):
 def quokka(size=None, extract=None):
     """Return an image of a quokka as a numpy array.
 
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
+
     Parameters
     ----------
     size : None or float or tuple of int, optional
@@ -199,6 +205,8 @@ def quokka(size=None, extract=None):
 def quokka_square(size=None):
     """Return an (square) image of a quokka as a numpy array.
 
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
+
     Parameters
     ----------
     size : None or float or tuple of int, optional
@@ -218,6 +226,8 @@ def quokka_square(size=None):
 
 def quokka_heatmap(size=None, extract=None):
     """Return a heatmap (here: depth map) for the standard example quokka image.
+
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
 
     Parameters
     ----------
@@ -259,6 +269,8 @@ def quokka_heatmap(size=None, extract=None):
 
 def quokka_segmentation_map(size=None, extract=None):
     """Return a segmentation map for the standard example quokka image.
+
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
 
     Parameters
     ----------
@@ -314,6 +326,8 @@ def quokka_keypoints(size=None, extract=None):
 
     The keypoints cover the eyes, ears, nose and paws.
 
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
+
     Parameters
     ----------
     size : None or float or tuple of int or tuple of float, optional
@@ -359,6 +373,8 @@ def quokka_bounding_boxes(size=None, extract=None):
     """Return example bounding boxes on the standard example quokke image.
 
     Currently only a single bounding box is returned that covers the quokka.
+
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
 
     Parameters
     ----------
@@ -413,6 +429,8 @@ def quokka_polygons(size=None, extract=None):
     Returns example polygons on the standard example quokke image.
 
     The result contains one polygon, covering the quokka's outline.
+
+    Added in 0.5.0. (Moved from ``imgaug.imgaug``.)
 
     Parameters
     ----------
