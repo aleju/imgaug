@@ -26,7 +26,7 @@ import imgaug.augmenters.artistic as artisticlib
 class Test_stylize_cartoon(unittest.TestCase):
     @classmethod
     def _test_integrationtest(cls, size, validate_grads):
-        image = ia.quokka_square((size, size))
+        image = ia.data.quokka_square((size, size))
 
         image_cartoon = iaa.stylize_cartoon(image, blur_ksize=5,
                                             segmentation_size=2.0)

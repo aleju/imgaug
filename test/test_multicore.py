@@ -243,8 +243,8 @@ class TestPool(unittest.TestCase):
             mock_Pool.map_async.return_value = "X"
             with mock.patch("multiprocessing.pool.Pool", mock_Pool):
                 batches = [
-                    clazz(images=[ia.quokka()]),
-                    clazz(images=[ia.quokka()+1])
+                    clazz(images=[ia.data.quokka()]),
+                    clazz(images=[ia.data.quokka()+1])
                 ]
                 with multicore.Pool(augseq, processes=1) as pool:
                     if call_async:
@@ -291,8 +291,8 @@ class TestPool(unittest.TestCase):
     @classmethod
     def _test_imap_batches_both(cls, call_unordered):
         for clazz in [Batch, UnnormalizedBatch]:
-            batches = [clazz(images=[ia.quokka()]),
-                       clazz(images=[ia.quokka()+1])]
+            batches = [clazz(images=[ia.data.quokka()]),
+                       clazz(images=[ia.data.quokka()+1])]
 
             def _generate_batches():
                 for batch in batches:

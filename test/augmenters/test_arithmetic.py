@@ -1453,7 +1453,7 @@ class TestAdd(unittest.TestCase):
     def test_heatmaps(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.Add(value=10)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -1942,7 +1942,7 @@ class TestAddElementwise(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.AddElementwise(value=10)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -2344,7 +2344,7 @@ class AdditiveGaussianNoise(unittest.TestCase):
         base_img = np.ones((16, 16, 1), dtype=np.uint8) * 128
 
         aug = iaa.AdditiveGaussianNoise(loc=0.5, scale=10)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -2823,7 +2823,7 @@ class TestDropout(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.Dropout(p=1.0)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -2917,7 +2917,7 @@ class TestCoarseDropout(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.CoarseDropout(p=1.0, size_px=2)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -3824,7 +3824,7 @@ class TestMultiply(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.Multiply(mul=2)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -4323,7 +4323,7 @@ class TestMultiplyElementwise(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.MultiplyElementwise(mul=2)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -4799,7 +4799,7 @@ class TestReplaceElementwise(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.ReplaceElementwise(mask=1, replacement=0.5)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -5066,7 +5066,7 @@ class TestCoarseSaltAndPepper(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.CoarseSaltAndPepper(p=1.0, size_px=2)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -5184,7 +5184,7 @@ class TestCoarseSalt(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.CoarseSalt(p=1.0, size_px=2)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -5301,7 +5301,7 @@ class TestCoarsePepper(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.CoarsePepper(p=1.0, size_px=2)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -6101,7 +6101,7 @@ class TestInvert(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.Invert(p=1.0)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 
@@ -6454,7 +6454,7 @@ def deactivated_test_ContrastNormalization():
 
     # test heatmaps (not affected by augmenter)
     aug = iaa.ContrastNormalization(alpha=2)
-    hm = ia.quokka_heatmap()
+    hm = ia.data.quokka_heatmap()
     hm_aug = aug.augment_heatmaps([hm])[0]
     assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 """
@@ -6466,7 +6466,7 @@ class TestJpegCompression(unittest.TestCase):
 
     def test_compression_is_zero(self):
         # basic test at 0 compression
-        img = ia.quokka(extract="square", size=(64, 64))
+        img = ia.data.quokka(extract="square", size=(64, 64))
         aug = iaa.JpegCompression(0)
         img_aug = aug.augment_image(img)
         diff = np.average(np.abs(img.astype(np.float32) - img_aug.astype(np.float32)))
@@ -6474,7 +6474,7 @@ class TestJpegCompression(unittest.TestCase):
 
     def test_compression_is_90(self):
         # basic test at 90 compression
-        img = ia.quokka(extract="square", size=(64, 64))
+        img = ia.data.quokka(extract="square", size=(64, 64))
         aug = iaa.JpegCompression(90)
         img_aug = aug.augment_image(img)
         diff = np.average(np.abs(img.astype(np.float32) - img_aug.astype(np.float32)))
@@ -6494,7 +6494,7 @@ class TestJpegCompression(unittest.TestCase):
 
     def test_compression_is_stochastic_parameter(self):
         # test if stochastic parameters are used by augmentation
-        img = ia.quokka(extract="square", size=(64, 64))
+        img = ia.data.quokka(extract="square", size=(64, 64))
 
         class _TwoValueParam(iap.StochasticParameter):
             def __init__(self, v1, v2):
@@ -6520,7 +6520,7 @@ class TestJpegCompression(unittest.TestCase):
     def test_keypoints_dont_change(self):
         # test keypoints (not affected by augmenter)
         aug = iaa.JpegCompression(50)
-        kps = ia.quokka_keypoints()
+        kps = ia.data.quokka_keypoints()
         kps_aug = aug.augment_keypoints([kps])[0]
         for kp, kp_aug in zip(kps.keypoints, kps_aug.keypoints):
             assert np.allclose([kp.x, kp.y], [kp_aug.x, kp_aug.y])
@@ -6528,7 +6528,7 @@ class TestJpegCompression(unittest.TestCase):
     def test_heatmaps_dont_change(self):
         # test heatmaps (not affected by augmenter)
         aug = iaa.JpegCompression(50)
-        hm = ia.quokka_heatmap()
+        hm = ia.data.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
         assert np.allclose(hm.arr_0to1, hm_aug.arr_0to1)
 

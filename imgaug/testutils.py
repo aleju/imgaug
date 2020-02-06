@@ -349,7 +349,7 @@ class _AssertWarnsContext(_AssertRaisesBaseContext):
 def assertWarns(testcase, expected_warning, *args, **kwargs):
     """Context with same functionality as ``assertWarns`` in ``unittest``.
 
-    Note that ``assertWarns`` is only available in python 3.2+.
+    Note that unittest's ``assertWarns`` is only available in python 3.2+.
 
     Added in 0.4.0.
 
