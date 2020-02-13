@@ -122,6 +122,9 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
         "Background image was float128, but blend_alpha() cannot handle that "
         "dtype.")
 
+    if image_fg.size == 0:
+        return np.copy(image_fg)
+
     input_was_2d = (image_fg.ndim == 2)
     if input_was_2d:
         image_fg = image_fg[..., np.newaxis]
@@ -168,13 +171,78 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
                 image_bg = image_bg[..., 0]
             return np.copy(image_bg)
 
-    # for efficiency reaons, only test one value of alpha here, even if alpha
+    # for efficiency reasons, only test one value of alpha here, even if alpha
     # is much larger
     if alpha.size > 0:
         assert 0 <= alpha.item(0) <= 1.0, (
             "Expected 'alpha' value(s) to be in the interval [0.0, 1.0]. "
             "Got min %.4f and max %.4f." % (np.min(alpha), np.max(alpha)))
 
+    both_uint8 = (image_fg.dtype.name == "uint8"
+                  and image_bg.dtype.name == "uint8")
+    if both_uint8:
+        if alpha.size == 1:
+            image_blend = _blend_alpha_uint8_single_alpha(
+                image_fg, image_bg, float(alpha)
+            )
+        elif alpha.shape == (1, 1, image_fg.shape[2]):
+            image_blend = _blend_alpha_uint8_channelwise_alphas(
+                image_fg, image_bg, alpha[0, 0, :]
+            )
+        else:
+            # couldn't find an OpenCV formulation here that performed
+            # consistently fast than np and also passed all tests
+            image_blend = _blend_alpha_non_uint8(image_fg, image_bg, alpha)
+    else:
+        image_blend = _blend_alpha_non_uint8(image_fg, image_bg, alpha)
+
+    if input_was_bool:
+        image_blend = image_blend > 0.5
+
+    if input_was_2d:
+        return image_blend[:, :, 0]
+    return image_blend
+
+
+# Added in 0.5.0.
+def _blend_alpha_uint8_single_alpha(image_fg, image_bg, alpha):
+    # here we are not guarantueed that inputs have ndim=3, can be ndim=2
+    result = cv2.addWeighted(
+        _normalize_cv2_input_arr_(image_fg),
+        alpha,
+        _normalize_cv2_input_arr_(image_bg),
+        beta=(1 - alpha),
+        gamma=0.0
+    )
+    if result.ndim == 2 and image_fg.ndim == 3:
+        return result[:, :, np.newaxis]
+    return result
+
+
+# Added in 0.5.0.
+def _blend_alpha_uint8_channelwise_alphas(image_fg, image_bg, alphas):
+    # we are guarantueed here that image_fg and image_bg have ndim=3
+    result = []
+    for i, alpha in enumerate(alphas):
+        result.append(
+            _blend_alpha_uint8_single_alpha(
+                image_fg[:, :, i],
+                image_bg[:, :, i],
+                float(alpha)
+            )
+        )
+    if len(result) <= 512:
+        image_blend = cv2.merge(result)
+    else:
+        image_blend = np.stack(result, axis=-1)
+    if image_blend.ndim == 2 and image_fg.ndim == 3:
+        image_blend = image_blend[:, :, np.newaxis]
+    return image_blend
+
+
+# Added in 0.5.0.
+# (Extracted from blend_alpha().)
+def _blend_alpha_non_uint8(image_fg, image_bg, alpha):
     dt_images = iadt.get_minimal_dtype([image_fg, image_bg])
 
     # doing the below itemsize increase only for non-float images led to
@@ -192,22 +260,22 @@ def blend_alpha(image_fg, image_bg, alpha, eps=1e-2):
     if image_bg.dtype.name != dt_blend.name:
         image_bg = image_bg.astype(dt_blend)
 
-    # the following is equivalent to
+    # the following is
+    #     image_blend = image_bg + alpha * (image_fg - image_bg)
+    # which is equivalent to
     #     image_blend = alpha * image_fg + (1 - alpha) * image_bg
     # but supposedly faster
-    image_blend = image_bg + alpha * (image_fg - image_bg)
+    image_blend = image_fg - image_bg
+    image_blend *= alpha
+    image_blend += image_bg
 
-    if input_was_bool:
-        image_blend = image_blend > 0.5
-    else:
-        # skip clip, because alpha is expected to be in range [0.0, 1.0] and
-        # both images must have same dtype dont skip round, because otherwise
-        # it is very unlikely to hit the image's max possible value
-        image_blend = iadt.restore_dtypes_(
-            image_blend, dt_images, clip=False, round=True)
+    # Skip clip, because alpha is expected to be in range [0.0, 1.0] and
+    # both images must have same dtype.
+    # Dont skip round, because otherwise it is very unlikely to hit the
+    # image's max possible value
+    image_blend = iadt.restore_dtypes_(
+        image_blend, dt_images, clip=False, round=True)
 
-    if input_was_2d:
-        return image_blend[:, :, 0]
     return image_blend
 
 
