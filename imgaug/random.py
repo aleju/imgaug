@@ -98,16 +98,16 @@ class RNG(object):
 
     Not supported sampling functions of numpy <=1.16:
 
-    * :func:`numpy.random.RandomState.rand`
-    * :func:`numpy.random.RandomState.randn`
-    * :func:`numpy.random.RandomState.randint`
-    * :func:`numpy.random.RandomState.random_integers`
-    * :func:`numpy.random.RandomState.random_sample`
-    * :func:`numpy.random.RandomState.ranf`
-    * :func:`numpy.random.RandomState.sample`
-    * :func:`numpy.random.RandomState.seed`
-    * :func:`numpy.random.RandomState.get_state`
-    * :func:`numpy.random.RandomState.set_state`
+    * `numpy.random.RandomState.rand`
+    * `numpy.random.RandomState.randn`
+    * `numpy.random.RandomState.randint`
+    * `numpy.random.RandomState.random_integers`
+    * `numpy.random.RandomState.random_sample`
+    * `numpy.random.RandomState.ranf`
+    * `numpy.random.RandomState.sample`
+    * `numpy.random.RandomState.seed`
+    * `numpy.random.RandomState.get_state`
+    * `numpy.random.RandomState.set_state`
 
     In :func:`~imgaug.random.RNG.choice`, the `axis` argument is not yet
     supported.
@@ -532,106 +532,106 @@ class RNG(object):
 
     # TODO add support for Generator's 'axis' argument
     def choice(self, a, size=None, replace=True, p=None):
-        """Call :func:`numpy.random.Generator.choice`."""
+        """Call `numpy.random.Generator.choice`."""
         # pylint: disable=invalid-name
         return self.generator.choice(a=a, size=size, replace=replace, p=p)
 
     def bytes(self, length):
-        """Call :func:`numpy.random.Generator.bytes`."""
+        """Call `numpy.random.Generator.bytes`."""
         return self.generator.bytes(length=length)
 
     # TODO mark in-place
     def shuffle(self, x):
-        """Call :func:`numpy.random.Generator.shuffle`."""
+        """Call `numpy.random.Generator.shuffle`."""
         # note that shuffle() does not allow keyword arguments
         # note that shuffle() works in-place
         self.generator.shuffle(x)
 
     def permutation(self, x):
-        """Call :func:`numpy.random.Generator.permutation`."""
+        """Call `numpy.random.Generator.permutation`."""
         # note that permutation() does not allow keyword arguments
         return self.generator.permutation(x)
 
     def beta(self, a, b, size=None):
-        """Call :func:`numpy.random.Generator.beta`."""
+        """Call `numpy.random.Generator.beta`."""
         # pylint: disable=invalid-name
         return self.generator.beta(a=a, b=b, size=size)
 
     def binomial(self, n, p, size=None):
-        """Call :func:`numpy.random.Generator.binomial`."""
+        """Call `numpy.random.Generator.binomial`."""
         return self.generator.binomial(n=n, p=p, size=size)
 
     def chisquare(self, df, size=None):
-        """Call :func:`numpy.random.Generator.chisquare`."""
+        """Call `numpy.random.Generator.chisquare`."""
         # pylint: disable=invalid-name
         return self.generator.chisquare(df=df, size=size)
 
     def dirichlet(self, alpha, size=None):
-        """Call :func:`numpy.random.Generator.dirichlet`."""
+        """Call `numpy.random.Generator.dirichlet`."""
         return self.generator.dirichlet(alpha=alpha, size=size)
 
     def exponential(self, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.exponential`."""
+        """Call `numpy.random.Generator.exponential`."""
         return self.generator.exponential(scale=scale, size=size)
 
     def f(self, dfnum, dfden, size=None):
-        """Call :func:`numpy.random.Generator.f`."""
+        """Call `numpy.random.Generator.f`."""
         return self.generator.f(dfnum=dfnum, dfden=dfden, size=size)
 
     def gamma(self, shape, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.gamma`."""
+        """Call `numpy.random.Generator.gamma`."""
         return self.generator.gamma(shape=shape, scale=scale, size=size)
 
     def geometric(self, p, size=None):
-        """Call :func:`numpy.random.Generator.geometric`."""
+        """Call `numpy.random.Generator.geometric`."""
         return self.generator.geometric(p=p, size=size)
 
     def gumbel(self, loc=0.0, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.gumbel`."""
+        """Call `numpy.random.Generator.gumbel`."""
         return self.generator.gumbel(loc=loc, scale=scale, size=size)
 
     def hypergeometric(self, ngood, nbad, nsample, size=None):
-        """Call :func:`numpy.random.Generator.hypergeometric`."""
+        """Call `numpy.random.Generator.hypergeometric`."""
         return self.generator.hypergeometric(
             ngood=ngood, nbad=nbad, nsample=nsample, size=size)
 
     def laplace(self, loc=0.0, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.laplace`."""
+        """Call `numpy.random.Generator.laplace`."""
         return self.generator.laplace(loc=loc, scale=scale, size=size)
 
     def logistic(self, loc=0.0, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.logistic`."""
+        """Call `numpy.random.Generator.logistic`."""
         return self.generator.logistic(loc=loc, scale=scale, size=size)
 
     def lognormal(self, mean=0.0, sigma=1.0, size=None):
-        """Call :func:`numpy.random.Generator.lognormal`."""
+        """Call `numpy.random.Generator.lognormal`."""
         return self.generator.lognormal(mean=mean, sigma=sigma, size=size)
 
     def logseries(self, p, size=None):
-        """Call :func:`numpy.random.Generator.logseries`."""
+        """Call `numpy.random.Generator.logseries`."""
         return self.generator.logseries(p=p, size=size)
 
     def multinomial(self, n, pvals, size=None):
-        """Call :func:`numpy.random.Generator.multinomial`."""
+        """Call `numpy.random.Generator.multinomial`."""
         return self.generator.multinomial(n=n, pvals=pvals, size=size)
 
     def multivariate_normal(self, mean, cov, size=None, check_valid="warn",
                             tol=1e-8):
-        """Call :func:`numpy.random.Generator.multivariate_normal`."""
+        """Call `numpy.random.Generator.multivariate_normal`."""
         return self.generator.multivariate_normal(
             mean=mean, cov=cov, size=size, check_valid=check_valid, tol=tol)
 
     def negative_binomial(self, n, p, size=None):
-        """Call :func:`numpy.random.Generator.negative_binomial`."""
+        """Call `numpy.random.Generator.negative_binomial`."""
         return self.generator.negative_binomial(n=n, p=p, size=size)
 
     def noncentral_chisquare(self, df, nonc, size=None):
-        """Call :func:`numpy.random.Generator.noncentral_chisquare`."""
+        """Call `numpy.random.Generator.noncentral_chisquare`."""
         # pylint: disable=invalid-name
         return self.generator.noncentral_chisquare(df=df, nonc=nonc, size=size)
 
     def noncentral_f(self, dfnum, dfden, nonc, size=None):
-        """Call :func:`numpy.random.Generator.noncentral_f`."""
+        """Call `numpy.random.Generator.noncentral_f`."""
         return self.generator.noncentral_f(
             dfnum=dfnum, dfden=dfden, nonc=nonc, size=size)
 
@@ -653,7 +653,7 @@ class RNG(object):
         )
 
     def _normal_np(self, loc=0.0, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.normal`.
+        """Call `numpy.random.Generator.normal`.
 
         Added in 0.5.0.
         (Extracted from normal().)
@@ -702,30 +702,30 @@ class RNG(object):
         return samples
 
     def pareto(self, a, size=None):
-        """Call :func:`numpy.random.Generator.pareto`."""
+        """Call `numpy.random.Generator.pareto`."""
         # pylint: disable=invalid-name
         return self.generator.pareto(a=a, size=size)
 
     def poisson(self, lam=1.0, size=None):
-        """Call :func:`numpy.random.Generator.poisson`."""
+        """Call `numpy.random.Generator.poisson`."""
         return self.generator.poisson(lam=lam, size=size)
 
     def power(self, a, size=None):
-        """Call :func:`numpy.random.Generator.power`."""
+        """Call `numpy.random.Generator.power`."""
         # pylint: disable=invalid-name
         return self.generator.power(a=a, size=size)
 
     def rayleigh(self, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.rayleigh`."""
+        """Call `numpy.random.Generator.rayleigh`."""
         return self.generator.rayleigh(scale=scale, size=size)
 
     def standard_cauchy(self, size=None):
-        """Call :func:`numpy.random.Generator.standard_cauchy`."""
+        """Call `numpy.random.Generator.standard_cauchy`."""
         return self.generator.standard_cauchy(size=size)
 
     def standard_exponential(self, size=None, dtype="float32", method="zig",
                              out=None):
-        """Call :func:`numpy.random.Generator.standard_exponential`.
+        """Call `numpy.random.Generator.standard_exponential`.
 
         .. note::
 
@@ -746,7 +746,7 @@ class RNG(object):
         return result
 
     def standard_gamma(self, shape, size=None, dtype="float32", out=None):
-        """Call :func:`numpy.random.Generator.standard_gamma`.
+        """Call `numpy.random.Generator.standard_gamma`.
 
         .. note::
 
@@ -768,7 +768,7 @@ class RNG(object):
         return result
 
     def standard_normal(self, size=None, dtype="float32", out=None):
-        """Call :func:`numpy.random.Generator.standard_normal`.
+        """Call `numpy.random.Generator.standard_normal`.
 
         .. note::
 
@@ -789,12 +789,12 @@ class RNG(object):
         return result
 
     def standard_t(self, df, size=None):
-        """Call :func:`numpy.random.Generator.standard_t`."""
+        """Call `numpy.random.Generator.standard_t`."""
         # pylint: disable=invalid-name
         return self.generator.standard_t(df=df, size=size)
 
     def triangular(self, left, mode, right, size=None):
-        """Call :func:`numpy.random.Generator.triangular`."""
+        """Call `numpy.random.Generator.triangular`."""
         return self.generator.triangular(
             left=left, mode=mode, right=right, size=size)
 
@@ -814,7 +814,7 @@ class RNG(object):
         )
 
     def _uniform_np(self, low=0.0, high=1.0, size=None):
-        """Call :func:`numpy.random.Generator.uniform`.
+        """Call `numpy.random.Generator.uniform`.
 
         Added in 0.5.0.
         (Extracted from uniform().)
@@ -855,21 +855,21 @@ class RNG(object):
         return samples
 
     def vonmises(self, mu, kappa, size=None):
-        """Call :func:`numpy.random.Generator.vonmises`."""
+        """Call `numpy.random.Generator.vonmises`."""
         # pylint: disable=invalid-name
         return self.generator.vonmises(mu=mu, kappa=kappa, size=size)
 
     def wald(self, mean, scale, size=None):
-        """Call :func:`numpy.random.Generator.wald`."""
+        """Call `numpy.random.Generator.wald`."""
         return self.generator.wald(mean=mean, scale=scale, size=size)
 
     def weibull(self, a, size=None):
-        """Call :func:`numpy.random.Generator.weibull`."""
+        """Call `numpy.random.Generator.weibull`."""
         # pylint: disable=invalid-name
         return self.generator.weibull(a=a, size=size)
 
     def zipf(self, a, size=None):
-        """Call :func:`numpy.random.Generator.zipf`."""
+        """Call `numpy.random.Generator.zipf`."""
         # pylint: disable=invalid-name
         return self.generator.zipf(a=a, size=size)
 
@@ -881,7 +881,7 @@ class RNG(object):
     ##################################################################
 
     def rand(self, *args):
-        """Call :func:`numpy.random.RandomState.rand`.
+        """Call `numpy.random.RandomState.rand`.
 
         .. warning::
 
@@ -893,7 +893,7 @@ class RNG(object):
         return self.random(size=args)
 
     def randint(self, low, high=None, size=None, dtype="int32"):
-        """Call :func:`numpy.random.RandomState.randint`.
+        """Call `numpy.random.RandomState.randint`.
 
         .. note::
 
@@ -912,7 +912,7 @@ class RNG(object):
                              endpoint=False)
 
     def randn(self, *args):
-        """Call :func:`numpy.random.RandomState.randn`.
+        """Call `numpy.random.RandomState.randn`.
 
         .. warning::
 
@@ -925,7 +925,7 @@ class RNG(object):
         return self.standard_normal(size=args)
 
     def random_integers(self, low, high=None, size=None):
-        """Call :func:`numpy.random.RandomState.random_integers`.
+        """Call `numpy.random.RandomState.random_integers`.
 
         .. warning::
 
@@ -940,7 +940,7 @@ class RNG(object):
         return self.integers(low=low, high=high, size=size, endpoint=True)
 
     def random_sample(self, size):
-        """Call :func:`numpy.random.RandomState.random_sample`.
+        """Call `numpy.random.RandomState.random_sample`.
 
         .. warning::
 
@@ -953,7 +953,7 @@ class RNG(object):
         return self.uniform(0.0, 1.0, size=size)
 
     def tomaxint(self, size=None):
-        """Call :func:`numpy.random.RandomState.tomaxint`.
+        """Call `numpy.random.RandomState.tomaxint`.
 
         .. warning::
 
@@ -1641,28 +1641,28 @@ def polyfill_integers(generator, low, high=None, size=None, dtype="int32",
     ----------
     generator : numpy.random.Generator or numpy.random.RandomState
         The generator to sample from. If it is a ``RandomState``,
-        :func:`numpy.random.RandomState.randint` will be called,
-        otherwise :func:`numpy.random.Generator.integers`.
+        `numpy.random.RandomState.randint` will be called,
+        otherwise `numpy.random.Generator.integers`.
 
     low : int or array-like of ints
-        See :func:`numpy.random.Generator.integers`.
+        See `numpy.random.Generator.integers`.
 
     high : int or array-like of ints, optional
-        See :func:`numpy.random.Generator.integers`.
+        See `numpy.random.Generator.integers`.
 
     size : int or tuple of ints, optional
-        See :func:`numpy.random.Generator.integers`.
+        See `numpy.random.Generator.integers`.
 
     dtype : {str, dtype}, optional
-        See :func:`numpy.random.Generator.integers`.
+        See `numpy.random.Generator.integers`.
 
     endpoint : bool, optional
-        See :func:`numpy.random.Generator.integers`.
+        See `numpy.random.Generator.integers`.
 
     Returns
     -------
     int or ndarray of ints
-        See :func:`numpy.random.Generator.integers`.
+        See `numpy.random.Generator.integers`.
 
     """
     if hasattr(generator, "randint"):
@@ -1687,19 +1687,19 @@ def polyfill_random(generator, size, dtype="float32", out=None):
         support ``random()``, but with different interfaces.
 
     size : int or tuple of ints, optional
-        See :func:`numpy.random.Generator.random`.
+        See `numpy.random.Generator.random`.
 
     dtype : {str, dtype}, optional
-        See :func:`numpy.random.Generator.random`.
+        See `numpy.random.Generator.random`.
 
     out : ndarray, optional
-        See :func:`numpy.random.Generator.random`.
+        See `numpy.random.Generator.random`.
 
 
     Returns
     -------
     float or ndarray of floats
-        See :func:`numpy.random.Generator.random`.
+        See `numpy.random.Generator.random`.
 
     """
     if hasattr(generator, "random_sample"):
