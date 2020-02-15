@@ -226,6 +226,44 @@ class RNG(object):
         """
         return self.set_state_(other.state)
 
+    def _set_state_by_fast_pseudoseed(self, state, pseudoseed):
+        # TODO this currently only works in np 1.17+
+
+        # Example states (before and after one call of generate_seed_()):
+        # {
+        #     'bit_generator': 'SFC64',
+        #     'state': {
+        #         'state': array([
+        #             9957867060933711493, 532597980065565856,
+        #             14769588338631205282, 13
+        #         ], dtype=uint64)
+        #     }, 'has_uint32': 0, 'uinteger': 0
+        # }
+        # {
+        #     'bit_generator': 'SFC64',
+        #     'state': {
+        #         'state': array([
+        #             532770076700848225, 3799086531713986226,
+        #             16787303681429560144, 14
+        #         ], dtype=uint64)
+        #     },
+        #     'has_uint32': 1,
+        #     'uinteger': 2442501727
+        # }
+
+        new_state = state
+        new_state["state"]["state"] += pseudoseed
+        new_state["has_uint32"] = 0
+        new_state["uinteger"] = 0
+        self.set_state_(new_state)
+
+    def _get_fast_pseudoseed(self):
+        # this currently only works in np 1.17+
+        # TODO enable in <=1.16
+        state = self.state
+        seedval = state["state"]["state"][0]
+        return state, seedval
+
     def is_global_rng(self):
         """Estimate whether this RNG is identical to the global RNG.
 
@@ -598,7 +636,7 @@ class RNG(object):
             dfnum=dfnum, dfden=dfden, nonc=nonc, size=size)
 
     def normal(self, loc=0.0, scale=1.0, size=None):
-        """Call :func:`numpy.random.Generator.normal`."""
+        """Sample values from a gaussian distribution."""
         use_cv2 = (
             self._is_new_rng_style
             and size is not None
@@ -631,33 +669,11 @@ class RNG(object):
 
         Added in 0.5.0.
 
+        .. note::
+
+            This method requires numpy 1.17+.
+
         """
-        # We have to set the default rng
-        # Example states (before and after one call of generate_seed_()):
-        # {
-        #     'bit_generator': 'SFC64',
-        #     'state': {
-        #         'state': array([
-        #             9957867060933711493, 532597980065565856,
-        #             14769588338631205282, 13
-        #         ], dtype=uint64)
-        #     }, 'has_uint32': 0, 'uinteger': 0
-        # }
-        # {
-        #     'bit_generator': 'SFC64',
-        #     'state': {
-        #         'state': array([
-        #             532770076700848225, 3799086531713986226,
-        #             16787303681429560144, 14
-        #         ], dtype=uint64)
-        #     },
-        #     'has_uint32': 1,
-        #     'uinteger': 2442501727
-        # }
-
-        # Note:
-        #  - This method requires numpy 1.17+ API
-
         # The first sample is always very close to loc, so we try to throw
         # it aways here
         overprovisioned = False
@@ -668,10 +684,7 @@ class RNG(object):
         else:
             out = out.flatten()
 
-        # derive seed from numpy bit generator's state
-        # this is faster than generate_seed_()
-        state = self.state
-        seedval = state["state"]["state"][0]
+        state, seedval = self._get_fast_pseudoseed()
 
         cv2.setRNGSeed(int(seedval) % (2**30))
         if not overprovisioned:
@@ -680,12 +693,7 @@ class RNG(object):
             )
         samples = cv2.randn(out, float(loc), float(scale))
 
-        # reseed
-        new_state = state
-        new_state["state"]["state"] += (97117 + samples.shape[0])
-        new_state["has_uint32"] = 0
-        new_state["uinteger"] = 0
-        self.set_state_(new_state)
+        self._set_state_by_fast_pseudoseed(state, (97117 + samples.shape[0]))
 
         if overprovisioned:
             samples = samples[1:]
@@ -791,8 +799,60 @@ class RNG(object):
             left=left, mode=mode, right=right, size=size)
 
     def uniform(self, low=0.0, high=1.0, size=None):
-        """Call :func:`numpy.random.Generator.uniform`."""
-        return self.generator.uniform(low=low, high=high, size=size)
+        """Sample values from a uniform distribution."""
+        use_cv2 = (
+            self._is_new_rng_style
+            and size is not None
+            and isinstance(size, tuple)
+            and functools.reduce(operator.mul, size, 1) > 12500
+        )
+        if use_cv2:
+            samples = self._uniform_cv2(low, high, size)
+            return samples
+        return self._uniform_np(
+            low=low, high=high, size=size
+        )
+
+    def _uniform_np(self, low=0.0, high=1.0, size=None):
+        """Call :func:`numpy.random.Generator.uniform`.
+
+        Added in 0.5.0.
+        (Extracted from uniform().)
+
+        """
+        samples = self.generator.uniform(low=low, high=high, size=size)
+        if hasattr(samples, "astype"):
+            return samples.astype(np.float32)
+        return samples
+
+    def _uniform_cv2(self, low, high, size, out=None):
+        """Generate gaussian samples using OpenCV.
+
+        Added in 0.5.0.
+
+        .. note::
+
+            This method requires numpy 1.17+.
+
+        """
+        # randu() does not require overprovisioning, all samples seem to
+        # be fine.
+        if out is None:
+            nb_components = functools.reduce(operator.mul, size, 1)
+            out = np.empty((nb_components,), dtype=np.float32)
+        else:
+            out = out.flatten()
+
+        state, seedval = self._get_fast_pseudoseed()
+
+        cv2.setRNGSeed(int(seedval) % (2**30))
+        samples = cv2.randu(out, float(low), float(high))
+
+        self._set_state_by_fast_pseudoseed(state, (97117 + samples.shape[0]))
+
+        samples = samples if samples.shape == size else samples.reshape(size)
+
+        return samples
 
     def vonmises(self, mu, kappa, size=None):
         """Call :func:`numpy.random.Generator.vonmises`."""
