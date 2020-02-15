@@ -41,9 +41,12 @@ automatically fall back to :class:`numpy.random.RandomState` in numpy <=1.16.
 from __future__ import print_function, division, absolute_import
 
 import copy as copylib
+import functools
+import operator
 
 import numpy as np
 import six.moves as sm
+import cv2
 
 
 # Check if numpy is version 1.17 or later. In that version, the new random
@@ -596,7 +599,99 @@ class RNG(object):
 
     def normal(self, loc=0.0, scale=1.0, size=None):
         """Call :func:`numpy.random.Generator.normal`."""
-        return self.generator.normal(loc=loc, scale=scale, size=size)
+        use_cv2 = (
+            self._is_new_rng_style
+            and size is not None
+            and isinstance(size, tuple)
+            and functools.reduce(operator.mul, size, 1) > 2500
+        )
+        if use_cv2:
+            samples = self._normal_cv2(loc, scale, size)
+            return samples
+        # seems to not be faster to check for N(0,1) and then call
+        # standard_normal() here (though not yet tested with out parameters)
+        return self._normal_np(
+            loc=loc, scale=scale, size=size
+        )
+
+    def _normal_np(self, loc=0.0, scale=1.0, size=None):
+        """Call :func:`numpy.random.Generator.normal`.
+
+        Added in 0.5.0.
+        (Extracted from normal().)
+
+        """
+        samples = self.generator.normal(loc=loc, scale=scale, size=size)
+        if hasattr(samples, "astype"):
+            return samples.astype(np.float32)
+        return samples
+
+    def _normal_cv2(self, loc, scale, size, out=None):
+        """Generate gaussian samples using OpenCV.
+
+        Added in 0.5.0.
+
+        """
+        # We have to set the default rng
+        # Example states (before and after one call of generate_seed_()):
+        # {
+        #     'bit_generator': 'SFC64',
+        #     'state': {
+        #         'state': array([
+        #             9957867060933711493, 532597980065565856,
+        #             14769588338631205282, 13
+        #         ], dtype=uint64)
+        #     }, 'has_uint32': 0, 'uinteger': 0
+        # }
+        # {
+        #     'bit_generator': 'SFC64',
+        #     'state': {
+        #         'state': array([
+        #             532770076700848225, 3799086531713986226,
+        #             16787303681429560144, 14
+        #         ], dtype=uint64)
+        #     },
+        #     'has_uint32': 1,
+        #     'uinteger': 2442501727
+        # }
+
+        # Note:
+        #  - This method requires numpy 1.17+ API
+
+        # The first sample is always very close to loc, so we try to throw
+        # it aways here
+        overprovisioned = False
+        if out is None:
+            overprovisioned = True
+            nb_components = functools.reduce(operator.mul, size, 1)
+            out = np.empty((nb_components + 1,), dtype=np.float32)
+        else:
+            out = out.flatten()
+
+        # derive seed from numpy bit generator's state
+        # this is faster than generate_seed_()
+        state = self.state
+        seedval = state["state"]["state"][0]
+
+        cv2.setRNGSeed(int(seedval) % (2**30))
+        if not overprovisioned:
+            _ = cv2.randn(
+                np.empty((1,), dtype=np.float32), float(loc), float(scale)
+            )
+        samples = cv2.randn(out, float(loc), float(scale))
+
+        # reseed
+        new_state = state
+        new_state["state"]["state"] += (97117 + samples.shape[0])
+        new_state["has_uint32"] = 0
+        new_state["uinteger"] = 0
+        self.set_state_(new_state)
+
+        if overprovisioned:
+            samples = samples[1:]
+        samples = samples if samples.shape == size else samples.reshape(size)
+
+        return samples
 
     def pareto(self, a, size=None):
         """Call :func:`numpy.random.Generator.pareto`."""
