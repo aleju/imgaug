@@ -416,6 +416,19 @@ def multiply_scalar(image, multiplier):
     This method ensures that ``uint8`` does not overflow during the
     multiplication.
 
+    note::
+
+        Tests were only conducted for rather small multipliers, around
+        ``-10.0`` to ``+10.0``.
+
+        In general, the multipliers sampled from `multiplier` must be in a
+        value range that corresponds to the input image's dtype. E.g. if the
+        input image has dtype ``uint16`` and the samples generated from
+        `multiplier` are ``float64``, this function will still force all
+        samples to be within the value range of ``float16``, as it has the
+        same number of bytes (two) as ``uint16``. This is done to make
+        overflows less likely to occur.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -435,19 +448,6 @@ def multiply_scalar(image, multiplier):
         - (1) Non-uint8 dtypes can overflow. For floats, this can result in
               +/-inf.
 
-    note::
-
-        Tests were only conducted for rather small multipliers, around
-        ``-10.0`` to ``+10.0``.
-
-        In general, the multipliers sampled from `multiplier` must be in a
-        value range that corresponds to the input image's dtype. E.g. if the
-        input image has dtype ``uint16`` and the samples generated from
-        `multiplier` are ``float64``, this function will still force all
-        samples to be within the value range of ``float16``, as it has the
-        same number of bytes (two) as ``uint16``. This is done to make
-        overflows less likely to occur.
-
     Parameters
     ----------
     image : ndarray
@@ -465,8 +465,71 @@ def multiply_scalar(image, multiplier):
         Image, multiplied by `multiplier`.
 
     """
-    if image.size == 0:
-        return np.copy(image)
+    return multiply_scalar_(np.copy(image), multiplier)
+
+
+def multiply_scalar_(image, multiplier):
+    """Multiply in-place an image by a single scalar or one scalar per channel.
+
+    This method ensures that ``uint8`` does not overflow during the
+    multiplication.
+
+    note::
+
+        Tests were only conducted for rather small multipliers, around
+        ``-10.0`` to ``+10.0``.
+
+        In general, the multipliers sampled from `multiplier` must be in a
+        value range that corresponds to the input image's dtype. E.g. if the
+        input image has dtype ``uint16`` and the samples generated from
+        `multiplier` are ``float64``, this function will still force all
+        samples to be within the value range of ``float16``, as it has the
+        same number of bytes (two) as ``uint16``. This is done to make
+        overflows less likely to occur.
+
+    Added in 0.5.0.
+
+    **Supported dtypes**:
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: limited; tested (1)
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: limited; tested (1)
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result in
+              +/-inf.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+        If `value` contains more than one value, the shape of the image is
+        expected to be ``(H,W,C)``.
+        May be changed in-place.
+
+    multiplier : number or ndarray
+        The multiplier to use. Either a single value or an array
+        containing exactly one component per channel, i.e. ``C`` components.
+
+    Returns
+    -------
+    ndarray
+        Image, multiplied by `multiplier`.
+        Might be the same image instance as was provided in `image`.
+
+    """
+    size = image.size
+    if size == 0:
+        return image
 
     iadt.gate_dtypes(
         image,
@@ -481,11 +544,15 @@ def multiply_scalar(image, multiplier):
         augmenter=None)
 
     if image.dtype.name == "uint8":
-        return _multiply_scalar_to_uint8(image, multiplier)
+        if size > 224*224*3:
+            return _multiply_scalar_to_uint8_lut_(image, multiplier)
+        return _multiply_scalar_to_uint8_cv2_mul_(image, multiplier)
     return _multiply_scalar_to_non_uint8(image, multiplier)
 
 
-def _multiply_scalar_to_uint8(image, multiplier):
+# Added in 0.5.0.
+# (Renamed from an existing function.)
+def _multiply_scalar_to_uint8_lut_(image, multiplier):
     # Using this LUT approach is significantly faster than
     # else-block code (more than 10x speedup) and is still faster
     # than the simpler image*sample approach without LUT (1.5-3x
@@ -524,7 +591,27 @@ def _multiply_scalar_to_uint8(image, multiplier):
     else:
         tables = value_range * multiplier
     tables = np.clip(tables, 0, 255).astype(image.dtype)
-    return ia.apply_lut(image, tables)
+    return ia.apply_lut_(image, tables)
+
+
+# Added in 0.5.0.
+def _multiply_scalar_to_uint8_cv2_mul_(image, multiplier):
+    # multiplier must already be an array_like
+    if multiplier.size > 1:
+        multiplier = multiplier[np.newaxis, np.newaxis, :]
+        multiplier = np.broadcast_to(multiplier, image.shape)
+    else:
+        multiplier = np.full(image.shape, multiplier, dtype=np.float32)
+
+    image = _normalize_cv2_input_arr_(image)
+    result = cv2.multiply(
+        image,
+        multiplier,
+        dtype=cv2.CV_8U,
+        dst=image
+    )
+
+    return result
 
 
 def _multiply_scalar_to_non_uint8(image, multiplier):
@@ -2301,7 +2388,7 @@ class Multiply(meta.Augmenter):
             else:
                 # the if/else here catches the case of the channel axis being 0
                 mul = mul_samples_i[0] if mul_samples_i.size > 0 else []
-            batch.images[i] = multiply_scalar(image, mul)
+            batch.images[i] = multiply_scalar_(image, mul)
 
         return batch
 
