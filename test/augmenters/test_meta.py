@@ -2526,6 +2526,34 @@ class TestAugmenter(unittest.TestCase):
         for hm in heatmaps_aug:
             assert np.allclose(hm.arr_0to1, np.rot90(heatmap.arr_0to1, -1))
 
+    def test_legacy_fallback_to_kp_aug_for_cbaois(self):
+        class _LegacyAugmenter(iaa.Augmenter):
+            def _augment_keypoints(self, keypoints_on_images, random_state,
+                                   parents, hooks):
+                return [kpsoi.shift(x=1) for kpsoi in keypoints_on_images]
+
+            def get_parameters(self):
+                return []
+
+        bbsoi = ia.BoundingBoxesOnImage([
+            ia.BoundingBox(x1=1, y1=2, x2=3, y2=4)
+        ], shape=(4, 5, 3))
+        psoi = ia.PolygonsOnImage([
+            ia.Polygon([(0, 0), (1, 0), (1, 1)])
+        ], shape=(4, 5, 3))
+        lsoi = ia.LineStringsOnImage([
+            ia.LineString([(0, 0), (1, 0), (1, 1)])
+        ], shape=(4, 5, 3))
+
+        aug = _LegacyAugmenter()
+        bbsoi_aug = aug.augment_bounding_boxes(bbsoi)
+        psoi_aug = aug.augment_polygons(psoi)
+        lsoi_aug = aug.augment_line_strings(lsoi)
+
+        assert bbsoi_aug[0].coords_almost_equals(bbsoi[0].shift(x=1))
+        assert psoi_aug[0].coords_almost_equals(psoi[0].shift(x=1))
+        assert lsoi_aug[0].coords_almost_equals(lsoi[0].shift(x=1))
+
     def test_localize_random_state(self):
         aug = _DummyAugmenter()
 

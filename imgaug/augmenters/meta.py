@@ -1361,7 +1361,12 @@ class Augmenter(object):
             The augmented bounding boxes.
 
         """
-        return bounding_boxes_on_images
+        return self._augment_cbaois_as_keypoints(
+            bounding_boxes_on_images,
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
 
     def _augment_polygons(self, polygons_on_images, random_state, parents,
                           hooks):
@@ -1403,7 +1408,12 @@ class Augmenter(object):
             The augmented polygons.
 
         """
-        return polygons_on_images
+        return self._augment_cbaois_as_keypoints(
+            polygons_on_images,
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
 
     def _augment_line_strings(self, line_strings_on_images, random_state,
                               parents, hooks):
@@ -1446,7 +1456,12 @@ class Augmenter(object):
             The augmented line strings.
 
         """
-        return line_strings_on_images
+        return self._augment_cbaois_as_keypoints(
+            line_strings_on_images,
+            random_state=random_state,
+            parents=parents,
+            hooks=hooks
+        )
 
     def _augment_bounding_boxes_as_keypoints(self, bounding_boxes_on_images,
                                              random_state, parents, hooks):
