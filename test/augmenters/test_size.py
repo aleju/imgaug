@@ -28,6 +28,167 @@ from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
                               runtest_pickleable_uint8_img)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+from imgaug.augmenters.size import _prevent_zero_sizes_after_crops_
+
+
+class Test__prevent_zero_sizes_after_crops_(unittest.TestCase):
+    def test_single_item_arrays_without_crops(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([10], dtype=np.int32)
+        crops_s = np.array([0], dtype=np.int32)
+        crops_e = np.array([0], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.all(cs == 0)
+        assert np.all(ce == 0)
+
+    def test_single_item_arrays_with_crops_in_bounds(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([10], dtype=np.int32)
+        crops_s = np.array([1], dtype=np.int32)
+        crops_e = np.array([2], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.all(cs == 1)
+        assert np.all(ce == 2)
+
+    def test_single_item_arrays_with_crops_out_of_bounds(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([10], dtype=np.int32)
+        crops_s = np.array([5], dtype=np.int32)
+        crops_e = np.array([20], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.all(cs == 0)
+        assert np.all(ce == 9)
+
+    def test_all_crops_zero(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([10, 11, 12, 13], dtype=np.int32)
+        crops_s = np.array([0, 0, 0, 0], dtype=np.int32)
+        crops_e = np.array([0, 0, 0, 0], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.all(cs == 0)
+        assert np.all(ce == 0)
+
+    def test_all_crops_above_zero_but_none_reaches_zero_size(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([10, 11, 12, 13], dtype=np.int32)
+        crops_s = np.array([1, 2, 3, 4], dtype=np.int32)
+        crops_e = np.array([5, 6, 7, 8], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.array_equal(cs, crops_s)
+        assert np.array_equal(ce, crops_e)
+
+    def test_some_axes_reach_zero_size(self):
+        axis_si = np.array([10, 11, 12, 13, 14], dtype=np.int32)
+        crops_s = np.array([1, 0, 13, 10, 7], dtype=np.int32)
+        crops_e = np.array([5, 12, 0, 10, 7], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.array_equal(cs, [1, 0, 11, 6, 6])
+        assert np.array_equal(ce, [5, 10, 0, 6, 7])
+
+    def test_axis_sizes_of_1(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([9, 1, 1, 1, 1, 1, 1, 1], dtype=np.int32)
+        crops_s = np.array([1, 0, 1, 0, 1, 2, 0, 2], dtype=np.int32)
+        crops_e = np.array([5, 0, 0, 1, 1, 0, 2, 2], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.array_equal(cs, [1, 0, 0, 0, 0, 0, 0, 0])
+        assert np.array_equal(ce, [5, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_axis_sizes_of_0(self):
+        # axis_sizes, crops_start, crops_end
+        axis_si = np.array([9, 0, 0, 0, 0, 0, 0, 0], dtype=np.int32)
+        crops_s = np.array([1, 0, 1, 0, 1, 2, 0, 2], dtype=np.int32)
+        crops_e = np.array([5, 0, 0, 1, 1, 0, 2, 2], dtype=np.int32)
+
+        cs, ce = _prevent_zero_sizes_after_crops_(
+            axis_si, np.copy(crops_s), np.copy(crops_e)
+        )
+
+        assert np.array_equal(cs, [1, 0, 0, 0, 0, 0, 0, 0])
+        assert np.array_equal(ce, [5, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_with_random_values(self):
+        batch_size = 256
+        for seed in np.arange(100):
+            with self.subTest(seed=seed):
+                rs = iarandom.RNG(seed)
+                axis_sizes = rs.integers(0, 100, size=(batch_size,))
+                crops_start = rs.integers(0, 100, size=(batch_size,))
+                crops_end = rs.integers(0, 100, size=(batch_size,))
+
+                cs, ce = _prevent_zero_sizes_after_crops_(
+                    axis_sizes, np.copy(crops_start), np.copy(crops_end)
+                )
+
+                expected_start = np.zeros((batch_size,), dtype=np.int32)
+                expected_end = np.zeros((batch_size,), dtype=np.int32)
+                gen = enumerate(zip(axis_sizes, crops_start, crops_end))
+                for i, (axs, csi, cei) in gen:
+                    if axs in [0, 1]:
+                        csi = 0
+                        cei = 0
+                    else:
+                        regain = abs(min(axs - csi - cei - 1, 0))
+                        while regain > 0:
+                            csi = csi - np.ceil(regain / 2)
+                            cei = cei - np.floor(regain / 2)
+
+                            if csi < 0:
+                                cei = cei - abs(csi)
+                                csi = 0
+                            if cei < 0:
+                                csi = csi - abs(cei)
+                                cei = 0
+
+                            regain = abs(min(axs - csi - cei, 0))
+                    expected_start[i] = csi
+                    expected_end[i] = cei
+
+                assert np.array_equal(cs, expected_start)
+                assert np.array_equal(ce, expected_end)
+                mask_zeros = (axis_sizes == 0)
+                if np.any(mask_zeros):
+                    assert np.all(
+                        axis_sizes[mask_zeros]
+                        - cs[mask_zeros]
+                        - ce[mask_zeros]
+                        == 0
+                    )
+                if np.any(~mask_zeros):
+                    assert np.all(
+                        axis_sizes[~mask_zeros]
+                        - cs[~mask_zeros]
+                        - ce[~mask_zeros]
+                        >= 1
+                    )
 
 
 class Test__handle_position_parameter(unittest.TestCase):
