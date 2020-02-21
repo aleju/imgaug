@@ -677,6 +677,52 @@ class TestAveragePooling(unittest.TestCase, _TestPoolingAugmentersBase):
         assert image_aug.shape == (1, 2, 3)
         assert np.all(diff <= 1)
 
+    def test_augment_images__kernel_size_is_two__view(self):
+        aug = iaa.AveragePooling(2, keep_size=False)
+
+        image = np.uint8([
+            [50-2, 50-1, 120-4, 120+4],
+            [50+1, 50+2, 120+1, 120-1],
+            [0, 0, 0, 0]
+        ])
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 3))
+        image = image[:2, :, :]
+        assert not image.flags["OWNDATA"]
+        assert image.flags["C_CONTIGUOUS"]
+
+        expected = np.uint8([
+            [50, 120]
+        ])
+        expected = np.tile(expected[:, :, np.newaxis], (1, 1, 3))
+
+        image_aug = aug.augment_image(image)
+
+        diff = np.abs(image_aug.astype(np.int32) - expected)
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (1, 2, 3)
+        assert np.all(diff <= 1)
+
+    def test_augment_images__kernel_size_is_two__non_contiguous(self):
+        aug = iaa.AveragePooling(2, keep_size=False)
+
+        image = np.array([
+            [50-2, 50-1, 120-4, 120+4],
+            [50+1, 50+2, 120+1, 120-1]
+        ], dtype=np.uint8, order="F")
+        assert image.flags["OWNDATA"]
+        assert not image.flags["C_CONTIGUOUS"]
+
+        expected = np.uint8([
+            [50, 120]
+        ])
+
+        image_aug = aug.augment_image(image)
+
+        diff = np.abs(image_aug.astype(np.int32) - expected)
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (1, 2)
+        assert np.all(diff <= 1)
+
     def test_augment_images__kernel_size_is_two__four_channels(self):
         aug = iaa.AveragePooling(2, keep_size=False)
 

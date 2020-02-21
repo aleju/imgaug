@@ -52,6 +52,10 @@ IMRESIZE_VALID_INTERPOLATIONS = [
     "nearest", "linear", "area", "cubic",
     cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_CUBIC]
 
+# Cache dict to save kernels used for pooling.
+# Added in 0.5.0.
+_POOLING_KERNELS_CACHE = {}
+
 
 ###############################################################################
 # Helpers for deprecation
@@ -1879,8 +1883,106 @@ def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
         Array after min-pooling.
 
     """
+    return min_pool_(np.copy(arr), block_size, pad_mode=pad_mode,
+                     pad_cval=pad_cval, preserve_dtype=preserve_dtype)
+
+
+def min_pool_(arr, block_size, pad_mode="edge", pad_cval=255,
+              preserve_dtype=True):
+    """Resize an array using min-pooling in-place.
+
+    Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
+    the minimum, even if the dtype was something else than ``uint8``.
+
+    **Supported dtypes**:
+
+        See :func:`~imgaug.imgaug.pool`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool.
+        May be altered in-place.
+        See :func:`~imgaug.imgaug.pool` for details.
+
+    block_size : int or tuple of int or tuple of int
+        Size of each block of values to pool.
+        See :func:`~imgaug.imgaug.pool` for details.
+
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder.
+        See :func:`~imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
+        Padding value.
+        See :func:`~imgaug.imgaug.pool` for details.
+
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype.
+        See  :func:`~imgaug.imgaug.pool` for details.
+
+    Returns
+    -------
+    (H',W') ndarray or (H',W',C') ndarray
+        Array after min-pooling.
+        Might be identical with `arr`.
+
+    """
+    if not isinstance(block_size, (tuple, list)):
+        block_size = (block_size, block_size)
+
+    if 0 in block_size:
+        return arr
+
+    shape = arr.shape
+    nb_channels = 0 if len(shape) <= 2 else shape[-1]
+
+    valid_for_cv2 = (
+        arr.dtype.name == "uint8"
+        and len(block_size) == 2
+        and nb_channels <= 512
+        and 0 not in shape
+    )
+    if valid_for_cv2:
+        return _min_pool_uint8_(arr, block_size, pad_mode=pad_mode,
+                                pad_cval=pad_cval)
     return pool(arr, block_size, np.min, pad_mode=pad_mode, pad_cval=pad_cval,
                 preserve_dtype=preserve_dtype)
+
+
+# Added in 0.5.0.
+def _min_pool_uint8_(arr, block_size, pad_mode="edge", pad_cval=255):
+    from imgaug.augmenters.size import pad_to_multiples_of
+
+    ndim_in = arr.ndim
+
+    s = arr.shape
+    if s[0] % block_size[0] != 0 or s[1] % block_size[1] != 0:
+        arr = pad_to_multiples_of(
+            arr,
+            height_multiple=block_size[0],
+            width_multiple=block_size[1],
+            mode=pad_mode,
+            cval=pad_cval
+        )
+
+    kernel = globals()["_POOLING_KERNELS_CACHE"].get(block_size, None)
+    if kernel is None:
+        kernel = np.ones(block_size, dtype=np.uint8)
+        if block_size[0] <= 30 and block_size[1] <= 30:
+            globals()["_POOLING_KERNELS_CACHE"][block_size] = kernel
+
+    arr = cv2.flip(arr, -1)
+    arr = cv2.erode(arr, kernel, iterations=1)
+    arr = cv2.flip(arr, -1)
+
+    if arr.ndim < ndim_in:
+        arr = arr[:, :, np.newaxis]
+
+    start_height = (block_size[0] - 1) // 2
+    start_width = (block_size[1] - 1) // 2
+    return arr[start_height::block_size[0], start_width::block_size[1]]
 
 
 def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
