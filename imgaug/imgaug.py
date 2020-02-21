@@ -1748,6 +1748,33 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
     return arr_reduced
 
 
+# This automatically calls a special uint8 method if it fulfills standard
+# cv2 criteria. Otherwise it falls back to pool().
+# Added in 0.5.0.
+def _pool_dispatcher_(arr, block_size, func_uint8, blockfunc, pad_mode="edge",
+                      pad_cval=255, preserve_dtype=True, cval=None):
+    if not isinstance(block_size, (tuple, list)):
+        block_size = (block_size, block_size)
+
+    if 0 in block_size:
+        return arr
+
+    shape = arr.shape
+    nb_channels = 0 if len(shape) <= 2 else shape[-1]
+
+    valid_for_cv2 = (
+        arr.dtype.name == "uint8"
+        and len(block_size) == 2
+        and nb_channels <= 512
+        and 0 not in shape
+    )
+    if valid_for_cv2:
+        return func_uint8(arr, block_size, pad_mode=pad_mode,
+                          pad_cval=pad_cval if cval is None else cval)
+    return pool(arr, block_size, blockfunc, pad_mode=pad_mode,
+                pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
+
+
 # TODO does OpenCV have a faster avg pooling method?
 def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
              preserve_dtype=True, cval=None):
@@ -1766,7 +1793,7 @@ def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
         Image-like array to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
-    block_size : int or tuple of int or tuple of int
+    block_size : int or tuple of int
         Size of each block of values to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
@@ -1813,7 +1840,7 @@ def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
         Image-like array to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
-    block_size : int or tuple of int or tuple of int
+    block_size : int or tuple of int
         Size of each block of values to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
@@ -1839,8 +1866,66 @@ def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
         Array after max-pooling.
 
     """
-    return pool(arr, block_size, np.max, pad_mode=pad_mode,
-                pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
+    return max_pool_(np.copy(arr), block_size, pad_mode=pad_mode,
+                     pad_cval=pad_cval, preserve_dtype=preserve_dtype,
+                     cval=cval)
+
+
+def max_pool_(arr, block_size, pad_mode="edge", pad_cval=0,
+              preserve_dtype=True, cval=None):
+    """Resize an array in-place using max-pooling.
+
+    Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
+    the maximum, even if the dtype was something else than ``uint8``.
+
+    **Supported dtypes**:
+
+        See :func:`~imgaug.imgaug.pool`.
+
+    Parameters
+    ----------
+    arr : (H,W) ndarray or (H,W,C) ndarray
+        Image-like array to pool.
+        May be altered in-place.
+        See :func:`~imgaug.imgaug.pool` for details.
+
+    block_size : int or tuple of int
+        Size of each block of values to pool.
+        See :func:`~imgaug.imgaug.pool` for details.
+
+    pad_mode : str, optional
+        Padding mode to use if the array cannot be divided by `block_size`
+        without remainder.
+        See :func:`~imgaug.imgaug.pad` for details.
+
+    pad_cval : number, optional
+        Padding value.
+        See :func:`~imgaug.imgaug.pool` for details.
+
+    preserve_dtype : bool, optional
+        Whether to preserve the input array dtype.
+        See  :func:`~imgaug.imgaug.pool` for details.
+
+    cval : None or number, optional
+        Deprecated. Old name for `pad_cval`.
+
+    Returns
+    -------
+    (H',W') ndarray or (H',W',C') ndarray
+        Array after max-pooling.
+        Might be a view of `arr`.
+
+    """
+    return _pool_dispatcher_(
+        arr,
+        block_size,
+        _max_pool_uint8_,
+        np.max,
+        pad_mode=pad_mode,
+        pad_cval=pad_cval,
+        preserve_dtype=preserve_dtype,
+        cval=cval
+    )
 
 
 def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
@@ -1860,7 +1945,7 @@ def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
         Image-like array to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
-    block_size : int or tuple of int or tuple of int
+    block_size : int or tuple of int
         Size of each block of values to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
@@ -1889,7 +1974,7 @@ def min_pool(arr, block_size, pad_mode="edge", pad_cval=255,
 
 def min_pool_(arr, block_size, pad_mode="edge", pad_cval=255,
               preserve_dtype=True):
-    """Resize an array using min-pooling in-place.
+    """Resize an array in-place using min-pooling.
 
     Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
     the minimum, even if the dtype was something else than ``uint8``.
@@ -1905,7 +1990,7 @@ def min_pool_(arr, block_size, pad_mode="edge", pad_cval=255,
         May be altered in-place.
         See :func:`~imgaug.imgaug.pool` for details.
 
-    block_size : int or tuple of int or tuple of int
+    block_size : int or tuple of int
         Size of each block of values to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
@@ -1926,33 +2011,34 @@ def min_pool_(arr, block_size, pad_mode="edge", pad_cval=255,
     -------
     (H',W') ndarray or (H',W',C') ndarray
         Array after min-pooling.
-        Might be identical with `arr`.
+        Might be a view of `arr`.
 
     """
-    if not isinstance(block_size, (tuple, list)):
-        block_size = (block_size, block_size)
-
-    if 0 in block_size:
-        return arr
-
-    shape = arr.shape
-    nb_channels = 0 if len(shape) <= 2 else shape[-1]
-
-    valid_for_cv2 = (
-        arr.dtype.name == "uint8"
-        and len(block_size) == 2
-        and nb_channels <= 512
-        and 0 not in shape
+    return _pool_dispatcher_(
+        arr,
+        block_size,
+        _min_pool_uint8_,
+        np.min,
+        pad_mode=pad_mode,
+        pad_cval=pad_cval,
+        preserve_dtype=preserve_dtype
     )
-    if valid_for_cv2:
-        return _min_pool_uint8_(arr, block_size, pad_mode=pad_mode,
-                                pad_cval=pad_cval)
-    return pool(arr, block_size, np.min, pad_mode=pad_mode, pad_cval=pad_cval,
-                preserve_dtype=preserve_dtype)
 
 
 # Added in 0.5.0.
 def _min_pool_uint8_(arr, block_size, pad_mode="edge", pad_cval=255):
+    return _minmax_pool_uint8_(arr, block_size, cv2.erode,
+                               pad_mode=pad_mode, pad_cval=pad_cval)
+
+
+# Added in 0.5.0.
+def _max_pool_uint8_(arr, block_size, pad_mode="edge", pad_cval=0):
+    return _minmax_pool_uint8_(arr, block_size, cv2.dilate,
+                               pad_mode=pad_mode, pad_cval=pad_cval)
+
+
+# Added in 0.5.0.
+def _minmax_pool_uint8_(arr, block_size, func, pad_mode="edge", pad_cval=0):
     from imgaug.augmenters.size import pad_to_multiples_of
 
     ndim_in = arr.ndim
@@ -1974,7 +2060,7 @@ def _min_pool_uint8_(arr, block_size, pad_mode="edge", pad_cval=255):
             globals()["_POOLING_KERNELS_CACHE"][block_size] = kernel
 
     arr = cv2.flip(arr, -1)
-    arr = cv2.erode(arr, kernel, iterations=1)
+    arr = func(arr, kernel, iterations=1)
     arr = cv2.flip(arr, -1)
 
     if arr.ndim < ndim_in:
@@ -2002,7 +2088,7 @@ def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
         Image-like array to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
-    block_size : int or tuple of int or tuple of int
+    block_size : int or tuple of int
         Size of each block of values to pool.
         See :func:`~imgaug.imgaug.pool` for details.
 
