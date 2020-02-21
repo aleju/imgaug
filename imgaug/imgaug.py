@@ -1752,12 +1752,13 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
 # cv2 criteria. Otherwise it falls back to pool().
 # Added in 0.5.0.
 def _pool_dispatcher_(arr, block_size, func_uint8, blockfunc, pad_mode="edge",
-                      pad_cval=255, preserve_dtype=True, cval=None):
+                      pad_cval=255, preserve_dtype=True, cval=None,
+                      copy=False):
     if not isinstance(block_size, (tuple, list)):
         block_size = (block_size, block_size)
 
     if 0 in block_size:
-        return arr
+        return arr if not copy else np.copy(arr)
 
     shape = arr.shape
     nb_channels = 0 if len(shape) <= 2 else shape[-1]
@@ -1775,13 +1776,17 @@ def _pool_dispatcher_(arr, block_size, func_uint8, blockfunc, pad_mode="edge",
                 pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
 
 
-# TODO does OpenCV have a faster avg pooling method?
 def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
              preserve_dtype=True, cval=None):
     """Resize an array using average pooling.
 
     Defaults to ``pad_mode="reflect"`` to ensure that padded values do not
     affect the average.
+
+    .. note::
+
+        This function currently rounds ``0.5`` up for (most) ``uint8``
+        images, but rounds it down for other dtypes.
 
     **Supported dtypes**:
 
@@ -1819,8 +1824,44 @@ def avg_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
         Array after average pooling.
 
     """
-    return pool(arr, block_size, np.average, pad_mode=pad_mode,
-                pad_cval=pad_cval, preserve_dtype=preserve_dtype, cval=cval)
+    return _pool_dispatcher_(
+        arr,
+        block_size,
+        _avg_pool_uint8,
+        np.average,
+        pad_mode=pad_mode,
+        pad_cval=pad_cval,
+        preserve_dtype=preserve_dtype,
+        cval=cval,
+        copy=True
+    )
+
+
+# Added in 0.5.0.
+def _avg_pool_uint8(arr, block_size, pad_mode="reflect", pad_cval=128):
+    from imgaug.augmenters.size import pad_to_multiples_of
+
+    ndim_in = arr.ndim
+
+    s = arr.shape
+    if s[0] % block_size[0] != 0 or s[1] % block_size[1] != 0:
+        arr = pad_to_multiples_of(
+            arr,
+            height_multiple=block_size[0],
+            width_multiple=block_size[1],
+            mode=pad_mode,
+            cval=pad_cval
+        )
+
+    height = arr.shape[0] // block_size[0]
+    width = arr.shape[1] // block_size[1]
+
+    arr = cv2.resize(arr, (width, height), interpolation=cv2.INTER_AREA)
+
+    if arr.ndim < ndim_in:
+        arr = arr[:, :, np.newaxis]
+
+    return arr
 
 
 def max_pool(arr, block_size, pad_mode="edge", pad_cval=0,
@@ -2038,7 +2079,7 @@ def _max_pool_uint8_(arr, block_size, pad_mode="edge", pad_cval=0):
 
 
 # Added in 0.5.0.
-def _minmax_pool_uint8_(arr, block_size, func, pad_mode="edge", pad_cval=0):
+def _minmax_pool_uint8_(arr, block_size, func, pad_mode, pad_cval):
     from imgaug.augmenters.size import pad_to_multiples_of
 
     ndim_in = arr.ndim

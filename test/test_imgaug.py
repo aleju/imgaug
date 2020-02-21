@@ -1413,10 +1413,12 @@ def test_avg_pool():
     arr_pooled = ia.avg_pool(arr, 2)
     assert arr_pooled.shape == (2, 2)
     assert arr_pooled.dtype == arr.dtype.type
-    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
-    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
-    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
-    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+    # add 1e-4 here to force 0.5 to be rounded up, as that's how OpenCV
+    # handles it
+    assert arr_pooled[0, 0] == int(np.round(1e-4 + np.average([0, 1, 4, 5])))
+    assert arr_pooled[0, 1] == int(np.round(1e-4 + np.average([2, 3, 6, 7])))
+    assert arr_pooled[1, 0] == int(np.round(1e-4 + np.average([8, 9, 12, 13])))
+    assert arr_pooled[1, 1] == int(np.round(1e-4 + np.average([10, 11, 14, 15])))
 
 
 # TODO add test that verifies the default padding mode
