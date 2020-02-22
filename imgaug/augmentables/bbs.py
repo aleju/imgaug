@@ -11,7 +11,7 @@ from .. import imgaug as ia
 from .base import IAugmentable
 from .utils import (normalize_shape, project_coords,
                     _remove_out_of_image_fraction_,
-                    _normalize_shift_args)
+                    _normalize_shift_args, _handle_on_image_shape)
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -1360,10 +1360,10 @@ class BoundingBoxesOnImage(IAugmentable):
     bounding_boxes : list of imgaug.augmentables.bbs.BoundingBox
         List of bounding boxes on the image.
 
-    shape : tuple of int or ndarray
-        The shape of the image on which the objects are placed.
-        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
-        such an image shape.
+    shape : tuple of int
+        The shape of the image on which the objects are placed, i.e. the
+        result of ``image.shape``.
+        Should include the number of channels, not only height and width.
 
     Examples
     --------
@@ -1380,7 +1380,7 @@ class BoundingBoxesOnImage(IAugmentable):
     """
     def __init__(self, bounding_boxes, shape):
         self.bounding_boxes = bounding_boxes
-        self.shape = normalize_shape(shape)
+        self.shape = _handle_on_image_shape(shape, self)
 
     @property
     def items(self):

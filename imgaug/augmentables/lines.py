@@ -10,11 +10,14 @@ import cv2
 
 from .. import imgaug as ia
 from .base import IAugmentable
-from .utils import (normalize_shape,
-                    project_coords_,
-                    interpolate_points,
-                    _remove_out_of_image_fraction_,
-                    _normalize_shift_args)
+from .utils import (
+    normalize_shape,
+    project_coords_,
+    interpolate_points,
+    _remove_out_of_image_fraction_,
+    _normalize_shift_args,
+    _handle_on_image_shape
+)
 
 
 # TODO Add Line class and make LineString a list of Line elements
@@ -1695,7 +1698,7 @@ class LineStringsOnImage(IAugmentable):
                 ", ".join([str(type(v)) for v in line_strings])
             ))
         self.line_strings = line_strings
-        self.shape = normalize_shape(shape)
+        self.shape = _handle_on_image_shape(shape, self)
 
     @property
     def items(self):

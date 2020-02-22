@@ -15,7 +15,7 @@ except ImportError:
 import numpy as np
 
 import imgaug as ia
-from imgaug.testutils import reseed, wrap_shift_deprecation
+from imgaug.testutils import reseed, wrap_shift_deprecation, assertWarns
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
 from imgaug.augmentables.kps import Keypoint
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
@@ -2166,6 +2166,16 @@ class TestLineStringsOnImage(unittest.TestCase):
             LineString([]),
             LineString([(0, 0), (5, 0)])
         ], shape=(10, 10, 3))
+        assert len(lsoi.line_strings) == 2
+        assert lsoi.shape == (10, 10, 3)
+
+    def test___init___shape_is_array(self):
+        image = np.zeros((10, 10, 3), dtype=np.uint8)
+        with assertWarns(self, ia.DeprecationWarning):
+            lsoi = LineStringsOnImage([
+                LineString([]),
+                LineString([(0, 0), (5, 0)])
+            ], shape=image)
         assert len(lsoi.line_strings) == 2
         assert lsoi.shape == (10, 10, 3)
 

@@ -158,9 +158,6 @@ class SegmentationMapsOnImage(IAugmentable):
             arr = arr.astype(np.int32)
 
         self.arr = arr
-
-        # don't allow arrays here as an alternative to tuples as input
-        # as allowing arrays introduces risk to mix up 'arr' and 'shape' args
         self.shape = shape
 
         if nb_classes is not None:

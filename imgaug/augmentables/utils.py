@@ -37,6 +37,28 @@ def deepcopy_fast(obj):
     return copylib.deepcopy(obj)
 
 
+def _handle_on_image_shape(shape, obj):
+    if hasattr(shape, "shape"):
+        ia.warn_deprecated(
+            "Providing a numpy array for parameter `shape` in "
+            "`%s` is deprecated. Please provide a shape tuple, "
+            "i.e. a tuple of integers denoting (height, width, [channels]). "
+            "Use something similar to `image.shape` to convert an array "
+            "to a shape tuple." % (
+                obj.__class__.__name__,
+            )
+        )
+        shape = normalize_shape(shape)
+    else:
+        assert isinstance(shape, tuple), (
+            "Expected to get a tuple of integers or a numpy array "
+            "(deprecated) for parameter `shape` in `%s`. Got type %s." % (
+                obj.__class__.__name__, type(shape).__name__
+            )
+        )
+    return shape
+
+
 # TODO integrate into keypoints
 def normalize_shape(shape):
     """Normalize a shape ``tuple`` or ``array`` to a shape ``tuple``.

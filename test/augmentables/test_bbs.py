@@ -18,7 +18,7 @@ import numpy as np
 import imgaug as ia
 import imgaug.random as iarandom
 from imgaug.augmentables.bbs import _LabelOnImageDrawer
-from imgaug.testutils import wrap_shift_deprecation
+from imgaug.testutils import wrap_shift_deprecation, assertWarns
 
 
 class TestBoundingBox_project_(unittest.TestCase):
@@ -1440,7 +1440,8 @@ class TestBoundingBoxesOnImage(unittest.TestCase):
         image = np.zeros((40, 50, 3), dtype=np.uint8)
         bb1 = ia.BoundingBox(y1=10, x1=20, y2=30, x2=40)
         bb2 = ia.BoundingBox(y1=15, x1=25, y2=35, x2=45)
-        bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=image)
+        with assertWarns(self, ia.DeprecationWarning):
+            bbsoi = ia.BoundingBoxesOnImage([bb1, bb2], shape=image)
         assert bbsoi.bounding_boxes == [bb1, bb2]
         assert bbsoi.shape == (40, 50, 3)
 

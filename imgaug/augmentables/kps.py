@@ -7,8 +7,12 @@ import six.moves as sm
 
 from .. import imgaug as ia
 from .base import IAugmentable
-from .utils import (normalize_shape, project_coords,
-                    _remove_out_of_image_fraction_)
+from .utils import (
+    normalize_shape,
+    project_coords,
+    _remove_out_of_image_fraction_,
+    _handle_on_image_shape
+)
 
 
 def compute_geometric_median(points=None, eps=1e-5, X=None):
@@ -612,10 +616,10 @@ class KeypointsOnImage(IAugmentable):
     keypoints : list of imgaug.augmentables.kps.Keypoint
         List of keypoints on the image.
 
-    shape : tuple of int or ndarray
-        The shape of the image on which the objects are placed.
-        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
-        such an image shape.
+    shape : tuple of int
+        The shape of the image on which the objects are placed, i.e. the
+        result of ``image.shape``.
+        Should include the number of channels, not only height and width.
 
     Examples
     --------
@@ -630,7 +634,7 @@ class KeypointsOnImage(IAugmentable):
 
     def __init__(self, keypoints, shape):
         self.keypoints = keypoints
-        self.shape = normalize_shape(shape)
+        self.shape = _handle_on_image_shape(shape, self)
 
     @property
     def items(self):

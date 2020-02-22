@@ -350,7 +350,13 @@ def assertWarns(testcase, expected_warning, *args, **kwargs):
 
     Added in 0.4.0.
 
+    Example
+    -------
+    >>> def test_foo(self):
+    >>>     with assertWarns(self, UserWarning):
+    >>>         pass
+
     """
     # pylint: disable=invalid-name
     context = _AssertWarnsContext(expected_warning, testcase)
-    return context.handle('assertWarns', args, kwargs)
+    return context.handle("assertWarns", args, kwargs)

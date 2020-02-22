@@ -20,7 +20,7 @@ import shapely.geometry
 
 import imgaug as ia
 import imgaug.random as iarandom
-from imgaug.testutils import reseed, wrap_shift_deprecation
+from imgaug.testutils import reseed, wrap_shift_deprecation, assertWarns
 from imgaug.augmentables.polys import _ConcavePolygonRecoverer
 
 
@@ -2326,10 +2326,11 @@ class TestPolygonsOnImage___init__(unittest.TestCase):
 
     def test_with_zero_polygons_and_shape_given_as_array(self):
         # shape given as numpy array
-        poly_oi = ia.PolygonsOnImage(
-            [],
-            shape=np.zeros((10, 10, 3), dtype=np.uint8)
-        )
+        with assertWarns(self, ia.DeprecationWarning):
+            poly_oi = ia.PolygonsOnImage(
+                [],
+                shape=np.zeros((10, 10, 3), dtype=np.uint8)
+            )
         assert poly_oi.shape == (10, 10, 3)
 
     def test_with_zero_polygons_and_shape_given_as_2d_tuple(self):
