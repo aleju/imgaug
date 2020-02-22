@@ -1,4 +1,4 @@
-# Reworked Pooling #622
+# Improved Performance of Pooling Operations #622
 
 This patch improves the performance of pooling operations.
 
