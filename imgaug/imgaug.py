@@ -2152,8 +2152,68 @@ def median_pool(arr, block_size, pad_mode="reflect", pad_cval=128,
         Array after min-pooling.
 
     """
+    # This uses a custom dispatcher (compared to avg/min/max pool), because
+    # cv2 medianBlur only works with odd kernel sizes > 1, does not support
+    # height/width-wise ksizes and uses a different method for ksizes > 5
+    # leading to different performance characteristics for ksizes <= 5 and
+    # ksizes > 5.
+
+    if not isinstance(block_size, (tuple, list)):
+        block_size = (block_size, block_size)
+
+    if 0 in block_size:
+        return np.copy(arr)
+
+    shape = arr.shape
+    nb_channels = 0 if len(shape) <= 2 else shape[-1]
+
+    valid_for_cv2 = (
+        arr.dtype.name == "uint8"
+        and len(block_size) == 2
+        and block_size[0] == block_size[1]
+        and (
+            block_size[0] in [3, 5]
+            or (
+                block_size[0] in [7, 9, 11, 13]
+                and (shape[0] * shape[1]) <= (32 * 32)
+            )
+        )
+        and nb_channels <= 512
+        and 0 not in shape
+    )
+    if valid_for_cv2:
+        return _median_pool_cv2(arr, block_size[0], pad_mode=pad_mode,
+                                pad_cval=pad_cval)
     return pool(arr, block_size, np.median, pad_mode=pad_mode,
                 pad_cval=pad_cval, preserve_dtype=preserve_dtype)
+
+
+# block_size must be a single integer here, in contrast to the other cv2
+# pool methods that support (int, int).
+# Added in 0.5.0.
+def _median_pool_cv2(arr, block_size, pad_mode, pad_cval):
+    from imgaug.augmenters.size import pad_to_multiples_of
+
+    ndim_in = arr.ndim
+
+    s = arr.shape
+    if s[0] % block_size != 0 or s[1] % block_size != 0:
+        arr = pad_to_multiples_of(
+            arr,
+            height_multiple=block_size,
+            width_multiple=block_size,
+            mode=pad_mode,
+            cval=pad_cval
+        )
+
+    arr = cv2.medianBlur(arr, block_size)
+
+    if arr.ndim < ndim_in:
+        arr = arr[:, :, np.newaxis]
+
+    start_height = (block_size - 1) // 2
+    start_width = (block_size - 1) // 2
+    return arr[start_height::block_size, start_width::block_size]
 
 
 def draw_grid(images, rows=None, cols=None):
