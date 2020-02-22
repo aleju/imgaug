@@ -15,8 +15,11 @@ except ImportError:
 import numpy as np
 
 from imgaug.augmentables.utils import (
-    interpolate_points, interpolate_point_pair,
-    interpolate_points_by_max_distance
+    interpolate_points,
+    interpolate_point_pair,
+    interpolate_points_by_max_distance,
+    normalize_shape,
+    normalize_imglike_shape
 )
 
 
@@ -301,3 +304,58 @@ class Test_interpolate_points_by_max_distance(unittest.TestCase):
                 [0, 0]
             ])
         )
+
+
+class Test_normalize_shape(unittest.TestCase):
+    def test_shape_tuple(self):
+        shape_out = normalize_shape((1, 2))
+        assert shape_out == (1, 2)
+
+    def test_shape_tuple_3d(self):
+        shape_out = normalize_shape((1, 2, 3))
+        assert shape_out == (1, 2, 3)
+
+    def test_array_1d(self):
+        arr = np.zeros((5,), dtype=np.uint8)
+        shape_out = normalize_shape(arr)
+        assert shape_out == (5,)
+
+    def test_array_2d(self):
+        arr = np.zeros((1, 2), dtype=np.uint8)
+        shape_out = normalize_shape(arr)
+        assert shape_out == (1, 2)
+
+    def test_array_3d(self):
+        arr = np.zeros((1, 2, 3), dtype=np.uint8)
+        shape_out = normalize_shape(arr)
+        assert shape_out == (1, 2, 3)
+
+
+class Test_normalize_imglike_shape(unittest.TestCase):
+    def test_shape_tuple(self):
+        shape_out = normalize_imglike_shape((1, 2))
+        assert shape_out == (1, 2)
+
+    def test_shape_tuple_3d(self):
+        shape_out = normalize_imglike_shape((1, 2, 3))
+        assert shape_out == (1, 2, 3)
+
+    def test_array_1d_fails(self):
+        arr = np.zeros((5,), dtype=np.uint8)
+        with self.assertRaises(AssertionError):
+            _ = normalize_imglike_shape(arr)
+
+    def test_array_2d(self):
+        arr = np.zeros((1, 2), dtype=np.uint8)
+        shape_out = normalize_imglike_shape(arr)
+        assert shape_out == (1, 2)
+
+    def test_array_3d(self):
+        arr = np.zeros((1, 2, 3), dtype=np.uint8)
+        shape_out = normalize_imglike_shape(arr)
+        assert shape_out == (1, 2, 3)
+
+    def test_array_4d_fails(self):
+        arr = np.zeros((1, 2, 3, 4), dtype=np.uint8)
+        with self.assertRaises(AssertionError):
+            _ = normalize_imglike_shape(arr)

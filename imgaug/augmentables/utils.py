@@ -37,6 +37,7 @@ def deepcopy_fast(obj):
     return copylib.deepcopy(obj)
 
 
+# Added in 0.5.0.
 def _handle_on_image_shape(shape, obj):
     if hasattr(shape, "shape"):
         ia.warn_deprecated(
@@ -59,7 +60,6 @@ def _handle_on_image_shape(shape, obj):
     return shape
 
 
-# TODO integrate into keypoints
 def normalize_shape(shape):
     """Normalize a shape ``tuple`` or ``array`` to a shape ``tuple``.
 
@@ -79,6 +79,36 @@ def normalize_shape(shape):
     assert ia.is_np_array(shape), (
         "Expected tuple of ints or array, got %s." % (type(shape),))
     return shape.shape
+
+
+def normalize_imglike_shape(shape):
+    """Normalize a shape tuple or image-like ``array`` to a shape tuple.
+
+    Added in 0.5.0.
+
+    Parameters
+    ----------
+    shape : tuple of int or ndarray
+        The input to normalize. May optionally be an array. If it is an
+        array, it must be 2-dimensional (height, width) or 3-dimensional
+        (height, width, channels). Otherwise an error will be raised.
+
+    Returns
+    -------
+    tuple of int
+        Shape ``tuple``.
+
+    """
+    if isinstance(shape, tuple):
+        return shape
+    assert ia.is_np_array(shape), (
+        "Expected tuple of ints or array, got %s." % (type(shape),))
+    shape = shape.shape
+    assert len(shape) in [2, 3], (
+        "Expected image array to be 2-dimensional or 3-dimensional, got "
+        "%d-dimensional input of shape %s." % (len(shape), shape)
+    )
+    return shape
 
 
 def project_coords_(coords, from_shape, to_shape):

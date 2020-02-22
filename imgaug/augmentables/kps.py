@@ -8,7 +8,7 @@ import six.moves as sm
 from .. import imgaug as ia
 from .base import IAugmentable
 from .utils import (
-    normalize_shape,
+    normalize_imglike_shape,
     project_coords,
     _remove_out_of_image_fraction_,
     _handle_on_image_shape
@@ -236,7 +236,7 @@ class Keypoint(object):
             otherwise.
 
         """
-        shape = normalize_shape(image)
+        shape = normalize_imglike_shape(image)
         height, width = shape[0:2]
         y_inside = (0 <= self.y < height)
         x_inside = (0 <= self.x < width)
@@ -719,7 +719,7 @@ class KeypointsOnImage(IAugmentable):
 
         """
         # pylint: disable=invalid-name
-        on_shape = normalize_shape(image)
+        on_shape = normalize_imglike_shape(image)
         if on_shape[0:2] == self.shape[0:2]:
             self.shape = on_shape  # channels may differ
             return self

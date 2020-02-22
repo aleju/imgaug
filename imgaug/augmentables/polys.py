@@ -14,7 +14,7 @@ from .. import imgaug as ia
 from .. import random as iarandom
 from .base import IAugmentable
 from .utils import (
-    normalize_shape,
+    normalize_imglike_shape,
     interpolate_points,
     _remove_out_of_image_fraction_,
     project_coords_,
@@ -1517,7 +1517,7 @@ class PolygonsOnImage(IAugmentable):
 
         """
         # pylint: disable=invalid-name
-        on_shape = normalize_shape(image)
+        on_shape = normalize_imglike_shape(image)
         if on_shape[0:2] == self.shape[0:2]:
             self.shape = on_shape  # channels may differ
             return self
