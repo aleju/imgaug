@@ -23,6 +23,7 @@ from __future__ import print_function, division, absolute_import
 
 import math
 import functools
+import itertools
 
 import numpy as np
 from scipy import ndimage
@@ -4112,16 +4113,6 @@ class PerspectiveTransform(meta.Augmenter):
                 self.fit_output]
 
 
-class _ElasticTransformationSamplingResult(object):
-    def __init__(self, random_states, alphas, sigmas, orders, cvals, modes):
-        self.random_states = random_states
-        self.alphas = alphas
-        self.sigmas = sigmas
-        self.orders = orders
-        self.cvals = cvals
-        self.modes = modes
-
-
 # TODO add independent sigmas for x/y
 # TODO add independent alphas for x/y
 # TODO add backend arg
@@ -4188,8 +4179,9 @@ class ElasticTransformation(meta.Augmenter):
     ----------
     alpha : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
         Strength of the distortion field. Higher values mean that pixels are
-        moved further with respect to the distortion field's direction. Set
-        this to around 10 times the value of `sigma` for visible effects.
+        moved further with respect to the distortion field's direction.
+        Should be a value from interval ``[1.0, inf]``. Set this to around
+        ``10 * sigma`` for visible effects.
 
             * If number, then that value will be used for all images.
             * If tuple ``(a, b)``, then a random value will be uniformly
@@ -4200,8 +4192,11 @@ class ElasticTransformation(meta.Augmenter):
               sample a value per image.
 
     sigma : number or tuple of number or list of number or imgaug.parameters.StochasticParameter, optional
-        Standard deviation of the gaussian kernel used to smooth the distortion
-        fields. Higher values (for ``128x128`` images around 5.0) lead to more
+        Corresponds to the standard deviation of the gaussian kernel used
+        in the original algorithm. Here, for performance reasons, it denotes
+        half of an average blur kernel size. (Only for ``sigma<1.5`` is
+        a gaussian kernel actually used.)
+        Higher values (for ``128x128`` images around 5.0) lead to more
         water-like effects, while lower values (for ``128x128`` images
         around ``1.0`` and lower) lead to more noisy, pixelated images. Set
         this to around 1/10th of `alpha` for visible effects.
@@ -4327,7 +4322,7 @@ class ElasticTransformation(meta.Augmenter):
         5: cv2.INTER_CUBIC
     }
 
-    def __init__(self, alpha=(0.0, 40.0), sigma=(4.0, 8.0), order=3, cval=0,
+    def __init__(self, alpha=(1.0, 40.0), sigma=(4.0, 8.0), order=0, cval=0,
                  mode="constant",
                  polygon_recoverer="auto",
                  seed=None, name=None,
@@ -4364,6 +4359,8 @@ class ElasticTransformation(meta.Augmenter):
         self._cval_heatmaps = 0.0
         self._cval_segmentation_maps = 0
 
+        self._last_meshgrid = None
+
     @classmethod
     def _handle_order_arg(cls, order):
         if order == ia.ALL:
@@ -4398,7 +4395,7 @@ class ElasticTransformation(meta.Augmenter):
         cvals = self.cval.draw_samples((nb_images,), random_state=rss[-2])
         modes = self.mode.draw_samples((nb_images,), random_state=rss[-1])
         return _ElasticTransformationSamplingResult(
-            rss[0:-5], alphas, sigmas, orders, cvals, modes)
+            rss[0], alphas, sigmas, orders, cvals, modes)
 
     # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
@@ -4417,14 +4414,11 @@ class ElasticTransformation(meta.Augmenter):
 
         shapes = batch.get_rowwise_shapes()
         samples = self._draw_samples(len(shapes), random_state)
+        smgen = _ElasticTfShiftMapGenerator()
+        shift_maps = smgen.generate(shapes, samples.alphas, samples.sigmas,
+                                    samples.random_state)
 
-        for i, shape in enumerate(shapes):
-            dx, dy = self._generate_shift_maps(
-                shape[0:2],
-                alpha=samples.alphas[i],
-                sigma=samples.sigmas[i],
-                random_state=samples.random_states[i])
-
+        for i, (shape, (dx, dy)) in enumerate(zip(shapes, shift_maps)):
             if batch.images is not None:
                 batch.images[i] = self._augment_image_by_samples(
                     batch.images[i], i, samples, dx, dy)
@@ -4617,40 +4611,7 @@ class ElasticTransformation(meta.Augmenter):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.alpha, self.sigma, self.order, self.cval, self.mode]
 
-    @classmethod
-    def _generate_shift_maps(cls, shape, alpha, sigma, random_state):
-        # pylint: disable=protected-access, invalid-name
-        assert len(shape) == 2, ("Expected 2d shape, got %s." % (shape,))
-
-        ksize = blur_lib._compute_gaussian_blur_ksize(sigma)
-        ksize = ksize + 1 if ksize % 2 == 0 else ksize
-
-        padding = ksize
-        h, w = shape[0:2]
-        h_pad = h + 2*padding
-        w_pad = w + 2*padding
-
-        # The step of random number generation could be batched, so that
-        # random numbers are sampled once for the whole batch. Would get rid
-        # of creating many random_states.
-        dxdy_unsmoothed = random_state.random((2 * h_pad, w_pad)) * 2 - 1
-
-        dx_unsmoothed = dxdy_unsmoothed[0:h_pad, :]
-        dy_unsmoothed = dxdy_unsmoothed[h_pad:, :]
-
-        # TODO could this also work with an average blur? would probably be
-        #      faster
-        dx = blur_lib.blur_gaussian_(dx_unsmoothed, sigma) * alpha
-        dy = blur_lib.blur_gaussian_(dy_unsmoothed, sigma) * alpha
-
-        if padding > 0:
-            dx = dx[padding:-padding, padding:-padding]
-            dy = dy[padding:-padding, padding:-padding]
-
-        return dx, dy
-
-    @classmethod
-    def _map_coordinates(cls, image, dx, dy, order=1, cval=0, mode="constant"):
+    def _map_coordinates(self, image, dx, dy, order=1, cval=0, mode="constant"):
         """Remap pixels in an image according to x/y shift maps.
 
         **Supported dtypes**:
@@ -4818,16 +4779,23 @@ class ElasticTransformation(meta.Augmenter):
 
         assert image.ndim == 3, (
             "Expected 3-dimensional image, got %d dimensions." % (image.ndim,))
-        result = np.copy(image)
-        height, width = image.shape[0:2]
-        if backend == "scipy":
-            h, w = image.shape[0:2]
+
+        h, w, nb_channels = image.shape
+        last = self._last_meshgrid
+        if last is not None and last[0].shape == (h, w):
+            y, x = self._last_meshgrid
+        else:
             y, x = np.meshgrid(
                 np.arange(h).astype(np.float32),
                 np.arange(w).astype(np.float32),
-                indexing="ij")
-            x_shifted = x + (-1) * dx
-            y_shifted = y + (-1) * dy
+                indexing="ij"
+            )
+            self._last_meshgrid = (y, x)
+        x_shifted = x - dx
+        y_shifted = y - dy
+
+        if backend == "scipy":
+            result = np.empty_like(image)
 
             for c in sm.xrange(image.shape[2]):
                 remapped_flat = ndimage.interpolation.map_coordinates(
@@ -4837,24 +4805,15 @@ class ElasticTransformation(meta.Augmenter):
                     cval=cval,
                     mode=mode
                 )
-                remapped = remapped_flat.reshape((height, width))
+                remapped = remapped_flat.reshape((h, w))
                 result[..., c] = remapped
         else:
-            h, w, nb_channels = image.shape
-
-            y, x = np.meshgrid(
-                np.arange(h).astype(np.float32),
-                np.arange(w).astype(np.float32),
-                indexing="ij")
-            x_shifted = x + (-1) * dx
-            y_shifted = y + (-1) * dy
-
             if image.dtype.kind == "f":
                 cval = float(cval)
             else:
                 cval = int(cval)
-            border_mode = cls._MAPPING_MODE_SCIPY_CV2[mode]
-            interpolation = cls._MAPPING_ORDER_SCIPY_CV2[order]
+            border_mode = self._MAPPING_MODE_SCIPY_CV2[mode]
+            interpolation = self._MAPPING_ORDER_SCIPY_CV2[order]
 
             is_nearest_neighbour = (interpolation == cv2.INTER_NEAREST)
             map1, map2 = cv2.convertMaps(
@@ -4862,10 +4821,15 @@ class ElasticTransformation(meta.Augmenter):
                 nninterpolation=is_nearest_neighbour)
             # remap only supports up to 4 channels
             if nb_channels <= 4:
+                # dst does not seem to improve performance here
                 result = cv2.remap(
                     _normalize_cv2_input_arr_(image),
-                    map1, map2, interpolation=interpolation,
-                    borderMode=border_mode, borderValue=(cval, cval, cval))
+                    map1,
+                    map2,
+                    interpolation=interpolation,
+                    borderMode=border_mode,
+                    borderValue=tuple([cval] * nb_channels)
+                )
                 if image.ndim == 3 and result.ndim == 2:
                     result = result[..., np.newaxis]
             else:
@@ -4887,6 +4851,133 @@ class ElasticTransformation(meta.Augmenter):
             result = iadt.restore_dtypes_(result, input_dtype)
 
         return result
+
+
+class _ElasticTransformationSamplingResult(object):
+    def __init__(self, random_state, alphas, sigmas, orders, cvals, modes):
+        self.random_state = random_state
+        self.alphas = alphas
+        self.sigmas = sigmas
+        self.orders = orders
+        self.cvals = cvals
+        self.modes = modes
+
+
+class _ElasticTfShiftMapGenerator(object):
+    """Class to generate shift/displacement maps for ElasticTransformation.
+
+    This class re-uses samples for multiple examples. This minimizes the amount
+    of sampling that has to be done.
+
+    Added in 0.5.0.
+
+    """
+
+    # Not really necessary to have this as a class, considering it has no
+    # attributes. But it makes things easier to read.
+    # Added in 0.5.0.
+    def __init__(self):
+        pass
+
+    # Added in 0.5.0.
+    def generate(self, shapes, alphas, sigmas, random_state):
+        # We will sample shift maps from [0.0, 1.0] and then shift by -0.5 to
+        # [-0.5, 0.5]. To bring these maps to [-1.0, 1.0], we have to multiply
+        # somewhere by 2. It is fastes to multiply the (fewer) alphas, which
+        # we will have to multiply the shift maps with anyways.
+        alphas *= 2
+
+        # Configuration for each chunk.
+        # switch dx / dy, flip dx lr, flip dx ud, flip dy lr, flip dy ud
+        switch = [False, True]
+        fliplr_dx = [False, True]
+        flipud_dx = [False, True]
+        fliplr_dy = [False, True]
+        flipud_dy = [False, True]
+        configs = list(
+            itertools.product(
+                switch, fliplr_dx, flipud_dx, fliplr_dy, flipud_dy
+            )
+        )
+
+        areas = [shape[0] * shape[1] for shape in shapes]
+        nb_chunks = len(configs)
+        gen = zip(
+            self._split_chunks(shapes, nb_chunks),
+            self._split_chunks(areas, nb_chunks),
+            self._split_chunks(alphas, nb_chunks),
+            self._split_chunks(sigmas, nb_chunks)
+        )
+        # "_c" denotes a chunk here
+        for shapes_c, areas_c, alphas_c, sigmas_c in gen:
+            area_max = max(areas_c)
+
+            dxdy = random_state.random((2, area_max))
+            dxdy -= 0.5
+            dx, dy = dxdy[0, :], dxdy[1, :]
+
+            # dx_lr = flip dx left-right, dx_ud = flip dx up-down
+            # dy_lr, dy_ud analogous
+            for i, (switch_i, dx_lr, dx_ud, dy_lr, dy_ud) in enumerate(configs):
+                if i >= len(shapes_c):
+                    break
+
+                dx_i, dy_i = (dx, dy) if not switch_i else (dy, dx)
+                shape_i = shapes_c[i][0:2]
+                area_i = shape_i[0] * shape_i[1]
+
+                if area_i == 0:
+                    yield (
+                        np.zeros(shape_i, dtype=np.float32),
+                        np.zeros(shape_i, dtype=np.float32)
+                    )
+                else:
+                    dx_i = dx_i[0:area_i].reshape(shape_i)
+                    dy_i = dy_i[0:area_i].reshape(shape_i)
+                    dx_i, dy_i = self._flip(dx_i, dy_i,
+                                            (dx_lr, dx_ud, dy_lr, dy_ud))
+                    dx_i, dy_i = self._mul_alpha(dx_i, dy_i, alphas_c[i])
+                    yield self._smoothen(dx_i, dy_i, sigmas_c[i])
+
+    # Added in 0.5.0.
+    @classmethod
+    def _flip(cls, dx, dy, flips):
+        # no measureable benefit from using cv2 here
+        if flips[0]:
+            dx = np.fliplr(dx)
+        if flips[1]:
+            dx = np.flipud(dx)
+        if flips[2]:
+            dy = np.fliplr(dy)
+        if flips[3]:
+            dy = np.flipud(dy)
+        return dx, dy
+
+    # Added in 0.5.0.
+    @classmethod
+    def _mul_alpha(cls, dx, dy, alpha):
+        # performance drops for cv2.multiply here
+        dx = dx * alpha
+        dy = dy * alpha
+        return dx, dy
+
+    # Added in 0.5.0.
+    @classmethod
+    def _smoothen(cls, dx, dy, sigma):
+        if sigma < 1.5:
+            dx = blur_lib.blur_gaussian_(dx, sigma)
+            dy = blur_lib.blur_gaussian_(dy, sigma)
+        else:
+            ksize = int(round(2*sigma))
+            dx = cv2.blur(dx, (ksize, ksize), dst=dx)
+            dy = cv2.blur(dy, (ksize, ksize), dst=dy)
+        return dx, dy
+
+    # Added in 0.5.0.
+    @classmethod
+    def _split_chunks(cls, iterable, chunk_size):
+        for i in sm.xrange(0, len(iterable), chunk_size):
+            yield iterable[i:i+chunk_size]
 
 
 class Rot90(meta.Augmenter):
