@@ -7,5 +7,7 @@ Pillow
 matplotlib
 scikit-image>=0.14.2
 opencv-python-headless
-imageio
+# imageio versions past 2.6.1 do not support <3.5 anymore
+imageio<=2.6.1; python_version<'3.5'
+imageio; python_version>='3.5'
 Shapely
