@@ -14,6 +14,7 @@ except ImportError:
 
 import numpy as np
 import imgaug as ia
+from imgaug.testutils import assertWarns
 
 
 class TestKeypoint_project_(unittest.TestCase):
@@ -611,10 +612,11 @@ class TestKeypointsOnImage(unittest.TestCase):
     def test_shape_is_array(self):
         image = np.zeros((10, 20, 3), dtype=np.uint8)
         kps = [ia.Keypoint(x=1, y=2), ia.Keypoint(x=3, y=4)]
-        kpi = ia.KeypointsOnImage(
-            keypoints=kps,
-            shape=image
-        )
+        with assertWarns(self, ia.DeprecationWarning):
+            kpi = ia.KeypointsOnImage(
+                keypoints=kps,
+                shape=image
+            )
         assert kpi.shape == (10, 20, 3)
 
     def test_draw_on_image(self):

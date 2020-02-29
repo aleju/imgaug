@@ -9,9 +9,13 @@ import skimage.measure
 
 from .. import imgaug as ia
 from .base import IAugmentable
-from .utils import (normalize_shape, project_coords,
-                    _remove_out_of_image_fraction_,
-                    _normalize_shift_args)
+from .utils import (
+    normalize_imglike_shape,
+    project_coords,
+    _remove_out_of_image_fraction_,
+    _normalize_shift_args,
+    _handle_on_image_shape
+)
 
 
 # TODO functions: square(), to_aspect_ratio(), contains_point()
@@ -456,7 +460,7 @@ class BoundingBox(object):
             Can be ``0.0``.
 
         """
-        shape = normalize_shape(image)
+        shape = normalize_imglike_shape(image)
         height, width = shape[0:2]
         bb_image = BoundingBox(x1=0, y1=0, x2=width, y2=height)
         inter = self.intersection(bb_image, default=None)
@@ -492,7 +496,7 @@ class BoundingBox(object):
         """
         area = self.area
         if area == 0:
-            shape = normalize_shape(image)
+            shape = normalize_imglike_shape(image)
             height, width = shape[0:2]
             y1_outside = self.y1 < 0 or self.y1 >= height
             x1_outside = self.x1 < 0 or self.x1 >= width
@@ -518,7 +522,7 @@ class BoundingBox(object):
             ``False`` otherwise.
 
         """
-        shape = normalize_shape(image)
+        shape = normalize_imglike_shape(image)
         height, width = shape[0:2]
         return (
             self.x1 >= 0
@@ -545,7 +549,7 @@ class BoundingBox(object):
             ``False`` otherwise.
 
         """
-        shape = normalize_shape(image)
+        shape = normalize_imglike_shape(image)
         height, width = shape[0:2]
         eps = np.finfo(np.float32).eps
         img_bb = BoundingBox(x1=0, x2=width-eps, y1=0, y2=height-eps)
@@ -611,7 +615,7 @@ class BoundingBox(object):
             The object may have been modified in-place.
 
         """
-        shape = normalize_shape(image)
+        shape = normalize_imglike_shape(image)
 
         height, width = shape[0:2]
         assert height > 0, (
@@ -1360,10 +1364,10 @@ class BoundingBoxesOnImage(IAugmentable):
     bounding_boxes : list of imgaug.augmentables.bbs.BoundingBox
         List of bounding boxes on the image.
 
-    shape : tuple of int or ndarray
-        The shape of the image on which the objects are placed.
-        Either an image with shape ``(H,W,[C])`` or a ``tuple`` denoting
-        such an image shape.
+    shape : tuple of int
+        The shape of the image on which the objects are placed, i.e. the
+        result of ``image.shape``.
+        Should include the number of channels, not only height and width.
 
     Examples
     --------
@@ -1380,7 +1384,7 @@ class BoundingBoxesOnImage(IAugmentable):
     """
     def __init__(self, bounding_boxes, shape):
         self.bounding_boxes = bounding_boxes
-        self.shape = normalize_shape(shape)
+        self.shape = _handle_on_image_shape(shape, self)
 
     @property
     def items(self):
@@ -1470,7 +1474,7 @@ class BoundingBoxesOnImage(IAugmentable):
 
         """
         # pylint: disable=invalid-name
-        on_shape = normalize_shape(image)
+        on_shape = normalize_imglike_shape(image)
         if on_shape[0:2] == self.shape[0:2]:
             self.shape = on_shape  # channels may differ
             return self

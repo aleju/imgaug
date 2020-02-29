@@ -10,11 +10,14 @@ import cv2
 
 from .. import imgaug as ia
 from .base import IAugmentable
-from .utils import (normalize_shape,
-                    project_coords_,
-                    interpolate_points,
-                    _remove_out_of_image_fraction_,
-                    _normalize_shift_args)
+from .utils import (
+    normalize_imglike_shape,
+    project_coords_,
+    interpolate_points,
+    _remove_out_of_image_fraction_,
+    _normalize_shift_args,
+    _handle_on_image_shape
+)
 
 
 # TODO Add Line class and make LineString a list of Line elements
@@ -191,7 +194,7 @@ class LineString(object):
         # pylint: disable=misplaced-comparison-constant
         if len(self.coords) == 0:
             return np.zeros((0,), dtype=bool)
-        shape = normalize_shape(image)
+        shape = normalize_imglike_shape(image)
         height, width = shape[0:2]
         x_within = np.logical_and(0 <= self.xx, self.xx < width)
         y_within = np.logical_and(0 <= self.yy, self.yy < height)
@@ -539,7 +542,7 @@ class LineString(object):
         # to get rounded to height/width by shapely, which can cause problems
         # when first clipping and then calling is_fully_within_image()
         # returning false
-        height, width = normalize_shape(image)[0:2]
+        height, width = normalize_imglike_shape(image)[0:2]
         eps = 1e-3
         edges = [
             LineString([(0.0, 0.0), (width - eps, 0.0)]),
@@ -1695,7 +1698,7 @@ class LineStringsOnImage(IAugmentable):
                 ", ".join([str(type(v)) for v in line_strings])
             ))
         self.line_strings = line_strings
-        self.shape = normalize_shape(shape)
+        self.shape = _handle_on_image_shape(shape, self)
 
     @property
     def items(self):
@@ -1757,7 +1760,7 @@ class LineStringsOnImage(IAugmentable):
 
         """
         # pylint: disable=invalid-name
-        on_shape = normalize_shape(image)
+        on_shape = normalize_imglike_shape(image)
         if on_shape[0:2] == self.shape[0:2]:
             self.shape = on_shape  # channels may differ
             return self

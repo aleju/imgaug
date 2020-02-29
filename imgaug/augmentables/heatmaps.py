@@ -88,8 +88,6 @@ class HeatmapsOnImage(IAugmentable):
         else:
             self.arr_0to1 = (arr - min_value) / (max_value - min_value)
 
-        # don't allow arrays here as an alternative to tuples as input
-        # as allowing arrays introduces risk to mix up 'arr' and 'shape' args
         self.shape = shape
 
         self.min_value = min_value
