@@ -22,7 +22,8 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.testutils import (reseed, assert_cbaois_equal,
-                              runtest_pickleable_uint8_img)
+                              runtest_pickleable_uint8_img,
+                              is_parameter_instance)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters.flip as fliplib
@@ -439,8 +440,8 @@ class _TestFliplrAndFlipudBase(object):
     def test_get_parameters(self):
         aug = self.create_aug(p=0.5)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Binomial)
-        assert isinstance(params[0].p, iap.Deterministic)
+        assert is_parameter_instance(params[0], iap.Binomial)
+        assert is_parameter_instance(params[0].p, iap.Deterministic)
         assert 0.5 - 1e-4 < params[0].p.value < 0.5 + 1e-4
 
     def test_other_dtypes_bool(self):

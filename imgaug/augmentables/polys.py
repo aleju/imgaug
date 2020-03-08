@@ -2248,7 +2248,7 @@ class _ConcavePolygonRecoverer(object):
         if polygon.is_valid:
             return polygon
 
-        random_state = iarandom.RNG(random_state)
+        random_state = iarandom.RNG.create_if_not_rng_(random_state)
         rss = random_state.duplicate(3)
 
         # remove consecutive duplicate points

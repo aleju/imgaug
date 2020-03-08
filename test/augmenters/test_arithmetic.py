@@ -28,7 +28,8 @@ from imgaug.testutils import (
     keypoints_equal,
     reseed,
     runtest_pickleable_uint8_img,
-    assertWarns
+    assertWarns,
+    is_parameter_instance
 )
 import imgaug.augmenters.arithmetic as arithmetic_lib
 import imgaug.augmenters.contrast as contrast_lib
@@ -1427,14 +1428,13 @@ class TestAdd(unittest.TestCase):
         # test get_parameters()
         aug = iaa.Add(value=1, per_channel=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
+        is_parameter_instance(params[0], iap.Deterministic)
+        is_parameter_instance(params[1], iap.Deterministic)
         assert params[0].value == 1
         assert params[1].value == 0
 
     def test_heatmaps(self):
         # test heatmaps (not affected by augmenter)
-        base_img = np.ones((3, 3, 1), dtype=np.uint8) * 100
         aug = iaa.Add(value=10)
         hm = ia.quokka_heatmap()
         hm_aug = aug.augment_heatmaps([hm])[0]
@@ -1917,8 +1917,8 @@ class TestAddElementwise(unittest.TestCase):
         # test get_parameters()
         aug = iaa.AddElementwise(value=1, per_channel=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
+        is_parameter_instance(params[0], iap.Deterministic)
+        is_parameter_instance(params[1], iap.Deterministic)
         assert params[0].value == 1
         assert params[1].value == 0
 
@@ -2344,8 +2344,8 @@ class TestCutout(unittest.TestCase):
     def test___init___defaults(self):
         aug = iaa.Cutout()
         assert aug.nb_iterations.value == 1
-        assert isinstance(aug.position[0], iap.Uniform)
-        assert isinstance(aug.position[1], iap.Uniform)
+        assert is_parameter_instance(aug.position[0], iap.Uniform)
+        assert is_parameter_instance(aug.position[1], iap.Uniform)
         assert np.isclose(aug.size.value, 0.2)
         assert aug.squared.value == 1
         assert aug.fill_mode.value == "constant"
@@ -2916,19 +2916,19 @@ class TestDropout2d(unittest.TestCase):
 
     def test___init___defaults(self):
         aug = iaa.Dropout2d()
-        assert isinstance(aug.p, iap.Binomial)
+        assert is_parameter_instance(aug.p, iap.Binomial)
         assert np.isclose(aug.p.p.value, 1-0.1)
         assert aug.nb_keep_channels == 1
 
     def test___init___p_is_float(self):
         aug = iaa.Dropout2d(p=0.7)
-        assert isinstance(aug.p, iap.Binomial)
+        assert is_parameter_instance(aug.p, iap.Binomial)
         assert np.isclose(aug.p.p.value, 0.3)
         assert aug.nb_keep_channels == 1
 
     def test___init___nb_keep_channels_is_int(self):
         aug = iaa.Dropout2d(p=0, nb_keep_channels=2)
-        assert isinstance(aug.p, iap.Binomial)
+        assert is_parameter_instance(aug.p, iap.Binomial)
         assert np.isclose(aug.p.p.value, 1.0)
         assert aug.nb_keep_channels == 2
 
@@ -3173,7 +3173,7 @@ class TestDropout2d(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.Dropout2d(p=0.7, nb_keep_channels=2)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Binomial)
+        is_parameter_instance(params[0], iap.Binomial)
         assert np.isclose(params[0].p.value, 0.3)
         assert params[1] == 2
 
@@ -3272,7 +3272,7 @@ class TestTotalDropout(unittest.TestCase):
 
     def test___init___p(self):
         aug = iaa.TotalDropout(p=0)
-        assert isinstance(aug.p, iap.Binomial)
+        assert is_parameter_instance(aug.p, iap.Binomial)
         assert np.isclose(aug.p.p.value, 1.0)
 
     def test_p_is_1(self):
@@ -3789,8 +3789,8 @@ class TestMultiply(unittest.TestCase):
         # test get_parameters()
         aug = iaa.Multiply(mul=1, per_channel=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
+        is_parameter_instance(params[0], iap.Deterministic)
+        is_parameter_instance(params[1], iap.Deterministic)
         assert params[0].value == 1
         assert params[1].value == 0
 
@@ -4288,8 +4288,8 @@ class TestMultiplyElementwise(unittest.TestCase):
         # test get_parameters()
         aug = iaa.MultiplyElementwise(mul=1, per_channel=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
+        is_parameter_instance(params[0], iap.Deterministic)
+        is_parameter_instance(params[1], iap.Deterministic)
         assert params[0].value == 1
         assert params[1].value == 0
 
@@ -4761,10 +4761,10 @@ class TestReplaceElementwise(unittest.TestCase):
         # test get_parameters()
         aug = iaa.ReplaceElementwise(mask=0.5, replacement=2, per_channel=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Binomial)
-        assert isinstance(params[0].p, iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
-        assert isinstance(params[2], iap.Deterministic)
+        is_parameter_instance(params[0], iap.Binomial)
+        is_parameter_instance(params[0].p, iap.Deterministic)
+        is_parameter_instance(params[1], iap.Deterministic)
+        is_parameter_instance(params[2], iap.Deterministic)
         assert 0.5 - 1e-6 < params[0].p.value < 0.5 + 1e-6
         assert params[1].value == 2
         assert params[2].value == 0
@@ -6406,7 +6406,7 @@ class TestJpegCompression(unittest.TestCase):
 
     def test___init__(self):
         aug = iaa.JpegCompression([0, 100])
-        assert isinstance(aug.compression, iap.Choice)
+        assert is_parameter_instance(aug.compression, iap.Choice)
         assert len(aug.compression.a) == 2
         assert aug.compression.a[0] == 0
         assert aug.compression.a[1] == 100

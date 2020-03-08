@@ -21,8 +21,10 @@ import imgaug.random as iarandom
 import imgaug.augmenters.pooling as iapooling
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.testutils import (reseed, assert_cbaois_equal,
-                              runtest_pickleable_uint8_img)
+from imgaug.testutils import (reseed,
+                              assert_cbaois_equal,
+                              runtest_pickleable_uint8_img,
+                              is_parameter_instance)
 
 
 class Test_compute_shape_after_pooling(unittest.TestCase):
@@ -601,7 +603,7 @@ class _TestPoolingAugmentersBase(object):
         params = aug.get_parameters()
         assert len(params) == 2
         assert len(params[0]) == 2
-        assert isinstance(params[0][0], iap.Deterministic)
+        assert is_parameter_instance(params[0][0], iap.Deterministic)
         assert params[0][0].value == 2
         assert params[0][1] is None
 
@@ -622,7 +624,7 @@ class TestAveragePooling(unittest.TestCase, _TestPoolingAugmentersBase):
     def test___init___default_settings(self):
         aug = iaa.AveragePooling(2)
         assert len(aug.kernel_size) == 2
-        assert isinstance(aug.kernel_size[0], iap.Deterministic)
+        assert is_parameter_instance(aug.kernel_size[0], iap.Deterministic)
         assert aug.kernel_size[0].value == 2
         assert aug.kernel_size[1] is None
         assert aug.keep_size is True
@@ -630,8 +632,8 @@ class TestAveragePooling(unittest.TestCase, _TestPoolingAugmentersBase):
     def test___init___custom_settings(self):
         aug = iaa.AveragePooling(((2, 4), (5, 6)), keep_size=False)
         assert len(aug.kernel_size) == 2
-        assert isinstance(aug.kernel_size[0], iap.DiscreteUniform)
-        assert isinstance(aug.kernel_size[1], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.kernel_size[0], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.kernel_size[1], iap.DiscreteUniform)
         assert aug.kernel_size[0].a.value == 2
         assert aug.kernel_size[0].b.value == 4
         assert aug.kernel_size[1].a.value == 5

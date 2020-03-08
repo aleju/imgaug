@@ -10,6 +10,8 @@ import copy as copy_module
 from collections import defaultdict
 from abc import ABCMeta, abstractmethod
 import tempfile
+from functools import reduce, wraps
+from operator import mul as mul_op
 
 import numpy as np
 import six
@@ -23,6 +25,144 @@ from . import imgaug as ia
 from . import dtypes as iadt
 from . import random as iarandom
 from .external.opensimplex import OpenSimplex
+
+
+# Added in 0.5.0.
+_PREFETCHING_ENABLED = True
+# Added in 0.5.0.
+_NB_PREFETCH = 10000
+# Added in 0.5.0.
+_NB_PREFETCH_STRINGS = 1000
+
+
+# Added in 0.5.0.
+def _prefetchable(func):
+    @wraps(func)
+    def _inner(*args, **kwargs):
+        param = func(*args, **kwargs)
+        return _wrap_leafs_of_param_in_prefetchers(param, _NB_PREFETCH)
+    return _inner
+
+
+# Added in 0.5.0.
+def _prefetchable_str(func):
+    @wraps(func)
+    def _inner(*args, **kwargs):
+        param = func(*args, **kwargs)
+        return _wrap_leafs_of_param_in_prefetchers(param, _NB_PREFETCH_STRINGS)
+    return _inner
+
+
+# Added in 0.5.0.
+def _wrap_param_in_prefetchers(param, nb_prefetch):
+    for key, value in param.__dict__.items():
+        if isinstance(value, StochasticParameter):
+            param.__dict__[key] = _wrap_param_in_prefetchers(value, nb_prefetch)
+
+    if param.prefetchable:
+        return AutoPrefetcher(param, nb_prefetch)
+    return param
+
+
+# Added in 0.5.0.
+def _wrap_leafs_of_param_in_prefetchers(param, nb_prefetch):
+    param_wrapped, did_wrap_any_child = \
+        _wrap_leafs_of_param_in_prefetchers_recursive(
+            param, nb_prefetch
+        )
+    return param_wrapped
+
+
+# Added in 0.5.0.
+def _wrap_leafs_of_param_in_prefetchers_recursive(param, nb_prefetch):
+    if isinstance(param, (list, tuple)):
+        result = []
+        did_wrap_any_child = False
+        for param_i in param:
+            param_i_wrapped, did_wrap_any_child_i = \
+                _wrap_leafs_of_param_in_prefetchers_recursive(
+                    param_i, nb_prefetch
+                )
+            result.append(param_i_wrapped)
+            did_wrap_any_child = did_wrap_any_child or did_wrap_any_child_i
+
+        if not did_wrap_any_child:
+            return param, False
+        if isinstance(param, tuple):
+            return tuple(result), did_wrap_any_child
+        return result, did_wrap_any_child
+    elif not isinstance(param, StochasticParameter):
+        return param, False
+
+    did_wrap_any_child = False
+    for key, value in param.__dict__.items():
+        param_wrapped, did_wrap_i = \
+            _wrap_leafs_of_param_in_prefetchers_recursive(
+                value, nb_prefetch
+            )
+
+        param.__dict__[key] = param_wrapped
+        did_wrap_any_child = did_wrap_any_child or did_wrap_i
+
+    if param.prefetchable and not did_wrap_any_child and _PREFETCHING_ENABLED:
+        return AutoPrefetcher(param, nb_prefetch), True
+    return param, did_wrap_any_child
+
+
+def toggle_prefetching(enabled):
+    """Toggle prefetching on or off.
+
+    Added in 0.5.0.
+
+    Parameters
+    ----------
+    enabled : bool
+        Whether enabled is activated (``True``) or off (``False``).
+
+    """
+    global _PREFETCHING_ENABLED
+    _PREFETCHING_ENABLED = enabled
+
+
+class toggled_prefetching(object):  # pylint: disable=invalid-name
+    """Context that toggles prefetching on or off depending on a flag.
+
+    Added in 0.5.0.
+
+    Parameters
+    ----------
+    enabled : bool
+        Whether enabled is activated (``True``) or off (``False``).
+
+    """
+
+    # Added in 0.5.0.
+    def __init__(self, enabled):
+        self.enabled = enabled
+        self._old_state = None
+
+    # Added in 0.5.0.
+    def __enter__(self):
+        global _PREFETCHING_ENABLED
+        self._old_state = _PREFETCHING_ENABLED
+        _PREFETCHING_ENABLED = self.enabled
+
+    # Added in 0.5.0.
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        global _PREFETCHING_ENABLED
+        _PREFETCHING_ENABLED = self._old_state
+
+
+class no_prefetching(toggled_prefetching):  # pylint: disable=invalid-name
+    """Context that deactviates prefetching.
+
+    Added in 0.5.0.
+
+    """
+
+    # Added in 0.5.0.
+    def __init__(self):
+        super(no_prefetching, self).__init__(False)
 
 
 def _check_value_range(value, name, value_range):
@@ -67,12 +207,14 @@ def _check_value_range(value, name, value_range):
 # FIXME this uses _check_value_range, which checks for a<=x<=b, but a produced
 #       Uniform parameter has value range a<=x<b.
 def handle_continuous_param(param, name, value_range=None,
-                            tuple_to_uniform=True, list_to_choice=True):
+                            tuple_to_uniform=True, list_to_choice=True,
+                            prefetch=True):
+    result = None
+
     if ia.is_single_number(param):
         _check_value_range(param, name, value_range)
-        return Deterministic(param)
-
-    if tuple_to_uniform and isinstance(param, tuple):
+        result = Deterministic(param)
+    elif tuple_to_uniform and isinstance(param, tuple):
         assert len(param) == 2, (
             "Expected parameter '%s' with type tuple to have exactly two "
             "entries, but got %d." % (name, len(param)))
@@ -81,19 +223,22 @@ def handle_continuous_param(param, name, value_range=None,
             "numbers, got %s." % (name, [type(v) for v in param],))
         _check_value_range(param[0], name, value_range)
         _check_value_range(param[1], name, value_range)
-        return Uniform(param[0], param[1])
-
-    if (list_to_choice and ia.is_iterable(param)
+        result = Uniform(param[0], param[1])
+    elif (list_to_choice and ia.is_iterable(param)
             and not isinstance(param, tuple)):
         assert all([ia.is_single_number(v) for v in param]), (
             "Expected iterable parameter '%s' to only contain numbers, "
             "got %s." % (name, [type(v) for v in param],))
         for param_i in param:
             _check_value_range(param_i, name, value_range)
-        return Choice(param)
+        result = Choice(param)
+    elif isinstance(param, StochasticParameter):
+        result = param
 
-    if isinstance(param, StochasticParameter):
-        return param
+    if result is not None:
+        if prefetch:
+            return _wrap_leafs_of_param_in_prefetchers(result, _NB_PREFETCH)
+        return result
 
     allowed_type = "number"
     list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
@@ -104,13 +249,15 @@ def handle_continuous_param(param, name, value_range=None,
 
 
 def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
-                          list_to_choice=True, allow_floats=True):
+                          list_to_choice=True, allow_floats=True,
+                          prefetch=True):
+    result = None
+
     if (ia.is_single_integer(param)
             or (allow_floats and ia.is_single_float(param))):
         _check_value_range(param, name, value_range)
-        return Deterministic(int(param))
-
-    if tuple_to_uniform and isinstance(param, tuple):
+        result = Deterministic(int(param))
+    elif tuple_to_uniform and isinstance(param, tuple):
         assert len(param) == 2, (
             "Expected parameter '%s' with type tuple to have exactly two "
             "entries, but got %d." % (name, len(param)))
@@ -127,9 +274,8 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
 
         _check_value_range(param[0], name, value_range)
         _check_value_range(param[1], name, value_range)
-        return DiscreteUniform(int(param[0]), int(param[1]))
-
-    if (list_to_choice and ia.is_iterable(param)
+        result = DiscreteUniform(int(param[0]), int(param[1]))
+    elif (list_to_choice and ia.is_iterable(param)
             and not isinstance(param, tuple)):
         is_valid_types = all([
             ia.is_single_number(v)
@@ -144,10 +290,14 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
 
         for param_i in param:
             _check_value_range(param_i, name, value_range)
-        return Choice([int(param_i) for param_i in param])
+        result = Choice([int(param_i) for param_i in param])
+    elif isinstance(param, StochasticParameter):
+        result = param
 
-    if isinstance(param, StochasticParameter):
-        return param
+    if result is not None:
+        if prefetch:
+            return _wrap_leafs_of_param_in_prefetchers(result, _NB_PREFETCH)
+        return result
 
     allowed_type = "number" if allow_floats else "int"
     list_str = ", list of %s" % (allowed_type,) if list_to_choice else ""
@@ -158,18 +308,19 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
 
 
 # Added in 0.4.0.
-def handle_categorical_string_param(param, name, valid_values=None):
-    if param == ia.ALL and valid_values is not None:
-        return Choice(list(valid_values))
+def handle_categorical_string_param(param, name, valid_values=None,
+                                    prefetch=True):
+    result = None
 
-    if ia.is_string(param):
+    if param == ia.ALL and valid_values is not None:
+        result = Choice(list(valid_values))
+    elif ia.is_string(param):
         if valid_values is not None:
             assert param in valid_values, (
                 "Expected parameter '%s' to be one of: %s. Got: %s." % (
                     name, ", ".join(list(valid_values)), param))
-        return Deterministic(param)
-
-    if isinstance(param, list):
+        result = Deterministic(param)
+    elif isinstance(param, list):
         assert all([ia.is_string(val) for val in param]), (
             "Expected list provided for parameter '%s' to only contain "
             "strings, got types: %s." % (
@@ -180,10 +331,16 @@ def handle_categorical_string_param(param, name, valid_values=None):
                 "the following allowed strings: %s. Got strings: %s." % (
                     name, ", ".join(valid_values), ", ".join(param)
                 ))
-        return Choice(param)
+        result = Choice(param)
+    elif isinstance(param, StochasticParameter):
+        result = param
 
-    if isinstance(param, StochasticParameter):
-        return param
+    # we currently prefetch only 1k values here instead of 10k, because
+    # strings might be rather long
+    if result is not None:
+        if prefetch:
+            return _wrap_leafs_of_param_in_prefetchers(result, _NB_PREFETCH_STRINGS)
+        return result
 
     raise Exception(
         "Expected parameter '%s' to be%s a string, a list of "
@@ -194,13 +351,13 @@ def handle_categorical_string_param(param, name, valid_values=None):
 
 
 def handle_discrete_kernel_size_param(param, name, value_range=(1, None),
-                                      allow_floats=True):
+                                      allow_floats=True, prefetch=True):
+    result = None, None
     if (ia.is_single_integer(param)
             or (allow_floats and ia.is_single_float(param))):
         _check_value_range(param, name, value_range)
-        return Deterministic(int(param)), None
-
-    if isinstance(param, tuple):
+        result = Deterministic(int(param)), None
+    elif isinstance(param, tuple):
         assert len(param) == 2, (
             "Expected parameter '%s' with type tuple to have exactly two "
             "entries, but got %d." % (name, len(param)))
@@ -209,24 +366,22 @@ def handle_discrete_kernel_size_param(param, name, value_range=(1, None),
                                           for param_i in param]))):
             _check_value_range(param[0], name, value_range)
             _check_value_range(param[1], name, value_range)
-            return DiscreteUniform(int(param[0]), int(param[1])), None
+            result = DiscreteUniform(int(param[0]), int(param[1])), None
+        elif all([isinstance(param_i, StochasticParameter)
+                  for param_i in param]):
+            result = param[0], param[1]
+        else:
+            handled = (
+                handle_discrete_param(
+                    param[0], "%s[0]" % (name,), value_range,
+                    allow_floats=allow_floats),
+                handle_discrete_param(
+                    param[1], "%s[1]" % (name,), value_range,
+                    allow_floats=allow_floats)
+            )
 
-        if all([isinstance(param_i, StochasticParameter)
-                for param_i in param]):
-            return param[0], param[1]
-
-        handled = (
-            handle_discrete_param(
-                param[0], "%s[0]" % (name,), value_range,
-                allow_floats=allow_floats),
-            handle_discrete_param(
-                param[1], "%s[1]" % (name,), value_range,
-                allow_floats=allow_floats)
-        )
-
-        return handled
-
-    if ia.is_iterable(param) and not isinstance(param, tuple):
+            result = handled
+    elif ia.is_iterable(param) and not isinstance(param, tuple):
         is_valid_types = all([
             ia.is_single_number(v)
             if allow_floats else ia.is_single_integer(v)
@@ -240,10 +395,18 @@ def handle_discrete_kernel_size_param(param, name, value_range=(1, None),
 
         for param_i in param:
             _check_value_range(param_i, name, value_range)
-        return Choice([int(param_i) for param_i in param]), None
+        result = Choice([int(param_i) for param_i in param]), None
+    elif isinstance(param, StochasticParameter):
+        result = param, None
 
-    if isinstance(param, StochasticParameter):
-        return param, None
+    result_pf = []
+    for v in result:
+        if v is not None and prefetch:
+            v = _wrap_leafs_of_param_in_prefetchers(v, _NB_PREFETCH)
+        result_pf.append(v)
+
+    if result_pf != [None, None]:
+        return tuple(result_pf)
 
     raise Exception(
         "Expected int, tuple/list with 2 entries or StochasticParameter. "
@@ -251,21 +414,21 @@ def handle_discrete_kernel_size_param(param, name, value_range=(1, None),
 
 
 def handle_probability_param(param, name, tuple_to_uniform=False,
-                             list_to_choice=False):
+                             list_to_choice=False, prefetch=True):
     eps = 1e-6
 
-    if param in [True, False, 0, 1]:
-        return Deterministic(int(param))
+    result = None
 
-    if ia.is_single_number(param):
+    if param in [True, False, 0, 1]:
+        result = Deterministic(int(param))
+    elif ia.is_single_number(param):
         assert 0.0 <= param <= 1.0, (
             "Expected probability of parameter '%s' to be in the interval "
             "[0.0, 1.0], got %.4f." % (name, param,))
         if 0.0-eps < param < 0.0+eps or 1.0-eps < param < 1.0+eps:
             return Deterministic(int(np.round(param)))
-        return Binomial(param)
-
-    if tuple_to_uniform and isinstance(param, tuple):
+        result = Binomial(param)
+    elif tuple_to_uniform and isinstance(param, tuple):
         assert all([ia.is_single_number(v) for v in param]), (
             "Expected parameter '%s' of type tuple to only contain numbers, "
             "got %s." % (name, [type(v) for v in param],))
@@ -276,9 +439,8 @@ def handle_probability_param(param, name, tuple_to_uniform=False,
             "Expected parameter '%s' of type tuple to contain two "
             "probabilities in the interval [0.0, 1.0]. "
             "Got values %.4f and %.4f." % (name, param[0], param[1]))
-        return Binomial(Uniform(param[0], param[1]))
-
-    if list_to_choice and ia.is_iterable(param):
+        result = Binomial(Uniform(param[0], param[1]))
+    elif list_to_choice and ia.is_iterable(param):
         assert all([ia.is_single_number(v) for v in param]), (
             "Expected iterable parameter '%s' to only contain numbers, "
             "got %s." % (name, [type(v) for v in param],))
@@ -286,10 +448,14 @@ def handle_probability_param(param, name, tuple_to_uniform=False,
             "Expected iterable parameter '%s' to only contain probabilities "
             "in the interval [0.0, 1.0], got values %s." % (
                 name, ", ".join(["%.4f" % (p_i,) for p_i in param])))
-        return Binomial(Choice(param))
+        result = Binomial(Choice(param))
+    elif isinstance(param, StochasticParameter):
+        result = param
 
-    if isinstance(param, StochasticParameter):
-        return param
+    if result is not None:
+        if prefetch:
+            return _wrap_leafs_of_param_in_prefetchers(result, _NB_PREFETCH)
+        return result
 
     raise Exception(
         "Expected boolean or number or StochasticParameter for %s, "
@@ -367,6 +533,22 @@ class StochasticParameter(object):
     def __init__(self):
         pass
 
+    @property
+    def prefetchable(self):
+        """Determines whether this parameter may be prefetched.
+
+        Added in 0.5.0.
+
+        Returns
+        -------
+        bool
+            Whether to allow prefetching of this parameter's samples.
+            This should usually only be ``True`` for parameters that actually
+            perform random sampling, i.e. depend on an RNG.
+
+        """
+        return False
+
     def draw_sample(self, random_state=None):
         """
         Draws a single sample value from this parameter.
@@ -409,7 +591,8 @@ class StochasticParameter(object):
             to match `size`.
 
         """
-        random_state = iarandom.RNG(random_state)
+        if not isinstance(random_state, iarandom.RNG):
+            random_state = iarandom.RNG(random_state)
         samples = self._draw_samples(
             size if not ia.is_single_integer(size) else tuple([size]),
             random_state)
@@ -629,6 +812,120 @@ class StochasticParameter(object):
         return data
 
 
+class AutoPrefetcher(StochasticParameter):
+    """Parameter that prefetches random samples from a child parameter.
+
+    This parameter will fetch ``N`` random samples in one big swoop and then
+    return ``M`` of these samples upon each call, with ``M << N``.
+    This improves the sampling efficiency by performing as few sampling
+    calls as possible.
+
+    This parameter will only start to prefetch after the first call.
+    In some cases this prevents inefficiencies when augmenters are only used
+    once. (Though this only works if the respective augmenter performs
+    a single sampling call per batch and not one call per image.)
+
+    This parameter will throw away its prefetched samples if a new RNG
+    is provided (compared to the previous call). It will however ignore the
+    state of the RNG.
+
+    This parameter should only wrap leaf nodes. In something like
+    ``Add(1, Normal(Uniform(0, 1), Uniform(0, 2)))`` it should only be applied
+    to the two ``Uniform`` instaces. Otherwise, only a single sample of
+    ``Uniform(0, 1)`` might be taken and influence thousands of samples of
+    ``Normal``.
+
+    Note that the samples returned by this parameter are part of a larger
+    array. In-place changes to these samples should hence be performed with
+    some caution.
+
+    Added in 0.5.0.
+
+    """
+
+    # Added in 0.5.0.
+    def __init__(self, other_param, nb_prefetch):
+        super(AutoPrefetcher, self).__init__()
+        self.other_param = other_param
+        self.nb_prefetch = nb_prefetch
+
+        self.samples = None
+        self.index = 0
+        self.last_rng_idx = None
+
+    # Added in 0.5.0.
+    def _draw_samples(self, size, random_state):
+        if not _PREFETCHING_ENABLED:
+            return self.other_param.draw_samples(size, random_state)
+
+        if self.last_rng_idx is None or random_state._idx != self.last_rng_idx:
+            self.last_rng_idx = random_state._idx
+            self.samples = None
+            return self.other_param.draw_samples(size, random_state)
+
+        self.last_rng_idx = random_state._idx
+
+        nb_components = reduce(mul_op, size)
+
+        if nb_components >= self.nb_prefetch:
+            return self.other_param.draw_samples(size, random_state)
+
+        if self.samples is None:
+            self._prefetch(random_state)
+
+        leftover = len(self.samples) - self.index - nb_components
+        if leftover <= 0:
+            self._prefetch(random_state)
+
+        samples = self.samples[self.index:self.index+nb_components]
+        self.index += nb_components
+
+        return samples.reshape(size)
+
+    # Added in 0.5.0.
+    def _prefetch(self, random_state):
+        samples = self.other_param.draw_samples((self.nb_prefetch,),
+                                                random_state)
+        if self.samples is None:
+            self.samples = samples
+        else:
+            self.samples = np.concatenate([
+                self.samples[self.index:], samples
+            ], axis=0)
+        self.index = 0
+
+    # Added in 0.5.0.
+    def __getattr__(self, attr):
+        other_param = super(
+            AutoPrefetcher, self
+        ).__getattribute__("other_param")
+        return getattr(other_param, attr)
+
+    # Added in 0.5.0.
+    def __repr__(self):
+        return self.__str__()
+
+    # Added in 0.5.0.
+    def __str__(self):
+        has_samples = (self.samples is not None)
+        return (
+            "AutoPrefetcher("
+            "nb_prefetch=%d, "
+            "samples=%s (dtype %s), "
+            "index=%d, "
+            "last_rng_idx=%s, "
+            "other_param=%s"
+            ")" % (
+                self.nb_prefetch,
+                self.samples.shape if has_samples else "None",
+                self.samples.dtype.name if has_samples else "None",
+                self.index,
+                self.last_rng_idx,
+                str(self.other_param)
+            )
+        )
+
+
 class Deterministic(StochasticParameter):
     """Parameter that is a constant value.
 
@@ -799,6 +1096,12 @@ class Choice(StochasticParameter):
                 "got %d and %d." % (len(a), len(p)))
         self.p = p
 
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
+
     def _draw_samples(self, size, random_state):
         if any([isinstance(a_i, StochasticParameter) for a_i in self.a]):
             rngs = random_state.duplicate(1+len(self.a))
@@ -900,6 +1203,12 @@ class Binomial(StochasticParameter):
         super(Binomial, self).__init__()
         self.p = handle_continuous_param(p, "p")
 
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
+
     def _draw_samples(self, size, random_state):
         p = self.p.draw_sample(random_state=random_state)
         assert 0 <= p <= 1.0, (
@@ -957,6 +1266,12 @@ class DiscreteUniform(StochasticParameter):
 
         self.a = handle_discrete_param(a, "a")
         self.b = handle_discrete_param(b, "b")
+
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
 
     def _draw_samples(self, size, random_state):
         # pylint: disable=invalid-name
@@ -1016,6 +1331,12 @@ class Poisson(StochasticParameter):
 
         self.lam = handle_continuous_param(lam, "lam")
 
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
+
     def _draw_samples(self, size, random_state):
         lam = self.lam.draw_sample(random_state=random_state)
         lam = max(lam, 0)
@@ -1071,6 +1392,12 @@ class Normal(StochasticParameter):
         self.loc = handle_continuous_param(loc, "loc")
         self.scale = handle_continuous_param(scale, "scale",
                                              value_range=(0, None))
+
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
 
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
@@ -1149,6 +1476,12 @@ class TruncatedNormal(StochasticParameter):
         self.low = handle_continuous_param(low, "low")
         self.high = handle_continuous_param(high, "high")
 
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
+
     def _draw_samples(self, size, random_state):
         # pylint: disable=invalid-name
         loc = self.loc.draw_sample(random_state=random_state)
@@ -1224,6 +1557,12 @@ class Laplace(StochasticParameter):
         self.scale = handle_continuous_param(scale, "scale",
                                              value_range=(0, None))
 
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
+
     def _draw_samples(self, size, random_state):
         loc = self.loc.draw_sample(random_state=random_state)
         scale = self.scale.draw_sample(random_state=random_state)
@@ -1275,6 +1614,12 @@ class ChiSquare(StochasticParameter):
 
         self.df = handle_discrete_param(df, "df", value_range=(1, None))
 
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
+
     def _draw_samples(self, size, random_state):
         # pylint: disable=invalid-name
         df = self.df.draw_sample(random_state=random_state)
@@ -1324,6 +1669,12 @@ class Weibull(StochasticParameter):
         super(Weibull, self).__init__()
 
         self.a = handle_continuous_param(a, "a", value_range=(0.0001, None))
+
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
 
     def _draw_samples(self, size, random_state):
         # pylint: disable=invalid-name
@@ -1381,6 +1732,12 @@ class Uniform(StochasticParameter):
 
         self.a = handle_continuous_param(a, "a")
         self.b = handle_continuous_param(b, "b")
+
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
 
     def _draw_samples(self, size, random_state):
         # pylint: disable=invalid-name
@@ -1444,6 +1801,12 @@ class Beta(StochasticParameter):
         assert ia.is_single_number(epsilon), (
             "Expected epsilon to a number, got type %s." % (type(epsilon),))
         self.epsilon = epsilon
+
+    # Added in 0.5.0.
+    @property
+    def prefetchable(self):
+        """See :func:`StochasticParameter.prefetchable`."""
+        return True
 
     def _draw_samples(self, size, random_state):
         alpha = self.alpha.draw_sample(random_state=random_state)
@@ -1846,8 +2209,9 @@ class Multiply(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Multiply, self).__init__()
 
-        self.other_param = handle_continuous_param(other_param, "other_param")
-        self.val = handle_continuous_param(val, "val")
+        self.other_param = handle_continuous_param(other_param, "other_param",
+                                                   prefetch=False)
+        self.val = handle_continuous_param(val, "val", prefetch=False)
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
@@ -1926,8 +2290,9 @@ class Divide(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Divide, self).__init__()
 
-        self.other_param = handle_continuous_param(other_param, "other_param")
-        self.val = handle_continuous_param(val, "val")
+        self.other_param = handle_continuous_param(other_param, "other_param",
+                                                   prefetch=False)
+        self.val = handle_continuous_param(val, "val", prefetch=False)
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
@@ -2018,8 +2383,9 @@ class Add(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Add, self).__init__()
 
-        self.other_param = handle_continuous_param(other_param, "other_param")
-        self.val = handle_continuous_param(val, "val")
+        self.other_param = handle_continuous_param(other_param, "other_param",
+                                                   prefetch=False)
+        self.val = handle_continuous_param(val, "val", prefetch=False)
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
@@ -2093,8 +2459,9 @@ class Subtract(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Subtract, self).__init__()
 
-        self.other_param = handle_continuous_param(other_param, "other_param")
-        self.val = handle_continuous_param(val, "val")
+        self.other_param = handle_continuous_param(other_param, "other_param",
+                                                   prefetch=False)
+        self.val = handle_continuous_param(val, "val", prefetch=False)
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
@@ -2169,8 +2536,9 @@ class Power(StochasticParameter):
     def __init__(self, other_param, val, elementwise=False):
         super(Power, self).__init__()
 
-        self.other_param = handle_continuous_param(other_param, "other_param")
-        self.val = handle_continuous_param(val, "val")
+        self.other_param = handle_continuous_param(other_param, "other_param",
+                                                   prefetch=False)
+        self.val = handle_continuous_param(val, "val", prefetch=False)
         self.elementwise = elementwise
 
     def _draw_samples(self, size, random_state):
@@ -2733,8 +3101,10 @@ class Sigmoid(StochasticParameter):
         _assert_arg_is_stoch_param("other_param", other_param)
         self.other_param = other_param
 
-        self.threshold = handle_continuous_param(threshold, "threshold")
-        self.activated = handle_probability_param(activated, "activated")
+        self.threshold = handle_continuous_param(threshold, "threshold",
+                                                 prefetch=False)
+        self.activated = handle_probability_param(activated, "activated",
+                                                  prefetch=False)
 
         assert ia.is_single_number(mul), (
             "Expected 'mul' to be a number, got type %s." % (type(mul),))

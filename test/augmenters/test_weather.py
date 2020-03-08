@@ -18,7 +18,8 @@ import cv2
 import imgaug as ia
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
-from imgaug.testutils import reseed, runtest_pickleable_uint8_img
+from imgaug.testutils import (reseed, runtest_pickleable_uint8_img,
+                              is_parameter_instance)
 
 
 class _TwoValueParam(iap.StochasticParameter):
@@ -42,12 +43,12 @@ class TestFastSnowyLandscape(unittest.TestCase):
         aug = iaa.FastSnowyLandscape(
             lightness_threshold=[100, 200],
             lightness_multiplier=[1.0, 4.0])
-        assert isinstance(aug.lightness_threshold, iap.Choice)
+        assert is_parameter_instance(aug.lightness_threshold, iap.Choice)
         assert len(aug.lightness_threshold.a) == 2
         assert aug.lightness_threshold.a[0] == 100
         assert aug.lightness_threshold.a[1] == 200
 
-        assert isinstance(aug.lightness_multiplier, iap.Choice)
+        assert is_parameter_instance(aug.lightness_multiplier, iap.Choice)
         assert len(aug.lightness_multiplier.a) == 2
         assert np.allclose(aug.lightness_multiplier.a[0], 1.0)
         assert np.allclose(aug.lightness_multiplier.a[1], 4.0)

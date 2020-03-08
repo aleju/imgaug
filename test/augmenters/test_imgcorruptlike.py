@@ -256,28 +256,29 @@ class TestAugmenters(unittest.TestCase):
             np.arange(32*32*3), 256
         ).reshape((32, 32, 3)).astype(np.uint8)
 
-        rng = iarandom.RNG(1)
-        # Replay sampling of severities.
-        # Even for deterministic values this is required as currently
-        # there is an advance() at the end of each draw_samples().
-        _ = iap.Deterministic(1).draw_samples((1,), rng)
+        with iap.no_prefetching():
+            rng = iarandom.RNG(1)
+            # Replay sampling of severities.
+            # Even for deterministic values this is required as currently
+            # there is an advance() at the end of each draw_samples().
+            _ = iap.Deterministic(1).draw_samples((1,), rng)
 
-        # As for the functions above, we can't just change the seed value
-        # to get different augmentations as many functions are dependend
-        # only on the severity. So we change only for some functions only
-        # the seed and for the others severity+seed.
-        image_aug1 = aug_cls(severity=severity, seed=1)(image=image)
-        image_aug2 = aug_cls(severity=severity, seed=1)(image=image)
-        if dependent_on_seed:
-            image_aug3 = aug_cls(severity=severity, seed=2)(
-                image=image)
-        else:
-            image_aug3 = aug_cls(severity=severity-1, seed=2)(
-                image=image)
-        image_aug_exp = func_expected(
-            image,
-            severity=severity,
-            seed=rng.generate_seed_())
+            # As for the functions above, we can't just change the seed value
+            # to get different augmentations as many functions are dependend
+            # only on the severity. So we change only for some functions only
+            # the seed and for the others severity+seed.
+            image_aug1 = aug_cls(severity=severity, seed=1)(image=image)
+            image_aug2 = aug_cls(severity=severity, seed=1)(image=image)
+            if dependent_on_seed:
+                image_aug3 = aug_cls(severity=severity, seed=2)(
+                    image=image)
+            else:
+                image_aug3 = aug_cls(severity=severity-1, seed=2)(
+                    image=image)
+            image_aug_exp = func_expected(
+                image,
+                severity=severity,
+                seed=rng.generate_seed_())
 
         assert aug_cls(severity=severity).func is func_expected
         assert np.array_equal(image_aug1, image_aug_exp)

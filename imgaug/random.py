@@ -78,6 +78,9 @@ GLOBAL_RNG = None
 SEED_MIN_VALUE = 0
 SEED_MAX_VALUE = 2**31-1
 
+# Added in 0.5.0.
+_RNG_IDX = 1
+
 # TODO decrease pool_size in SeedSequence to 2 or 1?
 # TODO add 'with resetted_rng(...)'
 # TODO change random_state to rng or seed
@@ -148,12 +151,22 @@ class RNG(object):
     # TODO add maybe a __new__ here that feeds-through an RNG input without
     #      wrapping it in RNG(rng_input)?
     def __init__(self, generator):
+        global _RNG_IDX
+
         if isinstance(generator, RNG):
             self.generator = generator.generator
         else:
             self.generator = normalize_generator_(generator)
         self._is_new_rng_style = (
             not isinstance(self.generator, np.random.RandomState))
+
+        # _idx is used to have a unique id for each RNG.
+        # This is currently necessary for AutoPrefetcher. It could be done
+        # similarly via the generator state, though at a much higher
+        # computational cost. id(rng) cannot be used for this as multiple
+        # RNG instances with different states may have the same id() value.
+        self._idx = _RNG_IDX
+        _RNG_IDX += 1
 
     @property
     def state(self):
@@ -453,6 +466,31 @@ class RNG(object):
 
         """
         return get_global_rng().derive_rng_()
+
+    @classmethod
+    def create_if_not_rng_(cls, generator):
+        """Create a new RNG from any input, but feed-through RNGs unchanged.
+
+        Added in 0.5.0.
+
+        Parameters
+        ----------
+        generator : None or int or RNG or numpy.random.Generator or numpy.random.BitGenerator or numpy.random.SeedSequence or numpy.random.RandomState
+            The numpy random number generator to use.
+            If this is an :class:`RNG`, it will be returned without change.
+            See ``__init__`` for details.
+
+        Returns
+        -------
+        RNG
+            If an :class:`RNG` was provided, then the input :class:`RNG`
+            instance without any change. Otherwise equivalent to
+            ``RNG(inputs)``.
+
+        """
+        if isinstance(generator, RNG):
+            return generator
+        return RNG(generator)
 
     ###########################################################################
     # Below:

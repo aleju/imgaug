@@ -1921,7 +1921,7 @@ class MultiplyHueAndSaturation(WithHueAndSaturation):
         if seed is None:
             rss = [None] * 5
         else:
-            rss = iarandom.RNG(seed).derive_rngs_(5)
+            rss = iarandom.RNG.create_if_not_rng_(seed).derive_rngs_(5)
 
         children = []
         if mul is not None:
@@ -2890,6 +2890,9 @@ class ChangeColorspace(meta.Augmenter):
             raise Exception("Expected to_colorspace to be string, list of "
                             "strings or StochasticParameter, got %s." % (
                                 type(to_colorspace),))
+        self.to_colorspace = iap._wrap_leafs_of_param_in_prefetchers(
+            self.to_colorspace, iap._NB_PREFETCH_STRINGS
+        )
 
         assert ia.is_string(from_colorspace), (
             "Expected from_colorspace to be a single string, "

@@ -37,7 +37,7 @@ from imgaug.testutils import (create_random_images, create_random_keypoints,
                               array_equal_lists, keypoints_equal, reseed,
                               assert_cbaois_equal,
                               runtest_pickleable_uint8_img,
-                              TemporaryDirectory)
+                              TemporaryDirectory, is_parameter_instance)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.lines import LineString, LineStringsOnImage
@@ -7609,8 +7609,8 @@ class TestSometimes(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.Sometimes(0.75)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Binomial)
-        assert isinstance(params[0].p, iap.Deterministic)
+        assert is_parameter_instance(params[0], iap.Binomial)
+        assert is_parameter_instance(params[0].p, iap.Deterministic)
         assert 0.75 - 1e-8 < params[0].p.value < 0.75 + 1e-8
 
     def test___str___and___repr__(self):
@@ -7622,7 +7622,6 @@ class TestSometimes(unittest.TestCase):
             else_list=else_list,
             name="SometimesTest")
 
-        expected_p = "Binomial(Deterministic(float 0.50000000))"
         expected_then_list = (
             "Sequential("
             "name=SometimesTest-then, "
@@ -7641,7 +7640,7 @@ class TestSometimes(unittest.TestCase):
             "Sometimes("
             "p=%s, name=%s, then_list=%s, else_list=%s, deterministic=%s"
             ")" % (
-                expected_p,
+                str(aug.p),
                 "SometimesTest",
                 expected_then_list,
                 expected_else_list,
@@ -7660,7 +7659,6 @@ class TestSometimes(unittest.TestCase):
             else_list=None,
             name="SometimesTest")
 
-        expected_p = "Binomial(Deterministic(float 0.50000000))"
         expected = (
             "Sometimes("
             "p=%s, "
@@ -7669,7 +7667,7 @@ class TestSometimes(unittest.TestCase):
             "else_list=%s, "
             "deterministic=%s"
             ")" % (
-                expected_p,
+                str(aug.p),
                 "SometimesTest",
                 "None",
                 "None",
@@ -8465,8 +8463,8 @@ class TestChannelShuffle(unittest.TestCase):
 
     def test___init__(self):
         aug = iaa.ChannelShuffle(p=0.9, channels=[0, 2])
-        assert isinstance(aug.p, iap.Binomial)
-        assert isinstance(aug.p.p, iap.Deterministic)
+        assert is_parameter_instance(aug.p, iap.Binomial)
+        assert is_parameter_instance(aug.p.p, iap.Deterministic)
         assert np.allclose(aug.p.p.value, 0.9)
         assert aug.channels == [0, 2]
 

@@ -263,6 +263,7 @@ def _int_r(value):
 
 
 # TODO somehow integrate this with pad()
+@iap._prefetchable_str
 def _handle_pad_mode_param(pad_mode):
     pad_modes_available = {
         "constant", "edge", "linear_ramp", "maximum", "mean", "median",
@@ -286,6 +287,7 @@ def _handle_pad_mode_param(pad_mode):
         "StochasticParameter, got %s." % (type(pad_mode),))
 
 
+@iap._prefetchable
 def _handle_position_parameter(position):
     if position == "uniform":
         return iap.Uniform(0.0, 1.0), iap.Uniform(0.0, 1.0)
@@ -1279,6 +1281,7 @@ class Resize(meta.Augmenter):
         self.interpolation = self._handle_interpolation_arg(interpolation)
 
     @classmethod
+    @iap._prefetchable_str
     def _handle_size_arg(cls, size, subcall):
         def _dict_to_size_tuple(val1, val2):
             kaa = "keep-aspect-ratio"
@@ -1843,6 +1846,7 @@ class CropAndPad(meta.Augmenter):
         self._pad_cval_segmentation_maps = 0
 
     @classmethod
+    @iap._prefetchable
     def _handle_px_and_percent_args(cls, px, percent):
         # pylint: disable=invalid-name
         all_sides = None
@@ -4684,6 +4688,7 @@ class KeepSizeByResize(meta.Augmenter):
             random_state=random_state, deterministic=deterministic)
         self.children = children
 
+        @iap._prefetchable_str
         def _validate_param(val, allow_same_as_images):
             valid_ips_and_resize = ia.IMRESIZE_VALID_INTERPOLATIONS \
                                   + [KeepSizeByResize.NO_RESIZE]

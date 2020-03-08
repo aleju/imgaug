@@ -23,7 +23,8 @@ import cv2
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import random as iarandom
-from imgaug.testutils import reseed, runtest_pickleable_uint8_img
+from imgaug.testutils import (reseed, runtest_pickleable_uint8_img,
+                              is_parameter_instance, remove_prefetching)
 
 
 class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
@@ -32,8 +33,8 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
 
     def test___init___default_settings(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer()
-        assert isinstance(colorizer.color_true, iap.DiscreteUniform)
-        assert isinstance(colorizer.color_false, iap.DiscreteUniform)
+        assert is_parameter_instance(colorizer.color_true, iap.DiscreteUniform)
+        assert is_parameter_instance(colorizer.color_false, iap.DiscreteUniform)
         assert colorizer.color_true.a.value == 0
         assert colorizer.color_true.b.value == 255
         assert colorizer.color_false.a.value == 0
@@ -42,16 +43,16 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
     def test___init___deterministic_settinga(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(color_true=1,
                                                          color_false=2)
-        assert isinstance(colorizer.color_true, iap.Deterministic)
-        assert isinstance(colorizer.color_false, iap.Deterministic)
+        assert is_parameter_instance(colorizer.color_true, iap.Deterministic)
+        assert is_parameter_instance(colorizer.color_false, iap.Deterministic)
         assert colorizer.color_true.value == 1
         assert colorizer.color_false.value == 2
 
     def test___init___tuple_and_list(self):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=(0, 100), color_false=[200, 201, 202])
-        assert isinstance(colorizer.color_true, iap.DiscreteUniform)
-        assert isinstance(colorizer.color_false, iap.Choice)
+        assert is_parameter_instance(colorizer.color_true, iap.DiscreteUniform)
+        assert is_parameter_instance(colorizer.color_false, iap.Choice)
         assert colorizer.color_true.a.value == 0
         assert colorizer.color_true.b.value == 100
         assert colorizer.color_false.a[0] == 200
@@ -62,8 +63,8 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
         colorizer = iaa.RandomColorsBinaryImageColorizer(
             color_true=iap.DiscreteUniform(0, 100),
             color_false=iap.Choice([200, 201, 202]))
-        assert isinstance(colorizer.color_true, iap.DiscreteUniform)
-        assert isinstance(colorizer.color_false, iap.Choice)
+        assert is_parameter_instance(colorizer.color_true, iap.DiscreteUniform)
+        assert is_parameter_instance(colorizer.color_false, iap.Choice)
         assert colorizer.color_true.a.value == 0
         assert colorizer.color_true.b.value == 100
         assert colorizer.color_false.a[0] == 200
@@ -175,23 +176,27 @@ class TestRandomColorsBinaryImageColorizer(unittest.TestCase):
 class TestCanny(unittest.TestCase):
     def test___init___default_settings(self):
         aug = iaa.Canny()
-        assert isinstance(aug.alpha, iap.Uniform)
+        assert is_parameter_instance(aug.alpha, iap.Uniform)
         assert isinstance(aug.hysteresis_thresholds, tuple)
-        assert isinstance(aug.sobel_kernel_size, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.sobel_kernel_size, iap.DiscreteUniform)
         assert isinstance(aug.colorizer, iaa.RandomColorsBinaryImageColorizer)
         assert np.isclose(aug.alpha.a.value, 0.0)
         assert np.isclose(aug.alpha.b.value, 1.0)
         assert len(aug.hysteresis_thresholds) == 2
-        assert isinstance(aug.hysteresis_thresholds[0], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.hysteresis_thresholds[0],
+                                     iap.DiscreteUniform)
         assert np.isclose(aug.hysteresis_thresholds[0].a.value, 100-40)
         assert np.isclose(aug.hysteresis_thresholds[0].b.value, 100+40)
-        assert isinstance(aug.hysteresis_thresholds[1], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.hysteresis_thresholds[1],
+                                     iap.DiscreteUniform)
         assert np.isclose(aug.hysteresis_thresholds[1].a.value, 200-40)
         assert np.isclose(aug.hysteresis_thresholds[1].b.value, 200+40)
         assert aug.sobel_kernel_size.a.value == 3
         assert aug.sobel_kernel_size.b.value == 7
-        assert isinstance(aug.colorizer.color_true, iap.DiscreteUniform)
-        assert isinstance(aug.colorizer.color_false, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.colorizer.color_true,
+                                     iap.DiscreteUniform)
+        assert is_parameter_instance(aug.colorizer.color_false,
+                                     iap.DiscreteUniform)
         assert aug.colorizer.color_true.a.value == 0
         assert aug.colorizer.color_true.b.value == 255
         assert aug.colorizer.color_false.a.value == 0
@@ -205,21 +210,24 @@ class TestCanny(unittest.TestCase):
             colorizer=iaa.RandomColorsBinaryImageColorizer(
                 color_true=10, color_false=20)
         )
-        assert isinstance(aug.alpha, iap.Deterministic)
+        assert is_parameter_instance(aug.alpha, iap.Deterministic)
         assert isinstance(aug.hysteresis_thresholds, tuple)
-        assert isinstance(aug.sobel_kernel_size, iap.Choice)
+        assert is_parameter_instance(aug.sobel_kernel_size, iap.Choice)
         assert isinstance(aug.colorizer, iaa.RandomColorsBinaryImageColorizer)
         assert np.isclose(aug.alpha.value, 0.2)
         assert len(aug.hysteresis_thresholds) == 2
-        assert isinstance(aug.hysteresis_thresholds[0], iap.Choice)
+        assert is_parameter_instance(aug.hysteresis_thresholds[0], iap.Choice)
         assert aug.hysteresis_thresholds[0].a == [0, 1, 2]
-        assert isinstance(aug.hysteresis_thresholds[1], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.hysteresis_thresholds[1],
+                                     iap.DiscreteUniform)
         assert np.isclose(aug.hysteresis_thresholds[1].a.value, 1)
         assert np.isclose(aug.hysteresis_thresholds[1].b.value, 10)
-        assert isinstance(aug.sobel_kernel_size, iap.Choice)
+        assert is_parameter_instance(aug.sobel_kernel_size, iap.Choice)
         assert aug.sobel_kernel_size.a == [3, 5]
-        assert isinstance(aug.colorizer.color_true, iap.Deterministic)
-        assert isinstance(aug.colorizer.color_false, iap.Deterministic)
+        assert is_parameter_instance(aug.colorizer.color_true,
+                                     iap.Deterministic)
+        assert is_parameter_instance(aug.colorizer.color_false,
+                                     iap.Deterministic)
         assert aug.colorizer.color_true.value == 10
         assert aug.colorizer.color_false.value == 20
 
@@ -231,16 +239,18 @@ class TestCanny(unittest.TestCase):
             colorizer=iaa.RandomColorsBinaryImageColorizer(
                 color_true=10, color_false=20)
         )
-        assert isinstance(aug.alpha, iap.Deterministic)
-        assert isinstance(aug.hysteresis_thresholds, iap.Choice)
-        assert isinstance(aug.sobel_kernel_size, iap.Choice)
+        assert is_parameter_instance(aug.alpha, iap.Deterministic)
+        assert is_parameter_instance(aug.hysteresis_thresholds, iap.Choice)
+        assert is_parameter_instance(aug.sobel_kernel_size, iap.Choice)
         assert isinstance(aug.colorizer, iaa.RandomColorsBinaryImageColorizer)
         assert np.isclose(aug.alpha.value, 0.2)
         assert aug.hysteresis_thresholds.a == [0, 1, 2]
-        assert isinstance(aug.sobel_kernel_size, iap.Choice)
+        assert is_parameter_instance(aug.sobel_kernel_size, iap.Choice)
         assert aug.sobel_kernel_size.a == [3, 5]
-        assert isinstance(aug.colorizer.color_true, iap.Deterministic)
-        assert isinstance(aug.colorizer.color_false, iap.Deterministic)
+        assert is_parameter_instance(aug.colorizer.color_true,
+                                     iap.Deterministic)
+        assert is_parameter_instance(aug.colorizer.color_false,
+                                     iap.Deterministic)
         assert aug.colorizer.color_true.value == 10
         assert aug.colorizer.color_false.value == 20
 
@@ -253,6 +263,10 @@ class TestCanny(unittest.TestCase):
             hysteresis_thresholds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             sobel_kernel_size=[3, 5, 7],
             random_state=iarandom.RNG(seed))
+        aug.alpha = remove_prefetching(aug.alpha)
+        aug.hysteresis_thresholds = remove_prefetching(
+            aug.hysteresis_thresholds)
+        aug.sobel_kernel_size = remove_prefetching(aug.sobel_kernel_size)
 
         example_image = np.zeros((5, 5, 3), dtype=np.uint8)
         samples = aug._draw_samples([example_image] * nb_images,
@@ -290,6 +304,12 @@ class TestCanny(unittest.TestCase):
                                    iap.DiscreteUniform(5, 100)),
             sobel_kernel_size=[3, 5, 7],
             random_state=iarandom.RNG(seed))
+        aug.alpha = remove_prefetching(aug.alpha)
+        aug.hysteresis_thresholds = (
+            remove_prefetching(aug.hysteresis_thresholds[0]),
+            remove_prefetching(aug.hysteresis_thresholds[1])
+        )
+        aug.sobel_kernel_size = remove_prefetching(aug.sobel_kernel_size)
 
         example_image = np.zeros((5, 5, 3), dtype=np.uint8)
         samples = aug._draw_samples([example_image] * nb_images,
@@ -630,9 +650,9 @@ class TestCanny(unittest.TestCase):
             colorizer=colorizer
         )
         params = aug.get_parameters()
-        assert params[0] is alpha
-        assert params[1] is hysteresis_thresholds
-        assert params[2] is sobel_kernel_size
+        assert params[0] is aug.alpha
+        assert params[1] is aug.hysteresis_thresholds
+        assert params[2] is aug.sobel_kernel_size
         assert params[3] is colorizer
 
     def test___str___single_value_hysteresis(self):
@@ -651,7 +671,9 @@ class TestCanny(unittest.TestCase):
         expected = ("Canny(alpha=%s, hysteresis_thresholds=%s, "
                     "sobel_kernel_size=%s, colorizer=%s, name=UnnamedCanny, "
                     "deterministic=False)") % (
-                        alpha, hysteresis_thresholds, sobel_kernel_size,
+                        str(aug.alpha),
+                        str(aug.hysteresis_thresholds),
+                        str(aug.sobel_kernel_size),
                         colorizer)
         assert observed == expected
 
@@ -674,9 +696,11 @@ class TestCanny(unittest.TestCase):
         expected = ("Canny(alpha=%s, hysteresis_thresholds=(%s, %s), "
                     "sobel_kernel_size=%s, colorizer=%s, name=UnnamedCanny, "
                     "deterministic=False)") % (
-                        alpha,
-                        hysteresis_thresholds[0], hysteresis_thresholds[1],
-                        sobel_kernel_size, colorizer)
+                        str(aug.alpha),
+                        str(aug.hysteresis_thresholds[0]),
+                        str(aug.hysteresis_thresholds[1]),
+                        str(aug.sobel_kernel_size),
+                        colorizer)
         assert observed == expected
 
     def test_pickleable(self):

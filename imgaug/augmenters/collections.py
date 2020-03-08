@@ -190,7 +190,7 @@ class RandAugment(meta.Sequential):
                  random_state="deprecated", deterministic="deprecated"):
         # pylint: disable=invalid-name
         seed = seed if random_state == "deprecated" else random_state
-        rng = iarandom.RNG(seed)
+        rng = iarandom.RNG.create_if_not_rng_(seed)
 
         # we don't limit the value range to 10 here, because the paper
         # gives several examples of using more than 10 for M
