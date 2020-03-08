@@ -1,4 +1,4 @@
-# Added Automatic Prefetching of Random Number Samples #???
+# Added Automatic Prefetching of Random Number Samples #634
 
 This patch adds automatic prefetching of random samples,
 which performs a single large random sampling call instead
