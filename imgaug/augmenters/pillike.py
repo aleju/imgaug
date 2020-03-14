@@ -1129,61 +1129,24 @@ def _create_affine_matrix(scale_x=1.0, scale_y=1.0,
                           rotate_deg=0,
                           shear_x_deg=0, shear_y_deg=0,
                           center_px=(0, 0)):
+    from .geometric import _AffineMatrixGenerator, _RAD_PER_DEGREE
+
     scale_x = max(scale_x, 0.0001)
     scale_y = max(scale_y, 0.0001)
 
-    rotate_rad, shear_x_rad, shear_y_rad = np.deg2rad([rotate_deg,
-                                                       shear_x_deg,
-                                                       shear_y_deg])
-    rotate_rad = (-1) * rotate_rad
+    rotate_rad = rotate_deg * _RAD_PER_DEGREE
+    shear_x_rad = shear_x_deg * _RAD_PER_DEGREE
+    shear_y_rad = shear_y_deg * _RAD_PER_DEGREE
 
-    matrix_centerize = np.array([
-        [1, 0, (-1) * center_px[0]],
-        [0, 1, (-1) * center_px[1]],
-        [0, 0, 1]
-    ], dtype=np.float32)
+    matrix_gen = _AffineMatrixGenerator()
+    matrix_gen.translate(x_px=-center_px[0], y_px=-center_px[1])
+    matrix_gen.scale(x_frac=scale_x, y_frac=scale_y)
+    matrix_gen.translate(x_px=translate_x_px, y_px=translate_y_px)
+    matrix_gen.shear(x_rad=-shear_x_rad, y_rad=shear_y_rad)
+    matrix_gen.rotate(rotate_rad)
+    matrix_gen.translate(x_px=center_px[0], y_px=center_px[1])
 
-    matrix_scale = np.array([
-        [scale_x, 0, 0],
-        [0, scale_y, 0],
-        [0, 0, 1]
-    ], dtype=np.float32)
-
-    matrix_translate = np.array([
-        [1, 0, translate_x_px],
-        [0, 1, translate_y_px],
-        [0, 0, 1]
-    ], dtype=np.float32)
-
-    matrix_shear = np.array([
-        [1, np.tanh(shear_x_rad), 0],
-        [np.tanh(shear_y_rad), 1, 0],
-        [0, 0, 1]
-    ], dtype=np.float32)
-
-    matrix_rotate = np.array([
-        [np.cos(rotate_rad), np.sin(rotate_rad), 0],
-        [-np.sin(rotate_rad), np.cos(rotate_rad), 0],
-        [0, 0, 1]
-    ], dtype=np.float32)
-
-    matrix_decenterize = np.array([
-        [1, 0, center_px[0]],
-        [0, 1, center_px[1]],
-        [0, 0, 1]
-    ], dtype=np.float32)
-
-    matrix = np.array([
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1]
-    ], dtype=np.float32)
-    for other_matrix in [matrix_centerize,
-                         matrix_rotate, matrix_shear,
-                         matrix_scale, matrix_translate,
-                         matrix_decenterize]:
-        matrix = np.matmul(other_matrix, matrix)
-
+    matrix = matrix_gen.matrix
     matrix = np.linalg.inv(matrix)
 
     return matrix

@@ -1852,28 +1852,29 @@ class TestAffine_rotate(unittest.TestCase):
         # measure alignment between images and heatmaps when rotating
         # here with smaller heatmaps
         for backend in ["auto", "cv2", "skimage"]:
-            aug = iaa.Affine(rotate=45, backend=backend)
+            with self.subTest(backend=backend):
+                aug = iaa.Affine(rotate=45, backend=backend)
 
-            image = np.zeros((56, 48), dtype=np.uint8)
-            image[:, 16:24+1] = 255
-            hm = ia.HeatmapsOnImage(
-                ia.imresize_single_image(
-                    image, (28, 24), interpolation="cubic"
-                ).astype(np.float32)/255,
-                shape=(56, 48)
-            )
+                image = np.zeros((56, 48), dtype=np.uint8)
+                image[:, 16:24+1] = 255
+                hm = ia.HeatmapsOnImage(
+                    ia.imresize_single_image(
+                        image, (28, 24), interpolation="cubic"
+                    ).astype(np.float32)/255,
+                    shape=(56, 48)
+                )
 
-            img_aug = aug.augment_image(image)
-            hm_aug = aug.augment_heatmaps([hm])[0]
+                img_aug = aug.augment_image(image)
+                hm_aug = aug.augment_heatmaps([hm])[0]
 
-            img_aug_mask = img_aug > 255*0.1
-            hm_aug_mask = ia.imresize_single_image(
-                hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic"
-            ) > 0.1
-            same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-            assert hm_aug.shape == (56, 48)
-            assert hm_aug.arr_0to1.shape == (28, 24, 1)
-            assert (same / img_aug_mask.size) >= 0.9
+                img_aug_mask = img_aug > 255*0.1
+                hm_aug_mask = ia.imresize_single_image(
+                    hm_aug.arr_0to1, img_aug.shape[0:2], interpolation="cubic"
+                ) > 0.1
+                same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+                assert hm_aug.shape == (56, 48)
+                assert hm_aug.arr_0to1.shape == (28, 24, 1)
+                assert (same / img_aug_mask.size) >= 0.9
 
     def test_bounding_boxes_have_expected_shape_after_augmentation(self):
         image = np.zeros((100, 100), dtype=np.uint8)
@@ -3262,13 +3263,11 @@ class TestShearX(unittest.TestCase):
         x3, y3 = _find_coords(image_aug[..., 2])
         x4, y4 = _find_coords(image_aug[..., 3])
         assert x1 > 20
-        assert y1 > 10
-        assert y2 > 10
-        assert np.isclose(y1, y2)
+        assert np.isclose(y1, 10.0)
+        assert np.isclose(y2, 10.0)
         assert x3 < 30
-        assert y3 < 40
-        assert y4 < 40
-        assert np.isclose(y3, y4)
+        assert np.isclose(y3, 40.0)
+        assert np.isclose(y4, 40.0)
         assert not np.isclose(x1, x4)
         assert not np.isclose(x2, x3)
 
@@ -3310,13 +3309,11 @@ class TestShearY(unittest.TestCase):
         x3, y3 = _find_coords(image_aug[..., 2])
         x4, y4 = _find_coords(image_aug[..., 3])
         assert y1 < 20
-        assert x1 > 10
-        assert x4 > 10
-        assert np.isclose(x1, x4)
+        assert np.isclose(x1, 10.0)
+        assert np.isclose(x4, 10.0)
         assert y2 > 20
-        assert x2 < 40
-        assert x3 < 40
-        assert np.isclose(x2, x3)
+        assert np.isclose(x2, 40.0)
+        assert np.isclose(x3, 40.0)
         assert not np.isclose(y1, y2)
         assert not np.isclose(y3, y4)
 

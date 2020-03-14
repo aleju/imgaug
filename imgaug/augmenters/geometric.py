@@ -77,6 +77,9 @@ _AFFINE_MODE_SKIMAGE_TO_CV2 = {
     "wrap": cv2.BORDER_WRAP
 }
 
+_PI = 3.141592653589793
+_RAD_PER_DEGREE = _PI / 180
+
 
 def _handle_order_arg(order, backend):
     # Peformance in skimage for Affine:
@@ -128,28 +131,33 @@ def _handle_cval_arg(cval):
         #      (or once per dtype)
         return iap.Uniform(0, 255)  # skimage transform expects float
     return iap.handle_continuous_param(
-        cval, "cval", value_range=None, tuple_to_uniform=True,
-        list_to_choice=True)
+        cval,
+        "cval",
+        value_range=None,
+        tuple_to_uniform=True,
+        list_to_choice=True
+    )
 
 
 # currently used for Affine and PiecewiseAffine
 # TODO use iap.handle_categorical_string_param() here
 def _handle_mode_arg(mode):
     if mode == ia.ALL:
-        return iap.Choice(["constant", "edge", "symmetric",
-                           "reflect", "wrap"])
+        return iap.Choice(["constant", "edge", "symmetric", "reflect", "wrap"])
     if ia.is_string(mode):
         return iap.Deterministic(mode)
     if isinstance(mode, list):
         assert all([ia.is_string(val) for val in mode]), (
             "Expected list of modes to only contain strings, got "
-            "types %s" % (", ".join([str(type(v)) for v in mode])))
+            "types %s" % (", ".join([str(type(v)) for v in mode]))
+        )
         return iap.Choice(mode)
     if isinstance(mode, iap.StochasticParameter):
         return mode
     raise Exception(
         "Expected mode to be imgaug.ALL, a string, a list of strings "
-        "or StochasticParameter, got %s." % (type(mode),))
+        "or StochasticParameter, got %s." % (type(mode),)
+    )
 
 
 def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
@@ -166,14 +174,9 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
 
     cv2_bad_order = order not in [0, 1, 3]
     if order == 0:
-        cv2_bad_dtype = (
-            arr.dtype.name
-            not in _VALID_DTYPES_CV2_ORDER_0)
+        cv2_bad_dtype = (arr.dtype.name not in _VALID_DTYPES_CV2_ORDER_0)
     else:
-        cv2_bad_dtype = (
-            arr.dtype.name
-            not in _VALID_DTYPES_CV2_ORDER_NOT_0
-        )
+        cv2_bad_dtype = (arr.dtype.name not in _VALID_DTYPES_CV2_ORDER_NOT_0)
     cv2_impossible = cv2_bad_order or cv2_bad_dtype
     use_skimage = (
         backend == "skimage"
@@ -227,7 +230,7 @@ def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
 
     image_warped = tf.warp(
         arr,
-        matrix.inverse,
+        np.linalg.inv(matrix),
         order=order,
         mode=mode,
         cval=cval,
@@ -236,7 +239,7 @@ def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
     )
 
     # tf.warp changes all dtypes to float64, including uint8
-    if input_dtype == np.bool_:
+    if input_dtype.kind == "b":
         image_warped = image_warped > 0.5
     else:
         image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
@@ -263,9 +266,9 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
                 order,))
 
     input_dtype = arr.dtype
-    if input_dtype in [np.bool_, np.float16]:
+    if input_dtype.name in ["bool", "float16"]:
         arr = arr.astype(np.float32)
-    elif input_dtype == np.int8 and order != 0:
+    elif input_dtype.name == "int8" and order != 0:
         arr = arr.astype(np.int16)
 
     dsize = (
@@ -286,7 +289,7 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
         #      contain 3 values and not nb_channels values
         image_warped = cv2.warpAffine(
             _normalize_cv2_input_arr_(arr),
-            matrix.params[:2],
+            matrix[0:2, :],
             dsize=dsize,
             flags=order,
             borderMode=mode,
@@ -302,13 +305,14 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
         image_warped = [
             cv2.warpAffine(
                 _normalize_cv2_input_arr_(arr[:, :, c]),
-                matrix.params[:2],
+                matrix[0:2, :],
                 dsize=dsize,
                 flags=order,
                 borderMode=mode,
                 borderValue=tuple([cval[0]])
             )
-            for c in sm.xrange(nb_channels)]
+            for c in sm.xrange(nb_channels)
+        ]
         image_warped = np.stack(image_warped, axis=-1)
 
     if input_dtype.name == "bool":
@@ -317,6 +321,28 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
         image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
 
     return image_warped
+
+
+# Added in 0.5.0.
+def _warp_affine_coords(coords, matrix):
+    if len(coords) == 0:
+        return coords
+    assert coords.shape[1] == 2
+    assert matrix.shape == (3, 3)
+
+    # this is the same as in scikit-image, _geometric.py -> _apply_mat()
+    x, y = np.transpose(coords)
+    src = np.vstack((x, y, np.ones_like(x)))
+    dst = np.dot(src.T, matrix.T)
+
+    # below, we will divide by the last dimension of the homogeneous
+    # coordinate matrix. In order to avoid division by zero,
+    # we replace exact zeros in this column with a very small number.
+    dst[dst[:, 2] == 0, 2] = np.finfo(float).eps
+    # rescale to homogeneous coordinates
+    dst[:, :2] /= dst[:, 2:3]
+
+    return dst[:, :2]
 
 
 def _compute_affine_warp_output_shape(matrix, input_shape):
@@ -332,7 +358,7 @@ def _compute_affine_warp_output_shape(matrix, input_shape):
         [width - 1, height - 1],
         [width - 1, 0]
     ])
-    corners = matrix(corners)
+    corners = _warp_affine_coords(corners, matrix)
     minc = corners[:, 0].min()
     minr = corners[:, 1].min()
     maxc = corners[:, 0].max()
@@ -346,8 +372,9 @@ def _compute_affine_warp_output_shape(matrix, input_shape):
     output_shape = tuple([int(v) for v in output_shape.tolist()])
     # fit output image in new shape
     translation = (-minc, -minr)
-    matrix_to_fit = tf.SimilarityTransform(translation=translation)
-    matrix = matrix + matrix_to_fit
+    matrix = _AffineMatrixGenerator(matrix).translate(
+        x_px=translation[0], y_px=translation[1]
+    ).matrix
     return matrix, output_shape
 
 
@@ -582,6 +609,77 @@ def generate_jigsaw_destinations(nb_rows, nb_cols, max_steps, seed,
     return destinations
 
 
+# Added in 0.5.0.
+class _AffineMatrixGenerator(object):
+    # Added in 0.5.0.
+    def __init__(self, matrix=None):
+        if matrix is None:
+            matrix = np.eye(3, dtype=np.float32)
+        self.matrix = matrix
+
+    # Added in 0.5.0.
+    def centerize(self, image_shape):
+        height, width = image_shape[0:2]
+        self.translate(-width/2, -height/2)
+        return self
+
+    # Added in 0.5.0.
+    def invert_centerize(self, image_shape):
+        height, width = image_shape[0:2]
+        self.translate(width/2, height/2)
+        return self
+
+    # Added in 0.5.0.
+    def translate(self, x_px, y_px):
+        if x_px < 1e-4 or x_px > 1e-4 or y_px < 1e-4 or x_px > 1e-4:
+            matrix = np.array([
+                [1, 0, x_px],
+                [0, 1, y_px],
+                [0, 0, 1]
+            ], dtype=np.float32)
+            self._mul(matrix)
+        return self
+
+    # Added in 0.5.0.
+    def scale(self, x_frac, y_frac):
+        if (x_frac < 1.0-1e-4 or x_frac > 1.0+1e-4
+                or y_frac < 1.0-1e-4 or y_frac > 1.0+1e-4):
+            matrix = np.array([
+                [x_frac, 0, 0],
+                [0, y_frac, 0],
+                [0, 0, 1]
+            ], dtype=np.float32)
+            self._mul(matrix)
+        return self
+
+    # Added in 0.5.0.
+    def rotate(self, rad):
+        if rad < 1e-4 or rad > 1e-4:
+            rad = -rad
+            matrix = np.array([
+                [np.cos(rad), np.sin(rad), 0],
+                [-np.sin(rad), np.cos(rad), 0],
+                [0, 0, 1]
+            ], dtype=np.float32)
+            self._mul(matrix)
+        return self
+
+    # Added in 0.5.0.
+    def shear(self, x_rad, y_rad):
+        if x_rad < 1e-4 or x_rad > 1e-4 or y_rad < 1e-4 or y_rad > 1e-4:
+            matrix = np.array([
+                [1, np.tanh(-x_rad), 0],
+                [np.tanh(y_rad), 1, 0],
+                [0, 0, 1]
+            ], dtype=np.float32)
+            self._mul(matrix)
+        return self
+
+    # Added in 0.5.0.
+    def _mul(self, matrix):
+        self.matrix = np.matmul(matrix, self.matrix)
+
+
 class _AffineSamplingResult(object):
     def __init__(self, scale=None, translate=None, translate_mode="px",
                  rotate=None, shear=None, cval=None, mode=None, order=None):
@@ -602,21 +700,23 @@ class _AffineSamplingResult(object):
         translate_y = self.translate[1][idx]  # TODO same as above
         translate_x = self.translate[0][idx]
         assert self.translate_mode in ["px", "percent"], (
-            "Expected 'px' or 'percent', got '%s'." % (self.translate_mode,))
+            "Expected 'px' or 'percent', got '%s'." % (self.translate_mode,)
+        )
+
         if self.translate_mode == "percent":
             translate_y_px = translate_y * arr_shape[0]
-        else:
-            translate_y_px = (translate_y / image_shape[0]) * arr_shape[0]
-        if self.translate_mode == "percent":
             translate_x_px = translate_x * arr_shape[1]
         else:
+            translate_y_px = (translate_y / image_shape[0]) * arr_shape[0]
             translate_x_px = (translate_x / image_shape[1]) * arr_shape[1]
 
         rotate_deg = self.rotate[idx]
         shear_x_deg = self.shear[0][idx]
         shear_y_deg = self.shear[1][idx]
-        rotate_rad, shear_x_rad, shear_y_rad = np.deg2rad([
-            rotate_deg, shear_x_deg, shear_y_deg])
+
+        rotate_rad = rotate_deg * _RAD_PER_DEGREE
+        shear_x_rad = shear_x_deg * _RAD_PER_DEGREE
+        shear_y_rad = shear_y_deg * _RAD_PER_DEGREE
 
         # we add the _deg versions of rotate and shear here for PILAffine,
         # Affine itself only uses *_rad
@@ -633,43 +733,40 @@ class _AffineSamplingResult(object):
             "shear_x_deg": shear_x_deg
         }
 
-    def to_matrix(self, idx, arr_shape, image_shape, fit_output,
-                  shift_add=(0.5, 0.5)):
+    # for images we use additional shifts of (0.5, 0.5) as otherwise
+    # we get an ugly black border for 90deg rotations
+    def to_matrix(
+            self,
+            idx,
+            arr_shape,
+            image_shape,
+            fit_output,
+            shift_add=(0.5, 0.5)
+    ):
         if 0 in image_shape:
-            return tf.AffineTransform(), arr_shape
+            return np.eye(3, dtype=np.float32), arr_shape
 
-        height, width = arr_shape[0:2]
-
-        params = self.get_affine_parameters(idx,
-                                            arr_shape=arr_shape,
-                                            image_shape=image_shape)
-
-        # for images we use additional shifts of (0.5, 0.5) as otherwise
-        # we get an ugly black border for 90deg rotations
-        shift_y = height / 2.0 - shift_add[0]
-        shift_x = width / 2.0 - shift_add[1]
-
-        matrix_to_topleft = tf.SimilarityTransform(
-            translation=[-shift_x, -shift_y])
-        matrix_shear_y_rot = tf.AffineTransform(rotation=-3.141592/2)
-        matrix_shear_y = tf.AffineTransform(shear=params["shear_y_rad"])
-        matrix_shear_y_rot_inv = tf.AffineTransform(rotation=3.141592/2)
-        matrix_transforms = tf.AffineTransform(
-            scale=(params["scale_x"], params["scale_y"]),
-            translation=(params["translate_x_px"], params["translate_y_px"]),
-            rotation=params["rotate_rad"],
-            shear=params["shear_x_rad"]
+        params = self.get_affine_parameters(
+            idx, arr_shape=arr_shape, image_shape=image_shape
         )
-        matrix_to_center = tf.SimilarityTransform(
-            translation=[shift_x, shift_y])
-        matrix = (matrix_to_topleft
-                  + matrix_shear_y_rot
-                  + matrix_shear_y
-                  + matrix_shear_y_rot_inv
-                  + matrix_transforms
-                  + matrix_to_center)
+
+        matrix_gen = _AffineMatrixGenerator()
+        matrix_gen.centerize(arr_shape)
+        matrix_gen.translate(x_px=shift_add[1], y_px=shift_add[0])
+        matrix_gen.rotate(params["rotate_rad"])
+        matrix_gen.scale(x_frac=params["scale_x"], y_frac=params["scale_y"])
+        matrix_gen.shear(x_rad=params["shear_x_rad"],
+                         y_rad=params["shear_y_rad"])
+        matrix_gen.translate(x_px=params["translate_x_px"],
+                             y_px=params["translate_y_px"])
+        matrix_gen.translate(x_px=-shift_add[1], y_px=-shift_add[0])
+        matrix_gen.invert_centerize(arr_shape)
+
+        matrix = matrix_gen.matrix
         if fit_output:
-            return _compute_affine_warp_output_shape(matrix, arr_shape)
+            matrix, arr_shape = _compute_affine_warp_output_shape(
+                matrix, arr_shape
+            )
         return matrix, arr_shape
 
     # Added in 0.4.0.
@@ -691,12 +788,9 @@ class _AffineSamplingResult(object):
 
 
 def _is_identity_matrix(matrix, eps=1e-4):
-    identity = np.float32([
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1]
-    ])
-    return np.average(np.abs(identity - matrix.params)) <= eps
+    identity = np.eye(3, dtype=np.float32)
+    # about twice as fast as np.allclose()
+    return np.average(np.abs(matrix - identity)) <= eps
 
 
 class Affine(meta.Augmenter):
@@ -1357,7 +1451,7 @@ class Affine(meta.Augmenter):
 
                     if (not _is_identity_matrix(matrix)
                             and not cbaoi.empty
-                            and not 0 in cbaoi.shape[0:2]):
+                            and 0 not in cbaoi.shape[0:2]):
                         # TODO this is hacky
                         if augm_name == "bounding_boxes":
                             # Ensure that 4 points are used for bbs.
@@ -1365,15 +1459,13 @@ class Affine(meta.Augmenter):
                             # to_xy_array() does not.
                             kpsoi = cbaoi.to_keypoints_on_image()
                             coords = kpsoi.to_xy_array()
-                            coords_aug = tf.matrix_transform(coords,
-                                                             matrix.params)
+                            coords_aug = tf.matrix_transform(coords, matrix)
                             kpsoi = kpsoi.fill_from_xy_array_(coords_aug)
                             cbaoi = cbaoi.invert_to_keypoints_on_image_(
                                 kpsoi)
                         else:
                             coords = cbaoi.to_xy_array()
-                            coords_aug = tf.matrix_transform(coords,
-                                                             matrix.params)
+                            coords_aug = tf.matrix_transform(coords, matrix)
                             cbaoi = cbaoi.fill_from_xy_array_(coords_aug)
 
                     cbaoi.shape = output_shape
@@ -1384,37 +1476,39 @@ class Affine(meta.Augmenter):
     def _augment_images_by_samples(self, images, samples,
                                    image_shapes=None,
                                    return_matrices=False):
-        nb_images = len(images)
+        if image_shapes is None:
+            image_shapes = [image.shape for image in images]
+
         input_was_array = ia.is_np_array(images)
         input_dtype = None if not input_was_array else images.dtype
         result = []
-        if return_matrices:
-            matrices = [None] * nb_images
-        for i in sm.xrange(nb_images):
-            image = images[i]
+        matrices = []
+        gen = enumerate(
+            zip(
+                images, image_shapes, samples.cval, samples.mode, samples.order
+            )
+        )
+        for i, (image, image_shape, cval, mode, order) in gen:
+            matrix, output_shape = samples.to_matrix(
+                i, image.shape, image_shape, self.fit_output
+            )
 
-            image_shape = (image.shape if image_shapes is None
-                           else image_shapes[i])
-            matrix, output_shape = samples.to_matrix(i, image.shape,
-                                                     image_shape,
-                                                     self.fit_output)
-
-            cval = samples.cval[i]
-            mode = samples.mode[i]
-            order = samples.order[i]
-
+            image_warped = image
             if not _is_identity_matrix(matrix):
                 image_warped = _warp_affine_arr(
-                    image, matrix,
-                    order=order, mode=mode, cval=cval,
-                    output_shape=output_shape, backend=self.backend)
+                    image,
+                    matrix,
+                    order=order,
+                    mode=mode,
+                    cval=cval,
+                    output_shape=output_shape,
+                    backend=self.backend
+                )
 
-                result.append(image_warped)
-            else:
-                result.append(image)
+            result.append(image_warped)
 
             if return_matrices:
-                matrices[i] = matrix
+                matrices.append(matrix)
 
         # the shapes can change due to fit_output, then it may not be possible
         # to return an array, even when the input was an array
@@ -1425,7 +1519,6 @@ class Affine(meta.Augmenter):
 
         if return_matrices:
             result = (result, matrices)
-
         return result
 
     # Added in 0.4.0.
@@ -1466,7 +1559,8 @@ class Affine(meta.Augmenter):
             setattr(augmentable_i, arr_attr_name, arr_aug)
             if self.fit_output:
                 _, output_shape_i = _compute_affine_warp_output_shape(
-                    matrix, augmentable_i.shape)
+                    matrix, augmentable_i.shape
+                )
             else:
                 output_shape_i = augmentable_i.shape
             augmentable_i.shape = output_shape_i
@@ -1529,13 +1623,15 @@ class Affine(meta.Augmenter):
             shear=shear_samples,
             cval=cval_samples,
             mode=mode_samples,
-            order=order_samples)
+            order=order_samples
+        )
 
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [
             self.scale, self.translate, self.rotate, self.shear, self.order,
-            self.cval, self.mode, self.backend, self.fit_output]
+            self.cval, self.mode, self.backend, self.fit_output
+        ]
 
 
 class ScaleX(Affine):
