@@ -20,6 +20,7 @@ import numpy as np
 # with skimage.segmentation for whatever reason
 import skimage.segmentation
 import skimage.measure
+import scipy.ndimage as ndimage
 import six
 import six.moves as sm
 
@@ -28,6 +29,10 @@ from . import meta
 from .. import random as iarandom
 from .. import parameters as iap
 from .. import dtypes as iadt
+
+
+_REPLACE_SEGMENTS_NP_BELOW_AREA = 64 * 64
+_REPLACE_SEGMENTS_NP_BELOW_NSEG = 25
 
 
 # TODO merge this into imresize?
@@ -271,7 +276,9 @@ class Superpixels(meta.Augmenter):
             segments = skimage.segmentation.slic(
                 image, n_segments=n_segments_samples[i], compactness=10)
 
-            image_aug = self._replace_segments(image, segments, replace_samples)
+            image_aug = replace_segments_(
+                image, segments, replace_samples > 0.5
+            )
 
             if orig_shape != image_aug.shape:
                 image_aug = ia.imresize_single_image(
@@ -282,51 +289,178 @@ class Superpixels(meta.Augmenter):
             batch.images[i] = image_aug
         return batch
 
-    @classmethod
-    def _replace_segments(cls, image, segments, replace_samples):
-        min_value, _center_value, max_value = \
-                iadt.get_value_range_of_dtype(image.dtype)
-        image_sp = np.copy(image)
-
-        nb_channels = image.shape[2]
-        for c in sm.xrange(nb_channels):
-            # segments+1 here because otherwise regionprops always
-            # misses the last label
-            regions = skimage.measure.regionprops(
-                segments+1, intensity_image=image[..., c])
-            for ridx, region in enumerate(regions):
-                # with mod here, because slic can sometimes create more
-                # superpixel than requested. replace_samples then does not
-                # have enough values, so we just start over with the first one
-                # again.
-                if replace_samples[ridx % len(replace_samples)] > 0.5:
-                    mean_intensity = region.mean_intensity
-                    image_sp_c = image_sp[..., c]
-
-                    if image_sp_c.dtype.kind in ["i", "u", "b"]:
-                        # After rounding the value can end up slightly outside
-                        # of the value_range. Hence, we need to clip. We do
-                        # clip via min(max(...)) instead of np.clip because
-                        # the latter one does not seem to keep dtypes for
-                        # dtypes with large itemsizes (e.g. uint64).
-                        value = int(np.round(mean_intensity))
-                        value = min(max(value, min_value), max_value)
-                    else:
-                        value = mean_intensity
-
-                    image_sp_c[segments == ridx] = value
-
-        return image_sp
-
     def get_parameters(self):
         """See :func:`~imgaug.augmenters.meta.Augmenter.get_parameters`."""
         return [self.p_replace, self.n_segments, self.max_size,
                 self.interpolation]
 
 
+# TODO add the old skimage method here for 512x512+ images as it starts to
+#      be faster for these areas
+# TODO incorporate this dtype support in the dtype sections of docstrings for
+#      Superpixels and segment_voronoi()
+def replace_segments_(image, segments, replace_flags):
+    """Replace segments in images by their average colors in-place.
+
+    This expects an image ``(H,W,[C])`` and an integer segmentation
+    map ``(H,W)``. The segmentation map must contain the same id for pixels
+    that are supposed to be replaced by the same color ("segments").
+    For each segement, the average color is computed and used as the
+    replacement.
+
+    **Supported dtypes**:
+
+    * ``uint8``: yes; indirectly tested
+    * ``uint16``: yes; indirectly tested
+    * ``uint32``: yes; indirectly tested
+    * ``uint64``: no; not tested
+    * ``int8``: yes; indirectly tested
+    * ``int16``: yes; indirectly tested
+    * ``int32``: yes; indirectly tested
+    * ``int64``: no; not tested
+    * ``float16``: ?; not tested
+    * ``float32``: ?; not tested
+    * ``float64``: ?; not tested
+    * ``float128``: ?; not tested
+    * ``bool``: yes; indirectly tested
+
+    Parameters
+    ----------
+    image : ndarray
+        An image of shape ``(H,W,[C])``.
+        This image may be changed in-place.
+        The function is currently not tested for float dtypes.
+
+    segments : ndarray
+        A ``(H,W)`` integer array containing the same ids for pixels belonging
+        to the same segment.
+
+    replace_flags : ndarray or None
+        A boolean array containing at the ``i`` th index a flag denoting
+        whether the segment with id ``i`` should be replaced by its average
+        color. If the flag is ``False``, the original image pixels will be
+        kept unchanged for that flag.
+        If this is ``None``, all segments will be replaced.
+
+    Returns
+    -------
+    ndarray
+        The image with replaced pixels.
+        Might be the same image as was provided via `image`.
+
+    """
+    assert replace_flags is None or replace_flags.dtype.kind == "b"
+
+    input_shape = image.shape
+    if 0 in image.shape:
+        return image
+
+    if len(input_shape) == 2:
+        image = image[:, :, np.newaxis]
+
+    nb_segments = None
+    func = _replace_segments_scipy_
+    bad_dtype = image.dtype.name not in ["uint8", "int8"]
+    area = image.shape[0] * image.shape[1]
+    if bad_dtype or area < _REPLACE_SEGMENTS_NP_BELOW_AREA:
+        func = _replace_segments_np_
+    else:
+        max_id = np.max(segments)
+        nb_segments = 1 + max_id
+        if nb_segments < _REPLACE_SEGMENTS_NP_BELOW_NSEG:
+            func = _replace_segments_np_
+
+    result = func(image, segments, replace_flags, nb_segments)
+
+    if len(input_shape) == 2:
+        return result[:, :, 0]
+    return result
+
+
+def _replace_segments_np_(image, segments, replace_flags, _nb_segments):
+    seg_ids = np.unique(segments)
+    if replace_flags is None:
+        replace_flags = [True] * len(seg_ids)
+    for i, seg_id in enumerate(seg_ids):
+        if replace_flags[i % len(replace_flags)]:
+            mask = (segments == seg_id)
+            mean_color = np.average(image[mask, :], axis=(0,))
+            image[mask] = mean_color
+    return image
+
+
+def _replace_segments_scipy_(image, segments, replace_flags, nb_segments):
+    # Generate segment ids of the segments to actually replace.
+    # Use "...[0:nb_segments]" here, because we can sample more flags than
+    # segments.
+    seg_ids = np.arange(nb_segments)
+    if replace_flags is not None:
+        replace_flags = np.resize(replace_flags, (nb_segments,))
+        seg_ids = seg_ids[replace_flags]
+    if len(seg_ids) == 0:
+        return image
+
+    if len(seg_ids) == nb_segments:
+        mask = np.full(segments.shape, True, dtype=np.bool)
+        segments_to_replace = segments.flat
+        image_to_replace = image.reshape((-1, image.shape[-1]))
+    else:
+        mask = np.isin(segments, seg_ids)
+        segments_to_replace = segments[mask]
+        image_to_replace = image[mask, :]
+
+    seg_id_to_intensity = np.full((nb_segments,), 0, dtype=np.uint8)
+
+    for c in sm.xrange(image.shape[2]):
+        # This returns a new array of same length as "seg_ids". Each value is
+        # the mean intensity of that segment in "image[..., c]".
+        labelwise_intensities = ndimage.labeled_comprehension(
+            image_to_replace[:, c],
+            segments_to_replace,
+            seg_ids,
+            np.mean,
+            np.uint8,
+            0
+        )
+
+        # we could call "seg_id_to_intensity *= 0" here, but that isn't really
+        # necessary as we set the values of all segments that we actually use
+        seg_id_to_intensity[seg_ids] = labelwise_intensities
+
+        # doesn't seem to work here to use `image_to_replace[:, c] = ...`
+        # instead
+        image[mask, c] = seg_id_to_intensity[segments_to_replace]
+    return image
+
+
 # TODO don't average the alpha channel for RGBA?
 def segment_voronoi(image, cell_coordinates, replace_mask=None):
     """Average colors within voronoi cells of an image.
+
+    **Supported dtypes**:
+
+    if (image size <= max_size):
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: no; not tested
+        * ``uint32``: no; not tested
+        * ``uint64``: no; not tested
+        * ``int8``: no; not tested
+        * ``int16``: no; not tested
+        * ``int32``: no; not tested
+        * ``int64``: no; not tested
+        * ``float16``: no; not tested
+        * ``float32``: no; not tested
+        * ``float64``: no; not tested
+        * ``float128``: no; not tested
+        * ``bool``: no; not tested
+
+    if (image size > max_size):
+
+        minimum of (
+            ``imgaug.augmenters.segmentation.Voronoi(image size <= max_size)``,
+            :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
+        )
 
     Parameters
     ----------
@@ -366,12 +500,11 @@ def segment_voronoi(image, cell_coordinates, replace_mask=None):
     height, width = image.shape[0:2]
     pixel_coords, ids_of_nearest_cells = \
         _match_pixels_with_voronoi_cells(height, width, cell_coordinates)
-    cell_colors = _compute_avg_segment_colors(
-        image, pixel_coords, ids_of_nearest_cells,
-        len(cell_coordinates))
-
-    image_aug = _render_segments(image, ids_of_nearest_cells, cell_colors,
-                                 replace_mask)
+    image_aug = replace_segments_(
+        image,
+        ids_of_nearest_cells.reshape(image.shape[0:2]),
+        replace_mask
+    )
 
     if input_dims == 2:
         return image_aug[..., 0]
@@ -391,54 +524,6 @@ def _match_pixels_with_voronoi_cells(height, width, cell_coordinates):
 def _generate_pixel_coords(height, width):
     xx, yy = np.meshgrid(np.arange(width), np.arange(height))
     return np.c_[xx.ravel(), yy.ravel()]
-
-
-def _compute_avg_segment_colors(image, pixel_coords, ids_of_nearest_segments,
-                                nb_segments):
-    nb_channels = image.shape[2]
-    cell_colors = np.zeros((nb_segments, nb_channels), dtype=np.float64)
-    cell_counters = np.zeros((nb_segments,), dtype=np.uint32)
-
-    # TODO vectorize
-    for pixel_coord, id_of_nearest_cell in zip(pixel_coords,
-                                               ids_of_nearest_segments):
-        # pixel_coord is (x,y), so we have to swap it to access the HxW image
-        pixel_coord_yx = pixel_coord[::-1]
-        cell_colors[id_of_nearest_cell] += image[tuple(pixel_coord_yx)]
-        cell_counters[id_of_nearest_cell] += 1
-
-    # cells without associated pixels can have a count of 0, we clip
-    # here to 1 as the result for these cells doesn't matter
-    cell_counters = np.clip(cell_counters, 1, None)
-
-    cell_colors = cell_colors / cell_counters[:, np.newaxis]
-
-    return cell_colors.astype(np.uint8)
-
-
-def _render_segments(image, ids_of_nearest_segments, avg_segment_colors,
-                     replace_mask):
-    ids_of_nearest_segments = np.copy(ids_of_nearest_segments)
-    height, width, nb_channels = image.shape
-
-    # without replace_mask we could reduce this down to:
-    # data = cell_colors[ids_of_nearest_cells, :].reshape(
-    #     (width, height, 3))
-    # data = np.transpose(data, (1, 0, 2))
-
-    keep_mask = (~replace_mask) if replace_mask is not None else None
-    if keep_mask is None or not np.any(keep_mask):
-        data = avg_segment_colors[ids_of_nearest_segments, :]
-    else:
-        ids_to_keep = np.nonzero(keep_mask)[0]
-        indices_to_keep = np.where(
-            np.isin(ids_of_nearest_segments, ids_to_keep))[0]
-        data = avg_segment_colors[ids_of_nearest_segments, :]
-
-        image_data = image.reshape((height*width, -1))
-        data[indices_to_keep] = image_data[indices_to_keep, :]
-    data = data.reshape((height, width, nb_channels))
-    return data
 
 
 # TODO this can be reduced down to a similar problem as Superpixels:
@@ -467,28 +552,7 @@ class Voronoi(meta.Augmenter):
 
     **Supported dtypes**:
 
-    if (image size <= max_size):
-
-        * ``uint8``: yes; fully tested
-        * ``uint16``: no; not tested
-        * ``uint32``: no; not tested
-        * ``uint64``: no; not tested
-        * ``int8``: no; not tested
-        * ``int16``: no; not tested
-        * ``int32``: no; not tested
-        * ``int64``: no; not tested
-        * ``float16``: no; not tested
-        * ``float32``: no; not tested
-        * ``float64``: no; not tested
-        * ``float128``: no; not tested
-        * ``bool``: no; not tested
-
-    if (image size > max_size):
-
-        minimum of (
-            ``imgaug.augmenters.segmentation.Voronoi(image size <= max_size)``,
-            :func:`~imgaug.augmenters.segmentation._ensure_image_max_size`
-        )
+    See :func:`imgaug.augmenters.segmentation.segment_voronoi`.
 
     Parameters
     ----------
