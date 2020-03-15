@@ -1,4 +1,4 @@
-# Improved Performance of Segment Replacement #???
+# Improved Performance of Segment Replacement #640
 
 This patch improves the performance of segment
 replacement (by average colors within the segments),
