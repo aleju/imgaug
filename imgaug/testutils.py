@@ -12,6 +12,7 @@ import tempfile
 import shutil
 import re
 import sys
+import importlib
 
 import numpy as np
 import six.moves as sm
@@ -360,3 +361,34 @@ def assertWarns(testcase, expected_warning, *args, **kwargs):
     # pylint: disable=invalid-name
     context = _AssertWarnsContext(expected_warning, testcase)
     return context.handle("assertWarns", args, kwargs)
+
+
+class temporary_constants(object):
+    """Context to temporarily change the value of one or more constants."""
+
+    UNCHANGED = object()
+
+    def __init__(self, paths, values):
+        if ia.is_string(paths):
+            paths = [paths]
+            values = [values]
+
+        self.paths = [".".join(path_i.split(".")[:-1]) for path_i in paths]
+        self.cnames = [path_i.split(".")[-1] for path_i in paths]
+        self.values = values
+        self.old_values = None
+
+    def __enter__(self):
+        old_values = []
+        for path, cname, value in zip(self.paths, self.cnames, self.values):
+            module = importlib.import_module(path)
+            old_values.append(getattr(module, cname))
+            if value is not temporary_constants.UNCHANGED:
+                setattr(module, cname, value)
+        self.old_values = old_values
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        gen = zip(self.paths, self.cnames, self.old_values)
+        for path, cname, old_value in gen:
+            module = importlib.import_module(path)
+            setattr(module, cname, old_value)
