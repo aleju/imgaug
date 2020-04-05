@@ -3182,62 +3182,9 @@ class PiecewiseAffine(meta.Augmenter):
             if transformer is None or len(kpsoi.keypoints) == 0:
                 result.append(kpsoi)
             else:
-                # Augmentation routine that only modifies keypoint coordinates
-                # This is efficient (coordinates of all other locations in the
-                # image are ignored). The code below should usually work, but
-                # for some reason augmented coordinates are often wildly off
-                # for large scale parameters (lots of jitter/distortion).
-                # The reason for that is unknown.
-                """
-                coords = keypoints_on_images[i].get_coords_array()
+                coords = kpsoi.to_xy_array()
                 coords_aug = transformer.inverse(coords)
-                result.append(
-                    ia.KeypointsOnImage.from_coords_array(
-                        coords_aug,
-                        shape=keypoints_on_images[i].shape
-                    )
-                )
-                """
-
-                # TODO this could be done a little bit more efficient by
-                #      removing first all KPs that are outside of the image
-                #      plane so that no corresponding distance map has to
-                #      be augmented
-                # Image based augmentation routine. Draws the keypoints on
-                # the image plane using distance maps (more accurate than
-                # just marking the points),  then augments these images, then
-                # searches for the new (visual) location of the keypoints.
-                # Much slower than directly augmenting the coordinates, but
-                # here the only method that reliably works.
-                dist_maps = kpsoi.to_distance_maps(inverted=True)
-                dist_maps_warped = tf.warp(
-                    dist_maps,
-                    transformer,
-                    order=1,
-                    preserve_range=True,
-                    output_shape=(kpsoi.shape[0], kpsoi.shape[1],
-                                  len(kpsoi.keypoints))
-                )
-
-                kps_aug = ia.KeypointsOnImage.from_distance_maps(
-                    dist_maps_warped,
-                    inverted=True,
-                    threshold=0.01,
-                    if_not_found_coords={"x": -1, "y": -1},
-                    nb_channels=(
-                        None if len(kpsoi.shape) < 3 else kpsoi.shape[2])
-                )
-
-                for kp, kp_aug in zip(kpsoi.keypoints, kps_aug.keypoints):
-                    # Keypoints that were outside of the image plane before the
-                    # augmentation were replaced with (-1, -1) by default (as
-                    # they can't be drawn on the keypoint images).
-                    within_image = (0 <= kp.x < w and 0 <= kp.y < h)
-                    if within_image:
-                        kp.x = kp_aug.x
-                        kp.y = kp_aug.y
-
-                result.append(kpsoi)
+                result.append(ia.KeypointsOnImage.from_xy_array(coords_aug, shape=kpsoi.shape))
 
         return result
 
@@ -3324,10 +3271,9 @@ class PiecewiseAffine(meta.Augmenter):
             # outside of the image plane and these would be replaced by
             # (-1, -1), which would not conform with the behaviour of the
             # other augmenters.
-            points_dest[:, 0] = np.clip(points_dest[:, 0],
-                                        0, augmentable_shape[0]-1)
-            points_dest[:, 1] = np.clip(points_dest[:, 1],
-                                        0, augmentable_shape[1]-1)
+            for index, axis_size in enumerate(augmentable_shape):
+                for limit in (0, axis_size):
+                    points_dest[points_src[:, index] == limit, index] = limit
 
             # tf.warp() results in qhull error if the points are identical,
             # which is mainly the case if any axis is 0
