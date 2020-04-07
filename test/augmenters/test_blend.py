@@ -124,6 +124,23 @@ class Test_blend_alpha(unittest.TestCase):
                 assert np.all(img_blend[:, :, 0] == 0)
                 assert np.all(img_blend[:, :, 1] == 255)
 
+    def test_larger_images(self):
+        sizes = [(4, 4), (16, 16), (64, 64), (128, 128)]
+        for dtype in ["uint8", "float32"]:
+            for size in sizes:
+                shape = size + (3,)
+                for alphas_shape in [size, size + (1,), size + (3,)]:
+                    with self.subTest(dtype=dtype, shape=shape,
+                                      alphas_shape=alphas_shape):
+                        alphas = np.full(alphas_shape, 0.5, dtype=np.float32)
+                        img_fg = np.full(shape, 0, dtype=dtype)
+                        img_bg = np.full(shape, 255, dtype=dtype)
+                        img_blend = blend.blend_alpha(
+                            img_fg, img_bg, alphas, eps=0)
+                        assert img_blend.dtype.name == dtype
+                        assert img_blend.shape == shape
+                        assert np.allclose(img_blend, 128, rtol=0, atol=1.01)
+
     def test_zero_sized_axes(self):
         shapes = [
             (0, 0),
@@ -286,7 +303,7 @@ class Test_blend_alpha(unittest.TestCase):
                     img_bg = np.full((3, 3, 2), v2, dtype=dtype)
                     img_blend = blend.blend_alpha(
                         img_fg, img_bg, [1.0, 0.0], eps=0.1)
-                    assert img_blend.dtype.name == np.dtype(dtype)
+                    assert img_blend.dtype.name == np.dtype(dtype).name
                     assert img_blend.shape == (3, 3, 2)
                     assert np.all(img_blend[:, :, 0] == v1_scalar)
                     assert np.all(img_blend[:, :, 1] == v2_scalar)
@@ -297,7 +314,7 @@ class Test_blend_alpha(unittest.TestCase):
                     alphas = np.zeros((1, 2), dtype=np.float64)
                     alphas[:, :] = [1.0, 0.0]
                     img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
-                    assert img_blend.dtype.name == np.dtype(dtype)
+                    assert img_blend.dtype.name == np.dtype(dtype).name
                     assert img_blend.shape == (1, 2, 3)
                     assert np.all(img_blend[0, 0, :] == v1_scalar)
                     assert np.all(img_blend[0, 1, :] == v2_scalar)
@@ -308,7 +325,7 @@ class Test_blend_alpha(unittest.TestCase):
                     alphas = np.zeros((1, 2, 1), dtype=np.float64)
                     alphas[:, :, 0] = [1.0, 0.0]
                     img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
-                    assert img_blend.dtype.name == np.dtype(dtype)
+                    assert img_blend.dtype.name == np.dtype(dtype).name
                     assert img_blend.shape == (1, 2, 3)
                     assert np.all(img_blend[0, 0, :] == v1_scalar)
                     assert np.all(img_blend[0, 1, :] == v2_scalar)
@@ -321,7 +338,7 @@ class Test_blend_alpha(unittest.TestCase):
                     alphas[:, :, 1] = [0.0, 1.0]
                     alphas[:, :, 2] = [1.0, 0.0]
                     img_blend = blend.blend_alpha(img_fg, img_bg, alphas, eps=0)
-                    assert img_blend.dtype.name == np.dtype(dtype)
+                    assert img_blend.dtype.name == np.dtype(dtype).name
                     assert img_blend.shape == (1, 2, 3)
                     assert np.all(img_blend[0, 0, [0, 2]] == v1_scalar)
                     assert np.all(img_blend[0, 1, [0, 2]] == v2_scalar)
