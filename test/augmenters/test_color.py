@@ -256,9 +256,11 @@ class Test_change_color_temperatures_(unittest.TestCase):
                 expected = np.uint8(multiplier).reshape((1, 1, 3))
                 assert np.array_equal(image_temp, expected)
 
-    def test_several_images_as_list(self):
+    def test_three_images_as_list(self):
+        # separate tests for three and four images due to possible
+        # broadcasting errors, see issue #646
         image = np.full((1, 1, 3), 255, dtype=np.uint8)
-        
+
         images_temp = iaa.change_color_temperatures_(
             [np.copy(image), np.copy(image), np.copy(image)],
             [11100, 11200, 11300]
@@ -274,7 +276,30 @@ class Test_change_color_temperatures_(unittest.TestCase):
         assert np.array_equal(images_temp[1], expected[1])
         assert np.array_equal(images_temp[2], expected[2])
 
-    def test_several_images_as_array(self):
+    def test_four_images_as_list(self):
+        # separate tests for three and four images due to possible
+        # broadcasting errors, see issue #646
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+        
+        images_temp = iaa.change_color_temperatures_(
+            [np.copy(image), np.copy(image), np.copy(image), np.copy(image)],
+            [11100, 11200, 11300, 11100]
+        )
+
+        expected = np.array([
+            [196, 214, 255],
+            [195, 214, 255],
+            [195, 214, 255],
+            [196, 214, 255]
+        ], dtype=np.uint8).reshape((4, 1, 1, 3))
+        assert isinstance(images_temp, list)
+        assert np.array_equal(images_temp[0], expected[0])
+        assert np.array_equal(images_temp[1], expected[1])
+        assert np.array_equal(images_temp[2], expected[2])
+
+    def test_three_images_as_array(self):
+        # separate tests for three and four images due to possible
+        # broadcasting errors, see issue #646
         image = np.full((1, 1, 3), 255, dtype=np.uint8)
 
         images_temp = iaa.change_color_temperatures_(
@@ -287,6 +312,26 @@ class Test_change_color_temperatures_(unittest.TestCase):
             [195, 214, 255],
             [195, 214, 255]
         ], dtype=np.uint8).reshape((3, 1, 1, 3))
+        assert ia.is_np_array(images_temp)
+        assert np.array_equal(images_temp, expected)
+
+    def test_four_images_as_array(self):
+        # separate tests for three and four images due to possible
+        # broadcasting errors, see issue #646
+        image = np.full((1, 1, 3), 255, dtype=np.uint8)
+
+        images_temp = iaa.change_color_temperatures_(
+            np.uint8([np.copy(image), np.copy(image), np.copy(image),
+                      np.copy(image)]),
+            np.float32([11100, 11200, 11300, 11100])
+        )
+
+        expected = np.array([
+            [196, 214, 255],
+            [195, 214, 255],
+            [195, 214, 255],
+            [196, 214, 255]
+        ], dtype=np.uint8).reshape((4, 1, 1, 3))
         assert ia.is_np_array(images_temp)
         assert np.array_equal(images_temp, expected)
 
