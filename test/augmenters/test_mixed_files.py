@@ -30,7 +30,7 @@ def test_determinism():
     images = [
         ia.quokka(size=(128, 128)),
         ia.quokka(size=(64, 64)),
-        ia.imresize_single_image(skimage.data.astronaut(), (128, 256))
+        ia.quokka((128, 256))
     ]
     images.extend([ia.quokka(size=(16, 16))] * 20)
 
