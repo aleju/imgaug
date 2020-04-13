@@ -354,7 +354,7 @@ class TestPool(unittest.TestCase):
             result = [result] + list(gen)
             times = np.float64(times)
             times_diffs = times[1:] - times[0:-1]
-            assert np.all(times_diffs < timeout)
+            assert np.all(times_diffs < timeout * 1.01)
             assert contains_all_ids(result)
 
             # with output buffer limit, but set to the number of batches,
@@ -366,7 +366,7 @@ class TestPool(unittest.TestCase):
             result = [result] + list(gen)
             times = np.float64(times)
             times_diffs = times[1:] - times[0:-1]
-            assert np.all(times_diffs < timeout)
+            assert np.all(times_diffs < timeout * 1.01)
             assert contains_all_ids(result)
 
             # With output buffer limit of #batches/2 (=4), followed by a
@@ -385,9 +385,9 @@ class TestPool(unittest.TestCase):
             times_diffs = times[1:] - times[0:-1]
             # use -1 here because we have N-1 times for N batches as
             # diffs denote diffs between Nth and N+1th batch
-            assert np.all(times_diffs[0:4-1] < timeout)
-            assert np.all(times_diffs[4-1:4-1+1] >= timeout)
-            assert np.all(times_diffs[4-1+1:] < timeout)
+            assert np.all(times_diffs[0:4-1] < timeout * 1.01)
+            assert np.all(times_diffs[4-1:4-1+1] >= timeout * 0.99)
+            assert np.all(times_diffs[4-1+1:] < timeout * 1.01)
             assert contains_all_ids(result)
 
     def test_imap_batches(self):

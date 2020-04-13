@@ -447,7 +447,7 @@ class _KelvinToRGBTable(object):
         multipliers_ceiled = self.table[tbl_indices_ceiled_int, :]
         multipliers = (
             multipliers_floored
-            + interpolation_factors
+            + interpolation_factors[:, np.newaxis]
             * (multipliers_ceiled - multipliers_floored)
         )
 
