@@ -17,6 +17,7 @@ import six.moves as sm
 import scipy
 import scipy.stats
 import imageio
+import cv2
 
 from . import imgaug as ia
 from . import dtypes as iadt
@@ -3094,6 +3095,8 @@ class FrequencyNoise(StochasticParameter):
                 "Expected upscale_method to be string or list of strings or "
                 "StochasticParameter, got %s." % (type(upscale_method),))
 
+        self._distance_matrix_cache = np.zeros((0, 0), dtype=np.float32)
+
     # TODO this is the same as in SimplexNoise, make DRY
     def _draw_samples(self, size, random_state):
         # code here is similar to:
@@ -3114,78 +3117,123 @@ class FrequencyNoise(StochasticParameter):
         return np.stack(channels, axis=-1)
 
     def _draw_samples_hw(self, height, width, random_state):
-        rngs = random_state.duplicate(5)
         maxlen = max(height, width)
-        size_px_max = self.size_px_max.draw_sample(random_state=rngs[0])
+        size_px_max = self.size_px_max.draw_sample(random_state=random_state)
+        h_small, w_small = height, width
         if maxlen > size_px_max:
             downscale_factor = size_px_max / maxlen
             h_small = int(height * downscale_factor)
             w_small = int(width * downscale_factor)
-        else:
-            h_small = height
-            w_small = width
 
         # don't go below Hx4 or 4xW
         h_small = max(h_small, 4)
         w_small = max(w_small, 4)
 
-        # generate random base matrix
-        # TODO use a single RNG with a single call here
-        wn_r = rngs[1].random(size=(h_small, w_small))
-        wn_a = rngs[2].random(size=(h_small, w_small))
+        # exponents to pronounce some frequencies
+        exponent = self.exponent.draw_sample(random_state=random_state)
 
-        wn_r = wn_r * (max(h_small, w_small) ** 2)
-        wn_a = wn_a * 2 * np.pi
+        # base function to invert, derived from a distance matrix (euclidean
+        # distance to image center)
+        f = self._get_distance_matrix_cached((h_small, w_small))
 
-        wn_r = wn_r * np.cos(wn_a)
-        wn_a = wn_r * np.sin(wn_a)
+        # prevent divide by zero warnings at the image corners in
+        # f**exponent
+        f[0, 0] = 1
+        f[-1, 0] = 1
+        f[0, -1] = 1
+        f[-1, -1] = 1
 
-        # pronounce some frequencies
-        exponent = self.exponent.draw_sample(random_state=rngs[3])
-        # this has some similarity with a distance map from the center, but
-        # looks a bit more like a cross
-        f = self._create_distance_matrix((h_small, w_small))
-        f[0, 0] = 1 # necessary to prevent -inf from appearing
         scale = f ** exponent
+
+        # invert setting corners to 1
         scale[0, 0] = 0
-        treal = wn_r * scale
-        timag = wn_a * scale
+        scale[-1, 0] = 0
+        scale[0, -1] = 0
+        scale[-1, -1] = 0
 
-        wn_freqs_mul = np.zeros(treal.shape, dtype=np.complex)
-        wn_freqs_mul.real = treal
-        wn_freqs_mul.imag = timag
+        # generate random base matrix
+        # first channel: wn_r, second channel: wn_a
+        wn = random_state.random(size=(2, h_small, w_small))
+        wn[0, ...] *= (max(h_small, w_small) ** 2)
+        wn[1, ...] *= 2 * np.pi
+        wn[0, ...] *= np.cos(wn[1, ...])
+        wn[1, ...] *= np.sin(wn[1, ...])
+        wn *= scale[np.newaxis, :, :]
+        wn = wn.transpose((1, 2, 0))
+        if wn.dtype != np.float32:
+            wn = wn.astype(np.float32)
 
-        wn_inv = np.fft.ifft2(wn_freqs_mul).real
+        # equivalent but slightly faster then:
+        #   wn_freqs_mul = np.zeros(treal.shape, dtype=np.complex)
+        #   wn_freqs_mul.real = wn[0]
+        #   wn_freqs_mul.imag = wn[1]
+        #   wn_inv = np.fft.ifft2(wn_freqs_mul).real
+        wn_inv = cv2.idft(wn)[:, :, 0]
 
         # normalize to 0 to 1
-        wn_inv_min = np.min(wn_inv)
-        wn_inv_max = np.max(wn_inv)
-        noise_0to1 = (wn_inv - wn_inv_min) / (wn_inv_max - wn_inv_min)
+        # equivalent to but slightly faster than:
+        #   wn_inv_min = np.min(wn_inv)
+        #   wn_inv_max = np.max(wn_inv)
+        #   noise_0to1 = (wn_inv - wn_inv_min) / (wn_inv_max - wn_inv_min)
+        # does not accept wn_inv as dst directly
+        noise_0to1 = cv2.normalize(
+            wn_inv,
+            dst=np.zeros_like(wn_inv),
+            alpha=0.01,
+            beta=1.0,
+            norm_type=cv2.NORM_MINMAX
+        )
 
         # upscale from low resolution to image size
-        upscale_method = self.upscale_method.draw_sample(random_state=rngs[4])
         if noise_0to1.shape != (height, width):
-            noise_0to1_uint8 = (noise_0to1 * 255).astype(np.uint8)
-            noise_0to1_3d = np.tile(
-                noise_0to1_uint8[..., np.newaxis], (1, 1, 3))
+            upscale_method = self.upscale_method.draw_sample(
+                random_state=random_state
+            )
             noise_0to1 = ia.imresize_single_image(
-                noise_0to1_3d,
+                noise_0to1.astype(np.float32),
                 (height, width),
                 interpolation=upscale_method)
-            noise_0to1 = (noise_0to1[..., 0] / 255.0).astype(np.float32)
+            if upscale_method == "cubic":
+                noise_0to1 = np.clip(noise_0to1, 0.0, 1.0)
 
         return noise_0to1
 
+    def _get_distance_matrix_cached(self, size):
+        cache = self._distance_matrix_cache
+        height, width = cache.shape
+        if height < size[0] or width < size[1]:
+            self._distance_matrix_cache = self._create_distance_matrix(
+                (max(height, size[0]), max(width, size[1]))
+            )
+
+        return self._extract_distance_matrix(self._distance_matrix_cache, size)
+
+    @classmethod
+    def _extract_distance_matrix(cls, matrix, size):
+        height, width = matrix.shape[0:2]
+        leftover_y = (height - size[0]) / 2
+        leftover_x = (width - size[1]) / 2
+        y1 = int(np.floor(leftover_y))
+        y2 = height - int(np.ceil(leftover_y))
+        x1 = int(np.floor(leftover_x))
+        x2 = width - int(np.ceil(leftover_x))
+        return matrix[y1:y2, x1:x2]
+
     @classmethod
     def _create_distance_matrix(cls, size):
-        h, w = size
+        def _create_line(line_size):
+            start = np.arange(line_size // 2)
+            middle = [line_size//2] if line_size % 2 == 1 else []
+            end = start[::-1]
+            return np.concatenate([start, middle, end])
 
-        def _freq(yy, xx):
-            hdist = np.minimum(yy, h-yy)
-            wdist = np.minimum(xx, w-xx)
-            return np.sqrt(hdist**2 + wdist**2)
-
-        return np.fromfunction(_freq, (h, w))
+        height, width = size
+        ydist = _create_line(height) ** 2
+        xdist = _create_line(width) ** 2
+        ydist_2d = np.broadcast_to(ydist[:, np.newaxis], size)
+        xdist_2d = np.broadcast_to(xdist[np.newaxis, :], size)
+        dist = np.sqrt(ydist_2d + xdist_2d)
+        return dist
 
     def __repr__(self):
         return self.__str__()
