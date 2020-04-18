@@ -167,102 +167,30 @@ def add_scalar_(image, value):
 
 
 def _add_scalar_to_uint8_(image, value):
-    # Using this LUT approach is significantly faster than using
-    # numpy-based adding with dtype checks (around 3-4x speedup) and is
-    # still faster than the simple numpy image+sample approach without LUT
-    # (about 10% at 64x64 and about 2x at 224x224 -- maybe dependent on
-    # installed BLAS libraries?)
-
-    # pylint: disable=no-else-return
-
-    is_single_value = (
-        ia.is_single_number(value)
-        or ia.is_np_scalar(value)
-        or (ia.is_np_array(value) and value.size == 1))
+    if ia.is_single_number(value):
+        is_single_value = True
+        value = round(value)
+    elif ia.is_np_scalar(value) or ia.is_np_array(value):
+        is_single_value = (value.size == 1)
+        value = np.round(value) if value.dtype.kind == "f" else value
+    else:
+        is_single_value = False
     is_channelwise = not is_single_value
 
-    table_gen = _AddUint8LUTSingleton.get_instance()
+    if image.ndim == 2 and is_single_value:
+        return cv2.add(image, value, dst=image, dtype=cv2.CV_8U)
 
-    if is_channelwise:
-        assert value.ndim == 1, (
-            "Expected `value` to be 1-dimensional, got %d-dimensional "
-            "data with shape %s." % (value.ndim, value.shape))
-        assert image.ndim == 3, (
-            "Expected `image` to be 3-dimensional when adding one value per "
-            "channel, got %d-dimensional data with shape %s." % (
-                image.ndim, image.shape))
-        assert image.shape[-1] == value.size, (
-            "Expected number of channels in `image` and number of components "
-            "in `value` to be identical. Got %d vs. %d." % (
-                image.shape[-1], value.size))
-
-        tables = [table_gen.get_table_for_value(value_c) for value_c in value]
+    input_shape = image.shape
+    image = image.ravel()
+    values = np.array(value)
+    if not is_channelwise:
+        values = np.broadcast_to(values, image.shape)
     else:
-        tables = table_gen.get_table_for_value(value)
-    return ia.apply_lut_(image, tables)
+        values = np.tile(values, image.size // len(values))
 
+    image_add = cv2.add(image, values, dst=image, dtype=cv2.CV_8U)
 
-class _AddUint8LUTSingleton(object):
-    _INSTANCE = None
-
-    @classmethod
-    def get_instance(cls):
-        """Get singleton instance of :class:`_AddUint8LUT`.
-
-        Added in 0.4.0.
-
-        Returns
-        -------
-        _AddUint8LUT
-            The global instance of :class:`_AddUint8LUT`.
-
-        """
-        if cls._INSTANCE is None:
-            cls._INSTANCE = _AddUint8LUT()
-        return cls._INSTANCE
-
-
-class _AddUint8LUT(object):
-    def __init__(self):
-        self.table = _create_add_uint8_lut()
-
-    def get_table_for_value(self, value):
-        # round() here doesn't behave identically between py2.7 and 3+,
-        # but it shouldn't have significant downsides here and is faster than
-        # np.round()
-        # we must round, otherwise for uniform(0, 255), 255 will never be
-        # sampled
-        if hasattr(value, "shape"):
-            assert value.size == 1, (
-                "If given a numpy array, expected to receive an array "
-                "containing a single value. "
-                "Got an array with %d values." % (value.size,)
-            )
-            value = value.flat[0]
-        value = int(min(max(round(value), -255), 255))
-        return self.table[value + 255]
-
-
-def _create_add_uint8_lut():
-    # base value range
-    # tile towards (512x256) matrix
-    # each row is identical (0, 1, 2, 3, ..., 255)
-    # and in each column all values are identical
-    value_range = np.arange(0, 256, dtype=np.int16)
-    table = np.tile(value_range[np.newaxis, :], (511, 1))
-
-    # values to add
-    # tile towards (511, 256) matrix
-    # where each column is identical (0, 1, 2, 3, ..., 255)
-    # and in each row all values are identical
-    to_add = np.arange(-255, 256, dtype=np.int16)
-    to_add = np.tile(to_add[:, np.newaxis], (1, 256))
-
-    # add to all columns in n-th row the value n
-    # i.e. n-th column is (0+n, 1+n, 2+n, 3+n, ..., 255+n)
-    table = table + to_add
-
-    return np.clip(table, 0, 255).astype(np.uint8)
+    return image_add.reshape(input_shape)
 
 
 def _add_scalar_to_non_uint8(image, value):
