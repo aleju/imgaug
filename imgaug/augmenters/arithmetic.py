@@ -35,12 +35,14 @@ import tempfile
 
 import imageio
 import numpy as np
+import cv2
 
 import imgaug as ia
 from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
 from .. import random as iarandom
+from ..imgaug import _normalize_cv2_input_arr_
 
 
 # fill modes for apply_cutout_() and Cutout augmenter
@@ -58,7 +60,7 @@ _CUTOUT_FILL_MODES = {
 
 
 def add_scalar(image, value):
-    """Add a single scalar value or one scalar value per channel to an image.
+    """Add a scalar value (or one scalar per channel) to an image.
 
     This method ensures that ``uint8`` does not overflow during the addition.
 
@@ -98,6 +100,52 @@ def add_scalar(image, value):
         Image with value added to it.
 
     """
+    return add_scalar_(np.copy(image), value)
+
+
+def add_scalar_(image, value):
+    """Add in-place a scalar value (or one scalar per channel) to an image.
+
+    This method ensures that ``uint8`` does not overflow during the addition.
+
+    **Supported dtypes**:
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: limited; tested (1)
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: limited; tested (1)
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
+
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+        If `value` contains more than one value, the shape of the image is
+        expected to be ``(H,W,C)``.
+        The image might be changed in-place.
+
+    value : number or ndarray
+        The value to add to the image. Either a single value or an array
+        containing exactly one component per channel, i.e. ``C`` components.
+
+    Returns
+    -------
+    ndarray
+        Image with value added to it.
+        This might be the input `image`, changed in-place.
+
+    """
     if image.size == 0:
         return np.copy(image)
 
@@ -114,51 +162,35 @@ def add_scalar(image, value):
         augmenter=None)
 
     if image.dtype.name == "uint8":
-        return _add_scalar_to_uint8(image, value)
+        return _add_scalar_to_uint8_(image, value)
     return _add_scalar_to_non_uint8(image, value)
 
 
-def _add_scalar_to_uint8(image, value):
-    # Using this LUT approach is significantly faster than using
-    # numpy-based adding with dtype checks (around 3-4x speedup) and is
-    # still faster than the simple numpy image+sample approach without LUT
-    # (about 10% at 64x64 and about 2x at 224x224 -- maybe dependent on
-    # installed BLAS libraries?)
-
-    # pylint: disable=no-else-return
-
-    is_single_value = (
-        ia.is_single_number(value)
-        or ia.is_np_scalar(value)
-        or (ia.is_np_array(value) and value.size == 1))
-    is_channelwise = not is_single_value
-    nb_channels = 1 if image.ndim == 2 else image.shape[-1]
-
-    value = np.clip(np.round(value), -255, 255).astype(np.int16)
-    value_range = np.arange(0, 256, dtype=np.int16)
-
-    if is_channelwise:
-        assert value.ndim == 1, (
-            "Expected `value` to be 1-dimensional, got %d-dimensional "
-            "data with shape %s." % (value.ndim, value.shape))
-        assert image.ndim == 3, (
-            "Expected `image` to be 3-dimensional when adding one value per "
-            "channel, got %d-dimensional data with shape %s." % (
-                image.ndim, image.shape))
-        assert image.shape[-1] == value.size, (
-            "Expected number of channels in `image` and number of components "
-            "in `value` to be identical. Got %d vs. %d." % (
-                image.shape[-1], value.size))
-
-        # TODO check if tile() is here actually needed
-        tables = np.tile(
-            value_range[:, np.newaxis],
-            (1, nb_channels)
-        ) + value[np.newaxis, :]
+def _add_scalar_to_uint8_(image, value):
+    if ia.is_single_number(value):
+        is_single_value = True
+        value = round(value)
+    elif ia.is_np_scalar(value) or ia.is_np_array(value):
+        is_single_value = (value.size == 1)
+        value = np.round(value) if value.dtype.kind == "f" else value
     else:
-        tables = value_range + value
-    tables = np.clip(tables, 0, 255).astype(image.dtype)
-    return ia.apply_lut(image, tables)
+        is_single_value = False
+    is_channelwise = not is_single_value
+
+    if image.ndim == 2 and is_single_value:
+        return cv2.add(image, value, dst=image, dtype=cv2.CV_8U)
+
+    input_shape = image.shape
+    image = image.ravel()
+    values = np.array(value)
+    if not is_channelwise:
+        values = np.broadcast_to(values, image.shape)
+    else:
+        values = np.tile(values, image.size // len(values))
+
+    image_add = cv2.add(image, values, dst=image, dtype=cv2.CV_8U)
+
+    return image_add.reshape(input_shape)
 
 
 def _add_scalar_to_non_uint8(image, value):
@@ -1602,7 +1634,7 @@ class Add(meta.Augmenter):
                 # the if/else here catches the case of the channel axis being 0
                 value = value_samples_i[0] if value_samples_i.size > 0 else []
 
-            batch.images[i] = add_scalar(image, value)
+            batch.images[i] = add_scalar_(image, value)
 
         return batch
 
