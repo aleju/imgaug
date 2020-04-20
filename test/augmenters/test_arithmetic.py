@@ -26,6 +26,171 @@ from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
                               runtest_pickleable_uint8_img, assertWarns)
 import imgaug.augmenters.arithmetic as arithmetic_lib
 import imgaug.augmenters.contrast as contrast_lib
+from imgaug.augmenters.arithmetic import _add_elementwise_cv2_to_uint8
+
+
+class Test__add_elementwise_cv2_to_uint8(unittest.TestCase):
+    def test_image_is_hw(self):
+        image_shape = (3, 4)
+        values_shape = (3, 4)
+
+        image = np.ones(image_shape, dtype=np.uint8)
+        values = np.ones(values_shape, dtype=np.float32)
+
+        result = _add_elementwise_cv2_to_uint8(image, values)
+
+        assert np.array_equal(result, image + 1)
+        assert result.shape == image_shape
+        assert result.dtype.name == "uint8"
+        assert result is not image
+
+    def test_image_is_hwn(self):
+        for nb_channels in [1, 2, 3, 4, 5, 10]:
+            for values_nb_channels in [None, 1, nb_channels]:
+                image_shape = (3, 4, nb_channels)
+                values_shape = (3, 4)
+                if values_nb_channels is not None:
+                    values_shape = values_shape + (values_nb_channels,)
+
+                with self.subTest(image_shape=image_shape,
+                                  values_shape=values_shape):
+                    image = np.ones(image_shape, dtype=np.uint8)
+                    values = np.ones(values_shape, dtype=np.float32)
+
+                    result = _add_elementwise_cv2_to_uint8(image, values)
+
+                    assert np.array_equal(result, image + 1)
+                    assert result.shape == image_shape
+                    assert result.dtype.name == "uint8"
+                    assert result is not image
+
+    def test_image_is_view(self):
+        for shape in [(4, 3), (4, 3, 3)]:
+            with self.subTest(shape=shape):
+                image = np.ones(shape, dtype=np.uint8)
+                values = np.ones((shape[0]-1, shape[1]), dtype=np.float32)
+
+                image = image[0:3, :]
+                assert image.flags["OWNDATA"] is False
+                assert image.flags["C_CONTIGUOUS"] is True
+
+                result = _add_elementwise_cv2_to_uint8(image, values)
+
+                assert np.array_equal(result, image + 1)
+                assert result.shape == (shape[0]-1, shape[1]) + shape[2:]
+                assert result.dtype.name == "uint8"
+                assert result is not image
+
+    def test_image_is_non_contiguous(self):
+        for shape in [(3, 4), (3, 4, 3)]:
+            with self.subTest(shape=shape):
+                image = np.ones(shape, dtype=np.uint8, order="F")
+                values = np.ones(shape, dtype=np.float32)
+
+                assert image.flags["OWNDATA"] is True
+                assert image.flags["C_CONTIGUOUS"] is False
+
+                result = _add_elementwise_cv2_to_uint8(image, values)
+
+                assert np.array_equal(result, image + 1)
+                assert result.shape == shape
+                assert result.dtype.name == "uint8"
+                assert result is not image
+
+    def test_floats_with_decimal_points(self):
+        image_shape = (3, 4, 3)
+        values_shape = (3, 4)
+
+        image = np.ones(image_shape, dtype=np.uint8)
+        values = np.full(values_shape, 1.7, dtype=np.float32)
+
+        result = _add_elementwise_cv2_to_uint8(image, values)
+        # cv2.add() performs rounding
+        assert np.array_equal(result, image + 2)
+        assert result.shape == image_shape
+        assert result.dtype.name == "uint8"
+        assert result is not image
+
+    def test_is_saturating(self):
+        image_shape = (3, 4, 3)
+        values_shape = (3, 4)
+
+        for value in [-1000.5, 1000.5]:
+            with self.subTest(value=value):
+                image = np.ones(image_shape, dtype=np.uint8)
+                values = np.full(values_shape, value, dtype=np.float32)
+
+                result = _add_elementwise_cv2_to_uint8(image, values)
+                if value < 0:
+                    assert np.all(result == 0)
+                else:
+                    assert np.all(result == 255)
+                assert result.shape == image_shape
+                assert result.dtype.name == "uint8"
+                assert result is not image
+
+    def test_values_is_int_uint(self):
+        image_shape = (3, 4, 3)
+        values_shape = (3, 4)
+
+        dtypes = ["int8", "int16", "int32", "uint8", "uint16"]
+        values = ["min", -10, -1, 0, 1, 10, "max"]
+
+        for dt in dtypes:
+            for value in values:
+                vmin, _, vmax = iadt.get_value_range_of_dtype(dt)
+                if value == "min":
+                    value = max(vmin, -1000)
+                elif value == "max":
+                    value = min(1000, vmax)
+                elif value < 0:
+                    value = 0 if dt.startswith("uint") else value
+
+                with self.subTest(dtype=dt, value=value):
+                    image = np.full(image_shape, 127, dtype=np.uint8)
+                    values_arr = np.full(values_shape, value, dtype=dt)
+
+                    result = _add_elementwise_cv2_to_uint8(image, values_arr)
+
+                    expected_value = min(max(127 + value, 0), 255)
+                    assert np.all(result == expected_value)
+                    assert result.shape == image_shape
+                    assert result.dtype.name == "uint8"
+                    assert result is not image
+
+    def test_values_is_float(self):
+        image_shape = (3, 4, 3)
+        values_shape = (3, 4)
+
+        dtypes = ["float32", "float64"]
+        values = [
+            [-1000.0, -255.0, -1.0, 0.0, 1.0, 255.0, 1000.0],
+            [-1000.0, -255.0, -1.0, 0.0, 1.0, 255.0, 1000.0]
+        ]
+
+        for dt, values_dt in zip(dtypes, values):
+            for value in values_dt:
+                with self.subTest(dtype=dt, value=value):
+                    image = np.full(image_shape, 127, dtype=np.uint8)
+                    values = np.full(values_shape, value, dtype=dt)
+
+                    result = _add_elementwise_cv2_to_uint8(image, values)
+
+                    if value < -1.01:
+                        expected_value = 0
+                    elif np.isclose(value, -1.0):
+                        expected_value = 126
+                    elif np.isclose(value, 0.0):
+                        expected_value = 127
+                    elif np.isclose(value, 1.0):
+                        expected_value = 128
+                    else:
+                        expected_value = 255
+
+                    assert np.all(result == expected_value)
+                    assert result.shape == image_shape
+                    assert result.dtype.name == "uint8"
+                    assert result is not image
 
 
 class Test_cutout(unittest.TestCase):

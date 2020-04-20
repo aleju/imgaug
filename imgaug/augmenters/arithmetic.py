@@ -269,6 +269,13 @@ def add_elementwise(image, values):
         The values to add to the image. Expected to have the same height
         and width as `image` and either no channels or one channel or
         the same number of channels as `image`.
+        This array is expected to have dtype ``int8``, ``int16``, ``int32``,
+        ``uint8``, ``uint16``, ``float32``, ``float64``. Other dtypes may
+        or may not work.
+        For ``uint8`` inputs, only `value` arrays with values in the interval
+        ``[-1000, 1000]`` are supported. Values beyond that interval may
+        result in an output array of zeros (no error is raised due to
+        performance reasons).
 
     Returns
     -------
@@ -288,12 +295,55 @@ def add_elementwise(image, values):
                     "float256"],
         augmenter=None)
 
-    if image.dtype.name == "uint8":
-        return _add_elementwise_to_uint8(image, values)
-    return _add_elementwise_to_non_uint8(image, values)
+    idt = image.dtype.name
+    if idt == "uint8":
+        vdt = values.dtype.name
+        valid_value_dtypes_cv2 = {
+            "int8", "int16", "int32", "uint8", "uint16", "float32", "float64"
+        }
+
+        ishape = image.shape
+
+        is_image_valid_shape_cv2 = (
+            (
+                len(ishape) == 2
+                or (len(ishape) == 3 and ishape[-1] <= 512)
+            )
+            and 0 not in ishape
+        )
+
+        use_cv2 = (
+            is_image_valid_shape_cv2
+            and vdt in valid_value_dtypes_cv2
+        )
+        if use_cv2:
+            return _add_elementwise_cv2_to_uint8(image, values)
+        return _add_elementwise_np_to_uint8(image, values)
+    return _add_elementwise_np_to_non_uint8(image, values)
 
 
-def _add_elementwise_to_uint8(image, values):
+def _add_elementwise_cv2_to_uint8(image, values):
+    ind, vnd = image.ndim, values.ndim
+    valid_vnd = [ind] if ind == 2 else [ind-1, ind]
+    assert vnd in valid_vnd, (
+        "Expected values with any of %s dimensions, "
+        "got %d dimensions (shape %s vs. image shape %s)." % (
+            valid_vnd, vnd, values.shape, image.shape
+        )
+    )
+
+    if vnd == ind - 1:
+        values = values[:, :, np.newaxis]
+    if values.shape[-1] == 1:
+        values = np.broadcast_to(values, image.shape)
+    # add does not seem to require normalization
+    result = cv2.add(image, values, dtype=cv2.CV_8U)
+    if result.ndim == 2 and ind == 3:
+        return result[:, :, np.newaxis]
+    return result
+
+
+def _add_elementwise_np_to_uint8(image, values):
     # This special uint8 block is around 60-100% faster than the
     # corresponding non-uint8 function further below (more speedup
     # for smaller images).
@@ -315,7 +365,7 @@ def _add_elementwise_to_uint8(image, values):
     return image_aug
 
 
-def _add_elementwise_to_non_uint8(image, values):
+def _add_elementwise_np_to_non_uint8(image, values):
     # We limit here the value range of the value parameter to the
     # bytes in the image's dtype. This prevents overflow problems
     # and makes it less likely that the image has to be up-casted,
@@ -327,6 +377,9 @@ def _add_elementwise_to_non_uint8(image, values):
     # We need 2* the itemsize of the image here to allow to shift
     # the image's max value to the lowest possible value, e.g. for
     # uint8 it must allow for -255 to 255.
+    if image.dtype.kind != "f" and values.dtype.kind == "f":
+        values = np.round(values)
+
     input_shape = image.shape
     input_dtype = image.dtype
 
