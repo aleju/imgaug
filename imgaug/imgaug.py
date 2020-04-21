@@ -1843,8 +1843,8 @@ def _avg_pool_uint8(arr, block_size, pad_mode="reflect", pad_cval=128):
 
     ndim_in = arr.ndim
 
-    s = arr.shape
-    if s[0] % block_size[0] != 0 or s[1] % block_size[1] != 0:
+    shape = arr.shape
+    if shape[0] % block_size[0] != 0 or shape[1] % block_size[1] != 0:
         arr = pad_to_multiples_of(
             arr,
             height_multiple=block_size[0],
