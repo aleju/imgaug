@@ -1413,10 +1413,12 @@ def test_avg_pool():
     arr_pooled = ia.avg_pool(arr, 2)
     assert arr_pooled.shape == (2, 2)
     assert arr_pooled.dtype == arr.dtype.type
-    assert arr_pooled[0, 0] == int(np.average([0, 1, 4, 5]))
-    assert arr_pooled[0, 1] == int(np.average([2, 3, 6, 7]))
-    assert arr_pooled[1, 0] == int(np.average([8, 9, 12, 13]))
-    assert arr_pooled[1, 1] == int(np.average([10, 11, 14, 15]))
+    # add 1e-4 here to force 0.5 to be rounded up, as that's how OpenCV
+    # handles it
+    assert arr_pooled[0, 0] == int(np.round(1e-4 + np.average([0, 1, 4, 5])))
+    assert arr_pooled[0, 1] == int(np.round(1e-4 + np.average([2, 3, 6, 7])))
+    assert arr_pooled[1, 0] == int(np.round(1e-4 + np.average([8, 9, 12, 13])))
+    assert arr_pooled[1, 1] == int(np.round(1e-4 + np.average([10, 11, 14, 15])))
 
 
 # TODO add test that verifies the default padding mode
@@ -1478,6 +1480,115 @@ def test_median_pool():
     assert arr_pooled[0, 1] == int(np.median([2, 3, 6, 7]))
     assert arr_pooled[1, 0] == int(np.median([8, 9, 12, 13]))
     assert arr_pooled[1, 1] == int(np.median([10, 11, 14, 15]))
+
+
+# TODO add test that verifies the default padding mode
+def test_median_pool_ksize_1_3():
+    # very basic test, as median_pool() just calls pool(), which is tested in
+    # test_pool()
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+
+    arr_pooled = ia.median_pool(arr, (1, 3))
+
+    assert arr_pooled.shape == (4, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.median([0, 1, 2]))
+    assert arr_pooled[0, 1] == int(np.median([3, 2, 1]))
+    assert arr_pooled[1, 0] == int(np.median([4, 5, 6]))
+    assert arr_pooled[1, 1] == int(np.median([7, 6, 5]))
+    assert arr_pooled[2, 0] == int(np.median([8, 9, 10]))
+    assert arr_pooled[2, 1] == int(np.median([11, 10, 9]))
+    assert arr_pooled[3, 0] == int(np.median([12, 13, 14]))
+    assert arr_pooled[3, 1] == int(np.median([15, 14, 13]))
+
+
+def test_median_pool_ksize_3():
+    # After padding:
+    # [5, 4, 5, 6, 7, 6],
+    # [1, 0, 1, 2, 3, 2],
+    # [5, 4, 5, 6, 7, 6],
+    # [9, 8, 9, 10, 11, 10],
+    # [13, 12, 13, 14, 15, 14],
+    # [9, 8, 9, 10, 11, 10]
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ])
+
+    arr_pooled = ia.median_pool(arr, 3)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.median([5, 4, 5, 1, 0, 1, 5, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.median([6, 7, 6, 2, 3, 2, 6, 7, 6]))
+    assert arr_pooled[1, 0] == int(np.median([9, 8, 9, 13, 12, 13, 9, 8, 9]))
+    assert arr_pooled[1, 1] == int(np.median([10, 11, 10, 14, 15, 13, 10, 11,
+                                              10]))
+
+
+def test_median_pool_ksize_3_view():
+    # After padding:
+    # [5, 4, 5, 6, 7, 6],
+    # [1, 0, 1, 2, 3, 2],
+    # [5, 4, 5, 6, 7, 6],
+    # [9, 8, 9, 10, 11, 10],
+    # [13, 12, 13, 14, 15, 14],
+    # [9, 8, 9, 10, 11, 10]
+    arr = np.uint8([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15],
+        [0, 0, 0, 0]
+    ])
+
+    arr_in = arr[0:4, :]
+    assert arr_in.flags["OWNDATA"] is False
+    assert arr_in.flags["C_CONTIGUOUS"] is True
+    arr_pooled = ia.median_pool(arr_in, 3)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.median([5, 4, 5, 1, 0, 1, 5, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.median([6, 7, 6, 2, 3, 2, 6, 7, 6]))
+    assert arr_pooled[1, 0] == int(np.median([9, 8, 9, 13, 12, 13, 9, 8, 9]))
+    assert arr_pooled[1, 1] == int(np.median([10, 11, 10, 14, 15, 13, 10, 11,
+                                              10]))
+
+
+def test_median_pool_ksize_3_non_contiguous():
+    # After padding:
+    # [5, 4, 5, 6, 7, 6],
+    # [1, 0, 1, 2, 3, 2],
+    # [5, 4, 5, 6, 7, 6],
+    # [9, 8, 9, 10, 11, 10],
+    # [13, 12, 13, 14, 15, 14],
+    # [9, 8, 9, 10, 11, 10]
+    arr = np.array([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],
+        [12, 13, 14, 15]
+    ], dtype=np.uint8, order="F")
+
+    assert arr.flags["OWNDATA"] is True
+    assert arr.flags["C_CONTIGUOUS"] is False
+    arr_pooled = ia.median_pool(arr, 3)
+
+    assert arr_pooled.shape == (2, 2)
+    assert arr_pooled.dtype == arr.dtype.type
+    assert arr_pooled[0, 0] == int(np.median([5, 4, 5, 1, 0, 1, 5, 4, 5]))
+    assert arr_pooled[0, 1] == int(np.median([6, 7, 6, 2, 3, 2, 6, 7, 6]))
+    assert arr_pooled[1, 0] == int(np.median([9, 8, 9, 13, 12, 13, 9, 8, 9]))
+    assert arr_pooled[1, 1] == int(np.median([10, 11, 10, 14, 15, 13, 10, 11,
+                                              10]))
 
 
 def test_draw_grid():
