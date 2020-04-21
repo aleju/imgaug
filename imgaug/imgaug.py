@@ -1919,6 +1919,8 @@ def max_pool_(arr, block_size, pad_mode="edge", pad_cval=0,
     Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
     the maximum, even if the dtype was something else than ``uint8``.
 
+    Added in 0.5.0.
+
     **Supported dtypes**:
 
         See :func:`~imgaug.imgaug.pool`.
@@ -2019,6 +2021,8 @@ def min_pool_(arr, block_size, pad_mode="edge", pad_cval=255,
 
     Defaults to ``pad_mode="edge"`` to ensure that padded values do not affect
     the minimum, even if the dtype was something else than ``uint8``.
+
+    Added in 0.5.0.
 
     **Supported dtypes**:
 
