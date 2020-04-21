@@ -275,6 +275,8 @@ def blur_avg_(image, k):
     The padding behaviour around the image borders is cv2's
     ``BORDER_REFLECT_101``.
 
+    Added in 0.5.0.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
