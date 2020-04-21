@@ -2104,6 +2104,7 @@ def _minmax_pool_uint8_(arr, block_size, func, pad_mode, pad_cval):
         if block_size[0] <= 30 and block_size[1] <= 30:
             globals()["_POOLING_KERNELS_CACHE"][block_size] = kernel
 
+    # TODO why was this done with image flips instead of kernel flips?
     arr = cv2.flip(arr, -1)
     arr = func(arr, kernel, iterations=1)
     arr = cv2.flip(arr, -1)
