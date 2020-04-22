@@ -26,6 +26,326 @@ from imgaug.testutils import reseed, runtest_pickleable_uint8_img
 # TODO add tests for DirectedEdgeDetect
 
 
+class Test_convolve(unittest.TestCase):
+    def test_1x1_identity_matrix_2d_image(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        matrix = np.float32([
+            [1.0]
+        ])
+
+        image_aug = iaa.convolve(image, matrix)
+
+        assert image_aug is not image
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3)
+        assert np.array_equal(image_aug, image)
+
+
+class Test_convolve_(unittest.TestCase):
+    def test_1x1_identity_matrix_2d_image_small_image_sizes(self):
+        for height in np.arange(16):
+            for width in np.arange(16):
+                shapes = [
+                    (height, width),
+                    (height, width, 1),
+                    (height, width, 3)
+                ]
+
+                for shape in shapes:
+                    with self.subTest(shape=shape):
+                        image = np.mod(
+                            np.arange(int(np.prod(shape))).reshape(shape),
+                            255
+                        ).astype(np.uint8)
+                        matrix = np.float32([
+                            [1.0]
+                        ])
+
+                        image_aug = iaa.convolve_(np.copy(image), matrix)
+
+                        assert image_aug.dtype.name == "uint8"
+                        assert image_aug.shape == shape
+                        assert np.array_equal(image_aug, image)
+
+    def test_1x1_identity_matrix_2d_image(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        matrix = np.float32([
+            [1.0]
+        ])
+
+        image_aug = iaa.convolve_(np.copy(image), matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3)
+        assert np.array_equal(image_aug, image)
+
+    def test_2x2_identity_matrix_2d_image(self):
+        image = np.array([
+            [0, 10, 20, 30],
+            [40, 50, 60, 70]
+        ], dtype=np.uint8)
+        matrix = np.float32([
+            [0.0, 0.0],
+            [0.0, 1.0]
+        ])
+
+        image_aug = iaa.convolve_(np.copy(image), matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 4)
+        assert np.array_equal(image_aug, image)
+
+    def test_3x3_identity_matrix_2d_image(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        matrix = np.float32([
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0]
+        ])
+
+        image_aug = iaa.convolve_(np.copy(image), matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3)
+        assert np.array_equal(image_aug, image)
+
+    def test_single_matrix_2d_image(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50],
+            [60, 70, 80]
+        ], dtype=np.uint8)
+        matrix = np.float32([
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0]
+        ])
+        expected = np.array([
+            [0+30, 10+40, 20+50],
+            [30+0, 40+10, 50+20],
+            [60+30, 70+40, 80+50]
+        ], dtype=np.float32)
+
+        image_aug = iaa.convolve_(np.copy(image), matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (3, 3)
+        assert np.array_equal(image_aug, expected)
+
+    def test_single_matrix_3d_image(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 2))
+        matrix = np.float32([
+            [0.0, 0.0, 0.0],
+            [0.0, 2.0, 0.0],
+            [0.0, 0.0, 0.0]
+        ])
+
+        image_aug = iaa.convolve_(np.copy(image), matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3, 2)
+        assert np.array_equal(image_aug, 2*image)
+
+    def test_matrix_is_list_of_arrays(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 2))
+        matrices = [
+            np.float32([
+                [0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ]),
+            np.float32([
+                [0.0, 0.0, 0.0],
+                [0.0, 2.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ])
+        ]
+
+        image_aug = iaa.convolve_(np.copy(image), matrices)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3, 2)
+        assert np.array_equal(image_aug[:, :, 0], image[:, :, 0])
+        assert np.array_equal(image_aug[:, :, 1], 2*image[:, :, 1])
+
+    def test_matrix_is_list_containing_none(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 2))
+        matrices = [
+            None,
+            np.float32([
+                [0.0, 0.0, 0.0],
+                [0.0, 2.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ])
+        ]
+
+        image_aug = iaa.convolve_(np.copy(image), matrices)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3, 2)
+        assert np.array_equal(image_aug[:, :, 0], image[:, :, 0])
+        assert np.array_equal(image_aug[:, :, 1], 2*image[:, :, 1])
+
+    def test_matrix_is_list_containing_only_none(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 2))
+        matrices = [
+            None,
+            None
+        ]
+
+        image_aug = iaa.convolve_(np.copy(image), matrices)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3, 2)
+        assert np.array_equal(image_aug[:, :, 0], image[:, :, 0])
+        assert np.array_equal(image_aug[:, :, 1], image[:, :, 1])
+
+    def test_unusual_channel_numbers(self):
+        for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+            with self.subTest(nb_channels=nb_channels):
+                image = np.array([
+                    [0, 10, 20],
+                    [30, 40, 50]
+                ], dtype=np.uint8)
+                image = image[:, :, np.newaxis]
+                image = np.tile(image, (1, 1, nb_channels))
+                matrix = np.float32([
+                    [2.0]
+                ])
+
+                image_aug = iaa.convolve_(np.copy(image), matrix)
+
+                assert image_aug.dtype.name == "uint8"
+                assert image_aug.shape == (2, 3, nb_channels)
+                assert np.array_equal(image_aug, 2*image)
+
+    def test_zero_sized_axes(self):
+        shapes = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 1, 0),
+            (1, 0, 0),
+            (0, 1, 1),
+            (1, 0, 1)
+        ]
+
+        for shape in shapes:
+            with self.subTest(shape=shape):
+                image = np.zeros(shape, dtype=np.uint8)
+                matrix = np.float32([
+                    [2.0]
+                ])
+
+                image_aug = iaa.convolve_(np.copy(image), matrix)
+
+                assert image_aug.shape == image.shape
+
+    def test_view_heightwise(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image_view = np.copy(image)[:2, :]
+        assert image_view.flags["OWNDATA"] is False
+        matrix = np.float32([
+            [2.0]
+        ])
+
+        image_aug = iaa.convolve_(image_view, matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3)
+        assert np.array_equal(image_aug, 2*image)
+
+    def test_view_channelwise_1_channel(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 3))
+        image[:, :, 0] += 0
+        image[:, :, 1] += 1
+        image[:, :, 2] += 2
+        image_view = np.copy(image)[:, :, [False, True, False]]
+        assert image_view.flags["OWNDATA"] is False
+        assert image_view.base.shape == (1, 2, 3)
+        matrix = np.float32([
+            [2.0]
+        ])
+
+        image_aug = iaa.convolve_(image_view, matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3, 1)
+        assert np.array_equal(image_aug, 2*image[:, :, 1:2])
+
+    def test_view_channelwise_4_channels(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image = np.tile(image[:, :, np.newaxis], (1, 1, 6))
+        image[:, :, 0] += 0
+        image[:, :, 1] += 1
+        image[:, :, 2] += 2
+        mask = [False, True, True, True, True, False]
+        image_view = np.copy(image)[:, :, mask]
+        assert image_view.flags["OWNDATA"] is False
+        assert image_view.base.shape == (4, 2, 3)
+        matrix = np.float32([
+            [2.0]
+        ])
+
+        image_aug = iaa.convolve_(image_view, matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3, 4)
+        assert np.array_equal(image_aug, 2*image[:, :, mask])
+
+    def test_noncontiguous(self):
+        image = np.array([
+            [0, 10, 20],
+            [30, 40, 50]
+        ], dtype=np.uint8)
+        image_nonc = np.array(image, dtype=np.uint8, order="F")
+        assert image_nonc.flags["C_CONTIGUOUS"] is False
+        matrix = np.float32([
+            [2.0]
+        ])
+
+        image_aug = iaa.convolve_(image_nonc, matrix)
+
+        assert image_aug.dtype.name == "uint8"
+        assert image_aug.shape == (2, 3)
+        assert np.array_equal(image_aug, 2*image)
+
+
 # TODO add test for keypoints once their handling was improved in Convolve
 class TestConvolve(unittest.TestCase):
     def setUp(self):

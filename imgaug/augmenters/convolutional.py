@@ -21,18 +21,46 @@ import cv2
 import six.moves as sm
 
 import imgaug as ia
-from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
 from .. import dtypes as iadt
 
 
-# TODO allow 3d matrices as input (not only 2D)
-# TODO add _augment_keypoints and other _augment funcs, as these should do
-#      something for e.g. [[0, 0, 1]]
-class Convolve(meta.Augmenter):
+def convolve(image, kernel):
+    """Apply a convolution kernel (or one per channel) to an image.
+
+    See :func:`convolve_` for details.
+
+    Added in 0.5.0.
+
+    **Supported dtypes**:
+
+        See :func:`~imgaug.augmenters.convolutional.convolve_`.
+
+    Parameters
+    ----------
+    image : ndarray
+        ``(H,W)`` or ``(H,W,C)`` image array.
+
+    kernel : ndarray or list of ndarray
+        Either a single 2D kernel matrix (will be applied to all channels)
+        or a list of 2D matrices (one per image channel).
+
+    Returns
+    -------
+    image
+        Image of the same shape and dtype as the input array.
+
     """
-    Apply a convolution to input images.
+    return convolve_(np.copy(image), kernel)
+
+
+def convolve_(image, kernel):
+    """Apply a convolution kernel (or one per channel) in-place to an image.
+
+    Use a list of matrices to apply one kernel per channel.
+
+    Added in 0.5.0.
 
     **Supported dtypes**:
 
@@ -57,6 +85,115 @@ class Convolve(meta.Augmenter):
               format (=1) in function 'getLinearFilter'.
         - (3) mapped internally to ``int16``.
         - (4) mapped internally to ``float32``.
+
+    Parameters
+    ----------
+    image : ndarray
+        ``(H,W)`` or ``(H,W,C)`` image array.
+        May be modified in-place.
+
+    kernel : ndarray or list of ndarray
+        Either a single 2D kernel matrix (will be applied to all channels)
+        or a list of 2D matrices (one per image channel).
+
+    Returns
+    -------
+    image
+        Image of the same shape and dtype as the input array.
+        Might have been modified in-place.
+
+    """
+    iadt.gate_dtypes(
+        image,
+        allowed=["bool",
+                 "uint8", "uint16",
+                 "int8", "int16",
+                 "float16", "float32", "float64"],
+        disallowed=["uint32", "uint64", "uint128", "uint256",
+                    "int32", "int64", "int128", "int256",
+                    "float96", "float128", "float256"],
+        augmenter=None
+    )
+
+    # currently we don't have to worry here about alignemnt with
+    # non-image data and therefore can just place this before any
+    # sampling
+    if image.size == 0:
+        return image
+
+    input_shape = image.shape
+    nb_channels = 1 if len(input_shape) == 2 else input_shape[2]
+
+    input_dtype = image.dtype
+    if image.dtype.name in ["bool", "float16"]:
+        image = image.astype(np.float32, copy=False)
+    elif image.dtype.name == "int8":
+        image = image.astype(np.int16, copy=False)
+
+    if ia.is_np_array(kernel):
+        assert kernel.ndim == 2, (
+            "Expected kernel to be either a list of (H,W) arrays or a "
+            "single (H,W) array, got array of shape %s." % (kernel.shape,)
+        )
+        matrices = [kernel]
+    else:
+        assert isinstance(kernel, list), (
+            "Expected kernel to be either a list of (H,W) arrays or a "
+            "single (H,W) array, got type %s." % (type(kernel).__name__,)
+        )
+        assert len(kernel) == nb_channels, (
+            "Kernel was given as a list. Expected that list to contain as "
+            "many arrays as there are image channels. "
+            "Got %d, but expected %d for image of shape %s." % (
+                len(kernel), nb_channels, image.shape
+            )
+        )
+        matrices = kernel
+
+    if not image.flags["C_CONTIGUOUS"]:
+        image = np.ascontiguousarray(image)
+
+    # force channelwise application for >512 channels
+    if nb_channels > 512 and len(matrices) == 1:
+        matrices = [matrices[0]] * nb_channels
+
+    if len(matrices) == 1:
+        if matrices[0] is not None:
+            if image.base is not None and image.base.shape[0] == 1:
+                image = np.copy(image)
+            image = cv2.filter2D(image, -1, matrices[0], dst=image)
+    else:
+        for channel in sm.xrange(nb_channels):
+            if matrices[channel] is not None:
+                arr_channel = np.copy(image[..., channel])
+                image[..., channel] = cv2.filter2D(
+                    arr_channel,
+                    -1,
+                    matrices[channel],
+                    dst=arr_channel
+                )
+
+    if input_dtype.name == "bool":
+        image = image > 0.5
+    elif input_dtype.name in ["int8", "float16"]:
+        image = iadt.restore_dtypes_(image, input_dtype)
+
+    if len(input_shape) == 3 and image.ndim == 2:
+        image = image[:, :, np.newaxis]
+
+    return image
+
+
+# TODO allow 3d matrices as input (not only 2D)
+# TODO add _augment_keypoints and other _augment funcs, as these should do
+#      something for e.g. [[0, 0, 1]]
+class Convolve(meta.Augmenter):
+    """
+    Apply a convolution to input images.
+
+    **Supported dtypes**:
+
+        See :func:`~imgaug.augmenters.convolutional.convolve_`.
 
     Parameters
     ----------
@@ -151,85 +288,23 @@ class Convolve(meta.Augmenter):
             return batch
 
         images = batch.images
-
-        iadt.gate_dtypes(images,
-                         allowed=["bool",
-                                  "uint8", "uint16",
-                                  "int8", "int16",
-                                  "float16", "float32", "float64"],
-                         disallowed=["uint32", "uint64", "uint128", "uint256",
-                                     "int32", "int64", "int128", "int256",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
         rss = random_state.duplicate(len(images))
 
         for i, image in enumerate(images):
             _height, _width, nb_channels = image.shape
 
-            # currently we don't have to worry here about alignemnt with
-            # non-image data and therefore can just place this before any
-            # sampling
-            if image.size == 0:
-                continue
-
-            input_dtype = image.dtype
-            if image.dtype.name in ["bool", "float16"]:
-                image = image.astype(np.float32, copy=False)
-            elif image.dtype.name == "int8":
-                image = image.astype(np.int16, copy=False)
-
             if self.matrix_type == "None":
-                matrices = [None] * nb_channels
+                matrix = None
             elif self.matrix_type == "constant":
-                matrices = [self.matrix] * nb_channels
-            elif self.matrix_type == "function":
-                matrices = self.matrix(images[i], nb_channels, rss[i])
-                if ia.is_np_array(matrices) and matrices.ndim == 2:
-                    matrices = np.tile(
-                        matrices[..., np.newaxis],
-                        (1, 1, nb_channels))
-
-                is_valid_list = (isinstance(matrices, list)
-                                 and len(matrices) == nb_channels)
-                is_valid_array = (ia.is_np_array(matrices)
-                                  and matrices.ndim == 3
-                                  and matrices.shape[2] == nb_channels)
-                assert is_valid_list or is_valid_array, (
-                    "Callable provided to Convole must return either a "
-                    "list of 2D matrices (one per image channel) "
-                    "or a 2D numpy array "
-                    "or a 3D numpy array where the last dimension's size "
-                    "matches the number of image channels. "
-                    "Got type %s." % (type(matrices),))
-
-                if ia.is_np_array(matrices):
-                    # Shape of matrices is currently (H, W, C), but in the
-                    # loop below we need the first axis to be the channel
-                    # index to unify handling of lists of arrays and arrays.
-                    # So we move the channel axis here to the start.
-                    matrices = matrices.transpose((2, 0, 1))
+                matrix = self.matrix
             else:
-                raise Exception("Invalid matrix type")
+                assert self.matrix_type == "function"
+                # TODO check if sampled matrices are identical over channels
+                #      and if so merge. (does that really help wrt speed?)
+                matrix = self.matrix(images[i], nb_channels, rss[i])
 
-            # TODO check if sampled matrices are identical over channels
-            #      and then just apply once. (does that really help wrt speed?)
-            image_aug = image
-            for channel in sm.xrange(nb_channels):
-                if matrices[channel] is not None:
-                    # ndimage.convolve caused problems here cv2.filter2D()
-                    # always returns same output dtype as input dtype
-                    image_aug[..., channel] = cv2.filter2D(
-                        _normalize_cv2_input_arr_(image_aug[..., channel]),
-                        -1,
-                        matrices[channel]
-                    )
-
-            if input_dtype.name == "bool":
-                image_aug = image_aug > 0.5
-            elif input_dtype.name in ["int8", "float16"]:
-                image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
-
-            batch.images[i] = image_aug
+            if matrix is not None:
+                batch.images[i] = convolve_(image, matrix)
 
         return batch
 
@@ -350,7 +425,7 @@ class _SharpeningMatrixGenerator(object):
             (1-alpha_sample) * matrix_nochange
             + alpha_sample * matrix_effect
         )
-        return [matrix] * nb_channels
+        return matrix
 
 
 class Emboss(Convolve):
@@ -461,7 +536,7 @@ class _EmbossMatrixGenerator(object):
             (1-alpha_sample) * matrix_nochange
             + alpha_sample * matrix_effect
         )
-        return [matrix] * nb_channels
+        return matrix
 
 
 # TODO add tests
@@ -553,7 +628,7 @@ class _EdgeDetectMatrixGenerator(object):
             (1-alpha_sample) * matrix_nochange
             + alpha_sample * matrix_effect
         )
-        return [matrix] * nb_channels
+        return matrix
 
 
 # TODO add tests
@@ -714,4 +789,4 @@ class _DirectedEdgeDetectMatrixGenerator(object):
             + alpha_sample * matrix_effect
         )
 
-        return [matrix] * nb_channels
+        return matrix
