@@ -267,6 +267,119 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
     return image
 
 
+def blur_avg_(image, k):
+    """Blur an image in-place by computing averages over local neighbourhoods.
+
+    This operation *may* change the input image in-place.
+
+    The padding behaviour around the image borders is cv2's
+    ``BORDER_REFLECT_101``.
+
+    Added in 0.5.0.
+
+    **Supported dtypes**:
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: yes; tested
+        * ``uint32``: no (1)
+        * ``uint64``: no (2)
+        * ``int8``: yes; tested (3)
+        * ``int16``: yes; tested
+        * ``int32``: no (4)
+        * ``int64``: no (5)
+        * ``float16``: yes; tested (6)
+        * ``float32``: yes; tested
+        * ``float64``: yes; tested
+        * ``float128``: no
+        * ``bool``: yes; tested (7)
+
+        - (1) rejected by ``cv2.blur()``
+        - (2) loss of resolution in ``cv2.blur()`` (result is ``int32``)
+        - (3) ``int8`` is mapped internally to ``int16``, ``int8`` itself
+              leads to cv2 error "Unsupported combination of source format
+              (=1), and buffer format (=4) in function 'getRowSumFilter'" in
+              ``cv2``
+        - (4) results too inaccurate
+        - (5) loss of resolution in ``cv2.blur()`` (result is ``int32``)
+        - (6) ``float16`` is mapped internally to ``float32``
+        - (7) ``bool`` is mapped internally to ``float32``
+
+    Parameters
+    ----------
+    image : numpy.ndarray
+        The image to blur. Expected to be of shape ``(H, W)`` or ``(H, W, C)``.
+
+    k : int or tuple of int
+        Kernel size to use. A single ``int`` will lead to an ``k x k``
+        kernel. Otherwise a ``tuple`` of two ``int`` ``(height, width)``
+        is expected.
+
+    Returns
+    -------
+    numpy.ndarray
+        The blurred image. Same shape and dtype as the input.
+        (Input image *might* have been altered in-place.)
+
+    """
+    if isinstance(k, tuple):
+        k_height, k_width = k
+    else:
+        k_height, k_width = k, k
+
+    shape = image.shape
+    if 0 in shape:
+        return image
+
+    if k_height <= 0 or k_width <= 0 or (k_height, k_width) == (1, 1):
+        return image
+
+    iadt.gate_dtypes(
+        image,
+        allowed=["bool",
+                 "uint8", "uint16", "int8", "int16",
+                 "float16", "float32", "float64"],
+        disallowed=["uint32", "uint64", "uint128", "uint256",
+                    "int32", "int64", "int128", "int256",
+                    "float96", "float128", "float256"],
+        augmenter=None)
+
+    input_dtype = image.dtype
+    if image.dtype.name in ["bool", "float16"]:
+        image = image.astype(np.float32, copy=False)
+    elif image.dtype.name == "int8":
+        image = image.astype(np.int16, copy=False)
+
+    input_ndim = len(shape)
+    if input_ndim == 2 or shape[-1] <= 512:
+        image = _normalize_cv2_input_arr_(image)
+        image_aug = cv2.blur(
+            image,
+            (k_width, k_height),
+            dst=image
+        )
+        # cv2.blur() removes channel axis for single-channel images
+        if input_ndim == 3 and image_aug.ndim == 2:
+            image_aug = image_aug[..., np.newaxis]
+    else:
+        # TODO this is quite inefficient
+        # handling more than 512 channels in cv2.blur()
+        channels = [
+            cv2.blur(
+                _normalize_cv2_input_arr_(image[..., c]),
+                (k_width, k_height)
+            )
+            for c in sm.xrange(shape[-1])
+        ]
+        image_aug = np.stack(channels, axis=-1)
+
+    if input_dtype.name == "bool":
+        image_aug = image_aug > 0.5
+    elif input_dtype.name in ["int8", "float16"]:
+        image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
+
+    return image_aug
+
+
 def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
     """Apply a pyramidic mean shift filter to the input image in-place.
 
@@ -624,16 +737,6 @@ class AverageBlur(meta.Augmenter):
 
         images = batch.images
 
-        iadt.gate_dtypes(
-            images,
-            allowed=["bool",
-                     "uint8", "uint16", "int8", "int16",
-                     "float16", "float32", "float64"],
-            disallowed=["uint32", "uint64", "uint128", "uint256",
-                        "int32", "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=self)
-
         nb_images = len(images)
         if self.mode == "single":
             samples = self.k.draw_samples((nb_images,),
@@ -648,41 +751,7 @@ class AverageBlur(meta.Augmenter):
 
         gen = enumerate(zip(images, samples[0], samples[1]))
         for i, (image, ksize_h, ksize_w) in gen:
-            kernel_impossible = (ksize_h == 0 or ksize_w == 0)
-            kernel_does_nothing = (ksize_h == 1 and ksize_w == 1)
-            has_zero_sized_axes = (image.size == 0)
-            if (not kernel_impossible and not kernel_does_nothing
-                    and not has_zero_sized_axes):
-                input_dtype = image.dtype
-                if image.dtype.name in ["bool", "float16"]:
-                    image = image.astype(np.float32, copy=False)
-                elif image.dtype.name == "int8":
-                    image = image.astype(np.int16, copy=False)
-
-                if image.ndim == 2 or image.shape[-1] <= 512:
-                    image_aug = cv2.blur(
-                        _normalize_cv2_input_arr_(image),
-                        (ksize_h, ksize_w))
-                    # cv2.blur() removes channel axis for single-channel images
-                    if image_aug.ndim == 2:
-                        image_aug = image_aug[..., np.newaxis]
-                else:
-                    # TODO this is quite inefficient
-                    # handling more than 512 channels in cv2.blur()
-                    channels = [
-                        cv2.blur(
-                            _normalize_cv2_input_arr_(image[..., c]),
-                            (ksize_h, ksize_w))
-                        for c in sm.xrange(image.shape[-1])
-                    ]
-                    image_aug = np.stack(channels, axis=-1)
-
-                if input_dtype.name == "bool":
-                    image_aug = image_aug > 0.5
-                elif input_dtype.name in ["int8", "float16"]:
-                    image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
-
-                batch.images[i] = image_aug
+            batch.images[i] = blur_avg_(image, (ksize_h, ksize_w))
         return batch
 
     def get_parameters(self):
