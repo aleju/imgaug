@@ -1545,7 +1545,7 @@ class _InvertTables(object):
 class _InvertTablesSingleton(object):
     _INSTANCE = None
 
-    # Added in 0.4.0.
+    # Added in 0.5.0.
     @classmethod
     def get_instance(cls):
         if cls._INSTANCE is None:
