@@ -235,6 +235,62 @@ def _blur_gaussian_scipy_(image, sigma, ksize):
     return image
 
 
+def _blur_gaussian_cv2(image, sigma, ksize):
+    dtype = image.dtype
+
+    if dtype.name == "bool":
+        image = image.astype(np.float32, copy=False)
+    elif dtype.name == "float16":
+        image = image.astype(np.float32, copy=False)
+    elif dtype.name == "int8":
+        image = image.astype(np.int16, copy=False)
+    elif dtype.name == "int32":
+        image = image.astype(np.float64, copy=False)
+
+    # ksize here is derived from the equation to compute sigma based
+    # on ksize, see
+    # https://docs.opencv.org/3.1.0/d4/d86/group__imgproc__filter.html
+    # -> cv::getGaussianKernel()
+    # example values:
+    #   sig = 0.1 -> ksize = -1.666
+    #   sig = 0.5 -> ksize = 0.9999
+    #   sig = 1.0 -> ksize = 1.0
+    #   sig = 2.0 -> ksize = 11.0
+    #   sig = 3.0 -> ksize = 17.666
+    # ksize = ((sig - 0.8)/0.3 + 1)/0.5 + 1
+
+    if ksize is None:
+        ksize = _compute_gaussian_blur_ksize(sigma)
+    else:
+        assert ia.is_single_integer(ksize), (
+            "Expected 'ksize' argument to be a number, "
+            "got %s." % (type(ksize),))
+        ksize = ksize + 1 if ksize % 2 == 0 else ksize
+
+    image_warped = image
+    if ksize > 0:
+        # works with >512 channels
+        # normalization not required here
+        # dst seems to not help here
+        image_warped = cv2.GaussianBlur(
+            image,
+            (ksize, ksize),
+            sigmaX=sigma,
+            sigmaY=sigma,
+            borderType=cv2.BORDER_REFLECT_101
+        )
+
+        if image_warped.ndim == 2 and image.ndim == 3:
+            image_warped = image_warped[..., np.newaxis]
+
+    if dtype.name == "bool":
+        image_warped = image_warped > 0.5
+    elif dtype.name != image.dtype.name:
+        image_warped = iadt.restore_dtypes_(image_warped, dtype)
+
+    return image_warped
+
+
 def blur_avg_(image, k):
     """Blur an image in-place by computing averages over local neighbourhoods.
 
@@ -346,62 +402,6 @@ def blur_avg_(image, k):
         image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
 
     return image_aug
-
-
-def _blur_gaussian_cv2(image, sigma, ksize):
-    dtype = image.dtype
-
-    if dtype.name == "bool":
-        image = image.astype(np.float32, copy=False)
-    elif dtype.name == "float16":
-        image = image.astype(np.float32, copy=False)
-    elif dtype.name == "int8":
-        image = image.astype(np.int16, copy=False)
-    elif dtype.name == "int32":
-        image = image.astype(np.float64, copy=False)
-
-    # ksize here is derived from the equation to compute sigma based
-    # on ksize, see
-    # https://docs.opencv.org/3.1.0/d4/d86/group__imgproc__filter.html
-    # -> cv::getGaussianKernel()
-    # example values:
-    #   sig = 0.1 -> ksize = -1.666
-    #   sig = 0.5 -> ksize = 0.9999
-    #   sig = 1.0 -> ksize = 1.0
-    #   sig = 2.0 -> ksize = 11.0
-    #   sig = 3.0 -> ksize = 17.666
-    # ksize = ((sig - 0.8)/0.3 + 1)/0.5 + 1
-
-    if ksize is None:
-        ksize = _compute_gaussian_blur_ksize(sigma)
-    else:
-        assert ia.is_single_integer(ksize), (
-            "Expected 'ksize' argument to be a number, "
-            "got %s." % (type(ksize),))
-        ksize = ksize + 1 if ksize % 2 == 0 else ksize
-
-    image_warped = image
-    if ksize > 0:
-        # works with >512 channels
-        # normalization not required here
-        # dst seems to not help here
-        image_warped = cv2.GaussianBlur(
-            image,
-            (ksize, ksize),
-            sigmaX=sigma,
-            sigmaY=sigma,
-            borderType=cv2.BORDER_REFLECT_101
-        )
-
-        if image_warped.ndim == 2 and image.ndim == 3:
-            image_warped = image_warped[..., np.newaxis]
-
-    if dtype.name == "bool":
-        image_warped = image_warped > 0.5
-    elif dtype.name != image.dtype.name:
-        image_warped = iadt.restore_dtypes_(image_warped, dtype)
-
-    return image_warped
 
 
 def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
