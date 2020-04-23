@@ -293,6 +293,23 @@ def _blur_gaussian_cv2(image, sigma, ksize):
     return image_warped
 
 
+def _compute_gaussian_blur_ksize(sigma):
+    if sigma < 3.0:
+        ksize = 3.3 * sigma  # 99% of weight
+    elif sigma < 5.0:
+        ksize = 2.9 * sigma  # 97% of weight
+    else:
+        ksize = 2.6 * sigma  # 95% of weight
+
+    # we use 5x5 here as the minimum size as that simplifies
+    # comparisons with gaussian_filter() in the tests
+    # TODO reduce this to 3x3
+    ksize = int(max(ksize, 5))
+    if ksize % 2 == 0:
+        ksize += 1
+    return ksize
+
+
 def blur_avg_(image, k):
     """Blur an image in-place by computing averages over local neighbourhoods.
 
@@ -504,23 +521,6 @@ def blur_mean_shift_(image, spatial_window_radius, color_window_radius):
         image = image[..., 0:1]
 
     return image
-
-
-def _compute_gaussian_blur_ksize(sigma):
-    if sigma < 3.0:
-        ksize = 3.3 * sigma  # 99% of weight
-    elif sigma < 5.0:
-        ksize = 2.9 * sigma  # 97% of weight
-    else:
-        ksize = 2.6 * sigma  # 95% of weight
-
-    # we use 5x5 here as the minimum size as that simplifies
-    # comparisons with gaussian_filter() in the tests
-    # TODO reduce this to 3x3
-    ksize = int(max(ksize, 5))
-    if ksize % 2 == 0:
-        ksize += 1
-    return ksize
 
 
 # TODO offer different values for sigma on x/y-axis, supported by cv2 but not
