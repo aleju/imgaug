@@ -192,6 +192,7 @@ def blur_gaussian_(image, sigma, ksize=None, backend="auto", eps=1e-3):
     return image
 
 
+# Added in 0.5.0.
 def _blur_gaussian_scipy_(image, sigma, ksize):
     dtype = image.dtype
 
@@ -235,6 +236,7 @@ def _blur_gaussian_scipy_(image, sigma, ksize):
     return image
 
 
+# Added in 0.5.0.
 def _blur_gaussian_cv2(image, sigma, ksize):
     dtype = image.dtype
 
