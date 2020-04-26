@@ -544,22 +544,15 @@ def multiply_scalar_(image, multiplier):
         augmenter=None)
 
     if image.dtype.name == "uint8":
-        if size > 224*224*3:
+        if size >= 224*224*3:
             return _multiply_scalar_to_uint8_lut_(image, multiplier)
         return _multiply_scalar_to_uint8_cv2_mul_(image, multiplier)
     return _multiply_scalar_to_non_uint8(image, multiplier)
 
 
+# TODO add a c++/cython method here to compute the LUT tables
 # Added in 0.5.0.
-# (Renamed from an existing function.)
 def _multiply_scalar_to_uint8_lut_(image, multiplier):
-    # Using this LUT approach is significantly faster than
-    # else-block code (more than 10x speedup) and is still faster
-    # than the simpler image*sample approach without LUT (1.5-3x
-    # speedup, maybe dependent on installed BLAS libraries?)
-
-    # pylint: disable=no-else-return
-
     is_single_value = (
         ia.is_single_number(multiplier)
         or ia.is_np_scalar(multiplier)
@@ -583,15 +576,17 @@ def _multiply_scalar_to_uint8_lut_(image, multiplier):
             "in `multiplier` to be identical. Got %d vs. %d." % (
                 image.shape[-1], multiplier.size))
 
-        # TODO check if tile() is here actually needed
-        tables = np.tile(
-            value_range[:, np.newaxis],
-            (1, nb_channels)
-        ) * multiplier[np.newaxis, :]
+        value_range = np.broadcast_to(value_range[:, np.newaxis],
+                                      (256, nb_channels))
+        value_range = value_range * multiplier[np.newaxis, :]
+        value_range = np.clip(value_range, 0, 255, out=value_range)
+        value_range = value_range.astype(image.dtype, copy=False)
     else:
-        tables = value_range * multiplier
-    tables = np.clip(tables, 0, 255).astype(image.dtype)
-    return ia.apply_lut_(image, tables)
+        value_range *= multiplier
+        if multiplier < 0 or multiplier > 1:
+            value_range = np.clip(value_range, 0, 255, out=value_range)
+        value_range = value_range.astype(image.dtype, copy=False)
+    return ia.apply_lut_(image, value_range)
 
 
 # Added in 0.5.0.
