@@ -579,13 +579,9 @@ def _multiply_scalar_to_uint8_lut_(image, multiplier):
         value_range = np.broadcast_to(value_range[:, np.newaxis],
                                       (256, nb_channels))
         value_range = value_range * multiplier[np.newaxis, :]
-        value_range = np.clip(value_range, 0, 255, out=value_range)
-        value_range = value_range.astype(image.dtype, copy=False)
     else:
-        value_range *= multiplier
-        if multiplier < 0 or multiplier > 1:
-            value_range = np.clip(value_range, 0, 255, out=value_range)
-        value_range = value_range.astype(image.dtype, copy=False)
+        value_range = value_range * multiplier
+    value_range = np.clip(value_range, 0, 255).astype(image.dtype)
     return ia.apply_lut_(image, value_range)
 
 
