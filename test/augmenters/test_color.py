@@ -771,7 +771,7 @@ class TestMultiplyAndAddToBrightness(unittest.TestCase):
         expected = cv2.cvtColor(image, cv2.COLOR_RGB2HSV).astype(np.float32)
         expected[:, :, 2] *= 1.2
         expected = cv2.cvtColor(expected.astype(np.uint8), cv2.COLOR_HSV2RGB)
-        assert np.array_equal(image_aug, expected)
+        assert np.allclose(image_aug, expected, rtol=0, atol=1.01)
 
     def test_multiply_and_add_example_image(self):
         aug = iaa.MultiplyAndAddToBrightness(mul=1.2, add=10,
@@ -785,7 +785,7 @@ class TestMultiplyAndAddToBrightness(unittest.TestCase):
         expected[:, :, 2] *= 1.2
         expected[:, :, 2] += 10
         expected = cv2.cvtColor(expected.astype(np.uint8), cv2.COLOR_HSV2RGB)
-        assert np.array_equal(image_aug, expected)
+        assert np.allclose(image_aug, expected, rtol=0, atol=1.01)
 
     def test___str__(self):
         params = [

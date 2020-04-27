@@ -26,7 +26,10 @@ from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
                               runtest_pickleable_uint8_img, assertWarns)
 import imgaug.augmenters.arithmetic as arithmetic_lib
 import imgaug.augmenters.contrast as contrast_lib
-from imgaug.augmenters.arithmetic import _add_elementwise_cv2_to_uint8
+from imgaug.augmenters.arithmetic import (
+    _add_elementwise_cv2_to_uint8,
+    _multiply_scalar_to_uint8_cv2_mul_
+)
 
 
 class Test__add_elementwise_cv2_to_uint8(unittest.TestCase):
@@ -191,6 +194,123 @@ class Test__add_elementwise_cv2_to_uint8(unittest.TestCase):
                     assert result.shape == image_shape
                     assert result.dtype.name == "uint8"
                     assert result is not image
+
+
+class Test__multiply_scalar_to_uint8_cv2_mul_(unittest.TestCase):
+    def test_single_multiplier_image_hw(self):
+        image = np.full((3, 4), 10, dtype=np.uint8)
+        image_cp = np.copy(image)
+        multiplier = np.float32(2.67)
+
+        observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp, multiplier)
+
+        expected = np.full((3, 4), 27, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == image.shape
+        assert observed.dtype.name == "uint8"
+        assert observed is image_cp
+
+    def test_single_multiplier_image_hwc(self):
+        for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+            with self.subTest(nb_channels=nb_channels):
+                image = np.full((3, 4, nb_channels), 10, dtype=np.uint8)
+                image_cp = np.copy(image)
+                multiplier = np.float32(2.6)
+
+                observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp,
+                                                              multiplier)
+
+                expected = np.full((3, 4, nb_channels), 26, dtype=np.uint8)
+                assert np.array_equal(observed, expected)
+                assert observed.shape == image.shape
+                assert observed.dtype.name == "uint8"
+                assert observed is image_cp
+
+    def test_single_multiplier_saturating(self):
+        for value in [-0.1, 0, 30, 100.5]:
+            with self.subTest(value=value):
+                image = np.full((3, 4), 10, dtype=np.uint8)
+                image_cp = np.copy(image)
+                multiplier = np.float32(value)
+
+                observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp,
+                                                              multiplier)
+
+                if value <= 0+1e-4:
+                    expected = np.zeros_like(image)
+                else:
+                    expected = np.full(image.shape, 255, dtype=np.uint8)
+                assert np.array_equal(observed, expected)
+                assert observed.shape == image.shape
+                assert observed.dtype.name == "uint8"
+                assert observed is image_cp
+
+    def test_channelwise_multiplier_image_hw(self):
+        image = np.full((3, 4), 10, dtype=np.uint8)
+        image_cp = np.copy(image)
+        multiplier = np.array([2.6], dtype=np.float32)
+
+        observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp, multiplier)
+
+        expected = np.full((3, 4), 26, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == image.shape
+        assert observed.dtype.name == "uint8"
+        assert observed is image_cp
+
+    def test_channelwise_multiplier_image_hwc(self):
+        for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+            with self.subTest(nb_channels=nb_channels):
+                image = np.full((3, 4, nb_channels), 10, dtype=np.uint8)
+                image_cp = np.copy(image)
+                multiplier = np.ones((nb_channels,), dtype=np.float32)
+                multiplier[0] = 2.6
+                if nb_channels >= 2:
+                    multiplier[1] = 4.0
+                if nb_channels >= 3:
+                    multiplier[2] = 5.6
+                if nb_channels >= 4:
+                    multiplier[nb_channels-1] = 7.1
+
+                observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp,
+                                                              multiplier)
+
+                expected = image
+                expected[:, :, 0] = 26
+                if nb_channels >= 2:
+                    expected[:, :, 1] = 40
+                if nb_channels >= 3:
+                    expected[:, :, 2] = 56
+                if nb_channels >= 4:
+                    expected[:, :, nb_channels-1] = 71
+                assert np.array_equal(observed, expected)
+                assert observed.shape == image.shape
+                assert observed.dtype.name == "uint8"
+                assert observed is image_cp
+
+    def test_image_is_view(self):
+        image = np.full((4, 3), 10, dtype=np.uint8)
+        image_cp = np.copy(image)[0:3, :]
+        multiplier = np.float32(2.6)
+
+        observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp, multiplier)
+
+        expected = np.full((3, 3), 26, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (3, 3)
+        assert observed.dtype.name == "uint8"
+
+    def test_image_is_non_contiguous(self):
+        image = np.full((3, 4), 10, dtype=np.uint8)
+        image_cp = np.full((3, 4), 10, dtype=np.uint8, order="F")
+        multiplier = np.float32(2.6)
+
+        observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp, multiplier)
+
+        expected = np.full((3, 4), 26, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == image.shape
+        assert observed.dtype.name == "uint8"
 
 
 class Test_cutout(unittest.TestCase):
