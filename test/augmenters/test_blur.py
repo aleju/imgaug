@@ -192,6 +192,43 @@ class Test_blur_gaussian_(unittest.TestCase):
                               - image_scipy[..., c].astype(np.int32))
                 assert np.average(diff) < 0.05 * (size * size)
 
+    def test_view(self):
+        for backend in ["auto", "scipy", "cv2"]:
+            image = np.array([
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 255, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [1, 1, 1, 1, 1]
+            ], dtype=np.uint8)
+            image_cp = np.copy(image[0:5, :])
+
+            image_aug = iaa.blur_gaussian_(image[0:5, :], 3.0, backend=backend)
+
+            assert image_aug.shape == (5, 5)
+            assert image_aug.dtype.name == "uint8"
+            assert np.all(image_aug[image_cp == 0] > 0)
+            assert np.all(image_aug[image_cp == 255] < 255)
+
+    def test_non_contiguous(self):
+        for backend in ["auto", "scipy", "cv2"]:
+            image = np.array([
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 255, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0]
+            ], dtype=np.uint8, order="F")
+            image_cp = np.copy(image)
+
+            image_aug = iaa.blur_gaussian_(image, 3.0, backend=backend)
+
+            assert image_aug.shape == (5, 5)
+            assert image_aug.dtype.name == "uint8"
+            assert np.all(image_aug[image_cp == 0] > 0)
+            assert np.all(image_aug[image_cp == 255] < 255)
+
     def test_warnings(self):
         # note that self.assertWarningRegex does not exist in python 2.7
         with warnings.catch_warnings(record=True) as caught_warnings:
