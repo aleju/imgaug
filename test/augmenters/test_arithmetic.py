@@ -293,6 +293,32 @@ class Test__multiply_scalar_to_uint8_cv2_mul_(unittest.TestCase):
                     expected[:, :, nb_channels-1] = 71
                 assert np.array_equal(observed, expected)
                 assert observed.shape == image.shape
+                assert observed.dtype.name == "uint8"
+                assert observed is image_cp
+
+    def test_image_is_view(self):
+        image = np.full((4, 3), 10, dtype=np.uint8)
+        image_cp = np.copy(image)[0:3, :]
+        multiplier = np.float32(2.6)
+
+        observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp, multiplier)
+
+        expected = np.full((3, 3), 26, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (3, 3)
+        assert observed.dtype.name == "uint8"
+
+    def test_image_is_non_contiguous(self):
+        image = np.full((3, 4), 10, dtype=np.uint8)
+        image_cp = np.full((3, 4), 10, dtype=np.uint8, order="F")
+        multiplier = np.float32(2.6)
+
+        observed = _multiply_scalar_to_uint8_cv2_mul_(image_cp, multiplier)
+
+        expected = np.full((3, 4), 26, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == image.shape
+        assert observed.dtype.name == "uint8"
 
 
 class Test_multiply_elementwise_to_non_uint8(unittest.TestCase):
