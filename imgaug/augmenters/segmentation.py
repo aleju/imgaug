@@ -502,7 +502,7 @@ def segment_voronoi(image, cell_coordinates, replace_mask=None):
         return image
 
     height, width = image.shape[0:2]
-    pixel_coords, ids_of_nearest_cells = \
+    ids_of_nearest_cells = \
         _match_pixels_with_voronoi_cells(height, width, cell_coordinates)
     image_aug = replace_segments_(
         image,
@@ -522,7 +522,7 @@ def _match_pixels_with_voronoi_cells(height, width, cell_coordinates):
     pixel_coords = _generate_pixel_coords(height, width)
     pixel_coords_subpixel = pixel_coords.astype(np.float32) + 0.5
     ids_of_nearest_cells = tree.query(pixel_coords_subpixel)[1]
-    return pixel_coords, ids_of_nearest_cells
+    return ids_of_nearest_cells
 
 
 def _generate_pixel_coords(height, width):
