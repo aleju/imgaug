@@ -364,7 +364,11 @@ def assertWarns(testcase, expected_warning, *args, **kwargs):
 
 
 class temporary_constants(object):
-    """Context to temporarily change the value of one or more constants."""
+    """Context to temporarily change the value of one or more constants.
+
+    Added in 0.5.0.
+
+    """
 
     UNCHANGED = object()
 

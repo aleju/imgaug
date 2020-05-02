@@ -308,6 +308,8 @@ def replace_segments_(image, segments, replace_flags):
     For each segement, the average color is computed and used as the
     replacement.
 
+    Added in 0.5.0.
+
     **Supported dtypes**:
 
     * ``uint8``: yes; indirectly tested
@@ -377,6 +379,7 @@ def replace_segments_(image, segments, replace_flags):
     return result
 
 
+# Added in 0.5.0.
 def _replace_segments_np_(image, segments, replace_flags, _nb_segments):
     seg_ids = np.unique(segments)
     if replace_flags is None:
@@ -389,6 +392,7 @@ def _replace_segments_np_(image, segments, replace_flags, _nb_segments):
     return image
 
 
+# Added in 0.5.0.
 def _replace_segments_scipy_(image, segments, replace_flags, nb_segments):
     # Generate segment ids of the segments to actually replace.
     # Use "...[0:nb_segments]" here, because we can sample more flags than
