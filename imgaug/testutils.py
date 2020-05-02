@@ -370,6 +370,8 @@ class temporary_constants(object):
 
     """
 
+    # pylint: disable=invalid-name
+
     UNCHANGED = object()
 
     def __init__(self, paths, values):
