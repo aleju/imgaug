@@ -660,6 +660,19 @@ def multiply_elementwise(image, multipliers):
 
     This method ensures that ``uint8`` does not overflow during the addition.
 
+    note::
+
+        Tests were only conducted for rather small multipliers, around
+        ``-10.0`` to ``+10.0``.
+
+        In general, the multipliers sampled from `multipliers` must be in a
+        value range that corresponds to the input image's dtype. E.g. if the
+        input image has dtype ``uint16`` and the samples generated from
+        `multipliers` are ``float64``, this function will still force all
+        samples to be within the value range of ``float16``, as it has the
+        same number of bytes (two) as ``uint16``. This is done to make
+        overflows less likely to occur.
+
     **Supported dtypes**:
 
         * ``uint8``: yes; fully tested
@@ -679,6 +692,30 @@ def multiply_elementwise(image, multipliers):
         - (1) Non-uint8 dtypes can overflow. For floats, this can result
               in +/-inf.
 
+    Parameters
+    ----------
+    image : ndarray
+        Image array of shape ``(H,W,[C])``.
+
+    multipliers : ndarray
+        The multipliers with which to multiply the image. Expected to have
+        the same height and width as `image` and either no channels or one
+        channel or the same number of channels as `image`.
+
+    Returns
+    -------
+    ndarray
+        Image, multiplied by `multipliers`.
+
+    """
+    return multiply_elementwise_(np.copy(image), multipliers)
+
+
+def multiply_elementwise_(image, multipliers):
+    """Multiply in-place an image with an array of values.
+
+    This method ensures that ``uint8`` does not overflow during the addition.
+
     note::
 
         Tests were only conducted for rather small multipliers, around
@@ -691,6 +728,27 @@ def multiply_elementwise(image, multipliers):
         samples to be within the value range of ``float16``, as it has the
         same number of bytes (two) as ``uint16``. This is done to make
         overflows less likely to occur.
+
+    Added in 0.5.0.
+
+    **Supported dtypes**:
+
+        * ``uint8``: yes; fully tested
+        * ``uint16``: limited; tested (1)
+        * ``uint32``: no
+        * ``uint64``: no
+        * ``int8``: limited; tested (1)
+        * ``int16``: limited; tested (1)
+        * ``int32``: no
+        * ``int64``: no
+        * ``float16``: limited; tested (1)
+        * ``float32``: limited; tested (1)
+        * ``float64``: no
+        * ``float128``: no
+        * ``bool``: limited; tested (1)
+
+        - (1) Non-uint8 dtypes can overflow. For floats, this can result
+              in +/-inf.
 
     Parameters
     ----------
@@ -719,31 +777,50 @@ def multiply_elementwise(image, multipliers):
                     "float64", "float96", "float128", "float256"],
         augmenter=None)
 
+    if 0 in image.shape:
+        return image
+
     if multipliers.dtype.kind == "b":
         # TODO extend this with some shape checks
         image *= multipliers
         return image
     if image.dtype.name == "uint8":
-        return _multiply_elementwise_to_uint8(image, multipliers)
+        return _multiply_elementwise_to_uint8_(image, multipliers)
     return _multiply_elementwise_to_non_uint8(image, multipliers)
 
 
-def _multiply_elementwise_to_uint8(image, multipliers):
-    # This special uint8 block is around 60-100% faster than the
-    # non-uint8 block further below (more speedup for larger images).
-    if multipliers.dtype.kind == "f":
-        # interestingly, float32 is here significantly faster than
-        # float16
-        # TODO is that system dependent?
-        # TODO does that affect int8-int32 too?
-        multipliers = multipliers.astype(np.float32, copy=False)
-        image_aug = image.astype(np.float32)
-    else:
-        multipliers = multipliers.astype(np.int16, copy=False)
-        image_aug = image.astype(np.int16)
+# Added in 0.5.0.
+def _multiply_elementwise_to_uint8_(image, multipliers):
+    dt = multipliers.dtype
+    kind = dt.kind
+    dtn = dt.name
+    if kind == "f" and dtn != "float32":
+        multipliers = multipliers.astype(np.float32)
+    elif kind == "i" and dtn != "int32":
+        multipliers = multipliers.astype(np.int32)
+    elif kind == "u" and dtn != "uint8":
+        multipliers = multipliers.astype(np.uint8)
 
-    image_aug = np.multiply(image_aug, multipliers, casting="no", out=image_aug)
-    return iadt.restore_dtypes_(image_aug, np.uint8, round=False)
+    if multipliers.ndim < image.ndim:
+        multipliers = multipliers[:, :, np.newaxis]
+    if multipliers.shape != image.shape:
+        multipliers = np.broadcast_to(multipliers, image.shape)
+
+    assert image.shape == multipliers.shape, (
+        "Expected multipliers to have shape (H,W) or (H,W,1) or (H,W,C) "
+        "(H = image height, W = image width, C = image channels). Reached "
+        "shape %s after broadcasting, compared to image shape %s." % (
+            multipliers.shape, image.shape
+        )
+    )
+
+    # views seem to be fine here
+    if image.flags["C_CONTIGUOUS"] is False:
+        image = np.ascontiguousarray(image)
+
+    result = cv2.multiply(image, multipliers, dst=image, dtype=cv2.CV_8U)
+
+    return result
 
 
 def _multiply_elementwise_to_non_uint8(image, multipliers):
@@ -2592,7 +2669,7 @@ class MultiplyElementwise(meta.Augmenter):
             if mul.dtype.kind != "b" and is_mul_binomial:
                 mul = mul.astype(bool, copy=False)
 
-            batch.images[i] = multiply_elementwise(image, mul)
+            batch.images[i] = multiply_elementwise_(image, mul)
 
         return batch
 

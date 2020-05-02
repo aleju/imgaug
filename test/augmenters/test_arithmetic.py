@@ -35,6 +35,7 @@ import imgaug.augmenters.contrast as contrast_lib
 from imgaug.augmenters.arithmetic import (
     _add_elementwise_cv2_to_uint8,
     _multiply_scalar_to_uint8_cv2_mul_,
+    _multiply_elementwise_to_uint8_,
     _invert_uint8_subtract_
 )
 
@@ -317,6 +318,158 @@ class Test__multiply_scalar_to_uint8_cv2_mul_(unittest.TestCase):
         expected = np.full((3, 4), 26, dtype=np.uint8)
         assert np.array_equal(observed, expected)
         assert observed.shape == image.shape
+        assert observed.dtype.name == "uint8"
+
+
+class Test_multiply_elementwise_to_non_uint8(unittest.TestCase):
+    def test_image_is_hw(self):
+        image = np.full((4, 3), 10, dtype=np.uint8)
+        image_cp = np.copy(image)
+        multipliers = np.full((4, 3), 2.7, dtype=np.float32)
+
+        observed = _multiply_elementwise_to_uint8_(image_cp, multipliers)
+
+        expected = np.full((4, 3), 27, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (4, 3)
+        assert observed.dtype.name == "uint8"
+        assert observed is image_cp
+
+    def test_image_is_hwn(self):
+        for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+            with self.subTest(nb_channels=nb_channels):
+                image = np.full((4, 3, nb_channels), 10, dtype=np.uint8)
+                image_cp = np.copy(image)
+                multipliers = np.full((4, 3, nb_channels), 1, dtype=np.float32)
+                multipliers[:, :, 0] = 2.7
+                if nb_channels >= 2:
+                    multipliers[:, :, 1] = 4.0
+                if nb_channels >= 3:
+                    multipliers[:, :, 2] = 6.4
+                if nb_channels >= 4:
+                    multipliers[:, :, -1] = 8.3
+
+                observed = _multiply_elementwise_to_uint8_(image_cp,
+                                                           multipliers)
+
+                expected = np.full((4, 3, nb_channels), 10, dtype=np.uint8)
+                expected[:, :, 0] = 27
+                if nb_channels >= 2:
+                    expected[:, :, 1] = 40
+                if nb_channels >= 3:
+                    expected[:, :, 2] = 64
+                if nb_channels >= 4:
+                    expected[:, :, -1] = 83
+                assert np.array_equal(observed, expected)
+                assert observed.shape == (4, 3, nb_channels)
+                assert observed.dtype.name == "uint8"
+                assert observed is image_cp
+
+    def test_multipliers_hw(self):
+        nb_channels = 3
+        image = np.full((4, 3, nb_channels), 10, dtype=np.uint8)
+        image_cp = np.copy(image)
+        multipliers = np.full((4, 3), 2.7, dtype=np.float32)
+
+        observed = _multiply_elementwise_to_uint8_(image_cp,
+                                                   multipliers)
+
+        expected = np.full((4, 3, nb_channels), 27, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (4, 3, nb_channels)
+        assert observed.dtype.name == "uint8"
+        assert observed is image_cp
+
+    def test_multipliers_hw1(self):
+        nb_channels = 3
+        image = np.full((4, 3, nb_channels), 10, dtype=np.uint8)
+        image_cp = np.copy(image)
+        multipliers = np.full((4, 3, 1), 2.7, dtype=np.float32)
+
+        observed = _multiply_elementwise_to_uint8_(image_cp,
+                                                   multipliers)
+
+        expected = np.full((4, 3, nb_channels), 27, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (4, 3, nb_channels)
+        assert observed.dtype.name == "uint8"
+        assert observed is image_cp
+
+    def test_multipliers_is_float(self):
+        dtypes = ["float16", "float32", "float64"]
+        for dt in dtypes:
+            image = np.full((4, 3, 3), 10, dtype=np.uint8)
+            image_cp = np.copy(image)
+            multipliers = np.full((4, 3, 3), 1, dtype=dt)
+            multipliers[:, :, 0] = 2.7
+            multipliers[:, :, 1] = 4.0
+            multipliers[:, :, 2] = 6.4
+
+            observed = _multiply_elementwise_to_uint8_(image_cp,
+                                                       multipliers)
+
+            expected = np.full((4, 3, 3), 10, dtype=np.uint8)
+            expected[:, :, 0] = 27
+            expected[:, :, 1] = 40
+            expected[:, :, 2] = 64
+            assert np.array_equal(observed, expected)
+            assert observed.shape == (4, 3, 3)
+            assert observed.dtype.name == "uint8"
+            assert observed is image_cp
+
+    def test_multipliers_is_uint_int(self):
+        dtypes = ["uint8", "uint16", "uint32", "uint64",
+                  "int8", "int16", "int32", "int64"]
+        for dt in dtypes:
+            with self.subTest(dtype=dt):
+                image = np.full((4, 3, 3), 10, dtype=np.uint8)
+                image_cp = np.copy(image)
+                multipliers = np.full((4, 3, 3), 1, dtype=dt)
+                multipliers[:, :, 0] = 2
+                multipliers[:, :, 1] = 4
+                multipliers[:, :, 2] = 5
+
+                observed = _multiply_elementwise_to_uint8_(image_cp,
+                                                           multipliers)
+
+                expected = np.full((4, 3, 3), 10, dtype=np.uint8)
+                expected[:, :, 0] = 20
+                expected[:, :, 1] = 40
+                expected[:, :, 2] = 50
+                assert np.array_equal(observed, expected)
+                assert observed.shape == (4, 3, 3)
+                assert observed.dtype.name == "uint8"
+                assert observed is image_cp
+
+    def test_image_is_view(self):
+        nb_channels = 3
+        image = np.full((4, 3, nb_channels), 10, dtype=np.uint8)
+        image_cp = np.copy(image)[0:3, :, :]
+        assert image_cp.flags["OWNDATA"] is False
+        assert image_cp.flags["C_CONTIGUOUS"] is True
+        multipliers = np.full((3, 3, 1), 2.7, dtype=np.float32)
+
+        observed = _multiply_elementwise_to_uint8_(image_cp,
+                                                   multipliers)
+
+        expected = np.full((3, 3, nb_channels), 27, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (3, 3, nb_channels)
+        assert observed.dtype.name == "uint8"
+
+    def test_image_is_noncontiguous(self):
+        nb_channels = 3
+        image = np.full((4, 3, nb_channels), 10, dtype=np.uint8, order="F")
+        assert image.flags["OWNDATA"] is True
+        assert image.flags["C_CONTIGUOUS"] is False
+        multipliers = np.full((4, 3, 1), 2.7, dtype=np.float32)
+
+        observed = _multiply_elementwise_to_uint8_(image,
+                                                   multipliers)
+
+        expected = np.full((4, 3, nb_channels), 27, dtype=np.uint8)
+        assert np.array_equal(observed, expected)
+        assert observed.shape == (4, 3, nb_channels)
         assert observed.dtype.name == "uint8"
 
 
