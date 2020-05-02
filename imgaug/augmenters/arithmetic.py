@@ -1282,6 +1282,9 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
         modified in-place.
 
     """
+    if image.size == 0:
+        return image
+
     # when no custom min/max are chosen, all bool, uint, int and float dtypes
     # should be invertable (float tested only up to 64bit)
     # when chosing custom min/max:
@@ -1359,9 +1362,52 @@ def _invert_bool(arr, min_value, max_value):
 # Added in 0.4.0.
 def _invert_uint8_(arr, min_value, max_value, threshold,
                    invert_above_threshold):
-    table = _generate_table_for_invert_uint8(
-        min_value, max_value, threshold, invert_above_threshold)
+    shape = arr.shape
+    nb_channels = shape[-1] if len(shape) == 3 else 1
+    valid_for_cv2 = (
+        threshold is None
+        and min_value == 0
+        and len(shape) >= 2
+        and shape[0]*shape[1]*nb_channels != 4
+    )
+    if valid_for_cv2:
+        return _invert_uint8_subtract_(arr, max_value)
+    return _invert_uint8_lut_pregenerated_(
+        arr, min_value, max_value, threshold, invert_above_threshold
+    )
+
+
+# Added in 0.5.0.
+def _invert_uint8_lut_pregenerated_(arr, min_value, max_value, threshold,
+                                    invert_above_threshold):
+    table = _InvertTablesSingleton.get_instance().get_table(
+        min_value=min_value,
+        max_value=max_value,
+        threshold=threshold,
+        invert_above_threshold=invert_above_threshold
+    )
     arr = ia.apply_lut_(arr, table)
+    return arr
+
+
+# Added in 0.5.0.
+def _invert_uint8_subtract_(arr, max_value):
+    # seems to work with arr.base.shape[0] > 1
+    if arr.base is not None and arr.base.shape[0] == 1:
+        arr = np.copy(arr)
+    if not arr.flags["C_CONTIGUOUS"]:
+        arr = np.ascontiguousarray(arr)
+
+    input_shape = arr.shape
+    if len(input_shape) > 2 and input_shape[-1] > 1:
+        arr = arr.ravel()
+    # This also supports a mask, which would help for thresholded invert, but
+    # it seems that all non-masked components are set to zero in the output
+    # array. Tackling this issue seems to rather require more time than just
+    # using a LUT.
+    arr = cv2.subtract(int(max_value), arr, dst=arr)
+    if arr.shape != input_shape:
+        return arr.reshape(input_shape)
     return arr
 
 
@@ -1470,6 +1516,41 @@ def _generate_table_for_invert_uint8(min_value, max_value, threshold,
             ], axis=0)
 
     return table_inv
+
+
+# Added in 0.5.0.
+class _InvertTables(object):
+    # Added in 0.5.0.
+    def __init__(self):
+        self.tables = {}
+
+    # Added in 0.5.0.
+    def get_table(self, min_value, max_value, threshold,
+                  invert_above_threshold):
+        if min_value == 0 and max_value == 255:
+            key = (threshold, invert_above_threshold)
+            table = self.tables.get(key, None)
+            if table is None:
+                table = _generate_table_for_invert_uint8(
+                    min_value, max_value, threshold, invert_above_threshold
+                )
+                self.tables[key] = table
+            return table
+        return _generate_table_for_invert_uint8(
+            min_value, max_value, threshold, invert_above_threshold
+        )
+
+
+# Added in 0.5.0.
+class _InvertTablesSingleton(object):
+    _INSTANCE = None
+
+    # Added in 0.5.0.
+    @classmethod
+    def get_instance(cls):
+        if cls._INSTANCE is None:
+            cls._INSTANCE = _InvertTables()
+        return cls._INSTANCE
 
 
 def solarize(image, threshold=128):

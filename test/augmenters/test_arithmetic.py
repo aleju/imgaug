@@ -15,6 +15,7 @@ except ImportError:
     import mock
 
 import numpy as np
+import cv2
 import six.moves as sm
 
 import imgaug as ia
@@ -22,13 +23,19 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
-from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
-                              runtest_pickleable_uint8_img, assertWarns)
+from imgaug.testutils import (
+    array_equal_lists,
+    keypoints_equal,
+    reseed,
+    runtest_pickleable_uint8_img,
+    assertWarns
+)
 import imgaug.augmenters.arithmetic as arithmetic_lib
 import imgaug.augmenters.contrast as contrast_lib
 from imgaug.augmenters.arithmetic import (
     _add_elementwise_cv2_to_uint8,
-    _multiply_scalar_to_uint8_cv2_mul_
+    _multiply_scalar_to_uint8_cv2_mul_,
+    _invert_uint8_subtract_
 )
 
 
@@ -5478,6 +5485,140 @@ class Test_invert_(unittest.TestCase):
                                        invert_above_threshold=False)
 
                 assert np.allclose(observed, expected, rtol=0, atol=1e-4)
+
+
+class Test__invert_uint8_subtract_(unittest.TestCase):
+    def test_fails_with_size_4(self):
+        # cv2 seems to fail in same cases when input arrays have exactly 4
+        # components.
+        # We verify here that this is the case.
+        # If this test method fails, it means that the code runs merely
+        # sub-optimally as cv2 could be used for such arrays. The code is then
+        # not wrong though.
+        for shape in [(1, 2, 2), (2, 1, 2), (4, 1)]:
+            with self.subTest(shape=shape):
+                zeros = np.zeros(shape, dtype=np.uint8)
+
+                with self.assertRaises(cv2.error):
+                    _ = _invert_uint8_subtract_(zeros, 255)
+
+    def test_0_inverted_to_255_all_small_shapes(self):
+        # this includes zero-sized axes
+        for height in np.arange(8):
+            for width in np.arange(8):
+                # cv2 fails on area==4, we use a LUT function for that case
+                if height * width == 4:
+                    continue
+
+                for nb_channels in [None, 1, 3]:
+                    channels_tpl = (nb_channels,)
+                    if nb_channels is None:
+                        channels_tpl = tuple()
+                    shape = (height, width) + channels_tpl
+
+                    with self.subTest(shape=shape):
+                        zeros = np.zeros(shape, dtype=np.uint8)
+
+                        observed = _invert_uint8_subtract_(np.copy(zeros), 255)
+
+                        expected = np.full(shape, 255, dtype=np.uint8)
+                        assert observed.dtype.name == "uint8"
+                        assert np.array_equal(observed, expected)
+
+    def test_0_inverted_to_255(self):
+        for shape_hw in [(4, 8), (4, 4), (2, 4), (4, 2), (1, 16), (16, 1),
+                         (1, 2), (2, 1), (1, 1), (40, 60)]:
+            shapes_2d3d = [shape_hw]
+            for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+                shapes_2d3d.append(shape_hw + (nb_channels,))
+
+            for shape in shapes_2d3d:
+                if np.prod(shape) == 4:
+                    continue
+
+                with self.subTest(shape=shape):
+                    zeros = np.zeros(shape, dtype=np.uint8)
+
+                    observed = _invert_uint8_subtract_(np.copy(zeros), 255)
+
+                    expected = np.full(shape, 255, dtype=np.uint8)
+                    assert observed.dtype.name == "uint8"
+                    assert np.array_equal(observed, expected)
+
+    def test_nonzero_values(self):
+        arr = np.array([0, 10, 20, 30, 40, 50], dtype=np.uint8).reshape((3, 2))
+
+        observed = _invert_uint8_subtract_(np.copy(arr), 255)
+
+        expected = np.array(
+            [255-0, 255-10, 255-20, 255-30, 255-40, 255-50],
+            dtype=np.uint8
+        ).reshape((3, 2))
+        assert observed.dtype.name == "uint8"
+        assert np.array_equal(observed, expected)
+
+    def test_noncontiguous(self):
+        for shape_hw in [(3, 2), (4, 8)]:
+            shapes_2d3d = [shape_hw]
+            for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+                shapes_2d3d.append(shape_hw + (nb_channels,))
+
+            for shape in shapes_2d3d:
+                with self.subTest(shape=shape):
+                    zeros = np.zeros(shape, dtype=np.uint8, order="F")
+                    assert zeros.flags["C_CONTIGUOUS"] is False
+
+                    observed = _invert_uint8_subtract_(np.copy(zeros), 255)
+
+                    expected = np.full(shape, 255, dtype=np.uint8)
+                    assert observed.dtype.name == "uint8"
+                    assert np.array_equal(observed, expected)
+
+    def test_unusual_base_shapes(self):
+        for shape in [(5, 10, 514), (5, 1, 514), (1, 5, 514)]:
+            zeros = np.zeros(shape, dtype=np.uint8)
+            for nb_selected in [1, 2, 3, 5, 10, 512, 513]:
+                with self.subTest(shape=shape, nb_selected=nb_selected):
+                    mask = [False] * shape[-1]
+                    for c in np.arange(nb_selected):
+                        mask[c] = True
+                    zeros_view = np.copy(zeros)[:, :, mask]
+                    assert zeros_view.flags["OWNDATA"] is False
+                    assert zeros_view.base is not None
+                    assert (
+                        zeros_view.base.shape
+                        == (nb_selected, shape[0], shape[1])
+                    ), zeros_view.base.shape
+
+                    observed = _invert_uint8_subtract_(zeros_view, 255)
+
+                    expected = np.full(
+                        (shape[0], shape[1], nb_selected), 255, dtype=np.uint8
+                    )
+                    assert observed.dtype.name == "uint8"
+                    assert np.array_equal(observed, expected)
+
+    def test_view(self):
+        for shape_hw in [(1, 1), (1, 2), (2, 1), (4, 8), (40, 60)]:
+            shapes_2d3d = [shape_hw]
+            for nb_channels in [1, 2, 3, 4, 5, 10, 512, 513]:
+                shapes_2d3d.append(shape_hw + (nb_channels,))
+
+            for shape in shapes_2d3d:
+                if np.prod(shape) == 4:
+                    continue
+
+                with self.subTest(shape=shape):
+                    shape_pad = (shape[0] + 2,) + shape[1:]
+                    zeros = np.zeros(shape_pad, dtype=np.uint8)
+                    zeros_view = np.copy(zeros)[0:-2, ...]
+                    assert zeros_view.flags["OWNDATA"] is False
+
+                    observed = _invert_uint8_subtract_(zeros_view, 255)
+
+                    expected = np.full(shape, 255, dtype=np.uint8)
+                    assert observed.dtype.name == "uint8"
+                    assert np.array_equal(observed, expected)
 
 
 class Test_solarize(unittest.TestCase):
