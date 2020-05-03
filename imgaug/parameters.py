@@ -229,7 +229,7 @@ def handle_continuous_param(param, name, value_range=None,
         _check_value_range(param[1], name, value_range)
         result = Uniform(param[0], param[1])
     elif (list_to_choice and ia.is_iterable(param)
-            and not isinstance(param, tuple)):
+          and not isinstance(param, tuple)):
         assert all([ia.is_single_number(v) for v in param]), (
             "Expected iterable parameter '%s' to only contain numbers, "
             "got %s." % (name, [type(v) for v in param],))
