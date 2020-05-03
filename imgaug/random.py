@@ -151,6 +151,7 @@ class RNG(object):
     # TODO add maybe a __new__ here that feeds-through an RNG input without
     #      wrapping it in RNG(rng_input)?
     def __init__(self, generator):
+        # pylint: disable=protected-access
         global _RNG_IDX
 
         if isinstance(generator, RNG):

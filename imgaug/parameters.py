@@ -66,7 +66,7 @@ def _wrap_param_in_prefetchers(param, nb_prefetch):
 
 # Added in 0.5.0.
 def _wrap_leafs_of_param_in_prefetchers(param, nb_prefetch):
-    param_wrapped, did_wrap_any_child = \
+    param_wrapped, _did_wrap_any_child = \
         _wrap_leafs_of_param_in_prefetchers_recursive(
             param, nb_prefetch
         )
@@ -91,7 +91,8 @@ def _wrap_leafs_of_param_in_prefetchers_recursive(param, nb_prefetch):
         if isinstance(param, tuple):
             return tuple(result), did_wrap_any_child
         return result, did_wrap_any_child
-    elif not isinstance(param, StochasticParameter):
+
+    if not isinstance(param, StochasticParameter):
         return param, False
 
     did_wrap_any_child = False
@@ -143,12 +144,14 @@ class toggled_prefetching(object):  # pylint: disable=invalid-name
 
     # Added in 0.5.0.
     def __enter__(self):
+        # pylint: disable=global-statement
         global _PREFETCHING_ENABLED
         self._old_state = _PREFETCHING_ENABLED
         _PREFETCHING_ENABLED = self.enabled
 
     # Added in 0.5.0.
     def __exit__(self, exception_type, exception_value, exception_traceback):
+        # pylint: disable=global-statement
         global _PREFETCHING_ENABLED
         _PREFETCHING_ENABLED = self._old_state
 
@@ -276,7 +279,7 @@ def handle_discrete_param(param, name, value_range=None, tuple_to_uniform=True,
         _check_value_range(param[1], name, value_range)
         result = DiscreteUniform(int(param[0]), int(param[1]))
     elif (list_to_choice and ia.is_iterable(param)
-            and not isinstance(param, tuple)):
+          and not isinstance(param, tuple)):
         is_valid_types = all([
             ia.is_single_number(v)
             if allow_floats else ia.is_single_integer(v)
@@ -352,6 +355,8 @@ def handle_categorical_string_param(param, name, valid_values=None,
 
 def handle_discrete_kernel_size_param(param, name, value_range=(1, None),
                                       allow_floats=True, prefetch=True):
+    # pylint: disable=invalid-name
+
     result = None, None
     if (ia.is_single_integer(param)
             or (allow_floats and ia.is_single_float(param))):
@@ -855,6 +860,7 @@ class AutoPrefetcher(StochasticParameter):
 
     # Added in 0.5.0.
     def _draw_samples(self, size, random_state):
+        # pylint: disable=protected-access
         if not _PREFETCHING_ENABLED:
             return self.other_param.draw_samples(size, random_state)
 
