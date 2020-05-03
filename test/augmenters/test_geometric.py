@@ -6836,7 +6836,7 @@ class TestElasticTransformation(unittest.TestCase):
     # -----------
     def test_images(self):
         # test basic funtionality
-        aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+        aug = iaa.ElasticTransformation(alpha=5, sigma=0.25)
 
         observed = aug.augment_image(self.image)
 
@@ -6850,7 +6850,7 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test_images_nonsquare(self):
         # test basic funtionality with non-square images
-        aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+        aug = iaa.ElasticTransformation(alpha=2.0, sigma=0.25, order=3)
         img_nonsquare = np.zeros((50, 100), dtype=np.uint8) + 255
         img_nonsquare = np.pad(img_nonsquare, ((100, 100), (100, 100)),
                                mode="constant", constant_values=0)
@@ -7010,26 +7010,29 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test_sigma_is_stochastic_parameter(self):
         # test sigma being iap.Choice
-        aug = iaa.ElasticTransformation(alpha=3.0,
-                                        sigma=iap.Choice([0.01, 5.0]))
-        seen = [0, 0]
-        for _ in sm.xrange(100):
-            observed = aug.augment_image(self.image)
+        for order in [0, 1, 3]:
+            with self.subTest(order=order):
+                aug = iaa.ElasticTransformation(alpha=50.0,
+                                                sigma=iap.Choice([0.001, 5.0]),
+                                                order=order)
+                seen = [0, 0]
+                for _ in sm.xrange(100):
+                    observed = aug.augment_image(self.image)
 
-            observed_std_hori = np.std(
-                observed.astype(np.float32)[:, 1:]
-                - observed.astype(np.float32)[:, :-1])
-            observed_std_vert = np.std(
-                observed.astype(np.float32)[1:, :]
-                - observed.astype(np.float32)[:-1, :])
-            observed_std = (observed_std_hori + observed_std_vert) / 2
+                    observed_std_hori = np.std(
+                        observed.astype(np.float32)[:, 1:]
+                        - observed.astype(np.float32)[:, :-1])
+                    observed_std_vert = np.std(
+                        observed.astype(np.float32)[1:, :]
+                        - observed.astype(np.float32)[:-1, :])
+                    observed_std = (observed_std_hori + observed_std_vert) / 2
 
-            if observed_std > 10.0:
-                seen[0] += 1
-            else:
-                seen[1] += 1
-        assert seen[0] > 10
-        assert seen[1] > 10
+                    if observed_std > 25.0:
+                        seen[0] += 1
+                    else:
+                        seen[1] += 1
+                assert seen[0] > 10
+                assert seen[1] > 10
 
     # -----------
     # cval
@@ -7491,50 +7494,60 @@ class TestElasticTransformation(unittest.TestCase):
     # -----------
     def test_image_heatmaps_alignment(self):
         # test alignment between images and heatmaps
-        img = np.zeros((80, 80), dtype=np.uint8)
-        img[:, 30:50] = 255
-        img[30:50, :] = 255
-        hm = HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
-        aug = iaa.ElasticTransformation(alpha=60.0, sigma=4.0, mode="constant",
-                                        cval=0)
-        aug_det = aug.to_deterministic()
+        for order in [0, 1, 3]:
+            with self.subTest(order=order):
+                img = np.zeros((80, 80), dtype=np.uint8)
+                img[:, 30:50] = 255
+                img[30:50, :] = 255
+                hm = HeatmapsOnImage(img.astype(np.float32)/255.0, shape=(80, 80))
+                aug = iaa.ElasticTransformation(
+                    alpha=60.0,
+                    sigma=4.0,
+                    mode="constant",
+                    cval=0,
+                    order=order
+                )
+                aug_det = aug.to_deterministic()
 
-        img_aug = aug_det.augment_image(img)
-        hm_aug = aug_det.augment_heatmaps([hm])[0]
+                img_aug = aug_det.augment_image(img)
+                hm_aug = aug_det.augment_heatmaps([hm])[0]
 
-        img_aug_mask = img_aug > 255*0.1
-        hm_aug_mask = hm_aug.arr_0to1 > 0.1
-        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-        assert hm_aug.shape == (80, 80)
-        assert hm_aug.arr_0to1.shape == (80, 80, 1)
-        assert (same / img_aug_mask.size) >= 0.99
+                img_aug_mask = img_aug > 255*0.1
+                hm_aug_mask = hm_aug.arr_0to1 > 0.1
+                same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+                assert hm_aug.shape == (80, 80)
+                assert hm_aug.arr_0to1.shape == (80, 80, 1)
+                assert (same / img_aug_mask.size) >= 0.97
 
     def test_image_heatmaps_alignment_if_heatmaps_smaller_than_image(self):
         # test alignment between images and heatmaps
         # here with heatmaps that are smaller than the image
-        img = np.zeros((80, 80), dtype=np.uint8)
-        img[:, 30:50] = 255
-        img[30:50, :] = 255
-        img_small = ia.imresize_single_image(
-            img, (40, 40), interpolation="nearest")
-        hm = HeatmapsOnImage(
-            img_small.astype(np.float32)/255.0,
-            shape=(80, 80))
-        aug = iaa.ElasticTransformation(
-            alpha=60.0, sigma=4.0, mode="constant", cval=0)
-        aug_det = aug.to_deterministic()
+        for order in [0, 1, 3]:
+            with self.subTest(order=order):
+                img = np.zeros((80, 80), dtype=np.uint8)
+                img[:, 30:50] = 255
+                img[30:50, :] = 255
+                img_small = ia.imresize_single_image(
+                    img, (40, 40), interpolation="nearest")
+                hm = HeatmapsOnImage(
+                    img_small.astype(np.float32)/255.0,
+                    shape=(80, 80))
+                aug = iaa.ElasticTransformation(
+                    alpha=60.0, sigma=4.0, mode="constant", cval=0)
+                aug_det = aug.to_deterministic()
 
-        img_aug = aug_det.augment_image(img)
-        hm_aug = aug_det.augment_heatmaps([hm])[0]
+                img_aug = aug_det.augment_image(img)
+                hm_aug = aug_det.augment_heatmaps([hm])[0]
 
-        img_aug_mask = img_aug > 255*0.1
-        hm_aug_mask = ia.imresize_single_image(
-            hm_aug.arr_0to1, (80, 80), interpolation="nearest"
-        ) > 0.1
-        same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
-        assert hm_aug.shape == (80, 80)
-        assert hm_aug.arr_0to1.shape == (40, 40, 1)
-        assert (same / img_aug_mask.size) >= 0.94
+                img_aug_mask = img_aug > 255*0.1
+                hm_aug_mask = ia.imresize_single_image(
+                    hm_aug.arr_0to1, (80, 80), interpolation="nearest"
+                ) > 0.1
+                same = np.sum(img_aug_mask == hm_aug_mask[:, :, 0])
+                assert hm_aug.shape == (80, 80)
+                assert hm_aug.arr_0to1.shape == (40, 40, 1)
+                # TODO this is a fairly low threshold, why is that the case?
+                assert (same / img_aug_mask.size) >= 0.9
 
     # -----------
     # segmaps alignment
@@ -7584,7 +7597,7 @@ class TestElasticTransformation(unittest.TestCase):
         same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
         assert segmaps_aug.shape == (80, 80)
         assert segmaps_aug.arr.shape == (40, 40, 1)
-        assert (same / img_aug_mask.size) >= 0.94
+        assert (same / img_aug_mask.size) >= 0.93
 
     # ---------
     # unusual channel numbers

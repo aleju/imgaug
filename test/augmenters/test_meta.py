@@ -2966,7 +2966,7 @@ class TestAugmenter_augment_batches(unittest.TestCase):
                 mode=ia.ALL,
                 cval=(0, 255)),
             iaa.PiecewiseAffine(scale=(0.1, 0.3)),
-            iaa.ElasticTransformation(alpha=0.5)
+            iaa.ElasticTransformation(alpha=2.0)
         ]
 
         nb_iterations = 100

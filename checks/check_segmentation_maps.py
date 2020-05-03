@@ -106,6 +106,21 @@ def main():
         ])
     )
 
+    print("ElasticTransformation alpha=200, sig=20...")
+    aug = iaa.ElasticTransformation(alpha=200.0, sigma=20.0)
+    aug_det = aug.to_deterministic()
+    quokka_aug = aug_det.augment_image(quokka)
+    segmaps_aug = aug_det.augment_segmentation_maps(segmap)
+    segmaps_drawn = segmap.draw_on_image(quokka)[0]
+    segmaps_aug_drawn = segmaps_aug.draw_on_image(quokka_aug)[0]
+
+    ia.imshow(
+        np.hstack([
+            segmaps_drawn,
+            segmaps_aug_drawn
+        ])
+    )
+
     print("CopAndPad mode=constant...")
     aug = iaa.CropAndPad(px=(-10, 10, 15, -15), pad_mode="constant", pad_cval=128)
     aug_det = aug.to_deterministic()

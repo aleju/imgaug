@@ -25,6 +25,13 @@ def main():
     augs_cv2 = aug_cv2.augment_images([image] * 8)
     ia.imshow(ia.draw_grid(augs_scipy + augs_cv2, rows=2))
 
+    # check behaviour for multiple consecutive batches
+    aug = iaa.ElasticTransformation(alpha=(5, 100), sigma=(3, 5))
+    images1 = aug(images=[np.copy(image) for _ in range(10)])
+    images2 = aug(images=[np.copy(image) for _ in range(10)])
+    images3 = aug(images=[np.copy(image) for _ in range(10)])
+    ia.imshow(ia.draw_grid(images1 + images2 + images3, rows=3))
+
     print("alpha=vary, sigma=0.25")
     augs = [iaa.ElasticTransformation(alpha=alpha, sigma=0.25) for alpha in np.arange(0.0, 50.0, 0.1)]
     images_aug = [aug.augment_image(image) for aug in augs]
