@@ -121,6 +121,7 @@ def toggle_prefetching(enabled):
         Whether enabled is activated (``True``) or off (``False``).
 
     """
+    # pylint: disable=global-statement
     global _PREFETCHING_ENABLED
     _PREFETCHING_ENABLED = enabled
 
