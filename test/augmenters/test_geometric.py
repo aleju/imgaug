@@ -7547,7 +7547,7 @@ class TestElasticTransformation(unittest.TestCase):
                 assert hm_aug.shape == (80, 80)
                 assert hm_aug.arr_0to1.shape == (40, 40, 1)
                 # TODO this is a fairly low threshold, why is that the case?
-                assert (same / img_aug_mask.size) >= 0.92
+                assert (same / img_aug_mask.size) >= 0.9
 
     # -----------
     # segmaps alignment
@@ -7597,7 +7597,7 @@ class TestElasticTransformation(unittest.TestCase):
         same = np.sum(img_aug_mask == segmaps_aug_mask[:, :, 0])
         assert segmaps_aug.shape == (80, 80)
         assert segmaps_aug.arr.shape == (40, 40, 1)
-        assert (same / img_aug_mask.size) >= 0.94
+        assert (same / img_aug_mask.size) >= 0.93
 
     # ---------
     # unusual channel numbers
