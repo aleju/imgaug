@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import sys
 import warnings
+import itertools
 # unittest only added in 3.4 self.subTest()
 if sys.version_info[0] < 3 or sys.version_info[1] < 4:
     import unittest2 as unittest
@@ -20,7 +21,27 @@ from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug import random as iarandom
-from imgaug.testutils import reseed, runtest_pickleable_uint8_img
+from imgaug.testutils import (
+    reseed, runtest_pickleable_uint8_img, temporary_constants
+)
+
+
+def _create_replace_np_context(use_np_replace):
+    module_name = "imgaug.augmenters.segmentation."
+    cnames = [
+        module_name + "_REPLACE_SEGMENTS_NP_BELOW_AREA",
+        module_name + "_REPLACE_SEGMENTS_NP_BELOW_NSEG"
+    ]
+    if use_np_replace is True:
+        values = [10000 * 10000, 10000]
+    elif use_np_replace is False:
+        values = [0, 0]
+    else:
+        assert use_np_replace == "auto"
+        values = [temporary_constants.UNCHANGED,
+                  temporary_constants.UNCHANGED]
+
+    return temporary_constants(cnames, values)
 
 
 class TestSuperpixels(unittest.TestCase):
@@ -70,56 +91,76 @@ class TestSuperpixels(unittest.TestCase):
         return base_img_superpixels_right
 
     def test_p_replace_0_n_segments_2(self):
-        aug = iaa.Superpixels(p_replace=0, n_segments=2)
-        observed = aug.augment_image(self.base_img)
-        expected = self.base_img
-        assert np.allclose(observed, expected)
+        for use_np_replace in [True, False]:
+            with self.subTest(use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    aug = iaa.Superpixels(p_replace=0, n_segments=2)
+                    observed = aug.augment_image(self.base_img)
+                    expected = self.base_img
+                    assert np.allclose(observed, expected)
 
     def test_p_replace_1_n_segments_2(self):
-        aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
-        observed = aug.augment_image(self.base_img)
-        expected = self.base_img_superpixels
-        assert self._array_equals_tolerant(observed, expected, 2)
+        for use_np_replace in [True, False]:
+            with self.subTest(use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
+                    observed = aug.augment_image(self.base_img)
+                    expected = self.base_img_superpixels
+                    assert self._array_equals_tolerant(observed, expected, 2)
 
     def test_p_replace_1_n_segments_stochastic_parameter(self):
-        aug = iaa.Superpixels(p_replace=1.0, n_segments=iap.Deterministic(2))
-        observed = aug.augment_image(self.base_img)
-        expected = self.base_img_superpixels
-        assert self._array_equals_tolerant(observed, expected, 2)
+        for use_np_replace in [True, False]:
+            with self.subTest(use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    aug = iaa.Superpixels(
+                        p_replace=1.0, n_segments=iap.Deterministic(2)
+                    )
+                    observed = aug.augment_image(self.base_img)
+                    expected = self.base_img_superpixels
+                    assert self._array_equals_tolerant(observed, expected, 2)
 
     def test_p_replace_stochastic_parameter_n_segments_2(self):
-        aug = iaa.Superpixels(
-            p_replace=iap.Binomial(iap.Choice([0.0, 1.0])), n_segments=2)
-        observed = aug.augment_image(self.base_img)
-        assert (
-            np.allclose(observed, self.base_img)
-            or self._array_equals_tolerant(
-                observed, self.base_img_superpixels, 2)
-        )
+        for use_np_replace in [True, False]:
+            with self.subTest(use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    aug = iaa.Superpixels(
+                        p_replace=iap.Binomial(iap.Choice([0.0, 1.0])),
+                        n_segments=2
+                    )
+                    observed = aug.augment_image(self.base_img)
+                    assert (
+                        np.allclose(observed, self.base_img)
+                        or self._array_equals_tolerant(
+                            observed, self.base_img_superpixels, 2)
+                    )
 
     def test_p_replace_050_n_segments_2(self):
-        aug = iaa.Superpixels(p_replace=0.5, n_segments=2)
-        seen = {"none": False, "left": False, "right": False, "both": False}
-        for _ in sm.xrange(100):
-            observed = aug.augment_image(self.base_img)
-            if self._array_equals_tolerant(observed, self.base_img, 2):
-                seen["none"] = True
-            elif self._array_equals_tolerant(
-                    observed, self.base_img_superpixels_left, 2):
-                seen["left"] = True
-            elif self._array_equals_tolerant(
-                    observed, self.base_img_superpixels_right, 2):
-                seen["right"] = True
-            elif self._array_equals_tolerant(
-                    observed, self.base_img_superpixels, 2):
-                seen["both"] = True
-            else:
-                raise Exception(
-                    "Generated superpixels image does not match any "
-                    "expected image.")
-            if np.all(seen.values()):
-                break
-        assert np.all(seen.values())
+        _eq = self._array_equals_tolerant
+
+        for use_np_replace in [True, False]:
+            with self.subTest(use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    aug = iaa.Superpixels(p_replace=0.5, n_segments=2)
+                    seen = {"none": False, "left": False, "right": False,
+                            "both": False}
+                    for _ in sm.xrange(100):
+                        observed = aug.augment_image(self.base_img)
+                        if _eq(observed, self.base_img, 2):
+                            seen["none"] = True
+                        elif _eq(observed, self.base_img_superpixels_left, 2):
+                            seen["left"] = True
+                        elif _eq(observed, self.base_img_superpixels_right, 2):
+                            seen["right"] = True
+                        elif _eq(observed, self.base_img_superpixels, 2):
+                            seen["both"] = True
+                        else:
+                            raise Exception(
+                                "Generated superpixels image does not match "
+                                "any expected image."
+                            )
+                        if np.all(seen.values()):
+                            break
+                    assert np.all(seen.values())
 
     def test_failure_on_invalid_datatype_for_p_replace(self):
         # note that assertRaisesRegex does not exist in 2.7
@@ -152,15 +193,16 @@ class TestSuperpixels(unittest.TestCase):
             (1, 0, 1)
         ]
 
-        for shape in shapes:
-            with self.subTest(shape=shape):
-                image = np.full(shape, 128, dtype=np.uint8)
-                aug = iaa.Superpixels(p_replace=1.0, n_segments=10)
+        for shape, use_np_replace in itertools.product(shapes, [True, False]):
+            with self.subTest(shape=shape, use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    image = np.full(shape, 128, dtype=np.uint8)
+                    aug = iaa.Superpixels(p_replace=1.0, n_segments=10)
 
-                image_aug = aug(image=image)
+                    image_aug = aug(image=image)
 
-                assert image_aug.dtype.name == "uint8"
-                assert image_aug.shape == shape
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape
 
     def test_unusual_channel_numbers(self):
         shapes = [
@@ -170,15 +212,16 @@ class TestSuperpixels(unittest.TestCase):
             (1, 1, 513)
         ]
 
-        for shape in shapes:
-            with self.subTest(shape=shape):
-                image = np.full(shape, 128, dtype=np.uint8)
-                aug = iaa.Superpixels(p_replace=1.0, n_segments=10)
+        for shape, use_np_replace in itertools.product(shapes, [True, False]):
+            with self.subTest(shape=shape, use_np_replace=use_np_replace):
+                with _create_replace_np_context(use_np_replace):
+                    image = np.full(shape, 128, dtype=np.uint8)
+                    aug = iaa.Superpixels(p_replace=1.0, n_segments=10)
 
-                image_aug = aug(image=image)
+                    image_aug = aug(image=image)
 
-                assert image_aug.dtype.name == "uint8"
-                assert image_aug.shape == shape
+                    assert image_aug.dtype.name == "uint8"
+                    assert image_aug.shape == shape
 
     def test_get_parameters(self):
         aug = iaa.Superpixels(
@@ -193,62 +236,73 @@ class TestSuperpixels(unittest.TestCase):
         assert params[3] == "nearest"
 
     def test_other_dtypes_bool(self):
-        aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
-        img = np.array([
-            [False, False, True, True],
-            [False, False, True, True]
-        ], dtype=bool)
-        img_aug = aug.augment_image(img)
-        assert img_aug.dtype == img.dtype
-        assert np.all(img_aug == img)
+        for use_np_replace in [True, False]:
+                with self.subTest(use_np_replace=use_np_replace):
+                    with _create_replace_np_context(use_np_replace):
+                        aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
+                        img = np.array([
+                            [False, False, True, True],
+                            [False, False, True, True]
+                        ], dtype=bool)
+                        img_aug = aug.augment_image(img)
+                        assert img_aug.dtype == img.dtype
+                        assert np.all(img_aug == img)
 
-        aug = iaa.Superpixels(p_replace=1.0, n_segments=1)
-        img = np.array([
-            [True, True, True, True],
-            [False, True, True, True]
-        ], dtype=bool)
-        img_aug = aug.augment_image(img)
-        assert img_aug.dtype == img.dtype
-        assert np.all(img_aug)
+                        aug = iaa.Superpixels(p_replace=1.0, n_segments=1)
+                        img = np.array([
+                            [True, True, True, True],
+                            [False, True, True, True]
+                        ], dtype=bool)
+                        img_aug = aug.augment_image(img)
+                        assert img_aug.dtype == img.dtype
+                        assert np.all(img_aug)
 
     def test_other_dtypes_uint_int(self):
-        for dtype in [np.uint8, np.uint16, np.uint32,
-                      np.int8, np.int16, np.int32]:
-            min_value, center_value, max_value = \
-                iadt.get_value_range_of_dtype(dtype)
+        dtypes = ["uint8", "uint16", "uint32",
+                  "int8", "int16", "int32"]
+        for dtype in dtypes:
+            for use_np_replace in [True, False]:
+                with self.subTest(dtype=dtype, use_np_replace=use_np_replace):
+                    with _create_replace_np_context(use_np_replace):
+                        dtype = np.dtype(dtype)
 
-            if np.dtype(dtype).kind == "i":
-                values = [int(center_value), int(0.1 * max_value),
-                          int(0.2 * max_value), int(0.5 * max_value),
-                          max_value-100]
-                values = [((-1)*value, value) for value in values]
-            else:
-                values = [(0, int(center_value)),
-                          (10, int(0.1 * max_value)),
-                          (10, int(0.2 * max_value)),
-                          (10, int(0.5 * max_value)),
-                          (0, max_value),
-                          (int(center_value),
-                           max_value)]
+                        min_value, center_value, max_value = \
+                            iadt.get_value_range_of_dtype(dtype)
 
-            for v1, v2 in values:
-                aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
-                img = np.array([
-                    [v1, v1, v2, v2],
-                    [v1, v1, v2, v2]
-                ], dtype=dtype)
-                img_aug = aug.augment_image(img)
-                assert img_aug.dtype == np.dtype(dtype)
-                assert np.array_equal(img_aug, img)
+                        if np.dtype(dtype).kind == "i":
+                            values = [
+                                int(center_value), int(0.1 * max_value),
+                                int(0.2 * max_value), int(0.5 * max_value),
+                                max_value-100
+                            ]
+                            values = [((-1)*value, value) for value in values]
+                        else:
+                            values = [(0, int(center_value)),
+                                      (10, int(0.1 * max_value)),
+                                      (10, int(0.2 * max_value)),
+                                      (10, int(0.5 * max_value)),
+                                      (0, max_value),
+                                      (int(center_value),
+                                       max_value)]
 
-                aug = iaa.Superpixels(p_replace=1.0, n_segments=1)
-                img = np.array([
-                    [v2, v2, v2, v2],
-                    [v1, v2, v2, v2]
-                ], dtype=dtype)
-                img_aug = aug.augment_image(img)
-                assert img_aug.dtype == np.dtype(dtype)
-                assert np.all(img_aug == int(np.round((7/8)*v2 + (1/8)*v1)))
+                        for v1, v2 in values:
+                            aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
+                            img = np.array([
+                                [v1, v1, v2, v2],
+                                [v1, v1, v2, v2]
+                            ], dtype=dtype)
+                            img_aug = aug.augment_image(img)
+                            assert img_aug.dtype.name == dtype.name
+                            assert np.array_equal(img_aug, img)
+
+                            aug = iaa.Superpixels(p_replace=1.0, n_segments=1)
+                            img = np.array([
+                                [v2, v2, v2, v2],
+                                [v1, v2, v2, v2]
+                            ], dtype=dtype)
+                            img_aug = aug.augment_image(img)
+                            assert img_aug.dtype.name == dtype.name
+                            assert np.all(img_aug == int((7/8)*v2 + (1/8)*v1))
 
     def test_other_dtypes_float(self):
         # currently, no float dtype is actually accepted

@@ -15,19 +15,21 @@ def main():
     )
     uniform_sampler = iaa.UniformPointsSampler(50*50)
 
-    augs = [
-        iaa.Voronoi(points_sampler=reggrid_sampler, p_replace=1.0,
-                    max_size=128),
-        iaa.Voronoi(points_sampler=uniform_sampler, p_replace=1.0,
-                    max_size=128),
-        iaa.UniformVoronoi(50*50, p_replace=1.0, max_size=128),
-        iaa.RegularGridVoronoi(50, 50, p_drop_points=0.4, p_replace=1.0,
-                               max_size=128),
-    ]
+    for p_replace in [1.0, 0.5, 0.1, 0.0]:
+        augs = [
+            iaa.Voronoi(points_sampler=reggrid_sampler, p_replace=p_replace,
+                        max_size=128),
+            iaa.Voronoi(points_sampler=uniform_sampler, p_replace=p_replace,
+                        max_size=128),
+            iaa.UniformVoronoi(50*50, p_replace=p_replace, max_size=128),
+            iaa.RegularGridVoronoi(50, 50, p_drop_points=0.4,
+                                   p_replace=p_replace, max_size=128),
+            iaa.RelativeRegularGridVoronoi(p_replace=p_replace, max_size=128)
+        ]
 
-    images = [aug(image=image) for aug in augs]
+        images = [aug(image=image) for aug in augs]
 
-    ia.imshow(np.hstack(images))
+        ia.imshow(np.hstack(images))
 
 
 if __name__ == "__main__":
