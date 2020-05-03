@@ -363,10 +363,10 @@ class TestSnowflakes(unittest.TestCase):
         # test density_uniformity
         imgs_aug_ununiform = iaa.Snowflakes(
             density=0.4,
-            density_uniformity=0.1).augment_images([img] * 5)
+            density_uniformity=0.1).augment_images([img] * 30)
         imgs_aug_uniform = iaa.Snowflakes(
             density=0.4,
-            density_uniformity=0.9).augment_images([img] * 5)
+            density_uniformity=0.9).augment_images([img] * 30)
 
         ununiform_uniformity = np.average([
             self._measure_uniformity(img_aug)
@@ -408,7 +408,7 @@ class TestSnowflakes(unittest.TestCase):
         runtest_pickleable_uint8_img(aug, iterations=3, shape=(20, 20, 3))
 
     @classmethod
-    def _measure_uniformity(cls, image, patch_size=5, n_patches=100):
+    def _measure_uniformity(cls, image, patch_size=5, n_patches=50):
         pshalf = (patch_size-1) // 2
         image_f32 = image.astype(np.float32)
         grad_x = image_f32[:, 1:] - image_f32[:, :-1]
