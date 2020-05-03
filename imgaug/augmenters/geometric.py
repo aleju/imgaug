@@ -4812,6 +4812,7 @@ class ElasticTransformation(meta.Augmenter):
                 cval = float(cval)
             else:
                 cval = int(cval)
+
             border_mode = self._MAPPING_MODE_SCIPY_CV2[mode]
             interpolation = self._MAPPING_ORDER_SCIPY_CV2[order]
 
@@ -4937,7 +4938,7 @@ class _ElasticTfShiftMapGenerator(object):
                     dx_i, dy_i = self._flip(dx_i, dy_i,
                                             (dx_lr, dx_ud, dy_lr, dy_ud))
                     dx_i, dy_i = self._mul_alpha(dx_i, dy_i, alphas_c[i])
-                    yield self._smoothen(dx_i, dy_i, sigmas_c[i])
+                    yield self._smoothen_(dx_i, dy_i, sigmas_c[i])
 
     # Added in 0.5.0.
     @classmethod
@@ -4963,7 +4964,7 @@ class _ElasticTfShiftMapGenerator(object):
 
     # Added in 0.5.0.
     @classmethod
-    def _smoothen(cls, dx, dy, sigma):
+    def _smoothen_(cls, dx, dy, sigma):
         if sigma < 1.5:
             dx = blur_lib.blur_gaussian_(dx, sigma)
             dy = blur_lib.blur_gaussian_(dy, sigma)
