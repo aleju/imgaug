@@ -6850,7 +6850,7 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test_images_nonsquare(self):
         # test basic funtionality with non-square images
-        aug = iaa.ElasticTransformation(alpha=0.5, sigma=0.25)
+        aug = iaa.ElasticTransformation(alpha=2.0, sigma=0.25, order=3)
         img_nonsquare = np.zeros((50, 100), dtype=np.uint8) + 255
         img_nonsquare = np.pad(img_nonsquare, ((100, 100), (100, 100)),
                                mode="constant", constant_values=0)
