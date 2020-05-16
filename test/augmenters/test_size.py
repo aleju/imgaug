@@ -25,7 +25,9 @@ from imgaug import random as iarandom
 import imgaug.augmenters.size as iaa_size
 from imgaug.testutils import (array_equal_lists, keypoints_equal, reseed,
                               assert_cbaois_equal,
-                              runtest_pickleable_uint8_img)
+                              runtest_pickleable_uint8_img,
+                              is_parameter_instance,
+                              remove_prefetching)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmenters.size import _prevent_zero_sizes_after_crops_
@@ -200,18 +202,19 @@ class Test__handle_position_parameter(unittest.TestCase):
         assert isinstance(observed, tuple)
         assert len(observed) == 2
         for i in range(2):
-            assert isinstance(observed[i], iap.Uniform)
-            assert isinstance(observed[i].a, iap.Deterministic)
-            assert isinstance(observed[i].b, iap.Deterministic)
-            assert 0.0 - 1e-4 < observed[i].a.value < 0.0 + 1e-4
-            assert 1.0 - 1e-4 < observed[i].b.value < 1.0 + 1e-4
+            param = remove_prefetching(observed[i])
+            assert is_parameter_instance(param, iap.Uniform)
+            assert is_parameter_instance(param.a, iap.Deterministic)
+            assert is_parameter_instance(param.b, iap.Deterministic)
+            assert 0.0 - 1e-4 < param.a.value < 0.0 + 1e-4
+            assert 1.0 - 1e-4 < param.b.value < 1.0 + 1e-4
 
     def test_string_center(self):
         observed = iaa_size._handle_position_parameter("center")
         assert isinstance(observed, tuple)
         assert len(observed) == 2
         for i in range(2):
-            assert isinstance(observed[i], iap.Deterministic)
+            assert is_parameter_instance(observed[i], iap.Deterministic)
             assert 0.5 - 1e-4 < observed[i].value < 0.5 + 1e-4
 
     def test_string_normal(self):
@@ -219,12 +222,15 @@ class Test__handle_position_parameter(unittest.TestCase):
         assert isinstance(observed, tuple)
         assert len(observed) == 2
         for i in range(2):
-            assert isinstance(observed[i], iap.Clip)
-            assert isinstance(observed[i].other_param, iap.Normal)
-            assert isinstance(observed[i].other_param.loc, iap.Deterministic)
-            assert isinstance(observed[i].other_param.scale, iap.Deterministic)
-            assert 0.5 - 1e-4 < observed[i].other_param.loc.value < 0.5 + 1e-4
-            assert 0.35/2 - 1e-4 < observed[i].other_param.scale.value < 0.35/2 + 1e-4
+            param = remove_prefetching(observed[i])
+            assert is_parameter_instance(param, iap.Clip)
+            assert is_parameter_instance(param.other_param, iap.Normal)
+            assert is_parameter_instance(param.other_param.loc,
+                                         iap.Deterministic)
+            assert is_parameter_instance(param.other_param.scale,
+                                         iap.Deterministic)
+            assert 0.5 - 1e-4 < param.other_param.loc.value < 0.5 + 1e-4
+            assert 0.35/2 - 1e-4 < param.other_param.scale.value < 0.35/2 + 1e-4
 
     def test_xy_axis_combined_strings(self):
         pos_x = [
@@ -242,22 +248,22 @@ class Test__handle_position_parameter(unittest.TestCase):
                 position = "%s-%s" % (x_str, y_str)
                 with self.subTest(position=position):
                     observed = iaa_size._handle_position_parameter(position)
-                    assert isinstance(observed[0], iap.Deterministic)
+                    assert is_parameter_instance(observed[0], iap.Deterministic)
                     assert x_val - 1e-4 < observed[0].value < x_val + 1e-4
-                    assert isinstance(observed[1], iap.Deterministic)
+                    assert is_parameter_instance(observed[1], iap.Deterministic)
                     assert y_val - 1e-4 < observed[1].value < y_val + 1e-4
 
     def test_stochastic_parameter(self):
         observed = iaa_size._handle_position_parameter(iap.Poisson(2))
-        assert isinstance(observed, iap.Poisson)
+        assert is_parameter_instance(observed, iap.Poisson)
 
     def test_tuple_of_floats(self):
         observed = iaa_size._handle_position_parameter((0.4, 0.6))
         assert isinstance(observed, tuple)
         assert len(observed) == 2
-        assert isinstance(observed[0], iap.Deterministic)
+        assert is_parameter_instance(observed[0], iap.Deterministic)
         assert 0.4 - 1e-4 < observed[0].value < 0.4 + 1e-4
-        assert isinstance(observed[1], iap.Deterministic)
+        assert is_parameter_instance(observed[1], iap.Deterministic)
         assert 0.6 - 1e-4 < observed[1].value < 0.6 + 1e-4
 
     def test_tuple_of_floats_outside_value_range_leads_to_failure(self):
@@ -272,21 +278,21 @@ class Test__handle_position_parameter(unittest.TestCase):
     def test_tuple_of_stochastic_parameters(self):
         observed = iaa_size._handle_position_parameter(
             (iap.Poisson(2), iap.Poisson(3)))
-        assert isinstance(observed[0], iap.Poisson)
-        assert isinstance(observed[0].lam, iap.Deterministic)
+        assert is_parameter_instance(observed[0], iap.Poisson)
+        assert is_parameter_instance(observed[0].lam, iap.Deterministic)
         assert 2 - 1e-4 < observed[0].lam.value < 2 + 1e-4
-        assert isinstance(observed[1], iap.Poisson)
-        assert isinstance(observed[1].lam, iap.Deterministic)
+        assert is_parameter_instance(observed[1], iap.Poisson)
+        assert is_parameter_instance(observed[1].lam, iap.Deterministic)
         assert 3 - 1e-4 < observed[1].lam.value < 3 + 1e-4
 
-    def test_tuple_of_float_and_stochastic_paramter(self):
+    def test_tuple_of_float_and_stochastic_parameter(self):
         observed = iaa_size._handle_position_parameter((0.4, iap.Poisson(3)))
         assert isinstance(observed, tuple)
         assert len(observed) == 2
-        assert isinstance(observed[0], iap.Deterministic)
+        assert is_parameter_instance(observed[0], iap.Deterministic)
         assert 0.4 - 1e-4 < observed[0].value < 0.4 + 1e-4
-        assert isinstance(observed[1], iap.Poisson)
-        assert isinstance(observed[1].lam, iap.Deterministic)
+        assert is_parameter_instance(observed[1], iap.Poisson)
+        assert is_parameter_instance(observed[1].lam, iap.Deterministic)
         assert 3 - 1e-4 < observed[1].lam.value < 3 + 1e-4
 
     def test_bad_datatype_leads_to_failure(self):
@@ -1573,8 +1579,8 @@ class TestResize(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.Resize(size=1, interpolation="nearest")
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
+        assert is_parameter_instance(params[0], iap.Deterministic)
+        assert is_parameter_instance(params[1], iap.Deterministic)
         assert params[0].value == 1
         assert params[1].value == "nearest"
 
@@ -1683,7 +1689,7 @@ class TestPad(unittest.TestCase):
                       keep_size=False)
         expected = ["constant", "edge", "linear_ramp", "maximum", "mean",
                     "median", "minimum", "reflect", "symmetric", "wrap"]
-        assert isinstance(aug.pad_mode, iap.Choice)
+        assert is_parameter_instance(aug.pad_mode, iap.Choice)
         assert len(aug.pad_mode.a) == len(expected)
         assert np.all([v in aug.pad_mode.a for v in expected])
 
@@ -1693,7 +1699,7 @@ class TestPad(unittest.TestCase):
                       pad_cval=0,
                       keep_size=False)
         expected = ["constant", "maximum"]
-        assert isinstance(aug.pad_mode, iap.Choice)
+        assert is_parameter_instance(aug.pad_mode, iap.Choice)
         assert len(aug.pad_mode.a) == len(expected)
         assert np.all([v in aug.pad_mode.a for v in expected])
 
@@ -1703,7 +1709,7 @@ class TestPad(unittest.TestCase):
                       pad_cval=[50, 100],
                       keep_size=False)
         expected = [50, 100]
-        assert isinstance(aug.pad_cval, iap.Choice)
+        assert is_parameter_instance(aug.pad_cval, iap.Choice)
         assert len(aug.pad_cval.a) == len(expected)
         assert np.all([v in aug.pad_cval.a for v in expected])
 

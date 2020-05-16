@@ -26,7 +26,7 @@ import scipy.special
 import imgaug as ia
 import imgaug.random as iarandom
 from imgaug import parameters as iap
-from imgaug.testutils import reseed
+from imgaug.testutils import reseed, is_parameter_instance
 
 
 def _eps(arr):
@@ -39,7 +39,8 @@ class Test_handle_continuous_param(unittest.TestCase):
     def test_value_range_is_none(self):
         result = iap.handle_continuous_param(
             1, "[test1]",
-            value_range=None, tuple_to_uniform=True, list_to_choice=True)
+            value_range=None, tuple_to_uniform=True, list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_range_is_tuple_of_nones(self):
@@ -47,13 +48,15 @@ class Test_handle_continuous_param(unittest.TestCase):
             1, "[test1b]",
             value_range=(None, None),
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_param_is_stochastic_parameter(self):
         result = iap.handle_continuous_param(
             iap.Deterministic(1), "[test2]",
-            value_range=None, tuple_to_uniform=True, list_to_choice=True)
+            value_range=None, tuple_to_uniform=True, list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_range_is_tuple_of_integers(self):
@@ -61,7 +64,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             1, "[test3]",
             value_range=(0, 10),
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_param_is_outside_of_value_range(self):
@@ -79,7 +83,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             1, "[test5]",
             value_range=(None, 12),
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_param_is_outside_of_value_range_and_no_lower_bound(self):
@@ -98,7 +103,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             1, "[test7]",
             value_range=(-1, None),
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_param_is_outside_of_value_range_and_no_upper_bound(self):
@@ -127,7 +133,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             (1, 2), "[test10]",
             value_range=None,
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Uniform))
 
     def test_tuple_as_value_and_tuples_allowed_and_inside_value_range(self):
@@ -136,7 +143,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             (1, 2), "[test11]",
             value_range=(0, 10),
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Uniform))
 
     def test_tuple_value_and_allowed_and_partially_outside_value_range(self):
@@ -177,7 +185,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             [1, 2, 3], "[test15]",
             value_range=None,
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Choice))
 
     def test_list_value_and_allowed_and_partially_outside_value_range(self):
@@ -210,7 +219,8 @@ class Test_handle_continuous_param(unittest.TestCase):
             1, "[test18]",
             value_range=_value_range,
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_bad_datatype_as_value_range(self):
@@ -240,28 +250,29 @@ class Test_handle_discrete_param(unittest.TestCase):
         # value without value range
         result = iap.handle_discrete_param(
             1, "[test1]", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_range_is_tuple_of_nones(self):
         # value without value range as (None, None)
         result = iap.handle_discrete_param(
             1, "[test1b]", value_range=(None, None), tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_is_stochastic_parameter(self):
         # stochastic parameter
         result = iap.handle_discrete_param(
             iap.Deterministic(1), "[test2]", value_range=None,
-            tuple_to_uniform=True, list_to_choice=True, allow_floats=True)
+            tuple_to_uniform=True, list_to_choice=True, allow_floats=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_inside_value_range(self):
         # value within value range
         result = iap.handle_discrete_param(
             1, "[test3]", value_range=(0, 10), tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_outside_value_range(self):
@@ -269,14 +280,14 @@ class Test_handle_discrete_param(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = iap.handle_discrete_param(
                 1, "[test4]", value_range=(2, 12), tuple_to_uniform=True,
-                list_to_choice=True, allow_floats=True)
+                list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue("[test4]" in str(context.exception))
 
     def test_value_inside_value_range_no_lower_bound(self):
         # value within value range (without lower bound)
         result = iap.handle_discrete_param(
             1, "[test5]", value_range=(None, 12), tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_outside_value_range_no_lower_bound(self):
@@ -284,14 +295,14 @@ class Test_handle_discrete_param(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             _ = iap.handle_discrete_param(
                 1, "[test6]", value_range=(None, 0), tuple_to_uniform=True,
-                list_to_choice=True, allow_floats=True)
+                list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue("[test6]" in str(context.exception))
 
     def test_value_inside_value_range_no_upper_bound(self):
         # value within value range (without upper bound)
         result = iap.handle_discrete_param(
             1, "[test7]", value_range=(-1, None), tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_value_outside_value_range_no_upper_bound(self):
@@ -314,14 +325,14 @@ class Test_handle_discrete_param(unittest.TestCase):
         # tuple as value and tuple allowed
         result = iap.handle_discrete_param(
             (1, 2), "[test10]", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.DiscreteUniform))
 
     def test_value_tuple_and_allowed_and_inside_value_range(self):
         # tuple as value and tuple allowed and tuple within value range
         result = iap.handle_discrete_param(
             (1, 2), "[test11]", value_range=(0, 10), tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.DiscreteUniform))
 
     def test_value_tuple_and_allowed_and_inside_vr_allow_floats_false(self):
@@ -329,7 +340,8 @@ class Test_handle_discrete_param(unittest.TestCase):
         # allow_floats=False
         result = iap.handle_discrete_param(
             (1, 2), "[test11b]", value_range=(0, 10),
-            tuple_to_uniform=True, list_to_choice=True, allow_floats=False)
+            tuple_to_uniform=True, list_to_choice=True, allow_floats=False,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.DiscreteUniform))
 
     def test_value_tuple_and_allowed_and_partially_outside_value_range(self):
@@ -362,7 +374,7 @@ class Test_handle_discrete_param(unittest.TestCase):
         # list as value and list allowed
         result = iap.handle_discrete_param(
             [1, 2, 3], "[test15]", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True, allow_floats=True)
+            list_to_choice=True, allow_floats=True, prefetch=False)
         self.assertTrue(isinstance(result, iap.Choice))
 
     def test_value_list_and_allowed_and_partially_outside_value_range(self):
@@ -390,7 +402,8 @@ class Test_handle_discrete_param(unittest.TestCase):
             1, "[test18]",
             value_range=_value_range,
             tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True,
+            prefetch=False)
         self.assertTrue(isinstance(result, iap.Deterministic))
 
     def test_bad_datatype_as_value_range(self):
@@ -410,12 +423,12 @@ class Test_handle_categorical_string_param(unittest.TestCase):
         param = iap.handle_categorical_string_param(
             ia.ALL, "foo", valid_values)
 
-        assert isinstance(param, iap.Choice)
+        assert is_parameter_instance(param, iap.Choice)
         assert param.a == valid_values
 
     def test_arg_is_str(self):
         param = iap.handle_categorical_string_param("class1", "foo")
-        assert isinstance(param, iap.Deterministic)
+        assert is_parameter_instance(param, iap.Deterministic)
         assert param.value == "class1"
 
     def test_arg_is_valid_str(self):
@@ -424,7 +437,7 @@ class Test_handle_categorical_string_param(unittest.TestCase):
         param = iap.handle_categorical_string_param(
             "class1", "foo", valid_values)
 
-        assert isinstance(param, iap.Deterministic)
+        assert is_parameter_instance(param, iap.Deterministic)
         assert param.value == "class1"
 
     def test_arg_is_invalid_str(self):
@@ -443,7 +456,7 @@ class Test_handle_categorical_string_param(unittest.TestCase):
         param = iap.handle_categorical_string_param(["class1", "class3"],
                                                     "foo")
 
-        assert isinstance(param, iap.Choice)
+        assert is_parameter_instance(param, iap.Choice)
         assert param.a == ["class1", "class3"]
 
     def test_arg_is_valid_list(self):
@@ -452,7 +465,7 @@ class Test_handle_categorical_string_param(unittest.TestCase):
         param = iap.handle_categorical_string_param(
             ["class1", "class3"], "foo", valid_values)
 
-        assert isinstance(param, iap.Choice)
+        assert is_parameter_instance(param, iap.Choice)
         assert param.a == ["class1", "class3"]
 
     def test_arg_is_list_with_invalid_types(self):
@@ -486,7 +499,7 @@ class Test_handle_categorical_string_param(unittest.TestCase):
         param = iap.Deterministic("class1")
 
         param_out = iap.handle_categorical_string_param(
-            param, "foo", ["class1"])
+            param, "foo", ["class1"], prefetch=False)
 
         assert param_out is param
 
@@ -503,21 +516,21 @@ class Test_handle_probability_param(unittest.TestCase):
     def test_bool_like_values(self):
         for val in [True, False, 0, 1, 0.0, 1.0]:
             with self.subTest(param=val):
-                p = iap.handle_probability_param(val, "[test1]")
+                p = iap.handle_probability_param(val, "[test1]", prefetch=False)
                 assert isinstance(p, iap.Deterministic)
                 assert p.value == int(val)
 
     def test_float_probabilities(self):
         for val in [0.0001, 0.001, 0.01, 0.1, 0.9, 0.99, 0.999, 0.9999]:
             with self.subTest(param=val):
-                p = iap.handle_probability_param(val, "[test2]")
-                assert isinstance(p, iap.Binomial)
-                assert isinstance(p.p, iap.Deterministic)
+                p = iap.handle_probability_param(val, "[test2]", prefetch=False)
+                assert is_parameter_instance(p, iap.Binomial)
+                assert is_parameter_instance(p.p, iap.Deterministic)
                 assert val-1e-8 < p.p.value < val+1e-8
 
     def test_probability_is_stochastic_parameter(self):
         det = iap.Deterministic(1)
-        p = iap.handle_probability_param(det, "[test3]")
+        p = iap.handle_probability_param(det, "[test3]", prefetch=False)
         assert p == det
 
     def test_probability_has_bad_datatype(self):
@@ -1000,24 +1013,188 @@ class TestStochasticParameterOperators(unittest.TestCase):
         self.assertTrue("Invalid datatypes" in str(context.exception))
 
 
+class TestAutoPrefetcher(unittest.TestCase):
+    def setUp(self):
+        reseed()
+
+    def test_does_not_prefetch_at_first_call(self):
+        other_param = mock.Mock()
+        other_param.draw_samples.return_value = np.zeros((100,), dtype=np.uint8)
+        param = iap.AutoPrefetcher(other_param, 10)
+        rng = iarandom.RNG(0)
+
+        _samples = param.draw_samples((1,), rng)
+
+        # rng is currently not identical in call args,
+        # because draw_samples() creates a new one with same state
+        assert other_param.draw_samples.call_count == 1
+        assert other_param.draw_samples.call_args_list[0][0][0] == (1,)
+        assert other_param.draw_samples.call_args_list[0][0][1].equals(rng)
+        assert param.samples is None
+        assert param.index == 0
+        assert param.last_rng_idx == rng._idx
+
+    def test_prefetches_at_second_call(self):
+        other_param = mock.Mock()
+        other_param.draw_samples.return_value = np.zeros((100,), dtype=np.uint8)
+        param = iap.AutoPrefetcher(other_param, 10)
+        rng = iarandom.RNG(0)
+
+        _samples = param.draw_samples((1,), rng)
+        _samples = param.draw_samples((1,), rng)
+
+        # rng is currently not identical in call args,
+        # because draw_samples() creates a new one with same state
+        assert other_param.draw_samples.call_count == 2
+        assert other_param.draw_samples.call_args_list[0][0][0] == (1,)
+        assert other_param.draw_samples.call_args_list[0][0][1].equals(rng)
+        assert other_param.draw_samples.call_args_list[1][0][0] == (10,)
+        assert other_param.draw_samples.call_args_list[1][0][1].equals(rng)
+        # (100,) because that's what the mock always returns
+        assert param.samples.shape == (100,)
+        assert param.index == 1
+        assert param.last_rng_idx == rng._idx
+
+    def test_nb_prefetch_is_evenly_divisible_by_requested_sizes(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 100)
+        rng = iarandom.RNG(0)
+
+        samples1 = param.draw_samples((50,), rng)
+        samples2 = param.draw_samples((50,), rng)
+        samples3 = param.draw_samples((50,), rng)
+        samples4 = param.draw_samples((50,), rng)
+
+        # first call is not prefetched, second+ is, so first and second are
+        # here identical
+        assert np.array_equal(samples1, np.arange(50))
+        assert np.array_equal(samples2, np.arange(50))
+        assert np.array_equal(samples3, 50 + np.arange(50))
+        assert np.array_equal(samples4, np.arange(50))
+
+    def test_nb_prefetch_is_not_evenly_divisible_by_requested_sizes(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 100)
+        rng = iarandom.RNG(0)
+
+        samples1 = param.draw_samples((40,), rng)
+        samples2 = param.draw_samples((40,), rng)
+        samples3 = param.draw_samples((40,), rng)
+        samples4 = param.draw_samples((40,), rng)
+
+        # first call is not prefetched, second+ is, so first and second are
+        # here identical
+        assert np.array_equal(samples1, np.arange(40))
+        assert np.array_equal(samples2, np.arange(40))
+        assert np.array_equal(samples3, 40 + np.arange(40))
+        assert np.array_equal(
+            samples4,
+            np.concatenate([
+                80 + np.arange(20),
+                np.arange(20)
+            ], axis=0)
+        )
+
+    def test_exactly_as_many_components_requested_as_nb_prefetch_allows(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 40)
+        rng = iarandom.RNG(0)
+
+        samples1 = param.draw_samples((40,), rng)
+        samples2 = param.draw_samples((40,), rng)
+        samples3 = param.draw_samples((40,), rng)
+
+        assert np.array_equal(samples1, np.arange(40))
+        assert np.array_equal(samples2, np.arange(40))
+        assert np.array_equal(samples3, np.arange(40))
+
+    def test_more_components_requested_than_nb_prefetch_allows(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 10)
+        rng = iarandom.RNG(0)
+
+        samples1 = param.draw_samples((40,), rng)
+        samples2 = param.draw_samples((40,), rng)
+        samples3 = param.draw_samples((40,), rng)
+
+        assert np.array_equal(samples1, np.arange(40))
+        assert np.array_equal(samples2, np.arange(40))
+        assert np.array_equal(samples3, np.arange(40))
+
+    def test_size_is_tuple(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 50)
+        rng = iarandom.RNG(0)
+
+        samples1 = param.draw_samples((2, 3, 4), rng)  # 24 samples
+        samples2 = param.draw_samples((1, 5, 2), rng)  # 10 samples
+        samples3 = param.draw_samples((10, 2), rng)  # 20 samples
+
+        assert np.array_equal(samples1, np.arange(2*3*4).reshape((2, 3, 4)))
+        assert np.array_equal(samples2, np.arange(1*5*2).reshape((1, 5, 2)))
+        assert np.array_equal(samples3,
+                              (1*5*2) + np.arange(10*2).reshape((10, 2)))
+
+    def test_to_string_first_call(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 10)
+        other_param_str = str(other_param)
+
+        expected = (
+            "AutoPrefetcher("
+            "nb_prefetch=10, "
+            "samples=None (dtype None), "
+            "index=0, "
+            "last_rng_idx=None, "
+            "other_param=%s"
+            ")" % (other_param_str,)
+        )
+        assert str(param) == repr(param) == expected
+
+    def test_to_string_second_call(self):
+        other_param = iap.DeterministicList(np.arange(200))
+        param = iap.AutoPrefetcher(other_param, 10)
+        other_param_str = str(other_param)
+
+        rng = iarandom.RNG(0)
+
+        _ = param.draw_samples((2,), rng)
+        _ = param.draw_samples((2,), rng)
+
+        expected = (
+            "AutoPrefetcher("
+            "nb_prefetch=10, "
+            "samples=(10,) (dtype int64), "
+            "index=2, "
+            "last_rng_idx=%d, "
+            "other_param=%s"
+            ")" % (rng._idx, other_param_str)
+        )
+        assert str(param) == repr(param) == expected
+
+
 class TestBinomial(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test___init___p_is_zero(self):
         param = iap.Binomial(0)
+        expected = "Binomial(%s)" % (str(param.p),)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Binomial(Deterministic(int 0))"
+            == expected
         )
 
     def test___init___p_is_one(self):
         param = iap.Binomial(1.0)
+        expected = "Binomial(%s)" % (str(param.p),)
+        assert "Deterministic(float 1.00000000)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Binomial(Deterministic(float 1.00000000))"
+            == expected
         )
 
     def test_p_is_zero(self):
@@ -1278,10 +1455,13 @@ class TestDiscreteUniform(unittest.TestCase):
 
     def test___init__(self):
         param = iap.DiscreteUniform(0, 2)
+        expected = "DiscreteUniform(%s, %s)" % (str(param.a), str(param.b))
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 2)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "DiscreteUniform(Deterministic(int 0), Deterministic(int 2))"
+            == expected
         )
 
     def test_bounds_are_ints(self):
@@ -1392,10 +1572,12 @@ class TestPoisson(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Poisson(1)
+        expected = "Poisson(%s)" % (str(param.lam),)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Poisson(Deterministic(int 1))"
+            == expected
         )
 
     def test_draw_sample(self):
@@ -1437,10 +1619,12 @@ class TestNormal(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Normal(0, 1)
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Normal(loc=Deterministic(int 0), scale=Deterministic(int 1))"
+            == "Normal(loc=%s, scale=%s)" % (str(param.loc), str(param.scale))
         )
 
     def test_draw_sample(self):
@@ -1519,12 +1703,21 @@ class TestTruncatedNormal(unittest.TestCase):
         param = iap.TruncatedNormal(0, 1)
         expected = (
             "TruncatedNormal("
-            "loc=Deterministic(int 0), "
-            "scale=Deterministic(int 1), "
-            "low=Deterministic(float -inf), "
-            "high=Deterministic(float inf)"
-            ")"
+            "loc=%s, "
+            "scale=%s, "
+            "low=%s, "
+            "high=%s"
+            ")" % (
+                str(param.loc),
+                str(param.scale),
+                str(param.low),
+                str(param.high)
+            )
         )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
+        assert "Deterministic(float -inf)" in str(param)
+        assert "Deterministic(float inf)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
@@ -1535,12 +1728,21 @@ class TestTruncatedNormal(unittest.TestCase):
         param = iap.TruncatedNormal(0, 1, low=-100, high=50.0)
         expected = (
             "TruncatedNormal("
-            "loc=Deterministic(int 0), "
-            "scale=Deterministic(int 1), "
-            "low=Deterministic(int -100), "
-            "high=Deterministic(float 50.00000000)"
-            ")"
+            "loc=%s, "
+            "scale=%s, "
+            "low=%s, "
+            "high=%s"
+            ")" % (
+                str(param.loc),
+                str(param.scale),
+                str(param.low),
+                str(param.high)
+            )
         )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
+        assert "Deterministic(int -100)" in str(param)
+        assert "Deterministic(float 50.00000000)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
@@ -1621,10 +1823,16 @@ class TestLaplace(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Laplace(0, 1)
+        expected = "Laplace(loc=%s, scale=%s)" % (
+            str(param.loc),
+            str(param.scale)
+        )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Laplace(loc=Deterministic(int 0), scale=Deterministic(int 1))"
+            == expected
         )
 
     def test_draw_sample(self):
@@ -1714,11 +1922,12 @@ class TestChiSquare(unittest.TestCase):
 
     def test___init__(self):
         param = iap.ChiSquare(1)
-
+        expected = "ChiSquare(df=%s)" % (str(param.df),)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "ChiSquare(df=Deterministic(int 1))"
+            == expected
         )
 
     def test_draw_sample(self):
@@ -1802,11 +2011,12 @@ class TestWeibull(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Weibull(1)
-
+        expected = "Weibull(a=%s)" % (str(param.a),)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Weibull(a=Deterministic(int 1))"
+            == expected
         )
 
     def test_draw_sample(self):
@@ -1821,8 +2031,7 @@ class TestWeibull(unittest.TestCase):
         param = iap.Weibull(1)
 
         samples = param.draw_samples((100, 1000))
-        samples_direct = iarandom.RNG(1234).weibull(a=1,
-                                                             size=(100, 1000))
+        samples_direct = iarandom.RNG(1234).weibull(a=1, size=(100, 1000))
 
         assert samples.shape == (100, 1000)
         assert np.all(0 <= samples)
@@ -1919,10 +2128,13 @@ class TestUniform(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Uniform(0, 1.0)
+        expected = "Uniform(%s, %s)" % (str(param.a), str(param.b))
+        assert "Deterministic(int 0)" in str(param.a)
+        assert "Deterministic(float 1.00000000)" in str(param.b)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Uniform(Deterministic(int 0), Deterministic(float 1.00000000))"
+            == expected
         )
 
     def test_draw_sample(self):
@@ -2052,13 +2264,12 @@ class TestBeta(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Beta(0.5, 0.5)
+        expected = "Beta(%s, %s)" % (str(param.alpha), str(param.beta))
+        assert "Deterministic(float 0.50000000)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Beta("
-               "Deterministic(float 0.50000000), "
-               "Deterministic(float 0.50000000)"
-               ")"
+            == expected
         )
 
     def test_draw_sample(self):
@@ -2410,28 +2621,40 @@ class TestFromLowerResolution(unittest.TestCase):
         param = iap.FromLowerResolution(other_param=iap.Deterministic(0),
                                         size_percent=1, method="nearest")
 
+        expected = (
+            "FromLowerResolution(size_percent=%s, method=%s, other_param=%s)"
+        ) % (
+            str(param.size_percent),
+            str(param.method),
+            str(param.other_param)
+        )
+        assert "Deterministic(int 1)" in str(param)
+        assert "Deterministic(nearest)" in str(param)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "FromLowerResolution("
-               "size_percent=Deterministic(int 1), "
-               "method=Deterministic(nearest), "
-               "other_param=Deterministic(int 0)"
-               ")"
+            == expected
         )
 
     def test___init___size_px(self):
         param = iap.FromLowerResolution(other_param=iap.Deterministic(0),
                                         size_px=1, method="nearest")
 
+        expected = (
+            "FromLowerResolution(size_px=%s, method=%s, other_param=%s)"
+        ) % (
+            str(param.size_px),
+            str(param.method),
+            str(param.other_param)
+        )
+        assert "Deterministic(int 1)" in str(param)
+        assert "Deterministic(nearest)" in str(param)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "FromLowerResolution("
-               "size_px=Deterministic(int 1), "
-               "method=Deterministic(nearest), "
-               "other_param=Deterministic(int 0)"
-               ")"
+            == expected
         )
 
     def test_binomial_hwc(self):
@@ -2694,10 +2917,12 @@ class TestClip(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Clip(iap.Deterministic(0), -1, 1)
+        expected = "Clip(%s, -1.000000, 1.000000)" % (str(param.other_param),)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Clip(Deterministic(int 0), -1.000000, 1.000000)"
+            == expected
         )
 
     def test_value_within_bounds(self):
@@ -2796,36 +3021,36 @@ class TestClip(unittest.TestCase):
         param = iap.Clip(iap.Deterministic(0), None, 1)
 
         sample = param.draw_sample()
-
+        expected = "Clip(%s, None, 1.000000)" % (str(param.other_param),)
         assert sample == 0
         assert (
             param.__str__()
             == param.__repr__()
-            == "Clip(Deterministic(int 0), None, 1.000000)"
+            == expected
         )
 
     def test_upper_bound_is_none(self):
         param = iap.Clip(iap.Deterministic(0), 0, None)
 
         sample = param.draw_sample()
-
+        expected = "Clip(%s, 0.000000, None)" % (str(param.other_param),)
         assert sample == 0
         assert (
             param.__str__()
             == param.__repr__()
-            == "Clip(Deterministic(int 0), 0.000000, None)"
+            == expected
         )
 
     def test_both_bounds_are_none(self):
         param = iap.Clip(iap.Deterministic(0), None, None)
 
         sample = param.draw_sample()
-
+        expected = "Clip(%s, None, None)" % (str(param.other_param),)
         assert sample == 0
         assert (
             param.__str__()
             == param.__repr__()
-            == "Clip(Deterministic(int 0), None, None)"
+            == expected
         )
 
 
@@ -2835,11 +3060,12 @@ class TestDiscretize(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Discretize(iap.Deterministic(0))
-
+        expected = "Discretize(%s, round=True)" % (param.other_param,)
+        assert "Deterministic(int 0)" in str(param.other_param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Discretize(Deterministic(int 0), round=True)"
+            == expected
         )
 
     def test_applied_to_deterministic(self):
@@ -2915,10 +3141,16 @@ class TestMultiply(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Multiply(iap.Deterministic(0), 1, elementwise=False)
+        expected = "Multiply(%s, %s, False)" % (
+            str(param.other_param),
+            str(param.val)
+        )
+        assert "Deterministic(int 0)" in str(param.other_param)
+        assert "Deterministic(int 1)" in str(param.val)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Multiply(Deterministic(int 0), Deterministic(int 1), False)"
+            == expected
         )
 
     def test_multiply_example_integer_values(self):
@@ -3057,10 +3289,15 @@ class TestDivide(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Divide(iap.Deterministic(0), 1, elementwise=False)
+        expected = "Divide(%s, %s, False)" % (
+            str(param.other_param), str(param.val)
+        )
+        assert "Deterministic(int 0)" in str(param.other_param)
+        assert "Deterministic(int 1)" in str(param.val)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Divide(Deterministic(int 0), Deterministic(int 1), False)"
+            == expected
         )
 
     def test_divide_integers(self):
@@ -3245,10 +3482,16 @@ class TestAdd(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Add(iap.Deterministic(0), 1, elementwise=False)
+        expected = "Add(%s, %s, False)" % (
+            str(param.other_param),
+            str(param.val)
+        )
+        assert "Deterministic(int 0)" in str(param.other_param)
+        assert "Deterministic(int 1)" in str(param.val)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Add(Deterministic(int 0), Deterministic(int 1), False)"
+            == expected
         )
 
     def test_add_integers(self):
@@ -3384,10 +3627,16 @@ class TestSubtract(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Subtract(iap.Deterministic(0), 1, elementwise=False)
+        expected = "Subtract(%s, %s, False)" % (
+            str(param.other_param),
+            str(param.val)
+        )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Subtract(Deterministic(int 0), Deterministic(int 1), False)"
+            == expected
         )
 
     def test_subtract_integers(self):
@@ -3527,10 +3776,16 @@ class TestPower(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Power(iap.Deterministic(0), 1, elementwise=False)
+        expected = "Power(%s, %s, False)" % (
+            str(param.other_param),
+            str(param.val)
+        )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Power(Deterministic(int 0), Deterministic(int 1), False)"
+            == expected
         )
 
     def test_pairs(self):
@@ -3664,10 +3919,12 @@ class TestAbsolute(unittest.TestCase):
 
     def test___init__(self):
         param = iap.Absolute(iap.Deterministic(0))
+        expected = "Absolute(%s)" % (str(param.other_param),)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "Absolute(Deterministic(int 0))"
+            == expected
         )
 
     def test_fixed_values(self):
@@ -3714,10 +3971,12 @@ class TestRandomSign(unittest.TestCase):
 
     def test___init__(self):
         param = iap.RandomSign(iap.Deterministic(0), 0.5)
+        expected = "RandomSign(%s, 0.50)" % (str(param.other_param),)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "RandomSign(Deterministic(int 0), 0.50)"
+            == expected
         )
 
     def test_value_is_deterministic(self):
@@ -3783,10 +4042,12 @@ class TestForceSign(unittest.TestCase):
 
     def test___init__(self):
         param = iap.ForceSign(iap.Deterministic(0), True, "invert", 1)
+        expected = "ForceSign(%s, True, invert, 1)" % (str(param.other_param),)
+        assert "Deterministic(int 0)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == "ForceSign(Deterministic(int 0), True, invert, 1)"
+            == expected
         )
 
     def test_single_sample_positive(self):
@@ -3934,18 +4195,19 @@ class TestIterativeNoiseAggregator(unittest.TestCase):
         param = iap.IterativeNoiseAggregator(iap.Deterministic(0),
                                              iterations=(1, 3),
                                              aggregation_method="max")
+        expected = "IterativeNoiseAggregator(%s, %s, %s)" % (
+            str(param.other_param),
+            str(param.iterations),
+            str(param.aggregation_method)
+        )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
+        assert "Deterministic(int 3)" in str(param)
+        assert "Deterministic(max)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == (
-                "IterativeNoiseAggregator("
-                "Deterministic(int 0), "
-                "DiscreteUniform(Deterministic(int 1), "
-                "Deterministic(int 3)"
-                "), "
-                "Deterministic(max)"
-                ")"
-            )
+            == expected
         )
 
     def test_value_is_deterministic_max_1_iter(self):
@@ -4138,21 +4400,20 @@ class TestSigmoid(unittest.TestCase):
             threshold=(-10, 10),
             activated=True,
             mul=1,
-            add=0)
+            add=0
+        )
+        expected = "Sigmoid(%s, %s, %s, 1, 0)" % (
+            str(param.other_param),
+            str(param.threshold),
+            str(param.activated)
+        )
+        assert "Deterministic(int 0)" in str(param)
+        assert "Deterministic(int -10)" in str(param)
+        assert "Deterministic(int 1)" in str(param)
         assert (
             param.__str__()
             == param.__repr__()
-            == (
-                "Sigmoid("
-                "Deterministic(int 0), "
-                "Uniform("
-                "Deterministic(int -10), "
-                "Deterministic(int 10)"
-                "), "
-                "Deterministic(int 1), "
-                "1, "
-                "0)"
-            )
+            == expected
         )
 
     def test_activated_is_true(self):

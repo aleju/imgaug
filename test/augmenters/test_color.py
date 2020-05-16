@@ -23,7 +23,8 @@ import imgaug.random as iarandom
 from imgaug import augmenters as iaa
 from imgaug import parameters as iap
 import imgaug.augmenters.meta as meta
-from imgaug.testutils import reseed, runtest_pickleable_uint8_img
+from imgaug.testutils import (reseed, runtest_pickleable_uint8_img,
+                              is_parameter_instance)
 import imgaug.augmenters.color as colorlib
 
 
@@ -623,11 +624,15 @@ class TestWithBrightnessChannels(unittest.TestCase):
         expected_child = iaa.Sequential([child], name="foo-then")
         expected = (
             "WithBrightnessChannels("
-            "to_colorspace=Deterministic(HSV), "
+            "to_colorspace=%s, "
             "from_colorspace=RGB, "
             "name=foo, "
             "children=%s, "
-            "deterministic=False)" % (str(expected_child),))
+            "deterministic=False)" % (
+                str(aug.to_colorspace),
+                str(expected_child),
+            )
+        )
         assert aug_str == expected
 
     def test_get_children_lists(self):
@@ -810,11 +815,16 @@ class TestMultiplyAndAddToBrightness(unittest.TestCase):
                     "MultiplyAndAddToBrightness("
                     "mul=%s, "
                     "add=%s, "
-                    "to_colorspace=Deterministic(HSV), "
+                    "to_colorspace=%s, "
                     "from_colorspace=RGB, "
                     "random_order=True, "
                     "name=foo, "
-                    "deterministic=False)" % (str(exp_mul), str(exp_add),))
+                    "deterministic=False)" % (
+                        exp_mul,
+                        exp_add,
+                        str(aug.to_colorspace)
+                    )
+                )
                 assert aug_str == expected
 
     def test_pickleable(self):
@@ -1054,10 +1064,11 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
         assert isinstance(aug.children, iaa.Sequential)
         assert len(aug.children) == 1
         assert isinstance(aug.children[0], iaa.Multiply)
-        assert isinstance(aug.children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[0].mul, iap.Uniform)
         assert np.isclose(aug.children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].mul.b.value, 1.1)
-        assert isinstance(aug.children[0].per_channel, iap.Deterministic)
+        assert is_parameter_instance(aug.children[0].per_channel,
+                                     iap.Deterministic)
         assert aug.children[0].per_channel.value == 1
 
     def test_returns_correct_objects__mul_hue(self):
@@ -1069,7 +1080,8 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
         assert aug.children[0].channels == [0]
         assert len(aug.children[0].children) == 1
         assert isinstance(aug.children[0].children[0], iaa.Multiply)
-        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[0].children[0].mul,
+                                     iap.Uniform)
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
@@ -1082,7 +1094,8 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
         assert aug.children[0].channels == [1]
         assert len(aug.children[0].children) == 1
         assert isinstance(aug.children[0].children[0], iaa.Multiply)
-        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[0].children[0].mul,
+                                     iap.Uniform)
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
@@ -1097,7 +1110,8 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
         assert aug.children[0].channels == [0]
         assert len(aug.children[0].children) == 1
         assert isinstance(aug.children[0].children[0], iaa.Multiply)
-        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[0].children[0].mul,
+                                     iap.Uniform)
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
@@ -1105,7 +1119,8 @@ class TestMultiplyHueAndSaturation(unittest.TestCase):
         assert aug.children[1].channels == [1]
         assert len(aug.children[0].children) == 1
         assert isinstance(aug.children[1].children[0], iaa.Multiply)
-        assert isinstance(aug.children[1].children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[1].children[0].mul,
+                                     iap.Uniform)
         assert np.isclose(aug.children[1].children[0].mul.a.value, 0.8)
         assert np.isclose(aug.children[1].children[0].mul.b.value, 1.2)
 
@@ -1331,7 +1346,8 @@ class TestMultiplyHue(unittest.TestCase):
         assert aug.children[0].channels == [0]
         assert len(aug.children[0].children) == 1
         assert isinstance(aug.children[0].children[0], iaa.Multiply)
-        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[0].children[0].mul,
+                                     iap.Uniform)
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
@@ -1353,7 +1369,8 @@ class TestMultiplySaturation(unittest.TestCase):
         assert aug.children[0].channels == [1]
         assert len(aug.children[0].children) == 1
         assert isinstance(aug.children[0].children[0], iaa.Multiply)
-        assert isinstance(aug.children[0].children[0].mul, iap.Uniform)
+        assert is_parameter_instance(aug.children[0].children[0].mul,
+                                     iap.Uniform)
         assert np.isclose(aug.children[0].children[0].mul.a.value, 0.9)
         assert np.isclose(aug.children[0].children[0].mul.b.value, 1.1)
 
@@ -1478,24 +1495,24 @@ class TestAddToHueAndSaturation(unittest.TestCase):
 
     def test___init__(self):
         aug = iaa.AddToHueAndSaturation((-20, 20))
-        assert isinstance(aug.value, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.value, iap.DiscreteUniform)
         assert aug.value.a.value == -20
         assert aug.value.b.value == 20
         assert aug.value_hue is None
         assert aug.value_saturation is None
-        assert isinstance(aug.per_channel, iap.Deterministic)
+        assert is_parameter_instance(aug.per_channel, iap.Deterministic)
         assert aug.per_channel.value == 0
 
     def test___init___value_none(self):
         aug = iaa.AddToHueAndSaturation(value_hue=(-20, 20),
                                         value_saturation=[0, 5, 10])
         assert aug.value is None
-        assert isinstance(aug.value_hue, iap.DiscreteUniform)
-        assert isinstance(aug.value_saturation, iap.Choice)
+        assert is_parameter_instance(aug.value_hue, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.value_saturation, iap.Choice)
         assert aug.value_hue.a.value == -20
         assert aug.value_hue.b.value == 20
         assert aug.value_saturation.a == [0, 5, 10]
-        assert isinstance(aug.per_channel, iap.Deterministic)
+        assert is_parameter_instance(aug.per_channel, iap.Deterministic)
         assert aug.per_channel.value == 0
 
     def test___init___per_channel(self):
@@ -1503,7 +1520,7 @@ class TestAddToHueAndSaturation(unittest.TestCase):
         assert aug.value is None
         assert aug.value_hue is not None
         assert aug.value_saturation is not None
-        assert isinstance(aug.per_channel, iap.Binomial)
+        assert is_parameter_instance(aug.per_channel, iap.Binomial)
         assert np.isclose(aug.per_channel.p.value, 0.5)
 
     def test__generate_lut_table(self):
@@ -1769,12 +1786,12 @@ class TestAddToHueAndSaturation(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.AddToHueAndSaturation((-20, 20), per_channel=0.5)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.DiscreteUniform)
+        assert is_parameter_instance(params[0], iap.DiscreteUniform)
         assert params[0].a.value == -20
         assert params[0].b.value == 20
         assert params[1] is None
         assert params[2] is None
-        assert isinstance(params[3], iap.Binomial)
+        assert is_parameter_instance(params[3], iap.Binomial)
         assert np.isclose(params[3].p.value, 0.5)
 
     def test_get_parameters_value_hue_and_value_saturation(self):
@@ -1782,12 +1799,12 @@ class TestAddToHueAndSaturation(unittest.TestCase):
                                         value_saturation=5)
         params = aug.get_parameters()
         assert params[0] is None
-        assert isinstance(params[1], iap.DiscreteUniform)
+        assert is_parameter_instance(params[1], iap.DiscreteUniform)
         assert params[1].a.value == -20
         assert params[1].b.value == 20
-        assert isinstance(params[2], iap.Deterministic)
+        assert is_parameter_instance(params[2], iap.Deterministic)
         assert params[2].value == 5
-        assert isinstance(params[3], iap.Deterministic)
+        assert is_parameter_instance(params[3], iap.Deterministic)
         assert params[3].value == 0
 
     def test_pickleable(self):
@@ -1801,7 +1818,7 @@ class TestAddToHue(unittest.TestCase):
     def test_returns_correct_class(self):
         aug = iaa.AddToHue((-20, 20))
         assert isinstance(aug, iaa.AddToHueAndSaturation)
-        assert isinstance(aug.value_hue, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.value_hue, iap.DiscreteUniform)
         assert aug.value_hue.a.value == -20
         assert aug.value_hue.b.value == 20
 
@@ -1814,7 +1831,7 @@ class TestAddToSaturation(unittest.TestCase):
     def test_returns_correct_class(self):
         aug = iaa.AddToSaturation((-20, 20))
         assert isinstance(aug, iaa.AddToHueAndSaturation)
-        assert isinstance(aug.value_saturation, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.value_saturation, iap.DiscreteUniform)
         assert aug.value_saturation.a.value == -20
         assert aug.value_saturation.b.value == 20
 
@@ -1901,7 +1918,7 @@ class TestChangeColorTemperature(unittest.TestCase):
 
     def test___init___defaults(self):
         aug = iaa.ChangeColorTemperature()
-        assert isinstance(aug.kelvin, iap.Uniform)
+        assert is_parameter_instance(aug.kelvin, iap.Uniform)
         assert aug.kelvin.a.value == 1000
         assert aug.kelvin.b.value == 11000
         assert aug.from_colorspace == iaa.CSPACE_RGB
@@ -1912,19 +1929,20 @@ class TestChangeColorTemperature(unittest.TestCase):
 
     def test___init___kelvin_is_tuple(self):
         aug = iaa.ChangeColorTemperature((2000, 3000))
-        assert isinstance(aug.kelvin, iap.Uniform)
+        assert is_parameter_instance(aug.kelvin, iap.Uniform)
         assert aug.kelvin.a.value == 2000
         assert aug.kelvin.b.value == 3000
 
     def test___init___kelvin_is_list(self):
         aug = iaa.ChangeColorTemperature([1000, 2000, 3000])
-        assert isinstance(aug.kelvin, iap.Choice)
+        assert is_parameter_instance(aug.kelvin, iap.Choice)
         assert aug.kelvin.a == [1000, 2000, 3000]
 
     def test___init___kelvin_is_stochastic_param(self):
         param = iap.Deterministic(5000)
         aug = iaa.ChangeColorTemperature(param)
-        assert aug.kelvin is param
+        assert is_parameter_instance(aug.kelvin, iap.Deterministic)
+        assert aug.kelvin.value == 5000
 
     @mock.patch("imgaug.augmenters.color.change_color_temperatures_")
     def test_mocked(self, mock_ccts):
@@ -1986,7 +2004,7 @@ class TestKMeansColorQuantization(unittest.TestCase):
 
     def test___init___defaults(self):
         aug = self.augmenter()
-        assert isinstance(aug.n_colors, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
         assert aug.from_colorspace == iaa.CSPACE_RGB
@@ -2004,7 +2022,7 @@ class TestKMeansColorQuantization(unittest.TestCase):
             max_size=None,
             interpolation="cubic"
         )
-        assert isinstance(aug.n_colors, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 5
         assert aug.n_colors.b.value == 8
         assert aug.from_colorspace == iaa.CSPACE_BGR
@@ -2260,7 +2278,7 @@ class TestKMeansColorQuantization(unittest.TestCase):
             interpolation="cubic"
         )
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.DiscreteUniform)
+        assert is_parameter_instance(params[0], iap.DiscreteUniform)
         assert params[0].a.value == 5
         assert params[0].b.value == 8
         assert params[1] == iaa.CSPACE_BGR
@@ -2422,7 +2440,7 @@ class TestUniformColorQuantization(TestKMeansColorQuantization):
 
     def test___init___defaults(self):
         aug = self.augmenter()
-        assert isinstance(aug.n_colors, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 2
         assert aug.n_colors.b.value == 16
         assert aug.from_colorspace == iaa.CSPACE_RGB
@@ -2438,7 +2456,7 @@ class TestUniformColorQuantization(TestKMeansColorQuantization):
             max_size=128,
             interpolation="cubic"
         )
-        assert isinstance(aug.n_colors, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.n_colors, iap.DiscreteUniform)
         assert aug.n_colors.a.value == 5
         assert aug.n_colors.b.value == 8
         assert aug.from_colorspace == iaa.CSPACE_BGR
@@ -2565,7 +2583,7 @@ class TestUniformColorQuantizationToNBits(unittest.TestCase):
 
     def test___init___defaults(self):
         aug = self.augmenter()
-        assert isinstance(aug.counts, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.counts, iap.DiscreteUniform)
         assert aug.counts.a.value == 1
         assert aug.counts.b.value == 8
         assert aug.from_colorspace == iaa.CSPACE_RGB
@@ -2581,7 +2599,7 @@ class TestUniformColorQuantizationToNBits(unittest.TestCase):
             max_size=128,
             interpolation="cubic"
         )
-        assert isinstance(aug.counts, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.counts, iap.DiscreteUniform)
         assert aug.counts.a.value == 5
         assert aug.counts.b.value == 8
         assert aug.from_colorspace == iaa.CSPACE_BGR

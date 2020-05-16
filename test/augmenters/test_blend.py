@@ -27,7 +27,7 @@ from imgaug import dtypes as iadt
 from imgaug.augmenters import blend
 from imgaug.testutils import (
     keypoints_equal, reseed, assert_cbaois_equal,
-    runtest_pickleable_uint8_img)
+    runtest_pickleable_uint8_img, is_parameter_instance)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from imgaug.augmentables.batches import _BatchInAugmentation
@@ -1067,8 +1067,8 @@ class TestBlendAlpha(unittest.TestCase):
         bg = iaa.Sequential([iaa.Add(1)])
         aug = iaa.BlendAlpha(0.65, fg, bg, per_channel=1)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
+        assert params[0] is aug.factor
+        assert params[1] is aug.per_channel
         assert 0.65 - 1e-6 < params[0].value < 0.65 + 1e-6
         assert params[1].value == 1
 
@@ -3213,8 +3213,8 @@ class TestSegMapClassIdsMaskGen(unittest.TestCase):
 
     def test___init___class_ids_stochastic(self):
         gen = iaa.SegMapClassIdsMaskGen([0, 1, 3], nb_sample_classes=2)
-        assert isinstance(gen.class_ids, iap.Choice)
-        assert isinstance(gen.nb_sample_classes, iap.Deterministic)
+        assert is_parameter_instance(gen.class_ids, iap.Choice)
+        assert is_parameter_instance(gen.nb_sample_classes, iap.Deterministic)
 
     def test_draw_masks__fixed_class_ids(self):
         segmap_arr = np.zeros((3, 2, 2), dtype=np.int32)
@@ -3373,8 +3373,8 @@ class TestBoundingBoxesMaskGen(unittest.TestCase):
 
     def test___init___labels_stochastic(self):
         gen = iaa.BoundingBoxesMaskGen(["person", "car"], nb_sample_labels=2)
-        assert isinstance(gen.labels, iap.Choice)
-        assert isinstance(gen.nb_sample_labels, iap.Deterministic)
+        assert is_parameter_instance(gen.labels, iap.Choice)
+        assert is_parameter_instance(gen.nb_sample_labels, iap.Deterministic)
 
     def test_draw_masks__labels_is_none(self):
         bbs = [ia.BoundingBox(x1=1, y1=1, x2=5, y2=5, label="bb1"),

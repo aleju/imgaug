@@ -320,7 +320,7 @@ class Augmenter(object):
             self.random_state = iarandom.RNG.create_pseudo_random_()
         else:
             # self.random_state = iarandom.normalize_rng_(random_state)
-            self.random_state = iarandom.RNG(seed)
+            self.random_state = iarandom.RNG.create_if_not_rng_(seed)
 
         self.activated = True
 
@@ -638,11 +638,13 @@ class Augmenter(object):
         # little overhead.
         with _maybe_deterministic_ctx(self):
             if not batch_inaug.empty:
-                batch_inaug = self._augment_batch_(
-                    batch_inaug,
-                    random_state=self.random_state,
-                    parents=parents if parents is not None else [],
-                    hooks=hooks)
+                pf_enabled = not self.deterministic
+                with iap.toggled_prefetching(pf_enabled):
+                    batch_inaug = self._augment_batch_(
+                        batch_inaug,
+                        random_state=self.random_state,
+                        parents=parents if parents is not None else [],
+                        hooks=hooks)
 
         # revert augmentables being set to None for non-activated augmenters
         for column in set_to_none:
@@ -699,7 +701,7 @@ class Augmenter(object):
             See :func:`~imgaug.augmenters.meta.Augmenter.augment_batch_`.
 
         Returns
-        ----------
+        -------
         imgaug.augmentables.batches._BatchInAugmentation
             The augmented batch.
 
@@ -722,10 +724,12 @@ class Augmenter(object):
         # batch.T_unaug (that had any content)
         for column in columns:
             with _maybe_deterministic_ctx(random_state, deterministic):
-                value = getattr(self, "_augment_" + column.name)(
-                    column.value, random_state=random_state,
-                    parents=parents, hooks=hooks)
-                setattr(batch, column.attr_name, value)
+                pf_enabled = not self.deterministic
+                with iap.toggled_prefetching(pf_enabled):
+                    value = getattr(self, "_augment_" + column.name)(
+                        column.value, random_state=random_state,
+                        parents=parents, hooks=hooks)
+                    setattr(batch, column.attr_name, value)
 
         # If the augmenter was alread in deterministic mode, we can expect
         # that to_deterministic() was called, which advances the RNG. But
@@ -2376,7 +2380,7 @@ class Augmenter(object):
         if entropy is None:
             random_state = iarandom.RNG.create_pseudo_random_()
         else:
-            random_state = iarandom.RNG(entropy)
+            random_state = iarandom.RNG.create_if_not_rng_(entropy)
 
         if not self.deterministic or deterministic_too:
             # note that derive_rng_() (used below) advances the RNG, so

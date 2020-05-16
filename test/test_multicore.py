@@ -417,15 +417,17 @@ class TestPool(unittest.TestCase):
                 sum_to_vecs[vecsum].append(vec)
 
     def test_augmentations_with_seed_match(self):
+        nb_batches = 60
         augseq = iaa.AddElementwise((0, 255))
         image = np.zeros((10, 10, 1), dtype=np.uint8)
         batch = ia.Batch(images=np.uint8([image, image]))
-        batches = [batch.deepcopy() for _ in sm.xrange(60)]
+        batches = [batch.deepcopy() for _ in sm.xrange(nb_batches)]
 
         # seed=1
         with multicore.Pool(augseq, processes=2, maxtasksperchild=30,
                             seed=1) as pool:
             batches_aug1 = pool.map_batches(batches, chunksize=2)
+
         # seed=1
         with multicore.Pool(augseq, processes=2, seed=1) as pool:
             batches_aug2 = pool.map_batches(batches, chunksize=1)
@@ -433,9 +435,9 @@ class TestPool(unittest.TestCase):
         with multicore.Pool(augseq, processes=2, seed=2) as pool:
             batches_aug3 = pool.map_batches(batches, chunksize=1)
 
-        assert len(batches_aug1) == 60
-        assert len(batches_aug2) == 60
-        assert len(batches_aug3) == 60
+        assert len(batches_aug1) == nb_batches
+        assert len(batches_aug2) == nb_batches
+        assert len(batches_aug3) == nb_batches
 
         for b1, b2, b3 in zip(batches_aug1, batches_aug2, batches_aug3):
             # images were augmented

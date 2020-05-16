@@ -758,6 +758,10 @@ class AverageBlur(meta.Augmenter):
                 "Expected int, tuple/list with 2 entries or "
                 "StochasticParameter. Got %s." % (type(k),))
 
+        self.k = iap._wrap_leafs_of_param_in_prefetchers(
+            self.k, iap._NB_PREFETCH
+        )
+
     # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is None:
@@ -878,6 +882,9 @@ class MedianBlur(meta.Augmenter):
             assert all([ki % 2 != 0 for ki in k]), (
                 "Expected all values in iterable k to be odd, but at least "
                 "one was not. Add or subtract 1 to/from that value.")
+        self.k = iap._wrap_leafs_of_param_in_prefetchers(
+            self.k, iap._NB_PREFETCH
+        )
 
     # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):

@@ -26,7 +26,8 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.augmenters import contrast as contrast_lib
 from imgaug.testutils import (ArgCopyingMagicMock, keypoints_equal, reseed,
-                              runtest_pickleable_uint8_img, assertWarns)
+                              runtest_pickleable_uint8_img, assertWarns,
+                              is_parameter_instance)
 from imgaug.augmentables.batches import _BatchInAugmentation
 
 
@@ -36,15 +37,15 @@ class TestGammaContrast(unittest.TestCase):
 
     def test___init___tuple_to_uniform(self):
         aug = iaa.GammaContrast((1, 2))
-        assert isinstance(aug.params1d[0], iap.Uniform)
-        assert isinstance(aug.params1d[0].a, iap.Deterministic)
-        assert isinstance(aug.params1d[0].b, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0], iap.Uniform)
+        assert is_parameter_instance(aug.params1d[0].a, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0].b, iap.Deterministic)
         assert aug.params1d[0].a.value == 1
         assert aug.params1d[0].b.value == 2
 
     def test___init___list_to_choice(self):
         aug = iaa.GammaContrast([1, 2])
-        assert isinstance(aug.params1d[0], iap.Choice)
+        assert is_parameter_instance(aug.params1d[0], iap.Choice)
         assert np.all([val in aug.params1d[0].a for val in [1, 2]])
 
     def test_images_basic_functionality(self):
@@ -272,14 +273,14 @@ class TestSigmoidContrast(unittest.TestCase):
         # note that gain and cutoff are saved in inverted order in
         # _ContrastFuncWrapper to match the order of skimage's function
         aug = iaa.SigmoidContrast(gain=(1, 2), cutoff=(0.25, 0.75))
-        assert isinstance(aug.params1d[0], iap.Uniform)
-        assert isinstance(aug.params1d[0].a, iap.Deterministic)
-        assert isinstance(aug.params1d[0].b, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0], iap.Uniform)
+        assert is_parameter_instance(aug.params1d[0].a, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0].b, iap.Deterministic)
         assert aug.params1d[0].a.value == 1
         assert aug.params1d[0].b.value == 2
-        assert isinstance(aug.params1d[1], iap.Uniform)
-        assert isinstance(aug.params1d[1].a, iap.Deterministic)
-        assert isinstance(aug.params1d[1].b, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[1], iap.Uniform)
+        assert is_parameter_instance(aug.params1d[1].a, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[1].b, iap.Deterministic)
         assert np.allclose(aug.params1d[1].a.value, 0.25)
         assert np.allclose(aug.params1d[1].b.value, 0.75)
 
@@ -288,9 +289,9 @@ class TestSigmoidContrast(unittest.TestCase):
         # note that gain and cutoff are saved in inverted order in
         # _ContrastFuncWrapper to match the order of skimage's function
         aug = iaa.SigmoidContrast(gain=[1, 2], cutoff=[0.25, 0.75])
-        assert isinstance(aug.params1d[0], iap.Choice)
+        assert is_parameter_instance(aug.params1d[0], iap.Choice)
         assert np.all([val in aug.params1d[0].a for val in [1, 2]])
-        assert isinstance(aug.params1d[1], iap.Choice)
+        assert is_parameter_instance(aug.params1d[1], iap.Choice)
         assert np.all([
             np.allclose(val, val_choice)
             for val, val_choice
@@ -531,15 +532,15 @@ class TestLogContrast(unittest.TestCase):
 
     def test___init___tuple_to_uniform(self):
         aug = iaa.LogContrast((1, 2))
-        assert isinstance(aug.params1d[0], iap.Uniform)
-        assert isinstance(aug.params1d[0].a, iap.Deterministic)
-        assert isinstance(aug.params1d[0].b, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0], iap.Uniform)
+        assert is_parameter_instance(aug.params1d[0].a, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0].b, iap.Deterministic)
         assert aug.params1d[0].a.value == 1
         assert aug.params1d[0].b.value == 2
 
     def test___init___list_to_choice(self):
         aug = iaa.LogContrast([1, 2])
-        assert isinstance(aug.params1d[0], iap.Choice)
+        assert is_parameter_instance(aug.params1d[0], iap.Choice)
         assert np.all([val in aug.params1d[0].a for val in [1, 2]])
 
     def test_per_channel_is_float(self):
@@ -724,15 +725,15 @@ class TestLinearContrast(unittest.TestCase):
 
     def test___init___tuple_to_uniform(self):
         aug = iaa.LinearContrast((1, 2))
-        assert isinstance(aug.params1d[0], iap.Uniform)
-        assert isinstance(aug.params1d[0].a, iap.Deterministic)
-        assert isinstance(aug.params1d[0].b, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0], iap.Uniform)
+        assert is_parameter_instance(aug.params1d[0].a, iap.Deterministic)
+        assert is_parameter_instance(aug.params1d[0].b, iap.Deterministic)
         assert aug.params1d[0].a.value == 1
         assert aug.params1d[0].b.value == 2
 
     def test___init___list_to_choice(self):
         aug = iaa.LinearContrast([1, 2])
-        assert isinstance(aug.params1d[0], iap.Choice)
+        assert is_parameter_instance(aug.params1d[0], iap.Choice)
         assert np.all([val in aug.params1d[0].a for val in [1, 2]])
 
     def test_float_as_per_channel(self):
@@ -910,13 +911,14 @@ class TestAllChannelsCLAHE(unittest.TestCase):
             tile_grid_size_px=11,
             tile_grid_size_px_min=4,
             per_channel=True)
-        assert isinstance(aug.clip_limit, iap.Deterministic)
+        assert is_parameter_instance(aug.clip_limit, iap.Deterministic)
         assert aug.clip_limit.value == 10
-        assert isinstance(aug.tile_grid_size_px[0], iap.Deterministic)
+        assert is_parameter_instance(aug.tile_grid_size_px[0],
+                                     iap.Deterministic)
         assert aug.tile_grid_size_px[0].value == 11
         assert aug.tile_grid_size_px[1] is None
         assert aug.tile_grid_size_px_min == 4
-        assert isinstance(aug.per_channel, iap.Deterministic)
+        assert is_parameter_instance(aug.per_channel, iap.Deterministic)
         assert np.isclose(aug.per_channel.value, 1.0)
 
         aug = iaa.AllChannelsCLAHE(
@@ -924,35 +926,36 @@ class TestAllChannelsCLAHE(unittest.TestCase):
             tile_grid_size_px=(11, 17),
             tile_grid_size_px_min=4,
             per_channel=0.5)
-        assert isinstance(aug.clip_limit, iap.Uniform)
+        assert is_parameter_instance(aug.clip_limit, iap.Uniform)
         assert aug.clip_limit.a.value == 10
         assert aug.clip_limit.b.value == 20
-        assert isinstance(aug.tile_grid_size_px[0], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.tile_grid_size_px[0],
+                                     iap.DiscreteUniform)
         assert aug.tile_grid_size_px[0].a.value == 11
         assert aug.tile_grid_size_px[0].b.value == 17
         assert aug.tile_grid_size_px[1] is None
         assert aug.tile_grid_size_px_min == 4
-        assert isinstance(aug.per_channel, iap.Binomial)
+        assert is_parameter_instance(aug.per_channel, iap.Binomial)
         assert np.isclose(aug.per_channel.p.value, 0.5)
 
         aug = iaa.AllChannelsCLAHE(
             clip_limit=[10, 20, 30],
             tile_grid_size_px=[11, 17, 21])
-        assert isinstance(aug.clip_limit, iap.Choice)
+        assert is_parameter_instance(aug.clip_limit, iap.Choice)
         assert aug.clip_limit.a[0] == 10
         assert aug.clip_limit.a[1] == 20
         assert aug.clip_limit.a[2] == 30
-        assert isinstance(aug.tile_grid_size_px[0], iap.Choice)
+        assert is_parameter_instance(aug.tile_grid_size_px[0], iap.Choice)
         assert aug.tile_grid_size_px[0].a[0] == 11
         assert aug.tile_grid_size_px[0].a[1] == 17
         assert aug.tile_grid_size_px[0].a[2] == 21
         assert aug.tile_grid_size_px[1] is None
 
         aug = iaa.AllChannelsCLAHE(tile_grid_size_px=((11, 17), [11, 13, 15]))
-        assert isinstance(aug.tile_grid_size_px[0], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.tile_grid_size_px[0], iap.DiscreteUniform)
         assert aug.tile_grid_size_px[0].a.value == 11
         assert aug.tile_grid_size_px[0].b.value == 17
-        assert isinstance(aug.tile_grid_size_px[1], iap.Choice)
+        assert is_parameter_instance(aug.tile_grid_size_px[1], iap.Choice)
         assert aug.tile_grid_size_px[1].a[0] == 11
         assert aug.tile_grid_size_px[1].a[1] == 13
         assert aug.tile_grid_size_px[1].a[2] == 15
@@ -1250,7 +1253,7 @@ class TestAllChannelsCLAHE(unittest.TestCase):
             per_channel=True)
         params = aug.get_parameters()
         assert np.all([
-            isinstance(params[i], iap.Deterministic)
+            is_parameter_instance(params[i], iap.Deterministic)
             for i
             in [0, 3]])
         assert params[0].value == 1

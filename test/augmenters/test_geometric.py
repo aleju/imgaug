@@ -26,7 +26,7 @@ from imgaug import parameters as iap
 from imgaug import dtypes as iadt
 from imgaug.testutils import (
     array_equal_lists, keypoints_equal, reseed, assert_cbaois_equal,
-    runtest_pickleable_uint8_img, assertWarns)
+    runtest_pickleable_uint8_img, assertWarns, is_parameter_instance)
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters.geometric as geometriclib
@@ -52,10 +52,10 @@ class TestAffine(unittest.TestCase):
 
         params = aug.get_parameters()
 
-        assert isinstance(params[0], iap.Deterministic)  # scale
+        assert is_parameter_instance(params[0], iap.Deterministic)  # scale
         assert isinstance(params[1], tuple)  # translate
-        assert isinstance(params[2], iap.Deterministic)  # rotate
-        assert isinstance(params[3], iap.Deterministic)  # shear
+        assert is_parameter_instance(params[2], iap.Deterministic)  # rotate
+        assert is_parameter_instance(params[3], iap.Deterministic)  # shear
         assert params[0].value == 1  # scale
         assert params[1][0].value == 2  # translate
         assert params[2].value == 3  # rotate
@@ -71,9 +71,9 @@ class TestAffine___init__(unittest.TestCase):
     def test___init___scale_is_stochastic_parameter(self):
         aug = iaa.Affine(scale=iap.Uniform(0.7, 0.9))
 
-        assert isinstance(aug.scale, iap.Uniform)
-        assert isinstance(aug.scale.a, iap.Deterministic)
-        assert isinstance(aug.scale.b, iap.Deterministic)
+        assert is_parameter_instance(aug.scale, iap.Uniform)
+        assert is_parameter_instance(aug.scale.a, iap.Deterministic)
+        assert is_parameter_instance(aug.scale.b, iap.Deterministic)
         assert 0.7 - 1e-8 < aug.scale.a.value < 0.7 + 1e-8
         assert 0.9 - 1e-8 < aug.scale.b.value < 0.9 + 1e-8
 
@@ -81,9 +81,9 @@ class TestAffine___init__(unittest.TestCase):
         aug = iaa.Affine(translate_percent=iap.Uniform(0.7, 0.9))
 
         assert isinstance(aug.translate, tuple)
-        assert isinstance(aug.translate[0], iap.Uniform)
-        assert isinstance(aug.translate[0].a, iap.Deterministic)
-        assert isinstance(aug.translate[0].b, iap.Deterministic)
+        assert is_parameter_instance(aug.translate[0], iap.Uniform)
+        assert is_parameter_instance(aug.translate[0].a, iap.Deterministic)
+        assert is_parameter_instance(aug.translate[0].b, iap.Deterministic)
         assert 0.7 - 1e-8 < aug.translate[0].a.value < 0.7 + 1e-8
         assert 0.9 - 1e-8 < aug.translate[0].b.value < 0.9 + 1e-8
         assert aug.translate[1] is None
@@ -93,9 +93,9 @@ class TestAffine___init__(unittest.TestCase):
         aug = iaa.Affine(translate_px=iap.DiscreteUniform(1, 10))
 
         assert isinstance(aug.translate, tuple)
-        assert isinstance(aug.translate[0], iap.DiscreteUniform)
-        assert isinstance(aug.translate[0].a, iap.Deterministic)
-        assert isinstance(aug.translate[0].b, iap.Deterministic)
+        assert is_parameter_instance(aug.translate[0], iap.DiscreteUniform)
+        assert is_parameter_instance(aug.translate[0].a, iap.Deterministic)
+        assert is_parameter_instance(aug.translate[0].b, iap.Deterministic)
         assert aug.translate[0].a.value == 1
         assert aug.translate[0].b.value == 10
         assert aug.translate[1] is None
@@ -105,29 +105,29 @@ class TestAffine___init__(unittest.TestCase):
         aug = iaa.Affine(scale=1.0, translate_px=0, rotate=iap.Uniform(10, 20),
                          shear=0)
 
-        assert isinstance(aug.rotate, iap.Uniform)
-        assert isinstance(aug.rotate.a, iap.Deterministic)
+        assert is_parameter_instance(aug.rotate, iap.Uniform)
+        assert is_parameter_instance(aug.rotate.a, iap.Deterministic)
         assert aug.rotate.a.value == 10
-        assert isinstance(aug.rotate.b, iap.Deterministic)
+        assert is_parameter_instance(aug.rotate.b, iap.Deterministic)
         assert aug.rotate.b.value == 20
 
     def test___init___shear_is_stochastic_parameter(self):
         aug = iaa.Affine(scale=1.0, translate_px=0, rotate=0,
                          shear=iap.Uniform(10, 20))
 
-        assert isinstance(aug.shear, iap.Uniform)
-        assert isinstance(aug.shear.a, iap.Deterministic)
+        assert is_parameter_instance(aug.shear, iap.Uniform)
+        assert is_parameter_instance(aug.shear.a, iap.Deterministic)
         assert aug.shear.a.value == 10
-        assert isinstance(aug.shear.b, iap.Deterministic)
+        assert is_parameter_instance(aug.shear.b, iap.Deterministic)
         assert aug.shear.b.value == 20
 
     def test___init___cval_is_all(self):
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
                          cval=ia.ALL)
 
-        assert isinstance(aug.cval, iap.Uniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.Uniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
         assert aug.cval.b.value == 255
 
@@ -135,27 +135,27 @@ class TestAffine___init__(unittest.TestCase):
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
                          cval=iap.DiscreteUniform(1, 5))
 
-        assert isinstance(aug.cval, iap.DiscreteUniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 1
         assert aug.cval.b.value == 5
 
     def test___init___mode_is_all(self):
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
                          cval=0, mode=ia.ALL)
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
 
     def test___init___mode_is_string(self):
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
                          cval=0, mode="edge")
-        assert isinstance(aug.mode, iap.Deterministic)
+        assert is_parameter_instance(aug.mode, iap.Deterministic)
         assert aug.mode.value == "edge"
 
     def test___init___mode_is_list(self):
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
                          cval=0, mode=["constant", "edge"])
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert (
             len(aug.mode.a) == 2
             and "constant" in aug.mode.a
@@ -164,7 +164,7 @@ class TestAffine___init__(unittest.TestCase):
     def test___init___mode_is_stochastic_parameter(self):
         aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
                          cval=0, mode=iap.Choice(["constant", "edge"]))
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert (
             len(aug.mode.a) == 2
             and "constant" in aug.mode.a
@@ -3603,9 +3603,9 @@ def test_AffineCv2():
         assert nb_changed_aug_det == 0
 
         aug = iaa.AffineCv2(scale=iap.Uniform(0.7, 0.9))
-        assert isinstance(aug.scale, iap.Uniform)
-        assert isinstance(aug.scale.a, iap.Deterministic)
-        assert isinstance(aug.scale.b, iap.Deterministic)
+        assert is_parameter_instance(aug.scale, iap.Uniform)
+        assert is_parameter_instance(aug.scale.a, iap.Deterministic)
+        assert is_parameter_instance(aug.scale.b, iap.Deterministic)
         assert 0.7 - 1e-8 < aug.scale.a.value < 0.7 + 1e-8
         assert 0.9 - 1e-8 < aug.scale.b.value < 0.9 + 1e-8
 
@@ -3826,16 +3826,16 @@ def test_AffineCv2():
         assert (centers_aug < int(nb_iterations * (1/9 * 1.4))).all()
 
         aug = iaa.AffineCv2(translate_percent=iap.Uniform(0.7, 0.9))
-        assert isinstance(aug.translate, iap.Uniform)
-        assert isinstance(aug.translate.a, iap.Deterministic)
-        assert isinstance(aug.translate.b, iap.Deterministic)
+        assert is_parameter_instance(aug.translate, iap.Uniform)
+        assert is_parameter_instance(aug.translate.a, iap.Deterministic)
+        assert is_parameter_instance(aug.translate.b, iap.Deterministic)
         assert 0.7 - 1e-8 < aug.translate.a.value < 0.7 + 1e-8
         assert 0.9 - 1e-8 < aug.translate.b.value < 0.9 + 1e-8
 
         aug = iaa.AffineCv2(translate_px=iap.DiscreteUniform(1, 10))
-        assert isinstance(aug.translate, iap.DiscreteUniform)
-        assert isinstance(aug.translate.a, iap.Deterministic)
-        assert isinstance(aug.translate.b, iap.Deterministic)
+        assert is_parameter_instance(aug.translate, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.translate.a, iap.Deterministic)
+        assert is_parameter_instance(aug.translate.b, iap.Deterministic)
         assert aug.translate.a.value == 1
         assert aug.translate.b.value == 10
 
@@ -3968,10 +3968,10 @@ def test_AffineCv2():
         # rotate by StochasticParameter
         aug = iaa.AffineCv2(scale=1.0, translate_px=0,
                             rotate=iap.Uniform(10, 20), shear=0)
-        assert isinstance(aug.rotate, iap.Uniform)
-        assert isinstance(aug.rotate.a, iap.Deterministic)
+        assert is_parameter_instance(aug.rotate, iap.Uniform)
+        assert is_parameter_instance(aug.rotate.a, iap.Deterministic)
         assert aug.rotate.a.value == 10
-        assert isinstance(aug.rotate.b, iap.Deterministic)
+        assert is_parameter_instance(aug.rotate.b, iap.Deterministic)
         assert aug.rotate.b.value == 20
 
         # random rotation 0-364 degrees
@@ -4027,10 +4027,10 @@ def test_AffineCv2():
         # shear by StochasticParameter
         aug = iaa.AffineCv2(scale=1.0, translate_px=0, rotate=0,
                             shear=iap.Uniform(10, 20))
-        assert isinstance(aug.shear, iap.Uniform)
-        assert isinstance(aug.shear.a, iap.Deterministic)
+        assert is_parameter_instance(aug.shear, iap.Uniform)
+        assert is_parameter_instance(aug.shear.a, iap.Deterministic)
         assert aug.shear.a.value == 10
-        assert isinstance(aug.shear.b, iap.Deterministic)
+        assert is_parameter_instance(aug.shear.b, iap.Deterministic)
         assert aug.shear.b.value == 20
 
         # ---------------------
@@ -4096,17 +4096,17 @@ def test_AffineCv2():
 
         aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0,
                             cval=ia.ALL)
-        assert isinstance(aug.cval, iap.DiscreteUniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
         assert aug.cval.b.value == 255
 
         aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0,
                             cval=iap.DiscreteUniform(1, 5))
-        assert isinstance(aug.cval, iap.DiscreteUniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 1
         assert aug.cval.b.value == 5
 
@@ -4115,14 +4115,14 @@ def test_AffineCv2():
         # ------------
         aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0,
                             cval=0, mode=ia.ALL)
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0,
                             cval=0, mode="replicate")
-        assert isinstance(aug.mode, iap.Deterministic)
+        assert is_parameter_instance(aug.mode, iap.Deterministic)
         assert aug.mode.value == "replicate"
         aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0,
                             cval=0, mode=["replicate", "reflect"])
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert (
             len(aug.mode.a) == 2
             and "replicate" in aug.mode.a
@@ -4130,7 +4130,7 @@ def test_AffineCv2():
         aug = iaa.AffineCv2(scale=1.0, translate_px=100, rotate=0, shear=0,
                             cval=0,
                             mode=iap.Choice(["replicate", "reflect"]))
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert (
             len(aug.mode.a) == 2
             and "replicate" in aug.mode.a
@@ -4221,10 +4221,10 @@ def test_AffineCv2():
         aug = iaa.AffineCv2(scale=1, translate_px=2, rotate=3, shear=4,
                             order=1, cval=0, mode="constant")
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)  # scale
-        assert isinstance(params[1], iap.Deterministic)  # translate
-        assert isinstance(params[2], iap.Deterministic)  # rotate
-        assert isinstance(params[3], iap.Deterministic)  # shear
+        assert is_parameter_instance(params[0], iap.Deterministic)  # scale
+        assert is_parameter_instance(params[1], iap.Deterministic)  # translate
+        assert is_parameter_instance(params[2], iap.Deterministic)  # rotate
+        assert is_parameter_instance(params[3], iap.Deterministic)  # shear
         assert params[0].value == 1  # scale
         assert params[1].value == 2  # translate
         assert params[2].value == 3  # rotate
@@ -4265,16 +4265,16 @@ class TestPiecewiseAffine(unittest.TestCase):
     def test___init___scale_is_list(self):
         # scale as list
         aug = iaa.PiecewiseAffine(scale=[0.01, 0.10], nb_rows=12, nb_cols=4)
-        assert isinstance(aug.scale, iap.Choice)
+        assert is_parameter_instance(aug.scale, iap.Choice)
         assert 0.01 - 1e-8 < aug.scale.a[0] < 0.01 + 1e-8
         assert 0.10 - 1e-8 < aug.scale.a[1] < 0.10 + 1e-8
 
     def test___init___scale_is_tuple(self):
         # scale as tuple
         aug = iaa.PiecewiseAffine(scale=(0.01, 0.10), nb_rows=12, nb_cols=4)
-        assert isinstance(aug.jitter.scale, iap.Uniform)
-        assert isinstance(aug.jitter.scale.a, iap.Deterministic)
-        assert isinstance(aug.jitter.scale.b, iap.Deterministic)
+        assert is_parameter_instance(aug.jitter.scale, iap.Uniform)
+        assert is_parameter_instance(aug.jitter.scale.a, iap.Deterministic)
+        assert is_parameter_instance(aug.jitter.scale.b, iap.Deterministic)
         assert 0.01 - 1e-8 < aug.jitter.scale.a.value < 0.01 + 1e-8
         assert 0.10 - 1e-8 < aug.jitter.scale.b.value < 0.10 + 1e-8
 
@@ -4282,9 +4282,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         # scale as StochasticParameter
         aug = iaa.PiecewiseAffine(scale=iap.Uniform(0.01, 0.10), nb_rows=12,
                                   nb_cols=4)
-        assert isinstance(aug.jitter.scale, iap.Uniform)
-        assert isinstance(aug.jitter.scale.a, iap.Deterministic)
-        assert isinstance(aug.jitter.scale.b, iap.Deterministic)
+        assert is_parameter_instance(aug.jitter.scale, iap.Uniform)
+        assert is_parameter_instance(aug.jitter.scale.a, iap.Deterministic)
+        assert is_parameter_instance(aug.jitter.scale.b, iap.Deterministic)
         assert 0.01 - 1e-8 < aug.jitter.scale.a.value < 0.01 + 1e-8
         assert 0.10 - 1e-8 < aug.jitter.scale.b.value < 0.10 + 1e-8
 
@@ -4301,16 +4301,16 @@ class TestPiecewiseAffine(unittest.TestCase):
     def test___init___nb_rows_is_list(self):
         # rows as list
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=[4, 20], nb_cols=4)
-        assert isinstance(aug.nb_rows, iap.Choice)
+        assert is_parameter_instance(aug.nb_rows, iap.Choice)
         assert aug.nb_rows.a[0] == 4
         assert aug.nb_rows.a[1] == 20
 
     def test___init___nb_rows_is_tuple(self):
         # rows as tuple
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=(4, 20), nb_cols=4)
-        assert isinstance(aug.nb_rows, iap.DiscreteUniform)
-        assert isinstance(aug.nb_rows.a, iap.Deterministic)
-        assert isinstance(aug.nb_rows.b, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_rows, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.nb_rows.a, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_rows.b, iap.Deterministic)
         assert aug.nb_rows.a.value == 4
         assert aug.nb_rows.b.value == 20
 
@@ -4318,9 +4318,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         # rows as StochasticParameter
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=iap.DiscreteUniform(4, 20),
                                   nb_cols=4)
-        assert isinstance(aug.nb_rows, iap.DiscreteUniform)
-        assert isinstance(aug.nb_rows.a, iap.Deterministic)
-        assert isinstance(aug.nb_rows.b, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_rows, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.nb_rows.a, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_rows.b, iap.Deterministic)
         assert aug.nb_rows.a.value == 4
         assert aug.nb_rows.b.value == 20
 
@@ -4336,16 +4336,16 @@ class TestPiecewiseAffine(unittest.TestCase):
 
     def test___init___nb_cols_is_list(self):
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=[4, 20])
-        assert isinstance(aug.nb_cols, iap.Choice)
+        assert is_parameter_instance(aug.nb_cols, iap.Choice)
         assert aug.nb_cols.a[0] == 4
         assert aug.nb_cols.a[1] == 20
 
     def test___init___nb_cols_is_tuple(self):
         # cols as tuple
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4, nb_cols=(4, 20))
-        assert isinstance(aug.nb_cols, iap.DiscreteUniform)
-        assert isinstance(aug.nb_cols.a, iap.Deterministic)
-        assert isinstance(aug.nb_cols.b, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_cols, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.nb_cols.a, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_cols.b, iap.Deterministic)
         assert aug.nb_cols.a.value == 4
         assert aug.nb_cols.b.value == 20
 
@@ -4353,9 +4353,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         # cols as StochasticParameter
         aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=4,
                                   nb_cols=iap.DiscreteUniform(4, 20))
-        assert isinstance(aug.nb_cols, iap.DiscreteUniform)
-        assert isinstance(aug.nb_cols.a, iap.Deterministic)
-        assert isinstance(aug.nb_cols.b, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_cols, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.nb_cols.a, iap.Deterministic)
+        assert is_parameter_instance(aug.nb_cols.b, iap.Deterministic)
         assert aug.nb_cols.a.value == 4
         assert aug.nb_cols.b.value == 20
 
@@ -4372,28 +4372,28 @@ class TestPiecewiseAffine(unittest.TestCase):
     def test___init___order_is_int(self):
         # single int for order
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, order=0)
-        assert isinstance(aug.order, iap.Deterministic)
+        assert is_parameter_instance(aug.order, iap.Deterministic)
         assert aug.order.value == 0
 
     def test___init___order_is_list(self):
         # list for order
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   order=[0, 1, 3])
-        assert isinstance(aug.order, iap.Choice)
+        assert is_parameter_instance(aug.order, iap.Choice)
         assert all([v in aug.order.a for v in [0, 1, 3]])
 
     def test___init___order_is_stochastic_parameter(self):
         # StochasticParameter for order
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   order=iap.Choice([0, 1, 3]))
-        assert isinstance(aug.order, iap.Choice)
+        assert is_parameter_instance(aug.order, iap.Choice)
         assert all([v in aug.order.a for v in [0, 1, 3]])
 
     def test___init___order_is_all(self):
         # ALL for order
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   order=ia.ALL)
-        assert isinstance(aug.order, iap.Choice)
+        assert is_parameter_instance(aug.order, iap.Choice)
         assert all([v in aug.order.a for v in [0, 1, 3, 4, 5]])
 
     def test___init___bad_datatype_for_order_leads_to_failure(self):
@@ -4411,7 +4411,7 @@ class TestPiecewiseAffine(unittest.TestCase):
         # cval as list
         aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=5, nb_cols=5,
                                   mode="constant", cval=[0, 10])
-        assert isinstance(aug.cval, iap.Choice)
+        assert is_parameter_instance(aug.cval, iap.Choice)
         assert aug.cval.a[0] == 0
         assert aug.cval.a[1] == 10
 
@@ -4419,9 +4419,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         # cval as tuple
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   mode="constant", cval=(0, 10))
-        assert isinstance(aug.cval, iap.Uniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.Uniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
         assert aug.cval.b.value == 10
 
@@ -4430,9 +4430,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   mode="constant",
                                   cval=iap.DiscreteUniform(0, 10))
-        assert isinstance(aug.cval, iap.DiscreteUniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.DiscreteUniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
         assert aug.cval.b.value == 10
 
@@ -4440,9 +4440,9 @@ class TestPiecewiseAffine(unittest.TestCase):
         # ALL as cval
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   mode="constant", cval=ia.ALL)
-        assert isinstance(aug.cval, iap.Uniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.Uniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
         assert aug.cval.b.value == 255
 
@@ -4460,14 +4460,14 @@ class TestPiecewiseAffine(unittest.TestCase):
         # single string for mode
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   mode="nearest")
-        assert isinstance(aug.mode, iap.Deterministic)
+        assert is_parameter_instance(aug.mode, iap.Deterministic)
         assert aug.mode.value == "nearest"
 
     def test___init___mode_is_list(self):
         # list for mode
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8,
                                   mode=["nearest", "edge", "symmetric"])
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert all([
             v in aug.mode.a for v in ["nearest", "edge", "symmetric"]
         ])
@@ -4477,7 +4477,7 @@ class TestPiecewiseAffine(unittest.TestCase):
         aug = iaa.PiecewiseAffine(
             scale=0.1, nb_rows=8, nb_cols=8,
             mode=iap.Choice(["nearest", "edge", "symmetric"]))
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert all([
             v in aug.mode.a for v in ["nearest", "edge", "symmetric"]
         ])
@@ -4485,7 +4485,7 @@ class TestPiecewiseAffine(unittest.TestCase):
     def test___init___mode_is_all(self):
         # ALL for mode
         aug = iaa.PiecewiseAffine(scale=0.1, nb_rows=8, nb_cols=8, mode=ia.ALL)
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert all([
             v in aug.mode.a
             for v
@@ -4863,17 +4863,19 @@ class TestPiecewiseAffine(unittest.TestCase):
 
     def test_scale_alignment_between_images_and_keypoints(self):
         # strong scale, measure alignment between images and keypoints
-        aug = iaa.PiecewiseAffine(scale=0.10, nb_rows=12, nb_cols=4)
+        # fairly large scale here, as otherwise keypoints can end up
+        # outside of the image plane
+        aug = iaa.PiecewiseAffine(scale=0.05, nb_rows=12, nb_cols=4)
         aug_det = aug.to_deterministic()
-        kps = [ia.Keypoint(x=5, y=15), ia.Keypoint(x=17, y=12)]
-        kpsoi = ia.KeypointsOnImage(kps, shape=(24, 30, 3))
-        img_kps = np.zeros((24, 30, 3), dtype=np.uint8)
+        kps = [ia.Keypoint(x=160, y=110), ia.Keypoint(x=140, y=90)]
+        kpsoi = ia.KeypointsOnImage(kps, shape=(200, 300, 3))
+        img_kps = np.zeros((200, 300, 3), dtype=np.uint8)
         img_kps = kpsoi.draw_on_image(img_kps, color=[255, 255, 255])
 
         img_kps_aug = aug_det.augment_image(img_kps)
         kpsoi_aug = aug_det.augment_keypoints([kpsoi])[0]
 
-        assert kpsoi_aug.shape == (24, 30, 3)
+        assert kpsoi_aug.shape == (200, 300, 3)
         bb1 = ia.BoundingBox(
             x1=kpsoi_aug.keypoints[0].x-1, y1=kpsoi_aug.keypoints[0].y-1,
             x2=kpsoi_aug.keypoints[0].x+1, y2=kpsoi_aug.keypoints[0].y+1)
@@ -5313,12 +5315,12 @@ class TestPiecewiseAffine(unittest.TestCase):
                                   cval=2, mode="constant",
                                   absolute_scale=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
-        assert isinstance(params[2], iap.Deterministic)
-        assert isinstance(params[3], iap.Deterministic)
-        assert isinstance(params[4], iap.Deterministic)
-        assert isinstance(params[5], iap.Deterministic)
+        assert params[0] is aug.jitter.scale
+        assert params[1] is aug.nb_rows
+        assert params[2] is aug.nb_cols
+        assert params[3] is aug.order
+        assert params[4] is aug.cval
+        assert params[5] is aug.mode
         assert params[6] is False
         assert 0.1 - 1e-8 < params[0].value < 0.1 + 1e-8
         assert params[1].value == 8
@@ -5443,16 +5445,16 @@ class TestPerspectiveTransform(unittest.TestCase):
     def test___init___scale_is_tuple(self):
         # tuple for scale
         aug = iaa.PerspectiveTransform(scale=(0.1, 0.2))
-        assert isinstance(aug.jitter.scale, iap.Uniform)
-        assert isinstance(aug.jitter.scale.a, iap.Deterministic)
-        assert isinstance(aug.jitter.scale.b, iap.Deterministic)
+        assert is_parameter_instance(aug.jitter.scale, iap.Uniform)
+        assert is_parameter_instance(aug.jitter.scale.a, iap.Deterministic)
+        assert is_parameter_instance(aug.jitter.scale.b, iap.Deterministic)
         assert 0.1 - 1e-8 < aug.jitter.scale.a.value < 0.1 + 1e-8
         assert 0.2 - 1e-8 < aug.jitter.scale.b.value < 0.2 + 1e-8
 
     def test___init___scale_is_list(self):
         # list for scale
         aug = iaa.PerspectiveTransform(scale=[0.1, 0.2, 0.3])
-        assert isinstance(aug.jitter.scale, iap.Choice)
+        assert is_parameter_instance(aug.jitter.scale, iap.Choice)
         assert len(aug.jitter.scale.a) == 3
         assert 0.1 - 1e-8 < aug.jitter.scale.a[0] < 0.1 + 1e-8
         assert 0.2 - 1e-8 < aug.jitter.scale.a[1] < 0.2 + 1e-8
@@ -5461,7 +5463,7 @@ class TestPerspectiveTransform(unittest.TestCase):
     def test___init___scale_is_stochastic_parameter(self):
         # StochasticParameter for scale
         aug = iaa.PerspectiveTransform(scale=iap.Choice([0.1, 0.2, 0.3]))
-        assert isinstance(aug.jitter.scale, iap.Choice)
+        assert is_parameter_instance(aug.jitter.scale, iap.Choice)
         assert len(aug.jitter.scale.a) == 3
         assert 0.1 - 1e-8 < aug.jitter.scale.a[0] < 0.1 + 1e-8
         assert 0.2 - 1e-8 < aug.jitter.scale.a[1] < 0.2 + 1e-8
@@ -5479,16 +5481,16 @@ class TestPerspectiveTransform(unittest.TestCase):
 
     def test___init___mode_is_all(self):
         aug = iaa.PerspectiveTransform(cval=0, mode=ia.ALL)
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
 
     def test___init___mode_is_string(self):
         aug = iaa.PerspectiveTransform(cval=0, mode="replicate")
-        assert isinstance(aug.mode, iap.Deterministic)
+        assert is_parameter_instance(aug.mode, iap.Deterministic)
         assert aug.mode.value == "replicate"
 
     def test___init___mode_is_list(self):
         aug = iaa.PerspectiveTransform(cval=0, mode=["replicate", "constant"])
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert (
             len(aug.mode.a) == 2
             and "replicate" in aug.mode.a
@@ -5497,7 +5499,7 @@ class TestPerspectiveTransform(unittest.TestCase):
     def test___init___mode_is_stochastic_parameter(self):
         aug = iaa.PerspectiveTransform(
             cval=0, mode=iap.Choice(["replicate", "constant"]))
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert (
             len(aug.mode.a) == 2
             and "replicate" in aug.mode.a
@@ -6523,8 +6525,8 @@ class TestPerspectiveTransform(unittest.TestCase):
     def test_get_parameters(self):
         aug = iaa.PerspectiveTransform(scale=0.1, keep_size=False)
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Normal)
-        assert isinstance(params[0].scale, iap.Deterministic)
+        assert is_parameter_instance(params[0], iap.Normal)
+        assert is_parameter_instance(params[0].scale, iap.Deterministic)
         assert 0.1 - 1e-8 < params[0].scale.value < 0.1 + 1e-8
         assert params[1] is False
         assert params[2].value == 0
@@ -6700,18 +6702,18 @@ class TestElasticTransformation(unittest.TestCase):
     def test___init___alpha_is_tuple(self):
         # test alpha being tuple
         aug = iaa.ElasticTransformation(alpha=(1.0, 2.0), sigma=0.25)
-        assert isinstance(aug.alpha, iap.Uniform)
-        assert isinstance(aug.alpha.a, iap.Deterministic)
-        assert isinstance(aug.alpha.b, iap.Deterministic)
+        assert is_parameter_instance(aug.alpha, iap.Uniform)
+        assert is_parameter_instance(aug.alpha.a, iap.Deterministic)
+        assert is_parameter_instance(aug.alpha.b, iap.Deterministic)
         assert 1.0 - 1e-8 < aug.alpha.a.value < 1.0 + 1e-8
         assert 2.0 - 1e-8 < aug.alpha.b.value < 2.0 + 1e-8
 
     def test___init___sigma_is_tuple(self):
         # test sigma being tuple
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=(1.0, 2.0))
-        assert isinstance(aug.sigma, iap.Uniform)
-        assert isinstance(aug.sigma.a, iap.Deterministic)
-        assert isinstance(aug.sigma.b, iap.Deterministic)
+        assert is_parameter_instance(aug.sigma, iap.Uniform)
+        assert is_parameter_instance(aug.sigma.a, iap.Deterministic)
+        assert is_parameter_instance(aug.sigma.b, iap.Deterministic)
         assert 1.0 - 1e-8 < aug.sigma.a.value < 1.0 + 1e-8
         assert 2.0 - 1e-8 < aug.sigma.b.value < 2.0 + 1e-8
 
@@ -6727,23 +6729,23 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test___init___order_is_all(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=ia.ALL)
-        assert isinstance(aug.order, iap.Choice)
+        assert is_parameter_instance(aug.order, iap.Choice)
         assert all([order in aug.order.a for order in [0, 1, 2, 3, 4, 5]])
 
     def test___init___order_is_int(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=1)
-        assert isinstance(aug.order, iap.Deterministic)
+        assert is_parameter_instance(aug.order, iap.Deterministic)
         assert aug.order.value == 1
 
     def test___init___order_is_list(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, order=[0, 1, 2])
-        assert isinstance(aug.order, iap.Choice)
+        assert is_parameter_instance(aug.order, iap.Choice)
         assert all([order in aug.order.a for order in [0, 1, 2]])
 
     def test___init___order_is_stochastic_parameter(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
                                         order=iap.Choice([0, 1, 2, 3]))
-        assert isinstance(aug.order, iap.Choice)
+        assert is_parameter_instance(aug.order, iap.Choice)
         assert all([order in aug.order.a for order in [0, 1, 2, 3]])
 
     def test___init___bad_datatype_for_order_leads_to_failure(self):
@@ -6757,34 +6759,34 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test___init___cval_is_all(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=ia.ALL)
-        assert isinstance(aug.cval, iap.Uniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.Uniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 0
         assert aug.cval.b.value == 255
 
     def test___init___cval_is_int(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=128)
-        assert isinstance(aug.cval, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.Deterministic)
         assert aug.cval.value == 128
 
     def test___init___cval_is_list(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
                                         cval=[16, 32, 64])
-        assert isinstance(aug.cval, iap.Choice)
+        assert is_parameter_instance(aug.cval, iap.Choice)
         assert all([cval in aug.cval.a for cval in [16, 32, 64]])
 
     def test___init___cval_is_stochastic_parameter(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0,
                                         cval=iap.Choice([16, 32, 64]))
-        assert isinstance(aug.cval, iap.Choice)
+        assert is_parameter_instance(aug.cval, iap.Choice)
         assert all([cval in aug.cval.a for cval in [16, 32, 64]])
 
     def test___init___cval_is_tuple(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, cval=(128, 255))
-        assert isinstance(aug.cval, iap.Uniform)
-        assert isinstance(aug.cval.a, iap.Deterministic)
-        assert isinstance(aug.cval.b, iap.Deterministic)
+        assert is_parameter_instance(aug.cval, iap.Uniform)
+        assert is_parameter_instance(aug.cval.a, iap.Deterministic)
+        assert is_parameter_instance(aug.cval.b, iap.Deterministic)
         assert aug.cval.a.value == 128
         assert aug.cval.b.value == 255
 
@@ -6799,7 +6801,7 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test___init___mode_is_all(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode=ia.ALL)
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert all([
             mode in aug.mode.a
             for mode
@@ -6807,19 +6809,19 @@ class TestElasticTransformation(unittest.TestCase):
 
     def test___init___mode_is_string(self):
         aug = iaa.ElasticTransformation(alpha=0.25, sigma=1.0, mode="nearest")
-        assert isinstance(aug.mode, iap.Deterministic)
+        assert is_parameter_instance(aug.mode, iap.Deterministic)
         assert aug.mode.value == "nearest"
 
     def test___init___mode_is_list(self):
         aug = iaa.ElasticTransformation(
             alpha=0.25, sigma=1.0, mode=["constant", "nearest"])
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
 
     def test___init___mode_is_stochastic_parameter(self):
         aug = iaa.ElasticTransformation(
             alpha=0.25, sigma=1.0, mode=iap.Choice(["constant", "nearest"]))
-        assert isinstance(aug.mode, iap.Choice)
+        assert is_parameter_instance(aug.mode, iap.Choice)
         assert all([mode in aug.mode.a for mode in ["constant", "nearest"]])
 
     def test___init___bad_datatype_for_mode_leads_to_failure(self):
@@ -7654,11 +7656,11 @@ class TestElasticTransformation(unittest.TestCase):
         aug = iaa.ElasticTransformation(
             alpha=0.25, sigma=1.0, order=2, cval=10, mode="constant")
         params = aug.get_parameters()
-        assert isinstance(params[0], iap.Deterministic)
-        assert isinstance(params[1], iap.Deterministic)
-        assert isinstance(params[2], iap.Deterministic)
-        assert isinstance(params[3], iap.Deterministic)
-        assert isinstance(params[4], iap.Deterministic)
+        assert params[0] is aug.alpha
+        assert params[1] is aug.sigma
+        assert params[2] is aug.order
+        assert params[3] is aug.cval
+        assert params[4] is aug.mode
         assert 0.25 - 1e-8 < params[0].value < 0.25 + 1e-8
         assert 1.0 - 1e-8 < params[1].value < 1.0 + 1e-8
         assert params[2].value == 2
@@ -8064,14 +8066,14 @@ class TestRot90(unittest.TestCase):
 
     def test___init___k_is_list(self):
         aug = iaa.Rot90([1, 3])
-        assert isinstance(aug.k, iap.Choice)
+        assert is_parameter_instance(aug.k, iap.Choice)
         assert len(aug.k.a) == 2
         assert aug.k.a[0] == 1
         assert aug.k.a[1] == 3
 
     def test___init___k_is_all(self):
         aug = iaa.Rot90(ia.ALL)
-        assert isinstance(aug.k, iap.Choice)
+        assert is_parameter_instance(aug.k, iap.Choice)
         assert len(aug.k.a) == 4
         assert aug.k.a == [0, 1, 2, 3]
 

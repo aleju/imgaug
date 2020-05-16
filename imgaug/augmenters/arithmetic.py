@@ -1876,7 +1876,7 @@ class Add(meta.Augmenter):
 
         self.value = iap.handle_continuous_param(
             value, "value", value_range=None, tuple_to_uniform=True,
-            list_to_choice=True)
+            list_to_choice=True, prefetch=True)
         self.per_channel = iap.handle_probability_param(
             per_channel, "per_channel")
 
