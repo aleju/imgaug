@@ -27,7 +27,7 @@ _INT64_DTYPE = np.dtype("int64")  # Added in 0.5.0.
 _FLOAT16_DTYPE = np.dtype("float16")  # Added in 0.5.0.
 _FLOAT32_DTYPE = np.dtype("float32")  # Added in 0.5.0.
 _FLOAT64_DTYPE = np.dtype("float64")  # Added in 0.5.0.
-_BOOL_DTYPE = np.dtype("bool")
+_BOOL_DTYPE = np.dtype("bool")  # Added in 0.5.0.
 
 # Added in 0.5.0.
 try:
