@@ -26,6 +26,9 @@ python:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq -y python-virtualenv
+  # otherwise imagecodecs fails to build on py3.6,
+  # see https://github.com/scikit-image/scikit-image/issues/4673
+  - pip install --upgrade pip
 
 install:
 # TODO why was this deactivated?
