@@ -13,6 +13,45 @@ KIND_TO_DTYPES = {
     "f": ["float16", "float32", "float64", "float128"]
 }
 
+# Added in 0.5.0.
+_DTYPE_STR_TO_DTYPES_CACHE = dict()
+
+_UINT8_DTYPE = np.dtype("uint8")  # Added in 0.5.0.
+_UINT16_DTYPE = np.dtype("uint16")  # Added in 0.5.0.
+_UINT32_DTYPE = np.dtype("uint32")  # Added in 0.5.0.
+_UINT64_DTYPE = np.dtype("uint64")  # Added in 0.5.0.
+_INT8_DTYPE = np.dtype("int8")  # Added in 0.5.0.
+_INT16_DTYPE = np.dtype("int16")  # Added in 0.5.0.
+_INT32_DTYPE = np.dtype("int32")  # Added in 0.5.0.
+_INT64_DTYPE = np.dtype("int64")  # Added in 0.5.0.
+_FLOAT16_DTYPE = np.dtype("float16")  # Added in 0.5.0.
+_FLOAT32_DTYPE = np.dtype("float32")  # Added in 0.5.0.
+_FLOAT64_DTYPE = np.dtype("float64")  # Added in 0.5.0.
+_BOOL_DTYPE = np.dtype("bool")
+
+# Added in 0.5.0.
+try:
+    _FLOAT128_DTYPE = np.dtype("float128")
+except TypeError:
+    _FLOAT128_DTYPE = None
+
+# Added in 0.5.0.
+_DTYPE_NAME_TO_DTYPE = {
+    "uint8": _UINT8_DTYPE,
+    "uint16": _UINT16_DTYPE,
+    "uint32": _UINT32_DTYPE,
+    "uint64": _UINT64_DTYPE,
+    "int8": _INT8_DTYPE,
+    "int16": _INT16_DTYPE,
+    "int32": _INT32_DTYPE,
+    "int64": _INT64_DTYPE,
+    "float16": _FLOAT16_DTYPE,
+    "float32": _FLOAT32_DTYPE,
+    "float64": _FLOAT64_DTYPE,
+    "float128": _FLOAT128_DTYPE,
+    "bool": _BOOL_DTYPE
+}
+
 
 def normalize_dtypes(dtypes):
     if not isinstance(dtypes, list):
@@ -214,13 +253,12 @@ def clip_(array, min_value, max_value):
     # int64 is disallowed, because numpy's clip converts it to float64 since
     # 1.17
     # TODO find the cause for that
-    gate_dtypes(array,
-                allowed=["bool",
-                         "uint8", "uint16", "uint32",
-                         "int8", "int16", "int32",
-                         "float16", "float32", "float64", "float128"],
-                disallowed=["uint64", "int64"],
-                augmenter=None)
+    gate_dtypes_strs(
+        {array.dtype},
+        allowed="bool uint8 uint16 uint32 int8 int16 int32 "
+                "float16 float32 float64 float128",
+        disallowed="uint64 int64"
+    )
 
     # If the min of the input value range is above the allowed min, we do not
     # have to clip to the allowed min as we cannot exceed it anyways.
@@ -282,65 +320,180 @@ def clip_to_dtype_value_range_(array, dtype, validate=True,
     return clip_(array, min_value, max_value)
 
 
-def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
-    # assume that at least one allowed dtype string is given
-    assert len(allowed) > 0, (
-        "Expected at least one dtype to be allowed, but got an empty list.")
-    # check only first dtype for performance
-    assert ia.is_string(allowed[0]), (
-        "Expected only strings as dtypes, but got type %s." % (
-            type(allowed[0]),))
+def gate_dtypes_strs(dtypes, allowed, disallowed, augmenter=None):
+    """Verify that input dtypes match allowed/disallowed dtype strings.
 
-    if len(disallowed) > 0:
-        # check only first disallowed dtype for performance
-        assert ia.is_string(disallowed[0]), (
-            "Expected only strings as dtypes, but got type %s." % (
-                type(disallowed[0]),))
+    Added in 0.5.0.
 
-    # verify that "allowed" and "disallowed" do not contain overlapping
-    # dtypes
-    inters = set(allowed).intersection(set(disallowed))
-    nb_overlapping = len(inters)
+    Parameters
+    ----------
+    dtypes : numpy.ndarray or iterable of numpy.ndarray or iterable of numpy.dtype
+        One or more input dtypes to verify.
+
+    allowed : str
+        Names of one or more allowed dtypes, separated by single spaces.
+
+    disallowed : str
+        Names of disallowed dtypes, separated by single spaces.
+        Must not intersect with allowed dtypes.
+
+    augmenter : None or imgaug.augmenters.meta.Augmenter, optional
+        If the gating happens for an augmenter, it should be provided
+        here. This information will be used to improve output error
+        messages and warnings.
+
+    """
+    allowed, disallowed = _convert_gate_dtype_strs_to_types(
+        allowed, disallowed
+    )
+    return _gate_dtypes(dtypes, allowed, disallowed, augmenter=augmenter)
+
+
+# Added in 0.5.0.
+def _convert_gate_dtype_strs_to_types(allowed, disallowed):
+    allowed_types = _convert_dtype_strs_to_types(allowed)
+    disallowed_types = _convert_dtype_strs_to_types(disallowed)
+
+    intersection = allowed_types.intersection(disallowed_types)
+    nb_overlapping = len(intersection)
     assert nb_overlapping == 0, (
-        "Expected 'allowed' and 'disallowed' to not contain the same dtypes, "
-        "but %d appeared in both arguments. Got allowed: %s, "
+        "Expected 'allowed' and 'disallowed' dtypes to not contain the same "
+        "dtypes, but %d appeared in both arguments. Got allowed: %s, "
         "disallowed: %s, intersection: %s" % (
             nb_overlapping,
-            ", ".join(allowed),
-            ", ".join(disallowed),
-            ", ".join(inters))
+            allowed,
+            disallowed,
+            intersection
+        )
     )
 
-    dtypes = normalize_dtypes(dtypes)
+    return allowed_types, disallowed_types
 
-    for dtype in dtypes:
-        if dtype.name in allowed:
-            pass
-        elif dtype.name in disallowed:
+
+# Added in 0.5.0.
+def _convert_dtype_strs_to_types_cached(dtypes):
+    dtypes_parsed = _DTYPE_STR_TO_DTYPES_CACHE.get(dtypes, None)
+    if dtypes_parsed is None:
+        dtypes_parsed = _convert_dtype_strs_to_types_cached(dtypes)
+        _DTYPE_STR_TO_DTYPES_CACHE[dtypes] = dtypes_parsed
+    return dtypes_parsed
+
+
+# Added in 0.5.0.
+def _convert_dtype_strs_to_types(dtypes):
+    result = set()
+    for name in dtypes.split(" "):
+        name = name.strip()
+        if name:
+            dtype = _DTYPE_NAME_TO_DTYPE[name]
+
+            # this if ignores float128 if it is not available on the user
+            # system
+            if dtype is not None:
+                result.add(dtype)
+    return result
+
+
+# Deprecated since 0.5.0.
+@ia.deprecated("imgaug.dtypes.gate_dtypes_strs")
+def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
+    def _cvt(dts):
+        normalized = set()
+        if not isinstance(dts, list):
+            dts = [dts]
+
+        for dtype in dts:
+            try:
+                dtype = normalize_dtype(dtype)
+                normalized.add(dtype)
+            except TypeError:
+                pass
+        return normalized
+
+    dtypes_norm = _cvt(dtypes)
+    allowed_norm = _cvt(allowed)
+    disallowed_norm = _cvt(disallowed)
+
+    return _gate_dtypes(
+        dtypes_norm, allowed_norm, disallowed_norm, augmenter=augmenter
+    )
+
+
+def _gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
+    """Verify that input dtypes are among allowed and not disallowed dtypes.
+
+    Added in 0.5.0.
+
+    Parameters
+    ----------
+    dtypes : numpy.ndarray or iterable of numpy.ndarray or iterable of numpy.dtype
+        One or more input dtypes to verify.
+        Must not be a dtype function (like ``np.int64``), only a proper
+        dtype (like ``np.dtype("int64")``). For performance reasons this is
+        not validated.
+
+    allowed : set of numpy.dtype
+        One or more allowed dtypes.
+
+    disallowed : None or set of numpy.dtype
+        Any number of disallowed dtypes. Should not intersect with allowed
+        dtypes.
+
+    augmenter : None or imgaug.augmenters.meta.Augmenter, optional
+        If the gating happens for an augmenter, it should be provided
+        here. This information will be used to improve output error
+        messages and warnings.
+
+    """
+    if isinstance(dtypes, np.ndarray) or ia.is_np_scalar(dtypes):
+        dtypes = set([dtypes.dtype])
+    elif isinstance(dtypes, list):
+        dtypes = {arr.dtype for arr in dtypes}
+
+    dts_not_explicitly_allowed = dtypes - allowed
+    all_allowed = (not dts_not_explicitly_allowed)
+
+    if all_allowed:
+        return
+
+    if disallowed is None:
+        disallowed = set()
+
+    dts_explicitly_disallowed = dts_not_explicitly_allowed.intersection(
+        disallowed
+    )
+    dts_undefined = dts_not_explicitly_allowed - disallowed
+
+    if dts_explicitly_disallowed:
+        for dtype in dts_explicitly_disallowed:
             if augmenter is None:
                 raise ValueError(
                     "Got dtype '%s', which is a forbidden dtype (%s)." % (
-                        dtype.name, ", ".join(disallowed)
+                        np.dtype(dtype).name,
+                        _dtype_names_to_string(disallowed)
                     ))
 
             raise ValueError(
                 "Got dtype '%s' in augmenter '%s' (class '%s'), which "
                 "is a forbidden dtype (%s)." % (
-                    dtype.name,
+                    np.dtype(dtype).name,
                     augmenter.name,
                     augmenter.__class__.__name__,
-                    ", ".join(disallowed)
+                    _dtype_names_to_string(disallowed),
                 ))
-        else:
+
+    if dts_undefined:
+        for dtype in dts_undefined:
             if augmenter is None:
                 ia.warn(
                     "Got dtype '%s', which was neither explicitly allowed "
                     "(%s), nor explicitly disallowed (%s). Generated "
                     "outputs may contain errors." % (
                         dtype.name,
-                        ", ".join(allowed),
-                        ", ".join(disallowed)
-                    ))
+                        _dtype_names_to_string(allowed),
+                        _dtype_names_to_string(disallowed),
+                    )
+                )
             else:
                 ia.warn(
                     "Got dtype '%s' in augmenter '%s' (class '%s'), which was "
@@ -350,6 +503,41 @@ def gate_dtypes(dtypes, allowed, disallowed, augmenter=None):
                         dtype.name,
                         augmenter.name,
                         augmenter.__class__.__name__,
-                        ", ".join(allowed),
-                        ", ".join(disallowed)
-                    ))
+                        _dtype_names_to_string(allowed),
+                        _dtype_names_to_string(disallowed),
+                    )
+                )
+
+
+# Added in 0.5.0.
+def _dtype_names_to_string(dtypes):
+    if isinstance(dtypes, set):
+        dtypes = list(sorted(dtypes))
+    return ", ".join([np.dtype(dt).name for dt in dtypes])
+
+
+def allow_only_uint8(dtypes, augmenter=None):
+    """Verify that input dtypes are uint8.
+
+    Added in 0.5.0.
+
+    Parameters
+    ----------
+    dtypes : numpy.ndarray or iterable of numpy.ndarray or iterable of numpy.dtype
+        One or more input dtypes to verify.
+
+    augmenter : None or imgaug.augmenters.meta.Augmenter, optional
+        If the gating happens for an augmenter, it should be provided
+        here. This information will be used to improve output error
+        messages and warnings.
+
+    """
+    return gate_dtypes_strs(
+        dtypes,
+        allowed="uint8",
+        disallowed="uint16 uint32 uint64 "
+                   "int8 int16 int32 int64 "
+                   "float16 float32 float64 float128 "
+                   "bool",
+        augmenter=augmenter
+    )

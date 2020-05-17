@@ -66,6 +66,7 @@ from . import contrast as contrastlib
 from . import geometric
 from . import size as sizelib
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 # TODO some of the augmenters in this module broke on numpy arrays as
@@ -297,12 +298,12 @@ def equalize_(image, mask=None):
                   for c in np.arange(nb_channels)]
         return np.stack(result, axis=-1)
 
-    assert image.dtype.name == "uint8", (
-        "Expected image of dtype uint8, got dtype %s." % (image.dtype.name,))
+    iadt.allow_only_uint8({image.dtype})
+
     if mask is not None:
         assert mask.ndim == 2, (
             "Expected 2-dimensional mask, got shape %s." % (mask.shape,))
-        assert mask.dtype.name == "uint8", (
+        assert mask.dtype == iadt._UINT8_DTYPE, (
             "Expected mask of dtype uint8, got dtype %s." % (mask.dtype.name,))
 
     size = image.size
@@ -412,9 +413,7 @@ def autocontrast(image, cutoff=0, ignore=None):
         Contrast-enhanced image.
 
     """
-    assert image.dtype.name == "uint8", (
-        "Can apply autocontrast only to uint8 images, got dtype %s." % (
-            image.dtype.name,))
+    iadt.allow_only_uint8({image.dtype})
 
     if 0 in image.shape:
         return np.copy(image)
@@ -533,9 +532,7 @@ def _autocontrast_no_pil(image, cutoff, ignore):  # noqa: C901
 
 # Added in 0.4.0.
 def _apply_enhance_func(image, cls, factor):
-    assert image.dtype.name == "uint8", (
-        "Can apply PIL image enhancement only to uint8 images, "
-        "got dtype %s." % (image.dtype.name,))
+    iadt.allow_only_uint8({image.dtype})
 
     if 0 in image.shape:
         return np.copy(image)
@@ -729,9 +726,7 @@ def enhance_sharpness(image, factor):
 
 # Added in 0.4.0.
 def _filter_by_kernel(image, kernel):
-    assert image.dtype.name == "uint8", (
-        "Can apply PIL filters only to uint8 images, "
-        "got dtype %s." % (image.dtype.name,))
+    iadt.allow_only_uint8({image.dtype})
 
     if 0 in image.shape:
         return np.copy(image)
@@ -1238,9 +1233,7 @@ def warp_affine(image,
         Image after affine transformation.
 
     """
-    assert image.dtype.name == "uint8", (
-        "Can apply PIL affine transformation only to uint8 images, "
-        "got dtype %s." % (image.dtype.name,))
+    iadt.allow_only_uint8({image.dtype})
 
     if 0 in image.shape:
         return np.copy(image)
@@ -1502,14 +1495,13 @@ class Autocontrast(contrastlib._ContrastFuncWrapper):
 
         super(Autocontrast, self).__init__(
             func, params1d, per_channel,
-            dtypes_allowed=["uint8"],
-            dtypes_disallowed=["uint16", "uint32", "uint64",
-                               "int8", "int16", "int32", "int64",
-                               "float16", "float32", "float64",
-                               "float16", "float32", "float64", "float96",
-                               "float128", "float256", "bool"],
+            dtypes_allowed="uint8",
+            dtypes_disallowed="uint16 uint32 uint64 int8 int16 int32 int64 "
+                              "float16 float32 float64 float128 "
+                              "bool",
             seed=seed, name=name,
-            random_state=random_state, deterministic=deterministic)
+            random_state=random_state, deterministic=deterministic
+        )
 
 
 # Added in 0.4.0.

@@ -3858,12 +3858,13 @@ class WithChannels(Augmenter):
     @classmethod
     def _assert_dtypes_not_changed(cls, images_aug, images):
         if ia.is_np_array(images_aug) and ia.is_np_array(images):
-            dtypes_same = (images_aug.dtype.name == images.dtype.name)
+            dtypes_same = (images_aug.dtype == images.dtype)
         else:
-            dtypes_same = all(
-                [image_aug.dtype.name == image.dtype.name
-                 for image_aug, image
-                 in zip(images_aug, images)])
+            dtypes_same = all([
+                image_aug.dtype == image.dtype
+                for image_aug, image
+                in zip(images_aug, images)
+            ])
 
         assert dtypes_same, (
             "dtypes of images changed in WithChannels from "

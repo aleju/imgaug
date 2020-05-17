@@ -96,15 +96,7 @@ def stylize_cartoon(image, blur_ksize=3, segmentation_size=1.0,
         Image in cartoonish style.
 
     """
-    iadt.gate_dtypes(
-        image,
-        allowed=["uint8"],
-        disallowed=["bool",
-                    "uint16", "uint32", "uint64", "uint128", "uint256",
-                    "int8", "int16", "int32", "int64", "int128", "int256",
-                    "float16", "float32", "float64", "float96", "float128",
-                    "float256"],
-        augmenter=None)
+    iadt.allow_only_uint8({image.dtype})
 
     assert image.ndim == 3 and image.shape[2] == 3, (
         "Expected to get a (H,W,C) image, got shape %s." % (image.shape,))

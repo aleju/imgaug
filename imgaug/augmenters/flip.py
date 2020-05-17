@@ -16,6 +16,7 @@ import six.moves as sm
 from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 # pylint:disable=pointless-string-statement
@@ -673,7 +674,9 @@ fort cv2_ get contig 1.95215ms
 """
 # pylint:enable=pointless-string-statement
 
-_FLIPLR_DTYPES_CV2 = {"uint8", "uint16", "int8", "int16"}
+_FLIPLR_DTYPES_CV2 = iadt._convert_dtype_strs_to_types(
+    "uint8 uint16 int8 int16"
+)
 
 
 def fliplr(arr):
@@ -719,7 +722,7 @@ def fliplr(arr):
     # kinda works with that, it is very rare to happen and would induce an
     # additional check (with significant relative impact on runtime considering
     # flipping is already ultra fast)
-    if arr.dtype.name in _FLIPLR_DTYPES_CV2:
+    if arr.dtype in _FLIPLR_DTYPES_CV2:
         return _fliplr_cv2(arr)
     return _fliplr_sliced(arr)
 

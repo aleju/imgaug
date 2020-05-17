@@ -149,19 +149,13 @@ def add_scalar_(image, value):
     if image.size == 0:
         return np.copy(image)
 
-    iadt.gate_dtypes(
-        image,
-        allowed=["bool",
-                 "uint8", "uint16",
-                 "int8", "int16",
-                 "float16", "float32"],
-        disallowed=["uint32", "uint64", "uint128", "uint256",
-                    "int32", "int64", "int128", "int256",
-                    "float64", "float96", "float128",
-                    "float256"],
+    iadt.gate_dtypes_strs(
+        {image.dtype},
+        allowed="bool uint8 uint16 int8 int16 float16 float32",
+        disallowed="uint32 uint64 int32 int64 float64 float128",
         augmenter=None)
 
-    if image.dtype.name == "uint8":
+    if image.dtype == iadt._UINT8_DTYPE:
         return _add_scalar_to_uint8_(image, value)
     return _add_scalar_to_non_uint8(image, value)
 
@@ -283,24 +277,17 @@ def add_elementwise(image, values):
         Image with values added to it.
 
     """
-    iadt.gate_dtypes(
-        image,
-        allowed=["bool",
-                 "uint8", "uint16",
-                 "int8", "int16",
-                 "float16", "float32"],
-        disallowed=["uint32", "uint64", "uint128", "uint256",
-                    "int32", "int64", "int128", "int256",
-                    "float64", "float96", "float128",
-                    "float256"],
+    iadt.gate_dtypes_strs(
+        {image.dtype},
+        allowed="bool uint8 uint16 int8 int16 float16 float32",
+        disallowed="uint32 uint64 int32 int64 float64 float128",
         augmenter=None)
 
-    idt = image.dtype.name
-    if idt == "uint8":
-        vdt = values.dtype.name
-        valid_value_dtypes_cv2 = {
-            "int8", "int16", "int32", "uint8", "uint16", "float32", "float64"
-        }
+    if image.dtype == iadt._UINT8_DTYPE:
+        vdt = values.dtype
+        valid_value_dtypes_cv2 = iadt._convert_dtype_strs_to_types(
+            "int8 int16 int32 uint8 uint16 float32 float64"
+        )
 
         ishape = image.shape
 
@@ -531,19 +518,13 @@ def multiply_scalar_(image, multiplier):
     if size == 0:
         return image
 
-    iadt.gate_dtypes(
-        image,
-        allowed=["bool",
-                 "uint8", "uint16",
-                 "int8", "int16",
-                 "float16", "float32"],
-        disallowed=["uint32", "uint64", "uint128", "uint256",
-                    "int32", "int64", "int128", "int256",
-                    "float64", "float96", "float128",
-                    "float256"],
+    iadt.gate_dtypes_strs(
+        {image.dtype},
+        allowed="bool uint8 uint16 int8 int16 float16 float32",
+        disallowed="uint32 uint64 int32 int64 float64 float128",
         augmenter=None)
 
-    if image.dtype.name == "uint8":
+    if image.dtype == iadt._UINT8_DTYPE:
         if size >= 224*224*3:
             return _multiply_scalar_to_uint8_lut_(image, multiplier)
         return _multiply_scalar_to_uint8_cv2_mul_(image, multiplier)
@@ -766,15 +747,10 @@ def multiply_elementwise_(image, multipliers):
         Image, multiplied by `multipliers`.
 
     """
-    iadt.gate_dtypes(
-        image,
-        allowed=["bool",
-                 "uint8", "uint16",
-                 "int8", "int16",
-                 "float16", "float32"],
-        disallowed=["uint32", "uint64", "uint128", "uint256",
-                    "int32", "int64", "int128", "int256",
-                    "float64", "float96", "float128", "float256"],
+    iadt.gate_dtypes_strs(
+        {image.dtype},
+        allowed="bool uint8 uint16 int8 int16 float16 float32",
+        disallowed="uint32 uint64 int32 int64 float64 float128",
         augmenter=None)
 
     if 0 in image.shape:
@@ -784,7 +760,7 @@ def multiply_elementwise_(image, multipliers):
         # TODO extend this with some shape checks
         image *= multipliers
         return image
-    if image.dtype.name == "uint8":
+    if image.dtype == iadt._UINT8_DTYPE:
         return _multiply_elementwise_to_uint8_(image, multipliers)
     return _multiply_elementwise_to_non_uint8(image, multipliers)
 
@@ -793,12 +769,11 @@ def multiply_elementwise_(image, multipliers):
 def _multiply_elementwise_to_uint8_(image, multipliers):
     dt = multipliers.dtype
     kind = dt.kind
-    dtn = dt.name
-    if kind == "f" and dtn != "float32":
+    if kind == "f" and dt != iadt._FLOAT32_DTYPE:
         multipliers = multipliers.astype(np.float32)
-    elif kind == "i" and dtn != "int32":
+    elif kind == "i" and dt != iadt._INT32_DTYPE:
         multipliers = multipliers.astype(np.int32)
-    elif kind == "u" and dtn != "uint8":
+    elif kind == "u" and dt != iadt._UINT8_DTYPE:
         multipliers = multipliers.astype(np.uint8)
 
     if multipliers.ndim < image.ndim:
@@ -1180,16 +1155,13 @@ def replace_elementwise_(image, mask, replacements):
         Image with replaced components.
 
     """
-    iadt.gate_dtypes(
-        image,
-        allowed=["bool",
-                 "uint8", "uint16", "uint32",
-                 "int8", "int16", "int32",
-                 "float16", "float32", "float64"],
-        disallowed=["uint64", "uint128", "uint256",
-                    "int64", "int128", "int256",
-                    "float96", "float128", "float256"],
-        augmenter=None)
+    iadt.gate_dtypes_strs(
+        {image.dtype},
+        allowed="bool uint8 uint16 uint32 int8 int16 int32 float16 float32 "
+                "float64",
+        disallowed="uint64 int64 float128",
+        augmenter=None
+    )
 
     # This is slightly faster (~20%) for masks that are True at many
     # locations, but slower (~50%) for masks with few Trues, which is
@@ -1372,9 +1344,9 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
     # - float16 seems to not be perfectly accurate, but still ok-ish -- was
     #   off by 10 for center value of range (float 16 min, 16), where float
     #   16 min is around -65500
-    allow_dtypes_custom_minmax = {"uint8", "uint16", "uint32",
-                                  "int8", "int16", "int32",
-                                  "float16", "float32"}
+    allow_dtypes_custom_minmax = iadt._convert_dtype_strs_to_types(
+        "uint8 uint16 uint32 int8 int16 int32 float16 float32"
+    )
 
     min_value_dt, _, max_value_dt = \
         iadt.get_value_range_of_dtype(image.dtype)
@@ -1399,12 +1371,12 @@ def invert_(image, min_value=None, max_value=None, threshold=None,
     )
 
     if min_value != min_value_dt or max_value != max_value_dt:
-        assert image.dtype.name in allow_dtypes_custom_minmax, (
+        assert image.dtype in allow_dtypes_custom_minmax, (
             "Can use custom min/max values only with the following "
             "dtypes: %s. Got: %s." % (
                 ", ".join(allow_dtypes_custom_minmax), image.dtype.name))
 
-    if image.dtype.name == "uint8":
+    if image.dtype == iadt._UINT8_DTYPE:
         return _invert_uint8_(image, min_value, max_value, threshold,
                               invert_above_threshold)
 
@@ -1742,9 +1714,7 @@ def compress_jpeg(image, compression):
     maximum_quality = 100
     minimum_quality = 1
 
-    assert image.dtype.name == "uint8", (
-        "Jpeg compression can only be applied to uint8 images. "
-        "Got dtype %s." % (image.dtype.name,))
+    iadt.allow_only_uint8({image.dtype})
     assert 0 <= compression <= 100, (
         "Expected compression to be in the interval [0, 100], "
         "got %.4f." % (compression,))

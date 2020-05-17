@@ -16,6 +16,7 @@ except ImportError:
 import numpy as np
 
 from imgaug import dtypes as iadt
+from imgaug.testutils import ensure_deprecation_warning
 
 
 class Test_normalize_dtypes(unittest.TestCase):
@@ -982,24 +983,77 @@ class Test_clip_to_dtype_value_range(unittest.TestCase):
             "(201.0000 vs -128.0000 to 127.0000)." in str(context.exception))
 
 
-class Test_gate_dtypes(unittest.TestCase):
+class Test_gate_dtypes_strs(unittest.TestCase):
+    def test_standard_scenario_all_allowed(self):
+        for _ in range(3):
+            dtypes = {np.dtype("uint8"), np.dtype("uint8"),
+                      np.dtype("float32"), np.dtype("int64")}
+            allowed = "uint8 float32 int64"
+            disallowed = "bool"
+
+            iadt.gate_dtypes_strs(dtypes, allowed, disallowed)
+
+    def test_standard_scenario_one_disallowed(self):
+        for _ in range(3):
+            dtypes = {np.dtype("uint8"), np.dtype("uint8"),
+                      np.dtype("float32"), np.dtype("int64")}
+            allowed = "uint8 float32"
+            disallowed = "bool int64"
+
+            with self.assertRaises(ValueError) as context:
+                iadt.gate_dtypes_strs(dtypes, allowed, disallowed)
+            assert "Got dtype 'int64'" in str(context.exception)
+
+    def test_empty_set_as_dtypes(self):
+        for _ in range(3):
+            dtypes = set()
+            allowed = "uint8 float32 int64"
+            disallowed = "bool"
+
+            iadt.gate_dtypes_strs(dtypes, allowed, disallowed)
+
+    def test_allowed_dtype_does_not_exist(self):
+        dtypes = {np.dtype("uint8")}
+
+        with self.assertRaises(KeyError):
+            iadt.gate_dtypes_strs(dtypes, "uint8 int1000", "int8")
+
+    def test_disallowed_dtype_does_not_exist(self):
+        dtypes = {np.dtype("uint8")}
+
+        with self.assertRaises(KeyError):
+            iadt.gate_dtypes_strs(dtypes, "uint8", "int8 int1000")
+
+    def test_overlap_between_allowed_and_disallowed(self):
+        dtypes = {np.dtype("uint8"), np.dtype("float32"), np.dtype("int64")}
+        allowed = "uint8 float32 int64"
+        disallowed = "uint8 bool"
+
+        with self.assertRaises(AssertionError) as context:
+            iadt.gate_dtypes_strs(dtypes, allowed, disallowed)
+
+        assert (
+            "Expected 'allowed' and 'disallowed' dtypes to not contain "
+            "the same dtypes" in str(context.exception)
+        )
+
     def test_single_array_allowed(self):
         arr = np.zeros((1, 1, 3), dtype=np.int8)
 
-        iadt.gate_dtypes(arr, ["int8"], [])
+        iadt.gate_dtypes_strs(arr, "int8", "")
 
     def test_single_array_disallowed(self):
         arr = np.zeros((1, 1, 3), dtype=np.int8)
 
         with self.assertRaises(ValueError) as context:
-            iadt.gate_dtypes(arr, ["uint8"], ["int8"])
+            iadt.gate_dtypes_strs(arr, "uint8", "int8")
 
         assert "Got dtype 'int8'" in str(context.exception)
 
     def test_list_of_single_array(self):
         arr = np.zeros((1, 1, 3), dtype=np.int8)
 
-        iadt.gate_dtypes([arr], ["int8"], [])
+        iadt.gate_dtypes_strs([arr], "int8", "")
 
     def test_list_of_two_arrays_same_dtypes(self):
         arrays = [
@@ -1007,7 +1061,7 @@ class Test_gate_dtypes(unittest.TestCase):
             np.zeros((1, 1, 3), dtype=np.int8)
         ]
 
-        iadt.gate_dtypes(arrays, ["int8"], [])
+        iadt.gate_dtypes_strs(arrays, "int8", "")
 
     def test_list_of_two_arrays_different_dtypes(self):
         arrays = [
@@ -1015,7 +1069,7 @@ class Test_gate_dtypes(unittest.TestCase):
             np.zeros((1, 1, 3), dtype=np.uint8)
         ]
 
-        iadt.gate_dtypes(arrays, ["int8", "uint8"], [])
+        iadt.gate_dtypes_strs(arrays, "int8 uint8", "")
 
     def test_list_of_two_arrays_same_dtypes_one_disallowed(self):
         arrays = [
@@ -1024,20 +1078,183 @@ class Test_gate_dtypes(unittest.TestCase):
         ]
 
         with self.assertRaises(ValueError) as context:
-            iadt.gate_dtypes(arrays, ["int8"], ["uint8"])
+            iadt.gate_dtypes_strs(arrays, "int8", "uint8")
 
         assert "Got dtype 'uint8', which" in str(context.exception)
+
+
+class Test_gate_dtypes(unittest.TestCase):
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_standard_scenario_all_allowed(self):
+        dtypes = [np.dtype("uint8"), np.dtype("uint8"),
+                  np.dtype("float32"), np.dtype("int64")]
+        allowed = [np.dtype("uint8"), np.dtype("float32"),
+                   np.dtype("int64")]
+        disallowed = [np.dtype("bool")]
+
+        iadt.gate_dtypes(dtypes, allowed, disallowed)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_standard_scenario_one_disallowed(self):
+        dtypes = [np.dtype("uint8"), np.dtype("uint8"),
+                  np.dtype("float32"), np.dtype("int64")]
+        allowed = [np.dtype("uint8"), np.dtype("float32")]
+        disallowed = [np.dtype("bool"), np.dtype("int64")]
+
+        with self.assertRaises(ValueError) as context:
+            iadt.gate_dtypes(dtypes, allowed, disallowed)
+        assert "Got dtype 'int64'" in str(context.exception)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_standard_scenario_all_allowed_dtype_names(self):
+        dtypes = [np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")]
+        allowed = ["uint8", "float32", "int64"]
+        disallowed = ["bool"]
+
+        iadt.gate_dtypes(dtypes, allowed, disallowed)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_standard_scenario_one_disallowed_dtype_names(self):
+        dtypes = [np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")]
+        allowed = ["uint8", "float32"]
+        disallowed = ["bool", "int64"]
+
+        with self.assertRaises(ValueError) as context:
+            iadt.gate_dtypes(dtypes, allowed, disallowed)
+        assert "Got dtype 'int64'" in str(context.exception)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_standard_scenario_all_allowed_dtype_functions(self):
+        dtypes = [np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")]
+        allowed = [np.uint8, np.float32, np.int64]
+        disallowed = [np.bool_]
+
+        iadt.gate_dtypes(dtypes, allowed, disallowed)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_standard_scenario_one_disallowed_dtype_functions(self):
+        dtypes = [np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")]
+        allowed = [np.uint8, np.float32]
+        disallowed = [np.bool_, np.int64]
+
+        with self.assertRaises(ValueError) as context:
+            iadt.gate_dtypes(dtypes, allowed, disallowed)
+        assert "Got dtype 'int64'" in str(context.exception)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_single_array_allowed(self):
+        arr = np.zeros((1, 1, 3), dtype=np.int8)
+
+        iadt.gate_dtypes(arr, ["int8"], [])
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_single_array_disallowed(self):
+        arr = np.zeros((1, 1, 3), dtype=np.int8)
+
+        with self.assertRaises(ValueError) as context:
+            iadt.gate_dtypes(arr, ["uint8"], ["int8"])
+
+        assert "Got dtype 'int8'" in str(context.exception)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_list_of_single_array(self):
+        arr = np.zeros((1, 1, 3), dtype=np.int8)
+
+        iadt.gate_dtypes([arr], [np.dtype("int8")], [])
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_list_of_two_arrays_same_dtypes(self):
+        arrays = [
+            np.zeros((1, 1, 3), dtype=np.int8),
+            np.zeros((1, 1, 3), dtype=np.int8)
+        ]
+
+        iadt.gate_dtypes(arrays, [np.dtype("int8")], [])
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_list_of_two_arrays_different_dtypes(self):
+        arrays = [
+            np.zeros((1, 1, 3), dtype=np.int8),
+            np.zeros((1, 1, 3), dtype=np.uint8)
+        ]
+
+        iadt.gate_dtypes(arrays, ["int8", "uint8"], [])
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_list_of_two_arrays_same_dtypes_one_disallowed(self):
+        arrays = [
+            np.zeros((1, 1, 3), dtype=np.int8),
+            np.zeros((1, 1, 3), dtype=np.uint8)
+        ]
+
+        with self.assertRaises(ValueError) as context:
+            iadt.gate_dtypes(arrays, "int8", "uint8")
+
+        assert "Got dtype 'uint8', which" in str(context.exception)
+
+    @ensure_deprecation_warning("imgaug.dtypes.gate_dtypes_strs")
+    def test_single_dtype_function(self):
+        dtype = np.int8
+
+        iadt.gate_dtypes(dtype, ["int8"], [])
+
+
+class Test__gate_dtypes(unittest.TestCase):
+    def test_standard_scenario_all_allowed(self):
+        dtypes = {np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")}
+        allowed = {np.dtype("uint8"), np.dtype("float32"), np.dtype("int64")}
+        disallowed = {np.dtype("bool")}
+
+        iadt._gate_dtypes(dtypes, allowed, disallowed)
+
+    def test_standard_scenario_one_disallowed(self):
+        dtypes = {np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")}
+        allowed = {np.dtype("uint8"), np.dtype("float32")}
+        disallowed = {np.dtype("bool"), np.dtype("int64")}
+
+        with self.assertRaises(ValueError) as context:
+            iadt._gate_dtypes(dtypes, allowed, disallowed)
+        assert "Got dtype 'int64'" in str(context.exception)
+
+    def test_all_allowed_input_is_list_of_dtypes(self):
+        dtypes = {np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")}
+        allowed = {np.dtype("uint8"), np.dtype("float32"), np.dtype("int64")}
+        disallowed = {np.dtype("bool")}
+
+        iadt._gate_dtypes(dtypes, allowed, disallowed)
+
+    def test_all_allowed_input_is_list_of_dtype_functions(self):
+        dtypes = {np.dtype("uint8"), np.dtype("uint8"), np.dtype("float32"),
+                  np.dtype("int64")}
+        allowed = {np.dtype("uint8"), np.dtype("float32"), np.dtype("int64")}
+        disallowed = {np.dtype("bool")}
+
+        iadt._gate_dtypes(dtypes, allowed, disallowed)
+
+    def test_empty_set_as_dtypes(self):
+        dtypes = set()
+        allowed = {np.dtype("uint8"), np.dtype("float32"), np.dtype("int64")}
+        disallowed = {np.dtype("bool")}
+
+        iadt._gate_dtypes(dtypes, allowed, disallowed)
 
     def test_single_dtype_allowed(self):
         dtype = np.dtype("int8")
 
-        iadt.gate_dtypes(dtype, ["int8"], [])
+        iadt._gate_dtypes({dtype}, {np.dtype("int8")}, None)
 
     def test_single_dtype_disallowed(self):
         dtype = np.dtype("int8")
 
         with self.assertRaises(ValueError) as context:
-            iadt.gate_dtypes(dtype, ["uint8"], ["int8"])
+            iadt._gate_dtypes({dtype}, {np.dtype("uint8")}, {np.dtype("int8")})
 
         assert "Got dtype 'int8', which" in str(context.exception)
 
@@ -1050,59 +1267,51 @@ class Test_gate_dtypes(unittest.TestCase):
         dummy_augmenter = _DummyAugmenter()
 
         with self.assertRaises(ValueError) as context:
-            iadt.gate_dtypes(dtype,
-                             ["uint8"],
-                             ["int8"],
-                             augmenter=dummy_augmenter)
+            iadt._gate_dtypes(
+                {dtype},
+                {np.dtype("uint8")},
+                {np.dtype("int8")},
+                augmenter=dummy_augmenter
+            )
 
         assert "Got dtype 'int8' in augmenter 'foo'" in str(context.exception)
 
-    def test_single_dtype_function(self):
-        dtype = np.int8
-
-        iadt.gate_dtypes(dtype, ["int8"], [])
-
-    def test_single_dtype_name(self):
-        dtype = "int8"
-
-        iadt.gate_dtypes(dtype, ["int8"], [])
-
     def test_list_of_two_dtypes_both_same(self):
-        dtypes = [
+        dtypes = {
             np.dtype("int8"),
             np.dtype("int8")
-        ]
+        }
 
-        iadt.gate_dtypes(dtypes, ["int8"], [])
+        iadt._gate_dtypes(dtypes, {np.dtype("int8")}, None)
 
     def test_list_of_two_dtypes_both_different(self):
-        dtypes = [
+        dtypes = {
             np.dtype("int8"),
             np.dtype("uint8")
-        ]
+        }
 
-        iadt.gate_dtypes(dtypes, ["int8", "uint8"], [])
+        iadt._gate_dtypes(dtypes, {np.dtype("int8"), np.dtype("uint8")}, None)
 
     def test_list_of_two_dtypes_both_different_one_disallowed(self):
-        dtypes = [
+        dtypes = {
             np.dtype("int8"),
             np.dtype("uint8")
-        ]
+        }
 
         with self.assertRaises(ValueError) as context:
-            iadt.gate_dtypes(dtypes, ["int8"], ["uint8"])
+            iadt._gate_dtypes(dtypes, {np.dtype("int8")}, {np.dtype("uint8")})
 
         assert "Got dtype 'uint8', which" in str(context.exception)
 
     def test_dtype_not_in_allowed_or_disallowed(self):
-        dtypes = [
+        dtypes = {
             np.dtype("int8"),
             np.dtype("float32")
-        ]
+        }
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")
-            iadt.gate_dtypes(dtypes, ["int8"], ["uint8"])
+            iadt._gate_dtypes(dtypes, {np.dtype("int8")}, {np.dtype("uint8")})
 
         assert len(caught_warnings) == 1
         assert (
@@ -1113,18 +1322,20 @@ class Test_gate_dtypes(unittest.TestCase):
             def __init__(self):
                 self.name = "foo"
 
-        dtypes = [
+        dtypes = {
             np.dtype("int8"),
             np.dtype("float32")
-        ]
+        }
         dummy_augmenter = _DummyAugmenter()
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             warnings.simplefilter("always")
-            iadt.gate_dtypes(dtypes,
-                             ["int8"],
-                             ["uint8"],
-                             augmenter=dummy_augmenter)
+            iadt._gate_dtypes(
+                dtypes,
+                {np.dtype("int8")},
+                {np.dtype("uint8")},
+                augmenter=dummy_augmenter
+            )
 
         assert len(caught_warnings) == 1
         assert (

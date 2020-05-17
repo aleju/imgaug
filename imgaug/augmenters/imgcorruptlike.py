@@ -159,15 +159,7 @@ def _call_imgcorrupt_func(fname, seed, convert_to_pil, *args, **kwargs):
 
     image = args[0]
 
-    iadt.gate_dtypes(
-        image,
-        allowed=["uint8"],
-        disallowed=["bool",
-                    "uint16", "uint32", "uint64", "uint128", "uint256",
-                    "int8", "int16", "int32", "int64", "int128", "int256",
-                    "float16", "float32", "float64", "float96", "float128",
-                    "float256"],
-        augmenter=None)
+    iadt.allow_only_uint8({image.dtype})
 
     input_shape = image.shape
 

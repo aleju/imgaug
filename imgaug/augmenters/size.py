@@ -42,6 +42,7 @@ import imgaug as ia
 from imgaug.imgaug import _normalize_cv2_input_arr_
 from . import meta
 from .. import parameters as iap
+from .. import dtypes as iadt
 
 
 def _crop_trbl_to_xyxy(shape, top, right, bottom, left, prevent_zero_size=True):
@@ -429,7 +430,6 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         ``W'=W+left+right``.
 
     """
-    import imgaug.dtypes as iadt
 
     _assert_two_or_three_dims(arr)
     assert all([v >= 0 for v in [top, right, bottom, left]]), (
@@ -444,7 +444,7 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         # without the if here there are crashes for float128, e.g. if
         # cval is an int (just using float(cval) seems to not be accurate
         # enough)
-        if arr.dtype.name == "float128":
+        if arr.dtype == iadt._FLOAT128_DTYPE:
             cval = np.float128(cval)  # pylint: disable=no-member
 
         if is_multi_cval:
@@ -480,8 +480,9 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
         # these datatypes all simply generate a "TypeError: src data type = X
         # is not supported" error
         bad_datatype_cv2 = (
-            arr.dtype.name
-            in ["uint32", "uint64", "int64", "float16", "float128", "bool"]
+            arr.dtype in iadt._convert_dtype_strs_to_types(
+                "uint32 uint64 int64 float16 float128 bool"
+            )
         )
 
         # OpenCV turns the channel axis for arrays with 0 channels to 512

@@ -166,10 +166,10 @@ def blend_alpha_(image_fg, image_bg, alpha, eps=1e-2):
         "Expected foreground and background images to have the same dtype "
         "kind. Got %s and %s." % (image_fg.dtype.kind, image_bg.dtype.kind))
     # TODO switch to gate_dtypes()
-    assert image_fg.dtype.name not in ["float128"], (
+    assert image_fg.dtype != iadt._FLOAT128_DTYPE, (
         "Foreground image was float128, but blend_alpha_() cannot handle that "
         "dtype.")
-    assert image_bg.dtype.name not in ["float128"], (
+    assert image_bg.dtype != iadt._FLOAT128_DTYPE, (
         "Background image was float128, but blend_alpha_() cannot handle that "
         "dtype.")
 
@@ -228,8 +228,8 @@ def blend_alpha_(image_fg, image_bg, alpha, eps=1e-2):
             "Expected 'alpha' value(s) to be in the interval [0.0, 1.0]. "
             "Got min %.4f and max %.4f." % (np.min(alpha), np.max(alpha)))
 
-    both_uint8 = (image_fg.dtype.name == "uint8"
-                  and image_bg.dtype.name == "uint8")
+    uint8 = iadt._UINT8_DTYPE
+    both_uint8 = (image_fg.dtype, image_bg.dtype) == (uint8, uint8)
     if both_uint8:
         if alpha.size == 1:
             image_blend = _blend_alpha_uint8_single_alpha_(
@@ -352,11 +352,11 @@ def _blend_alpha_non_uint8(image_fg, image_bg, alpha):
     isize = max(isize, 4)
     dt_blend = np.dtype("f%d" % (isize,))
 
-    if alpha.dtype.name != dt_blend.name:
+    if alpha.dtype != dt_blend:
         alpha = alpha.astype(dt_blend)
-    if image_fg.dtype.name != dt_blend.name:
+    if image_fg.dtype != dt_blend:
         image_fg = image_fg.astype(dt_blend)
-    if image_bg.dtype.name != dt_blend.name:
+    if image_bg.dtype != dt_blend:
         image_bg = image_bg.astype(dt_blend)
 
     # the following is

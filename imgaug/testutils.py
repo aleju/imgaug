@@ -13,6 +13,7 @@ import shutil
 import re
 import sys
 import importlib
+import functools
 
 import numpy as np
 import six.moves as sm
@@ -450,3 +451,37 @@ def remove_prefetching(param):
     if isinstance(param, iap.AutoPrefetcher):
         return remove_prefetching(param.other_param)
     return param
+
+
+def ensure_deprecation_warning(expected_text):
+    """Ensure that a decorated function raises a deprecation warning.
+
+    Added in 0.5.0.
+
+    Parameters
+    ----------
+    expected_text : str
+        Expected text fragment to be found in warning's text.
+
+    Returns
+    -------
+    callable
+        Decorated function.
+
+    """
+    def _wrapper_with_args(func):
+        @functools.wraps(func)
+        def _wrapper(*args, **kwargs):
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                func(*args, **kwargs)
+
+            assert len(caught_warnings) == 1, (
+                "Expected 1 warning, got %d." % (len(caught_warnings),)
+            )
+            assert (
+                expected_text
+                in str(caught_warnings[-1].message)
+            )
+
+        return _wrapper
+    return _wrapper_with_args
