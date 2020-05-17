@@ -75,6 +75,15 @@ def _wrap_leafs_of_param_in_prefetchers(param, nb_prefetch):
 
 # Added in 0.5.0.
 def _wrap_leafs_of_param_in_prefetchers_recursive(param, nb_prefetch):
+    # Do not descent into AutoPrefetcher, otherwise we risk turning an
+    # AutoPrefetcher(X) into AutoPrefetcher(AutoPrefetcher(X)) if X is
+    # prefetchable
+    if isinstance(param, AutoPrefetcher):
+        # report did_wrap_any_child=True here, so that parent parameters
+        # are not wrapped in prefetchers, which could lead to ugly scenarios
+        # like AutoPrefetcher(Normal(AutoPrefetcher(Uniform(-1.0, 1.0))),
+        return param, True
+
     if isinstance(param, (list, tuple)):
         result = []
         did_wrap_any_child = False
