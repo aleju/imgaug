@@ -1,4 +1,4 @@
-# Improved Performance of dtype checks #???
+# Improved Performance of dtype checks #663
 
 This patch improves the performance of dtype checks
 throughout the library. The new method verifies input
