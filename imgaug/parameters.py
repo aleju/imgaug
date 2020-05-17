@@ -1116,7 +1116,7 @@ class Choice(StochasticParameter):
     @property
     def prefetchable(self):
         """See :func:`StochasticParameter.prefetchable`."""
-        return True
+        return self.replace
 
     def _draw_samples(self, size, random_state):
         if any([isinstance(a_i, StochasticParameter) for a_i in self.a]):
