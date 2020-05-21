@@ -23,6 +23,8 @@ jobs:
           - os: macos-latest
             python-version: 3.7
           - os: windows-latest
+            python-version: 2.7  # causes a shapely install error
+          - os: windows-latest
             python-version: 3.5
           - os: windows-latest
             python-version: 3.6
