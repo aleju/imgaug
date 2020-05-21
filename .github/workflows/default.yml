@@ -136,6 +136,8 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         flags: unittests
-        env_vars: OS,PYTHON
+        # right now the env_vars argument causes a warning, see
+        # https://github.com/codecov/codecov-action/issues/80
+        #env_vars: OS,PYTHON
         name: codecov-umbrella
         fail_ci_if_error: false
