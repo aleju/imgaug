@@ -1,4 +1,4 @@
-name: imgaug run tests
+name: PR or Push
 
 on:
   push:
