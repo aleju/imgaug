@@ -1,5 +1,5 @@
 # This action generates wheel files for python 2 and 3.
-name: wheels
+name: build wheels
 
 on:
   push:
