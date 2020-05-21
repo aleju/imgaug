@@ -18,6 +18,8 @@ jobs:
         #     is required for many test cases. Not having it will cause the
         #     test to error, even if the tested function is correct.
         os: [ubuntu-latest, macos-latest]
+        # see supported versions at
+        # https://raw.githubusercontent.com/actions/python-versions/master/versions-manifest.json
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         # test only 2.7 and the latest 3.x on mac
         exclude:
