@@ -3,6 +3,8 @@ name: wheels
 
 on:
   push:
+    branches:
+      - 'master'
 
 jobs:
   build:
