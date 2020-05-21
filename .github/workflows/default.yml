@@ -12,23 +12,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # windows-latest is currently excluded, because
+        # (a) In 2.7 shapely causes an install error
+        # (b) numpy seems to not know float128 in windows, but that datatype
+        #     is required for many test cases. Not having it will cause the
+        #     test to error, even if the tested function is correct.
+        os: [ubuntu-latest, macos-latest]
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-        # test only 2.7 and the latest 3.x on mac/windows
+        # test only 2.7 and the latest 3.x on mac
         exclude:
           - os: macos-latest
             python-version: 3.5
           - os: macos-latest
             python-version: 3.6
           - os: macos-latest
-            python-version: 3.7
-          - os: windows-latest
-            python-version: 2.7  # causes a shapely install error
-          - os: windows-latest
-            python-version: 3.5
-          - os: windows-latest
-            python-version: 3.6
-          - os: windows-latest
             python-version: 3.7
     env:
       OS: ${{ matrix.os }}
