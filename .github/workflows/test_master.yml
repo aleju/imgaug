@@ -1,7 +1,7 @@
 # This is effectively identical to pr_or_push.yml, with the exceptions of:
 # (1) This is only executed upon pushes to master
 # (2) This executes tests for more different python versions
-name: master
+name: test master
 
 on:
   push:
