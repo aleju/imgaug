@@ -1,0 +1,99 @@
+# This action generates wheel files for python 2 and 3.
+name: build wheels
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # windows-latest is currently excluded, because
+        # (a) In 2.7 shapely causes an install error
+        # (b) numpy seems to not know float128 in windows, but that datatype
+        #     is required for many test cases. Not having it will cause the
+        #     test to error, even if the tested function is correct.
+        os: [ubuntu-latest, macos-latest]
+        # see supported versions at
+        # https://raw.githubusercontent.com/actions/python-versions/master/versions-manifest.json
+        python-version: [2.7, 3.8]
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+    steps:
+    - uses: actions/checkout@v2
+
+    # ----------------
+    # Install python and base packages
+    # ----------------
+    - name: Set up Python ${{ matrix.python-version }} on ${{ runner.os }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+
+    - name: Upgrade basic packages
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+
+    # ----------------
+    # Set up pip cache
+    # ----------------
+    - name: Get Date
+      id: get-date
+      run: |
+        echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+      shell: bash
+
+    - uses: actions/cache@v1
+      if: startsWith(runner.os, 'Linux')
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - uses: actions/cache@v1
+      if: startsWith(runner.os, 'macOS')
+      with:
+        path: ~/Library/Caches/pip
+        key: ${{ runner.os }}-pip-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - uses: actions/cache@v1
+      if: startsWith(runner.os, 'Windows')
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # ----------------
+    # Install dependencies
+    # ----------------
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    # ----------------
+    # Generate wheels
+    # ----------------
+    - name: Generate wheels
+      run: |
+        python setup.py sdist
+        python setup.py bdist_wheel
+
+    # ----------------
+    # Upload artifacts
+    # ----------------
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{ runner.os }}-py${{ matrix.python-version }}-dist
+        path: dist/

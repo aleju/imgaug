@@ -60,9 +60,9 @@ script:
   - python -m pytest --verbose --xdoctest-modules --ignore="test/run_all.py" -s --durations=50 -Walways
   - coverage run --source imgaug -m pytest --verbose --xdoctest-modules --ignore="test/run_all.py" -Walways
 
-
+# some steps are now done in github action
 after_success:
-  - codecov -t feeff9b2-3750-4246-befb-8cde60dc28aa
+#  - codecov -t feeff9b2-3750-4246-befb-8cde60dc28aa
   - coverage xml
   - python-codacy-coverage -r coverage.xml
-  - coverage report
+#  - coverage report

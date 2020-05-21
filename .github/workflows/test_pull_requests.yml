@@ -1,0 +1,145 @@
+name: test pull requests
+
+on:
+  push:
+    branches:
+      - '!master'
+  pull_request:
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # windows-latest is currently excluded, because
+        # (a) In 2.7 shapely causes an install error
+        # (b) numpy seems to not know float128 in windows, but that datatype
+        #     is required for many test cases. Not having it will cause the
+        #     test to error, even if the tested function is correct.
+        os: [ubuntu-latest, macos-latest]
+        # see supported versions at
+        # https://raw.githubusercontent.com/actions/python-versions/master/versions-manifest.json
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        # test only 2.7 and the latest 3.x on mac
+        exclude:
+          - os: macos-latest
+            python-version: 3.5
+          - os: macos-latest
+            python-version: 3.6
+          - os: macos-latest
+            python-version: 3.7
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+    steps:
+    - uses: actions/checkout@v2
+
+    # ----------------
+    # Install python and base packages
+    # ----------------
+    - name: Set up Python ${{ matrix.python-version }} on ${{ runner.os }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+
+    - name: Upgrade basic packages
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+
+    # ----------------
+    # Set up pip cache
+    # ----------------
+    - name: Get Date
+      id: get-date
+      run: |
+        echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+      shell: bash
+
+    - uses: actions/cache@v1
+      if: startsWith(runner.os, 'Linux')
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - uses: actions/cache@v1
+      if: startsWith(runner.os, 'macOS')
+      with:
+        path: ~/Library/Caches/pip
+        key: ${{ runner.os }}-pip-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - uses: actions/cache@v1
+      if: startsWith(runner.os, 'Windows')
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # ----------------
+    # Install dependencies
+    # ----------------
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Install test dependencies
+      run: |
+        pip install --upgrade -r test/requirements.txt
+
+    - name: Install further test tools
+      run: |
+        pip install coverage pytest-cov flake8
+
+    # ----------------
+    # Install library
+    # ----------------
+    - name: Install library
+      run: |
+        pip install .
+
+    # ----------------
+    # Run checks and tests
+    # ----------------
+    - name: Run flake8
+      run: |
+        flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics --exclude=".svn,CVS,.bzr,.hg,.git,__pycache__,poly_point_isect.py"
+
+    - name: Run tests
+      run: |
+        python -m pytest --verbose --xdoctest-modules -s --durations=50 -Walways
+
+    # ----------------
+    # Code coverage reports
+    # ----------------
+    # Add 'coverage html -d out_foldername' to add html reports
+    - name: Generate code coverage report
+      run: |
+        coverage run --source imgaug -m pytest --verbose
+        coverage xml
+        coverage report
+
+    #- name: Upload coverage report to codacy
+    #  uses: codacy/codacy-coverage-reporter-action@master
+    #  with:
+    #    project-token: ${{ secrets.CODACY_TOKEN }}
+    #    coverage-reports: coverage.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
+        # right now the env_vars argument causes a warning, see
+        # https://github.com/codecov/codecov-action/issues/80
+        #env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: false
