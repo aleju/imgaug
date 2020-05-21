@@ -1,4 +1,4 @@
-name: PR or Push
+name: test pull requests
 
 on:
   push:
