@@ -1,5 +1,5 @@
 """Utility functions used in augmentable modules."""
-from __future__ import print_function, absolute_import, division
+from __future__ import print_function, division, absolute_import
 import copy as copylib
 import numpy as np
 import six.moves as sm
