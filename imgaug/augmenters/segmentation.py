@@ -37,7 +37,7 @@ _REPLACE_SEGMENTS_NP_BELOW_NSEG = 25
 _SLIC_SUPPORTS_START_LABEL = (
     tuple(map(int, skimage.__version__.split(".")[0:2]))
     >= (0, 17)
-)
+)  # Added in 0.5.0.
 
 
 # TODO merge this into imresize?
