@@ -136,9 +136,11 @@ jobs:
     # Code coverage reports
     # ----------------
     # Add 'coverage html -d out_foldername' to add html reports
+    # Dont deactivate -Walways here, otherwise some tests fail as warnings
+    # are no longer produced.
     - name: Generate code coverage report
       run: |
-        coverage run --source imgaug -m pytest --verbose
+        coverage run --source imgaug -m pytest --verbose -Walways
         coverage xml
         coverage report
 
