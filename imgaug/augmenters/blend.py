@@ -106,14 +106,14 @@ def blend_alpha_(image_fg, image_bg, alpha, eps=1e-2):
         * ``uint8``: yes; fully tested
         * ``uint16``: yes; fully tested
         * ``uint32``: yes; fully tested
-        * ``uint64``: yes; fully tested (1)
+        * ``uint64``: limited; fully tested (1)
         * ``int8``: yes; fully tested
         * ``int16``: yes; fully tested
         * ``int32``: yes; fully tested
-        * ``int64``: yes; fully tested (1)
+        * ``int64``: limited; fully tested (1)
         * ``float16``: yes; fully tested
         * ``float32``: yes; fully tested
-        * ``float64``: yes; fully tested (1)
+        * ``float64``: limited; fully tested (1)
         * ``float128``: no (2)
         * ``bool``: yes; fully tested (2)
 
@@ -122,6 +122,8 @@ def blend_alpha_(image_fg, image_bg, alpha, eps=1e-2):
               true 128 bits and hence not twice as much resolution. It is
               possible that these dtypes result in inaccuracies, though the
               tests did not indicate that.
+              Note that ``float128`` support is required for these dtypes
+              and thus they are not expected to work on Windows machines.
         - (2) Not available due to the input dtype having to be increased to
               an equivalent float dtype with two times the input resolution.
         - (3) Mapped internally to ``float16``.
@@ -355,7 +357,17 @@ def _blend_alpha_non_uint8(image_fg, image_bg, alpha):
     # faster than float16
     isize = dt_images.itemsize * 2
     isize = max(isize, 4)
-    dt_blend = np.dtype("f%d" % (isize,))
+    dt_name = "f%d" % (isize,)
+
+    # check if float128 (16*8=128) is supported
+    assert dt_name != "f16" or hasattr(np, "float128"), (
+        "The input images use dtype '%s', for which alpha-blending "
+        "requires float128 support to compute accurately its output, "
+        "but float128 seems to not be available on the current "
+        "system." % (image_fg.dtype.name,)
+    )
+
+    dt_blend = np.dtype(dt_name)
 
     if alpha.dtype != dt_blend:
         alpha = alpha.astype(dt_blend)
