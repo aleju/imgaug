@@ -34,6 +34,11 @@ from .. import dtypes as iadt
 _REPLACE_SEGMENTS_NP_BELOW_AREA = 64 * 64
 _REPLACE_SEGMENTS_NP_BELOW_NSEG = 25
 
+_SLIC_SUPPORTS_START_LABEL = (
+    tuple(map(int, skimage.__version__.split(".")[0:2]))
+    >= (0, 17)
+)  # Added in 0.5.0.
+
 
 # TODO merge this into imresize?
 def _ensure_image_max_size(image, max_size, interpolation):
@@ -273,8 +278,24 @@ class Superpixels(meta.Augmenter):
             image = _ensure_image_max_size(image, self.max_size,
                                            self.interpolation)
 
+            # skimage 0.17+ introduces the start_label arg and produces a
+            # warning if it is not provided. We use start_label=0 here
+            # (old skimage style) (not entirely sure if =0 is required or =1
+            # could be used here too, but *seems* like both could work),
+            # but skimage will change the default start_label to 1 in the
+            # future.
+            kwargs = (
+                {"start_label": 0}
+                if _SLIC_SUPPORTS_START_LABEL
+                else {}
+            )
+
             segments = skimage.segmentation.slic(
-                image, n_segments=n_segments_samples[i], compactness=10)
+                image,
+                n_segments=n_segments_samples[i],
+                compactness=10,
+                **kwargs
+            )
 
             image_aug = replace_segments_(
                 image, segments, replace_samples > 0.5
