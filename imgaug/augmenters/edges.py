@@ -126,7 +126,7 @@ class RandomColorsBinaryImageColorizer(IBinaryImageColorizer):
         assert image_original.shape[-1] in [1, 3, 4], (
             "Expected original image to have 1, 3 or 4 channels. "
             "Got %d channels." % (image_original.shape[-1],))
-        assert image_original.dtype.name == "uint8", (
+        assert image_original.dtype == iadt._UINT8_DTYPE, (
             "Expected original image to have dtype uint8, got dtype %s." % (
                 image_original.dtype.name))
 
@@ -421,17 +421,7 @@ class Canny(meta.Augmenter):
 
         images = batch.images
 
-        iadt.gate_dtypes(images,
-                         allowed=["uint8"],
-                         disallowed=[
-                             "bool",
-                             "uint16", "uint32", "uint64", "uint128",
-                             "uint256",
-                             "int8", "int16", "int32", "int64", "int128",
-                             "int256",
-                             "float32", "float64", "float96", "float128",
-                             "float256"],
-                         augmenter=self)
+        iadt.allow_only_uint8(images, augmenter=self)
 
         rss = random_state.duplicate(len(images))
         samples = self._draw_samples(images, rss[-1])

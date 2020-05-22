@@ -103,16 +103,10 @@ def convolve_(image, kernel):
         Might have been modified in-place.
 
     """
-    iadt.gate_dtypes(
-        image,
-        allowed=["bool",
-                 "uint8", "uint16",
-                 "int8", "int16",
-                 "float16", "float32", "float64"],
-        disallowed=["uint32", "uint64", "uint128", "uint256",
-                    "int32", "int64", "int128", "int256",
-                    "float96", "float128", "float256"],
-        augmenter=None
+    iadt.gate_dtypes_strs(
+        {image.dtype},
+        allowed="bool uint8 uint16 int8 int16 float16 float32 float64",
+        disallowed="uint32 uint64 int32 int64 float128"
     )
 
     # currently we don't have to worry here about alignemnt with
@@ -125,9 +119,9 @@ def convolve_(image, kernel):
     nb_channels = 1 if len(input_shape) == 2 else input_shape[2]
 
     input_dtype = image.dtype
-    if image.dtype.name in ["bool", "float16"]:
+    if image.dtype in {iadt._BOOL_DTYPE, iadt._FLOAT16_DTYPE}:
         image = image.astype(np.float32, copy=False)
-    elif image.dtype.name == "int8":
+    elif image.dtype == iadt._INT8_DTYPE:
         image = image.astype(np.int16, copy=False)
 
     if ia.is_np_array(kernel):
@@ -173,9 +167,9 @@ def convolve_(image, kernel):
                     dst=arr_channel
                 )
 
-    if input_dtype.name == "bool":
+    if input_dtype.kind == "b":
         image = image > 0.5
-    elif input_dtype.name in ["int8", "float16"]:
+    elif input_dtype in {iadt._INT8_DTYPE, iadt._FLOAT16_DTYPE}:
         image = iadt.restore_dtypes_(image, input_dtype)
 
     if len(input_shape) == 3 and image.ndim == 2:

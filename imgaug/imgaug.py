@@ -1503,27 +1503,20 @@ def imresize_many_images(images, sizes=None, interpolation=None):
     # TODO find more beautiful way to avoid circular imports
     from . import dtypes as iadt
     if inter == cv2.INTER_NEAREST:
-        iadt.gate_dtypes(
+        iadt.gate_dtypes_strs(
             images,
-            allowed=["bool",
-                     "uint8", "uint16",
-                     "int8", "int16", "int32",
-                     "float16", "float32", "float64"],
-            disallowed=["uint32", "uint64", "uint128", "uint256",
-                        "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=None)
+            allowed="bool uint8 uint16 int8 int16 int32 "
+                    "float16 float32 float64",
+            disallowed="uint32 uint64 int64 float128",
+            augmenter=None
+        )
     else:
-        iadt.gate_dtypes(
+        iadt.gate_dtypes_strs(
             images,
-            allowed=["bool",
-                     "uint8", "uint16",
-                     "int8", "int16",
-                     "float16", "float32", "float64"],
-            disallowed=["uint32", "uint64", "uint128", "uint256",
-                        "int32", "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=None)
+            allowed="bool uint8 uint16 int8 int16 float16 float32 float64",
+            disallowed="uint32 uint64 int32 int64 float128",
+            augmenter=None
+        )
 
     result_shape = (nb_images, height_target, width_target)
     if nb_channels is not None:
@@ -1698,15 +1691,12 @@ def pool(arr, block_size, func, pad_mode="constant", pad_cval=0,
     if arr.size == 0:
         return np.copy(arr)
 
-    iadt.gate_dtypes(arr,
-                     allowed=["bool",
-                              "uint8", "uint16", "uint32",
-                              "int8", "int16", "int32",
-                              "float16", "float32", "float64", "float128"],
-                     disallowed=["uint64", "uint128", "uint256",
-                                 "int64", "int128", "int256",
-                                 "float256"],
-                     augmenter=None)
+    iadt.gate_dtypes_strs(
+        {arr.dtype},
+        allowed="bool uint8 uint16 uint32 int8 int16 int32 "
+                "float16 float32 float64 float128",
+        disallowed="uint64 int64"
+    )
 
     if cval is not None:
         warn_deprecated("`cval` is a deprecated argument in pool(). "

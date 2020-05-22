@@ -248,16 +248,7 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
     if 0 in image.shape[0:2]:
         return image
 
-    iadt.gate_dtypes(
-        image,
-        allowed=["uint8"],
-        disallowed=[
-            "bool",
-            "uint16", "uint32", "uint64", "uint128", "uint256",
-            "int32", "int64", "int128", "int256",
-            "float16", "float32", "float64", "float96", "float128",
-            "float256"],
-        augmenter=None)
+    iadt.allow_only_uint8({image.dtype})
 
     for arg_name in ["to_colorspace", "from_colorspace"]:
         assert locals()[arg_name] in CSPACE_ALL, (
@@ -299,8 +290,6 @@ def change_colorspace_(image, to_colorspace, from_colorspace=CSPACE_RGB):
 
         image_aug = cv2.cvtColor(image_aug, from2rgb_var, dst=dst1)
         image_aug = cv2.cvtColor(image_aug, rgb2to_var, dst=dst2)
-
-    assert image_aug.dtype.name == "uint8"
 
     # for grayscale: covnert from (H, W) to (H, W, 3)
     if len(image_aug.shape) == 2:
@@ -932,10 +921,8 @@ def change_color_temperatures_(images, kelvins, from_colorspaces=CSPACE_RGB):
                                        to_colorspace=CSPACE_RGB,
                                        from_colorspace=from_colorspace)
 
-        # we should always have uint8 here as only that is accepted by
+        # we always have uint8 at this point as only that is accepted by
         # convert_colorspace
-        assert image_rgb.dtype.name == "uint8", (
-            "Expected dtype uint8, got %s." % (image_rgb.dtype.name,))
 
         # all multipliers are in the range [0.0, 1.0], hence we can afford to
         # not clip here
@@ -3484,11 +3471,10 @@ def quantize_kmeans(arr, nb_clusters, nb_max_iter=10, eps=1.0):
     that the six remaining colors do have to appear in the input image.
 
     """
+    iadt.allow_only_uint8({arr.dtype})
     assert arr.ndim in [2, 3], (
         "Expected two- or three-dimensional array shape, "
         "got shape %s." % (arr.shape,))
-    assert arr.dtype.name == "uint8", "Expected uint8 array, got %s." % (
-        arr.dtype.name,)
     assert 2 <= nb_clusters <= 256, (
         "Expected nb_clusters to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_clusters,))
@@ -3961,8 +3947,7 @@ def quantize_uniform_(arr, nb_bins, to_bin_centers=True):
         return arr
 
     # TODO remove dtype check here? apply_lut_() does that already
-    assert arr.dtype.name == "uint8", "Expected uint8 image, got %s." % (
-        arr.dtype.name,)
+    iadt.allow_only_uint8({arr.dtype})
     assert 2 <= nb_bins <= 256, (
         "Expected nb_bins to be in the discrete interval [2..256]. "
         "Got a value of %d instead." % (nb_bins,))

@@ -42,12 +42,12 @@ from .. import dtypes as iadt
 from .. import random as iarandom
 
 
-_VALID_DTYPES_CV2_ORDER_0 = {"uint8", "uint16", "int8", "int16", "int32",
-                             "float16", "float32", "float64",
-                             "bool"}
-_VALID_DTYPES_CV2_ORDER_NOT_0 = {"uint8", "uint16", "int8", "int16",
-                                 "float16", "float32", "float64",
-                                 "bool"}
+_WARP_AFF_VALID_DTYPES_CV2_ORDER_0 = iadt._convert_dtype_strs_to_types(
+    "uint8 uint16 int8 int16 int32 float16 float32 float64 bool"
+)  # Added in 0.5.0.
+_WARP_AFF_VALID_DTYPES_CV2_ORDER_NOT_0 = iadt._convert_dtype_strs_to_types(
+    "uint8 uint16 int8 int16 float16 float32 float64 bool"
+)  # Added in 0.5.0.
 
 # skimage | cv2
 # 0       | cv2.INTER_NEAREST
@@ -178,9 +178,11 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
 
     cv2_bad_order = order not in [0, 1, 3]
     if order == 0:
-        cv2_bad_dtype = (arr.dtype.name not in _VALID_DTYPES_CV2_ORDER_0)
+        cv2_bad_dtype = (arr.dtype
+                         not in _WARP_AFF_VALID_DTYPES_CV2_ORDER_0)
     else:
-        cv2_bad_dtype = (arr.dtype.name not in _VALID_DTYPES_CV2_ORDER_NOT_0)
+        cv2_bad_dtype = (arr.dtype
+                         not in _WARP_AFF_VALID_DTYPES_CV2_ORDER_NOT_0)
     cv2_impossible = cv2_bad_order or cv2_bad_dtype
     use_skimage = (
         backend == "skimage"
@@ -219,16 +221,12 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
 
 
 def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
-    iadt.gate_dtypes(
-        arr,
-        allowed=["bool",
-                 "uint8", "uint16", "uint32",
-                 "int8", "int16", "int32",
-                 "float16", "float32", "float64"],
-        disallowed=["uint64", "uint128", "uint256",
-                    "int64", "int128", "int256",
-                    "float96", "float128", "float256"],
-        augmenter=None)
+    iadt.gate_dtypes_strs(
+        {arr.dtype},
+        allowed="bool uint8 uint16 uint32 int8 int16 int32 "
+                "float16 float32 float64",
+        disallowed="uint64 int64 float128"
+    )
 
     input_dtype = arr.dtype
 
@@ -252,27 +250,22 @@ def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
 
 
 def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
-    iadt.gate_dtypes(
-        arr,
-        allowed=["bool",
-                 "uint8", "uint16",
-                 "int8", "int16", "int32",
-                 "float16", "float32", "float64"],
-        disallowed=["uint32", "uint64", "uint128", "uint256",
-                    "int64", "int128", "int256",
-                    "float96", "float128", "float256"],
-        augmenter=None)
+    iadt.gate_dtypes_strs(
+        {arr.dtype},
+        allowed="bool uint8 uint16 int8 int16 int32 float16 float32 float64",
+        disallowed="uint32 uint64 int64 float128"
+    )
 
     if order != 0:
-        assert arr.dtype.name != "int32", (
+        assert arr.dtype != iadt._INT32_DTYPE, (
             "Affine only supports cv2-based transformations of int32 "
             "arrays when using order=0, but order was set to %d." % (
                 order,))
 
     input_dtype = arr.dtype
-    if input_dtype.name in ["bool", "float16"]:
+    if input_dtype in {iadt._BOOL_DTYPE, iadt._FLOAT16_DTYPE}:
         arr = arr.astype(np.float32)
-    elif input_dtype.name == "int8" and order != 0:
+    elif input_dtype == iadt._INT8_DTYPE and order != 0:
         arr = arr.astype(np.int16)
 
     dsize = (
@@ -319,9 +312,9 @@ def _warp_affine_arr_cv2(arr, matrix, cval, mode, order, output_shape):
         ]
         image_warped = np.stack(image_warped, axis=-1)
 
-    if input_dtype.name == "bool":
+    if input_dtype.kind == "b":
         image_warped = image_warped > 0.5
-    elif input_dtype.name in ["int8", "float16"]:
+    elif input_dtype in {iadt._INT8_DTYPE, iadt._FLOAT16_DTYPE}:
         image_warped = iadt.restore_dtypes_(image_warped, input_dtype)
 
     return image_warped
@@ -2920,9 +2913,11 @@ class AffineCv2(meta.Augmenter):
                 (nb_samples,), random_state=rngs[5])
             translate_samples = (translate_samples, translate_samples)
 
-        valid_dts = ["int32", "int64", "float32", "float64"]
+        valid_dts = iadt._convert_dtype_strs_to_types(
+            "int32 int64 float32 float64"
+        )
         for i in sm.xrange(2):
-            assert translate_samples[i].dtype.name in valid_dts, (
+            assert translate_samples[i].dtype in valid_dts, (
                 "Expected translate_samples to have any dtype of %s. "
                 "Got %s." % (str(valid_dts), translate_samples[i].dtype.name,))
 
@@ -3182,16 +3177,13 @@ class PiecewiseAffine(meta.Augmenter):
 
     # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
-        iadt.gate_dtypes(
+        iadt.gate_dtypes_strs(
             images,
-            allowed=["bool",
-                     "uint8", "uint16", "uint32",
-                     "int8", "int16", "int32",
-                     "float16", "float32", "float64"],
-            disallowed=["uint64", "uint128", "uint256",
-                        "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=self)
+            allowed="bool uint8 uint16 uint32 int8 int16 int32 "
+                    "float16 float32 float64",
+            disallowed="uint64 int64 float128",
+            augmenter=self
+        )
 
         result = images
 
@@ -3783,16 +3775,12 @@ class PerspectiveTransform(meta.Augmenter):
 
     # Added in 0.4.0.
     def _augment_images_by_samples(self, images, samples):
-        iadt.gate_dtypes(
+        iadt.gate_dtypes_strs(
             images,
-            allowed=["bool",
-                     "uint8", "uint16",
-                     "int8", "int16",
-                     "float16", "float32", "float64"],
-            disallowed=["uint32", "uint64", "uint128", "uint256",
-                        "int32", "int64", "int128", "int256",
-                        "float96", "float128", "float256"],
-            augmenter=self)
+            allowed="bool uint8 uint16 int8 int16 float16 float32 float64",
+            disallowed="uint32 uint64 int32 int64 float128",
+            augmenter=self
+        )
 
         result = images
         if not self.keep_size:
@@ -3803,9 +3791,10 @@ class PerspectiveTransform(meta.Augmenter):
 
         for i, (image, matrix, max_height, max_width, cval, mode) in gen:
             input_dtype = image.dtype
-            if input_dtype.name in ["int8"]:
+            if input_dtype == iadt._INT8_DTYPE:
                 image = image.astype(np.int16)
-            elif input_dtype.name in ["bool", "float16"]:
+            elif (input_dtype
+                  in {iadt._BOOL_DTYPE, iadt._FLOAT16_DTYPE}):
                 image = image.astype(np.float32)
 
             # cv2.warpPerspective only supports <=4 channels and errors
@@ -3844,9 +3833,9 @@ class PerspectiveTransform(meta.Augmenter):
                 h, w = image.shape[0:2]
                 warped = ia.imresize_single_image(warped, (h, w))
 
-            if input_dtype.name == "bool":
+            if input_dtype.kind == "b":
                 warped = warped > 0.5
-            elif warped.dtype.name != input_dtype.name:
+            elif warped.dtype != input_dtype:
                 warped = iadt.restore_dtypes_(warped, input_dtype)
 
             result[i] = warped
@@ -4407,16 +4396,13 @@ class ElasticTransformation(meta.Augmenter):
     def _augment_batch_(self, batch, random_state, parents, hooks):
         # pylint: disable=invalid-name
         if batch.images is not None:
-            iadt.gate_dtypes(
+            iadt.gate_dtypes_strs(
                 batch.images,
-                allowed=["bool",
-                         "uint8", "uint16", "uint32", "uint64",
-                         "int8", "int16", "int32", "int64",
-                         "float16", "float32", "float64"],
-                disallowed=["uint128", "uint256",
-                            "int128", "int256",
-                            "float96", "float128", "float256"],
-                augmenter=self)
+                allowed="bool uint8 uint16 uint32 uint64 int8 int16 int32 "
+                        "int64 float16 float32 float64",
+                disallowed="float128",
+                augmenter=self
+            )
 
         shapes = batch.get_rowwise_shapes()
         samples = self._draw_samples(len(shapes), random_state)
@@ -4461,7 +4447,7 @@ class ElasticTransformation(meta.Augmenter):
         cval = max(min(samples.cvals[row_idx], max_value), min_value)
 
         input_dtype = image.dtype
-        if image.dtype.name == "float16":
+        if image.dtype == iadt._FLOAT16_DTYPE:
             image = image.astype(np.float32)
 
         image_aug = self._map_coordinates(
@@ -4470,7 +4456,7 @@ class ElasticTransformation(meta.Augmenter):
             cval=cval,
             mode=samples.modes[row_idx])
 
-        if image.dtype.name != input_dtype.name:
+        if image.dtype != input_dtype:
             image_aug = iadt.restore_dtypes_(image_aug, input_dtype)
         return image_aug
 
@@ -4735,47 +4721,39 @@ class ElasticTransformation(meta.Augmenter):
         if image.size == 0:
             return np.copy(image)
 
-        if order == 0 and image.dtype.name in ["uint64", "int64"]:
+        if (order == 0
+                and image.dtype
+                in {iadt._UINT64_DTYPE, iadt._INT64_DTYPE}):
             raise Exception(
                 "dtypes uint64 and int64 are only supported in "
                 "ElasticTransformation for order=0, got order=%d with "
                 "dtype=%s." % (order, image.dtype.name))
 
         input_dtype = image.dtype
-        if image.dtype.name == "bool":
+        if image.dtype.kind == "b":
             image = image.astype(np.float32)
-        elif order == 1 and image.dtype.name in ["int8", "int16", "int32"]:
+        elif (order == 1
+              and image.dtype
+              in {iadt._INT8_DTYPE, iadt._INT16_DTYPE, iadt._INT32_DTYPE}):
             image = image.astype(np.float64)
-        elif order >= 2 and image.dtype.name == "int8":
+        elif order >= 2 and image.dtype == iadt._INT8_DTYPE:
             image = image.astype(np.int16)
-        elif order >= 2 and image.dtype.name == "int32":
+        elif order >= 2 and image.dtype == iadt._INT32_DTYPE:
             image = image.astype(np.float64)
 
         shrt_max = 32767  # maximum of datatype `short`
         backend = "cv2"
         if order == 0:
-            bad_dtype_cv2 = (
-                image.dtype.name in [
-                    "uint32", "uint64",
-                    "int64",
-                    "float128",
-                    "bool"]
+            bad_dtype_cv2 = image.dtype in iadt._convert_dtype_strs_to_types(
+                "uint32 uint64 int64 float128 bool"
             )
         elif order == 1:
-            bad_dtype_cv2 = (
-                image.dtype.name in [
-                    "uint32", "uint64",
-                    "int8", "int16", "int32", "int64",
-                    "float128",
-                    "bool"]
+            bad_dtype_cv2 = image.dtype in iadt._convert_dtype_strs_to_types(
+                "uint32 uint64 int8 int16 int32 int64 float128 bool"
             )
         else:
-            bad_dtype_cv2 = (
-                image.dtype.name in [
-                    "uint32", "uint64",
-                    "int8", "int32", "int64",
-                    "float128",
-                    "bool"]
+            bad_dtype_cv2 = image.dtype in iadt._convert_dtype_strs_to_types(
+                "uint32 uint64 int8 int32 int64 float128 bool"
             )
 
         bad_dx_shape_cv2 = (dx.shape[0] >= shrt_max or dx.shape[1] >= shrt_max)
@@ -4854,7 +4832,7 @@ class ElasticTransformation(meta.Augmenter):
                     current_chan_idx += 4
                 result = np.concatenate(result, axis=2)
 
-        if result.dtype.name != input_dtype.name:
+        if result.dtype != input_dtype:
             result = iadt.restore_dtypes_(result, input_dtype)
 
         return result
@@ -5364,16 +5342,13 @@ class WithPolarWarping(meta.Augmenter):
     # Added in 0.4.0.
     def _augment_batch_(self, batch, random_state, parents, hooks):
         if batch.images is not None:
-            iadt.gate_dtypes(
+            iadt.gate_dtypes_strs(
                 batch.images,
-                allowed=["bool",
-                         "uint8", "uint16",
-                         "int8", "int16", "int32",
-                         "float16", "float32", "float64"],
-                disallowed=["uint32", "uint64", "uint128", "uint256",
-                            "int64", "int128", "int256",
-                            "float96", "float128", "float256"],
-                augmenter=self)
+                allowed="bool uint8 uint16 int8 int16 int32 float16 float32 "
+                        "float64",
+                disallowed="uint32 uint64 int64 float128",
+                augmenter=self
+            )
 
         with batch.propagation_hooks_ctx(self, hooks, parents):
             batch, inv_data_bbs = self._convert_bbs_to_polygons_(batch)
@@ -5566,10 +5541,10 @@ class WithPolarWarping(meta.Augmenter):
                 shapes_orig.append(arr.shape)
                 continue
 
-            input_dtype = arr.dtype.name
-            if input_dtype == "bool":
+            input_dtype = arr.dtype
+            if input_dtype.kind == "b":
                 arr = arr.astype(np.uint8) * 255
-            elif input_dtype == "float16":
+            elif input_dtype == iadt._FLOAT16_DTYPE:
                 arr = arr.astype(np.float32)
 
             height, width = arr.shape[0:2]
@@ -5597,9 +5572,9 @@ class WithPolarWarping(meta.Augmenter):
                 if arr_warped.ndim == 2 and arr.ndim == 3:
                     arr_warped = arr_warped[:, :, np.newaxis]
 
-            if input_dtype == "bool":
+            if input_dtype.kind == "b":
                 arr_warped = (arr_warped > 128)
-            elif input_dtype == "float16":
+            elif input_dtype == iadt._FLOAT16_DTYPE:
                 arr_warped = arr_warped.astype(np.float16)
 
             arrays_warped.append(arr_warped)
@@ -5627,10 +5602,10 @@ class WithPolarWarping(meta.Augmenter):
                 arrays_inv.append(arr_warped)
                 continue
 
-            input_dtype = arr_warped.dtype.name
-            if input_dtype == "bool":
+            input_dtype = arr_warped.dtype
+            if input_dtype.kind == "b":
                 arr_warped = arr_warped.astype(np.uint8) * 255
-            elif input_dtype == "float16":
+            elif input_dtype == iadt._FLOAT16_DTYPE:
                 arr_warped = arr_warped.astype(np.float32)
 
             height, width = shape_orig[0:2]
@@ -5661,9 +5636,9 @@ class WithPolarWarping(meta.Augmenter):
                 if arr_inv.ndim == 2 and arr_warped.ndim == 3:
                     arr_inv = arr_inv[:, :, np.newaxis]
 
-            if input_dtype == "bool":
+            if input_dtype.kind == "b":
                 arr_inv = (arr_inv > 128)
-            elif input_dtype == "float16":
+            elif input_dtype == iadt._FLOAT16_DTYPE:
                 arr_inv = arr_inv.astype(np.float16)
 
             arrays_inv.append(arr_inv)

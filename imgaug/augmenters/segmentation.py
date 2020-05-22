@@ -238,15 +238,12 @@ class Superpixels(meta.Augmenter):
 
         images = batch.images
 
-        iadt.gate_dtypes(images,
-                         allowed=["bool",
-                                  "uint8", "uint16", "uint32", "uint64",
-                                  "int8", "int16", "int32", "int64"],
-                         disallowed=["uint128", "uint256",
-                                     "int128", "int256",
-                                     "float16", "float32", "float64",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.gate_dtypes_strs(
+            images,
+            allowed="bool uint8 uint16 uint32 uint64 int8 int16 int32 int64",
+            disallowed="float16 float32 float64 float128",
+            augmenter=self
+        )
 
         nb_images = len(images)
         rss = random_state.duplicate(1+nb_images)
@@ -383,7 +380,9 @@ def replace_segments_(image, segments, replace_flags):
 
     nb_segments = None
     func = _replace_segments_scipy_
-    bad_dtype = image.dtype.name not in ["uint8", "int8"]
+    bad_dtype = (
+        image.dtype not in {iadt._UINT8_DTYPE, iadt._INT8_DTYPE}
+    )
     area = image.shape[0] * image.shape[1]
     if bad_dtype or area < _REPLACE_SEGMENTS_NP_BELOW_AREA:
         func = _replace_segments_np_
@@ -706,16 +705,7 @@ class Voronoi(meta.Augmenter):
 
         images = batch.images
 
-        iadt.gate_dtypes(images,
-                         allowed=["uint8"],
-                         disallowed=["bool",
-                                     "uint16", "uint32", "uint64", "uint128",
-                                     "uint256",
-                                     "int8", "int16", "int32", "int64",
-                                     "int128", "int256",
-                                     "float16", "float32", "float64",
-                                     "float96", "float128", "float256"],
-                         augmenter=self)
+        iadt.allow_only_uint8(images, augmenter=self)
 
         rss = random_state.duplicate(len(images))
         for i, (image, rs) in enumerate(zip(images, rss)):
