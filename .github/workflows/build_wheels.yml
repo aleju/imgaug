@@ -9,6 +9,11 @@ on:
 jobs:
   build:
 
+    # There were errors on Mac that would lead to non-stop printing of
+    # error messages forever instead of the job crashing. To prevent this,
+    # a timeout is placed here (default value is otherwise 360min).
+    timeout-minutes: 30
+
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
