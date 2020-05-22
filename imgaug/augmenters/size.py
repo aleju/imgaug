@@ -441,10 +441,15 @@ def pad(arr, top=0, right=0, bottom=0, left=0, mode="constant", cval=0):
     if top > 0 or right > 0 or bottom > 0 or left > 0:
         min_value, _, max_value = iadt.get_value_range_of_dtype(arr.dtype)
 
-        # without the if here there are crashes for float128, e.g. if
+        # Without the if here there are crashes for float128, e.g. if
         # cval is an int (just using float(cval) seems to not be accurate
-        # enough)
-        if arr.dtype == iadt._FLOAT128_DTYPE:
+        # enough).
+        # Note: If float128 is not available on the system, _FLOAT128_DTYPE is
+        # None, but 'np.dtype("float64") == None' actually equates to True
+        # for whatever reason, so we check first if the constant is not None
+        # (i.e. if float128 exists).
+        if (iadt._FLOAT128_DTYPE is not None
+                and arr.dtype == iadt._FLOAT128_DTYPE):
             cval = np.float128(cval)  # pylint: disable=no-member
 
         if is_multi_cval:

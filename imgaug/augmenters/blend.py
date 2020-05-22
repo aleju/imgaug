@@ -165,13 +165,18 @@ def blend_alpha_(image_fg, image_bg, alpha, eps=1e-2):
     assert image_fg.dtype.kind == image_bg.dtype.kind, (
         "Expected foreground and background images to have the same dtype "
         "kind. Got %s and %s." % (image_fg.dtype.kind, image_bg.dtype.kind))
-    # TODO switch to gate_dtypes()
-    assert image_fg.dtype != iadt._FLOAT128_DTYPE, (
-        "Foreground image was float128, but blend_alpha_() cannot handle that "
-        "dtype.")
-    assert image_bg.dtype != iadt._FLOAT128_DTYPE, (
-        "Background image was float128, but blend_alpha_() cannot handle that "
-        "dtype.")
+
+    # Note: If float128 is not available on the system, _FLOAT128_DTYPE is
+    # None, but 'np.dtype("float64") == None' actually equates to True
+    # for whatever reason, so we check first if the constant is not None
+    # (i.e. if float128 exists).
+    if iadt._FLOAT128_DTYPE is not None:
+        assert image_fg.dtype != iadt._FLOAT128_DTYPE, (
+            "Foreground image was float128, but blend_alpha_() cannot handle "
+            "that dtype.")
+        assert image_bg.dtype != iadt._FLOAT128_DTYPE, (
+            "Background image was float128, but blend_alpha_() cannot handle "
+            "that dtype.")
 
     if image_fg.size == 0:
         return image_fg
