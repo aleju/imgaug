@@ -170,6 +170,7 @@ disable=print-statement,
         len-as-condition,  # more annoying than useful warning, suggestion doesn't even work with np arrays
         unused-argument,  # without this pylint complains about almost every _augment_batch() implementation not using 'parents' and 'hooks'; due to inheritance we can't do anything about that
         no-self-use,  # without this pylint complains about every get_parameters() implementation that returns only []; due to inheritance we can't do anything about that
+        protected-access,  # we use plenty of calls of functions that are only marked private to discourage calls of them from outside of the library, but not from within the library
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
