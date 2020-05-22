@@ -615,7 +615,6 @@ class Polygon(object):
             assert multipoly_inter_shapely.is_empty
             return []
         else:
-            print(multipoly_inter_shapely, image, self.exterior)
             raise Exception(
                 "Got an unexpected result of type %s from Shapely for "
                 "image (%d, %d) and polygon %s. This is an internal error. "
