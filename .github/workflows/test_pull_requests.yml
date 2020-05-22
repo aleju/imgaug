@@ -22,13 +22,13 @@ jobs:
         # https://raw.githubusercontent.com/actions/python-versions/master/versions-manifest.json
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         # test only 2.7 and the latest 3.x on mac
-        exclude:
-          - os: macos-latest
-            python-version: 3.5
-          - os: macos-latest
-            python-version: 3.6
-          - os: macos-latest
-            python-version: 3.7
+        #exclude:
+          #- os: macos-latest
+          #  python-version: 3.5
+          #- os: macos-latest
+          #  python-version: 3.6
+          #- os: macos-latest
+          #  python-version: 3.7
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
