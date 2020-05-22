@@ -44,10 +44,10 @@ from .. import random as iarandom
 
 _WARP_AFF_VALID_DTYPES_CV2_ORDER_0 = iadt._convert_dtype_strs_to_types(
     "uint8 uint16 int8 int16 int32 float16 float32 float64 bool"
-)
+)  # Added in 0.5.0.
 _WARP_AFF_VALID_DTYPES_CV2_ORDER_NOT_0 = iadt._convert_dtype_strs_to_types(
     "uint8 uint16 int8 int16 float16 float32 float64 bool"
-)
+)  # Added in 0.5.0.
 
 # skimage | cv2
 # 0       | cv2.INTER_NEAREST
