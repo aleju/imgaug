@@ -645,7 +645,8 @@ class TestConvolve(unittest.TestCase):
             expected[2, 1] = 100 * 0.5 + 100 * 0.5
 
             diff = np.abs(
-                image_aug.astype(np.float128) - expected.astype(np.float128))
+                image_aug.astype(np.float64) - expected.astype(np.float64)
+            )
             assert image_aug.dtype.type == dtype
             assert np.max(diff) < 1.0
 
@@ -700,7 +701,7 @@ class TestConvolve(unittest.TestCase):
             expected[2, 1] = value * 0.5 + value * 0.5
 
             diff = np.abs(
-                image_aug.astype(np.float128) - expected.astype(np.float128))
+                image_aug.astype(np.float64) - expected.astype(np.float64))
             assert image_aug.dtype.type == dtype
             assert np.max(diff) < 1.0
 

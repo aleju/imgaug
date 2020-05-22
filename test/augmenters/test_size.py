@@ -451,7 +451,15 @@ def test_pad():
     # -------
     # float
     # -------
-    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+    dtypes = [np.float16, np.float32, np.float64]
+
+    try:
+        # without .type here the dtype(<list>) statements below fail
+        dtypes.append(np.dtype("float128").type)
+    except TypeError:
+        pass  # float128 not known by user system
+
+    for dtype in dtypes:
         arr = np.zeros((3, 3), dtype=dtype) + 1.0
 
         def _allclose(a, b):
@@ -3003,7 +3011,12 @@ class TestPad(unittest.TestCase):
         mask = np.zeros((4, 3), dtype=bool)
         mask[2, 1] = True
 
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
 
         for dtype in dtypes:
             with self.subTest(dtype=dtype):
@@ -3027,7 +3040,7 @@ class TestPad(unittest.TestCase):
                     assert image_aug.shape == (4, 3)
                     assert np.all(_isclose(image_aug[~mask], 0))
                     assert np.all(_isclose(image_aug[mask],
-                                           np.float128(value)))
+                                           high_res_dt(value)))
 
     def test_pickleable(self):
         aug = iaa.Pad((0, 10), seed=1)
@@ -4116,7 +4129,12 @@ class TestCrop(unittest.TestCase):
         mask = np.zeros((2, 3), dtype=bool)
         mask[0, 1] = True
 
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
 
         for dtype in dtypes:
             with self.subTest(dtype=dtype):
@@ -4140,7 +4158,7 @@ class TestCrop(unittest.TestCase):
                     assert image_aug.shape == (2, 3)
                     assert np.all(_isclose(image_aug[~mask], 0))
                     assert np.all(_isclose(image_aug[mask],
-                                           np.float128(value)))
+                                           high_res_dt(value)))
 
     def test_pickleable(self):
         aug = iaa.Crop((0, 10), seed=1)
@@ -4791,7 +4809,13 @@ class TestPadToFixedSize(unittest.TestCase):
 
     def test_other_dtypes_float(self):
         aug = iaa.PadToFixedSize(height=4, width=3, position="center-top")
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
 
         mask = np.zeros((4, 3), dtype=bool)
         mask[2, 1] = True
@@ -4819,7 +4843,7 @@ class TestPadToFixedSize(unittest.TestCase):
                     assert image_aug.shape == (4, 3)
                     assert np.all(_isclose(image_aug[~mask], 0))
                     assert np.all(_isclose(image_aug[mask],
-                                           np.float128(value)))
+                                           high_res_dt(value)))
 
     def test_pickleable(self):
         aug = iaa.PadToFixedSize(20, 20, position="uniform", seed=1)
@@ -5433,7 +5457,12 @@ class TestCropToFixedSize(unittest.TestCase):
         mask = np.zeros((2, 3), dtype=bool)
         mask[0, 1] = True
 
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
 
         for dtype in dtypes:
             min_value, center_value, max_value = \
@@ -5459,7 +5488,7 @@ class TestCropToFixedSize(unittest.TestCase):
                     assert image_aug.shape == (2, 3)
                     assert np.all(_isclose(image_aug[~mask], 0))
                     assert np.all(_isclose(image_aug[mask],
-                                           np.float128(value)))
+                                           high_res_dt(value)))
 
     def test_pickleable(self):
         aug = iaa.CropToFixedSize(10, 10, position="uniform", seed=1)

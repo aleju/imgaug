@@ -815,6 +815,11 @@ class Test_fill_rectangle_gaussian_(unittest.TestCase):
                                                   image_aug[..., c])
 
     def test_other_dtypes_int_uint(self):
+        try:
+            high_res_dt = np.float128
+        except AttributeError:
+            high_res_dt = np.float64
+
         dtypes = ["uint8", "uint16", "uint32", "uint64",
                   "int8", "int16", "int32", "int64"]
         for dtype in dtypes:
@@ -848,8 +853,8 @@ class Test_fill_rectangle_gaussian_(unittest.TestCase):
                         cval=0, per_channel=per_channel, random_state=rng)
 
                     rect = image_aug[10:-10, 10:-10]
-                    mean = np.average(np.float128(rect))
-                    std = np.std(np.float128(rect) - center_value)
+                    mean = np.average(high_res_dt(rect))
+                    std = np.std(high_res_dt(rect) - center_value)
                     assert np.array_equal(image_aug[:10, :], image_cp[:10, :])
                     assert not np.array_equal(rect,
                                               image_cp[10:-10, 10:-10])
@@ -866,12 +871,18 @@ class Test_fill_rectangle_gaussian_(unittest.TestCase):
                                                       image_aug[..., c])
 
     def test_other_dtypes_float(self):
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
+
         for dtype in dtypes:
             min_value = 0.0
             center_value = 0.5
             max_value = 1.0
-            dynamic_range = np.float128(max_value) - np.float128(min_value)
+            dynamic_range = high_res_dt(max_value) - high_res_dt(min_value)
 
             gaussian_min = iarandom.RNG(0).normal(min_value, 0.0001,
                                                   size=(1,))
@@ -901,8 +912,8 @@ class Test_fill_rectangle_gaussian_(unittest.TestCase):
                         cval=0, per_channel=per_channel, random_state=rng)
 
                     rect = image_aug[10:-10, 10:-10]
-                    mean = np.average(np.float128(rect))
-                    std = np.std(np.float128(rect) - center_value)
+                    mean = np.average(high_res_dt(rect))
+                    std = np.std(high_res_dt(rect) - center_value)
                     assert np.allclose(image_aug[:10, :], image_cp[:10, :],
                                        rtol=0, atol=1e-4)
                     assert not np.allclose(rect, image_cp[10:-10, 10:-10],
@@ -1111,7 +1122,13 @@ class Test_fill_rectangle_constant_(unittest.TestCase):
                         assert np.all(image_aug[-10:-10, 10:-10] == min_value)
 
     def test_other_dtypes_float(self):
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
+
         for dtype in dtypes:
             for per_channel in [False, True]:
                 min_value, center_value, max_value = \
@@ -1126,8 +1143,8 @@ class Test_fill_rectangle_constant_(unittest.TestCase):
 
                     # Use this here instead of any(isclose(...)) because
                     # the latter one leads to overflow warnings.
-                    assert image.flat[0] <= np.float128(min_value) + 1.0
-                    assert image.flat[4] >= np.float128(max_value) - 1.0
+                    assert image.flat[0] <= high_res_dt(min_value) + 1.0
+                    assert image.flat[4] >= high_res_dt(max_value) - 1.0
 
                     image_cp = np.copy(image)
 
@@ -1143,17 +1160,17 @@ class Test_fill_rectangle_constant_(unittest.TestCase):
                                        rtol=0, atol=1e-4)
                     if per_channel:
                         assert np.allclose(image_aug[10:-10, 10:-10, 0],
-                                           np.float128(min_value),
+                                           high_res_dt(min_value),
                                            rtol=0, atol=1e-4)
                         assert np.allclose(image_aug[10:-10, 10:-10, 1],
-                                           np.float128(10),
+                                           high_res_dt(10),
                                            rtol=0, atol=1e-4)
                         assert np.allclose(image_aug[10:-10, 10:-10, 2],
-                                           np.float128(max_value),
+                                           high_res_dt(max_value),
                                            rtol=0, atol=1e-4)
                     else:
                         assert np.allclose(image_aug[-10:-10, 10:-10],
-                                           np.float128(min_value),
+                                           high_res_dt(min_value),
                                            rtol=0, atol=1e-4)
 
 
@@ -3234,9 +3251,14 @@ class TestDropout2d(unittest.TestCase):
                         assert np.sum(image_aug == 0) == 7
 
     def test_other_dtypes_float(self):
-        dts = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
 
-        for dt in dts:
+        for dt in dtypes:
             min_value, center_value, max_value = \
                 iadt.get_value_range_of_dtype(dt)
             values = [min_value, -10.0, center_value, 10.0, max_value]
@@ -3257,7 +3279,7 @@ class TestDropout2d(unittest.TestCase):
                         assert np.sum(_isclose(image_aug, value)) == 10
                     else:
                         assert (
-                            np.sum(_isclose(image_aug, np.float128(value)))
+                            np.sum(_isclose(image_aug, high_res_dt(value)))
                             == 3)
                         assert np.sum(image_aug == 0) == 7
 
@@ -3543,9 +3565,14 @@ class TestTotalDropout(unittest.TestCase):
                             assert np.sum(images_aug == value) == 5*3
 
     def test_other_dtypes_float(self):
-        dts = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
 
-        for dt in dts:
+        for dt in dtypes:
             min_value, center_value, max_value = \
                 iadt.get_value_range_of_dtype(dt)
             values = [min_value, -10.0, center_value, 10.0, max_value]
@@ -3567,7 +3594,7 @@ class TestTotalDropout(unittest.TestCase):
                             assert np.sum(_isclose(images_aug, 0.0)) == 5*3
                         else:
                             assert (
-                                np.sum(_isclose(images_aug, np.float128(value)))
+                                np.sum(_isclose(images_aug, high_res_dt(value)))
                                 == 5*3)
 
     def test_pickleable(self):
@@ -5587,7 +5614,14 @@ class Test_invert_(unittest.TestCase):
 
     def test_float_with_threshold_50_inv_above(self):
         threshold = 50
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            _high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            _high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
+
         for dt in dtypes:
             with self.subTest(dtype=dt):
                 min_value, center_value, max_value = \
@@ -5614,7 +5648,14 @@ class Test_invert_(unittest.TestCase):
 
     def test_float_with_threshold_50_inv_below(self):
         threshold = 50
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            _high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            _high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
+
         for dt in dtypes:
             with self.subTest(dtype=dt):
                 min_value, center_value, max_value = \
@@ -6067,75 +6108,110 @@ class TestInvert(unittest.TestCase):
     def test_other_dtypes_p_is_zero(self):
         # with p=0.0
         aug = iaa.Invert(p=0.0)
-        dtypes = [bool,
-                  np.uint8, np.uint16, np.uint32, np.uint64,
-                  np.int8, np.int16, np.int32, np.int64,
-                  np.float16, np.float32, np.float64, np.float128]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = [
+            bool,
+            np.uint8, np.uint16, np.uint32, np.uint64,
+            np.int8, np.int16, np.int32, np.int64,
+            np.float16, np.float32, np.float64
+        ] + f128
+
         for dtype in dtypes:
-            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
-            kind = np.dtype(dtype).kind
-            image_min = np.full((3, 3), min_value, dtype=dtype)
-            if dtype is not bool:
-                image_center = np.full((3, 3), center_value if kind == "f" else int(center_value), dtype=dtype)
-            image_max = np.full((3, 3), max_value, dtype=dtype)
-            image_min_aug = aug.augment_image(image_min)
-            image_center_aug = None
-            if dtype is not bool:
-                image_center_aug = aug.augment_image(image_center)
-            image_max_aug = aug.augment_image(image_max)
+            with self.subTest(dtype=dtype):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+                kind = np.dtype(dtype).kind
+                image_min = np.full((3, 3), min_value, dtype=dtype)
+                if dtype is not bool:
+                    image_center = (
+                        np.full(
+                            (3, 3),
+                            center_value if kind == "f" else int(center_value),
+                            dtype=dtype
+                        )
+                    )
+                image_max = np.full((3, 3), max_value, dtype=dtype)
+                image_min_aug = aug.augment_image(image_min)
+                image_center_aug = None
+                if dtype is not bool:
+                    image_center_aug = aug.augment_image(image_center)
+                image_max_aug = aug.augment_image(image_max)
 
-            assert image_min_aug.dtype == np.dtype(dtype)
-            if image_center_aug is not None:
-                assert image_center_aug.dtype == np.dtype(dtype)
-            assert image_max_aug.dtype == np.dtype(dtype)
+                assert image_min_aug.dtype == np.dtype(dtype)
+                if image_center_aug is not None:
+                    assert image_center_aug.dtype == np.dtype(dtype)
+                assert image_max_aug.dtype == np.dtype(dtype)
 
-            if dtype is bool:
-                assert np.all(image_min_aug == image_min)
-                assert np.all(image_max_aug == image_max)
-            elif np.dtype(dtype).kind in ["i", "u"]:
-                assert np.array_equal(image_min_aug, image_min)
-                assert np.array_equal(image_center_aug, image_center)
-                assert np.array_equal(image_max_aug, image_max)
-            else:
-                assert np.allclose(image_min_aug, image_min)
-                assert np.allclose(image_center_aug, image_center)
-                assert np.allclose(image_max_aug, image_max)
+                if dtype is bool:
+                    assert np.all(image_min_aug == image_min)
+                    assert np.all(image_max_aug == image_max)
+                elif np.dtype(dtype).kind in ["i", "u"]:
+                    assert np.array_equal(image_min_aug, image_min)
+                    assert np.array_equal(image_center_aug, image_center)
+                    assert np.array_equal(image_max_aug, image_max)
+                else:
+                    assert np.allclose(image_min_aug, image_min)
+                    assert np.allclose(image_center_aug, image_center)
+                    assert np.allclose(image_max_aug, image_max)
 
     def test_other_dtypes_p_is_one(self):
         # with p=1.0
         aug = iaa.Invert(p=1.0)
-        dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
-                  np.int8, np.int16, np.int32, np.int64,
-                  np.float16, np.float32, np.float64, np.float128]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = [
+            bool,
+            np.uint8, np.uint16, np.uint32, np.uint64,
+            np.int8, np.int16, np.int32, np.int64,
+            np.float16, np.float32, np.float64
+        ] + f128
+
         for dtype in dtypes:
-            min_value, center_value, max_value = iadt.get_value_range_of_dtype(dtype)
-            kind = np.dtype(dtype).kind
-            image_min = np.full((3, 3), min_value, dtype=dtype)
-            if dtype is not bool:
-                image_center = np.full((3, 3), center_value if kind == "f" else int(center_value), dtype=dtype)
-            image_max = np.full((3, 3), max_value, dtype=dtype)
-            image_min_aug = aug.augment_image(image_min)
-            image_center_aug = None
-            if dtype is not bool:
-                image_center_aug = aug.augment_image(image_center)
-            image_max_aug = aug.augment_image(image_max)
+            with self.subTest(dtype=dtype):
+                min_value, center_value, max_value = \
+                    iadt.get_value_range_of_dtype(dtype)
+                kind = np.dtype(dtype).kind
+                image_min = np.full((3, 3), min_value, dtype=dtype)
+                if dtype is not bool:
+                    image_center = (
+                        np.full(
+                            (3, 3),
+                            center_value if kind == "f" else int(center_value),
+                            dtype=dtype
+                        )
+                    )
+                image_max = np.full((3, 3), max_value, dtype=dtype)
+                image_min_aug = aug.augment_image(image_min)
+                image_center_aug = None
+                if dtype is not bool:
+                    image_center_aug = aug.augment_image(image_center)
+                image_max_aug = aug.augment_image(image_max)
 
-            assert image_min_aug.dtype == np.dtype(dtype)
-            if image_center_aug is not None:
-                assert image_center_aug.dtype == np.dtype(dtype)
-            assert image_max_aug.dtype == np.dtype(dtype)
+                assert image_min_aug.dtype == np.dtype(dtype)
+                if image_center_aug is not None:
+                    assert image_center_aug.dtype == np.dtype(dtype)
+                assert image_max_aug.dtype == np.dtype(dtype)
 
-            if dtype is bool:
-                assert np.all(image_min_aug == image_max)
-                assert np.all(image_max_aug == image_min)
-            elif np.dtype(dtype).kind in ["i", "u"]:
-                assert np.array_equal(image_min_aug, image_max)
-                assert np.allclose(image_center_aug, image_center, atol=1.0+1e-4, rtol=0)
-                assert np.array_equal(image_max_aug, image_min)
-            else:
-                assert np.allclose(image_min_aug, image_max)
-                assert np.allclose(image_center_aug, image_center)
-                assert np.allclose(image_max_aug, image_min)
+                if dtype is bool:
+                    assert np.all(image_min_aug == image_max)
+                    assert np.all(image_max_aug == image_min)
+                elif np.dtype(dtype).kind in ["i", "u"]:
+                    assert np.array_equal(image_min_aug, image_max)
+                    assert np.allclose(image_center_aug, image_center, atol=1.0+1e-4, rtol=0)
+                    assert np.array_equal(image_max_aug, image_min)
+                else:
+                    assert np.allclose(image_min_aug, image_max)
+                    assert np.allclose(image_center_aug, image_center)
+                    assert np.allclose(image_max_aug, image_min)
 
     def test_other_dtypes_p_is_one_with_min_value(self):
         # with p=1.0 and min_value
