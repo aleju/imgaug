@@ -202,6 +202,11 @@ class Test_blend_alpha(unittest.TestCase):
 
     # TODO split this up into multiple tests
     def test_other_dtypes_uint_int(self):
+        try:
+            high_res_dt = np.float128
+        except AttributeError:
+            high_res_dt = np.float64
+
         #dtypes = ["uint8", "uint16", "uint32", "uint64",
         #          "int8", "int16", "int32", "int64"]
         dtypes = ["uint8"]
@@ -266,8 +271,8 @@ class Test_blend_alpha(unittest.TestCase):
                             v_blend = min(
                                 max(
                                     int(
-                                        0.75*np.float128(v1)
-                                        + 0.25*np.float128(v2)
+                                        0.75*high_res_dt(v1)
+                                        + 0.25*high_res_dt(v2)
                                     ),
                                     min_value
                                 ),
@@ -286,8 +291,8 @@ class Test_blend_alpha(unittest.TestCase):
                     v_blend = min(
                         max(
                             int(
-                                0.75 * np.float128(v1)
-                                + 0.25 * np.float128(v2)
+                                0.75 * high_res_dt(v1)
+                                + 0.25 * high_res_dt(v2)
                             ),
                             min_value
                         ),
@@ -347,6 +352,11 @@ class Test_blend_alpha(unittest.TestCase):
 
     # TODO split this up into multiple tests
     def test_other_dtypes_float(self):
+        try:
+            high_res_dt = np.float128
+        except AttributeError:
+            high_res_dt = np.float64
+
         dtypes = ["float16", "float32", "float64"]
         for dtype in dtypes:
             with self.subTest(dtype=dtype):
@@ -377,7 +387,7 @@ class Test_blend_alpha(unittest.TestCase):
                 ]
                 values = values + [(v2, v1) for v1, v2 in values]
 
-                max_float_dt = np.float128
+                max_float_dt = high_res_dt
 
                 for v1, v2 in values:
                     v1_scalar = np.full((), v1, dtype=dtype)

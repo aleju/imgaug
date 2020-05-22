@@ -307,7 +307,12 @@ class TestIdentity(unittest.TestCase):
     def test_other_dtypes_float(self):
         aug = iaa.Identity()
 
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128").name]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
 
         for dtype, value in zip(dtypes, values):
@@ -805,7 +810,12 @@ class TestLambda(unittest.TestCase):
 
         aug = iaa.Lambda(func_images=func_images)
 
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128").name]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
 
         for dtype, value in zip(dtypes, values):
@@ -835,7 +845,12 @@ def _lambda_pickleable_callback_images(images, random_state, parents, hooks):
 class TestAssertLambda(unittest.TestCase):
     DTYPES_UINT = ["uint8", "uint16", "uint32", "uint64"]
     DTYPES_INT = ["int8", "int32", "int64"]
-    DTYPES_FLOAT = ["float16", "float32", "float64", "float128"]
+    DTYPES_FLOAT = (
+        ["float16", "float32", "float64"]
+        + (
+            ["float128"] if hasattr(np, "float128") else []
+        )
+    )
 
     def setUp(self):
         reseed()
@@ -1210,7 +1225,12 @@ def _assertlambda_pickleable_callback_images(images, random_state,
 class TestAssertShape(unittest.TestCase):
     DTYPES_UINT = ["uint8", "uint16", "uint32", "uint64"]
     DTYPES_INT = ["int8", "int32", "int64"]
-    DTYPES_FLOAT = ["float16", "float32", "float64", "float128"]
+    DTYPES_FLOAT = (
+        ["float16", "float32", "float64"]
+        + (
+            ["float128"] if hasattr(np, "float128") else []
+        )
+    )
 
     def setUp(self):
         reseed()
@@ -6133,7 +6153,12 @@ class TestSequential(unittest.TestCase):
                 assert np.array_equal(image_aug, image)
 
     def test_other_dtypes_noop__float(self):
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
 
         for random_order in [False, True]:
@@ -6192,7 +6217,12 @@ class TestSequential(unittest.TestCase):
                 assert np.array_equal(image_aug, expected)
 
     def test_other_dtypes_flips__float(self):
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
 
         for random_order in [False, True]:
@@ -6718,7 +6748,12 @@ class TestSomeOf(unittest.TestCase):
                 assert np.array_equal(image_aug, image)
 
     def test_other_dtypes_via_noop__float(self):
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         random_orders = [False, True]
 
@@ -6792,7 +6827,12 @@ class TestSomeOf(unittest.TestCase):
                                 for expected_i in expected])
 
     def test_other_dtypes_via_flip__float(self):
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         random_orders = [False, True]
 
@@ -7851,7 +7891,13 @@ class TestSometimes(unittest.TestCase):
 
     def test_other_dtypes_via_noop__float(self):
         aug = iaa.Sometimes(1.0, iaa.Identity())
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):
             with self.subTest(dtype=dtype):
@@ -7916,7 +7962,14 @@ class TestSometimes(unittest.TestCase):
 
     def test_other_dtypes_via_flip__float(self):
         aug = iaa.Sometimes(0.5, iaa.Fliplr(1.0), iaa.Flipud(1.0))
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
+
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):
             with self.subTest(dtype=dtype):
@@ -8388,7 +8441,14 @@ class TestWithChannels(unittest.TestCase):
 
     def test_other_dtypes_via_noop__float(self):
         aug = iaa.WithChannels([0], iaa.Identity())
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
+
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):
             with self.subTest(dtype=dtype):
@@ -8436,7 +8496,14 @@ class TestWithChannels(unittest.TestCase):
 
     def test_other_dtypes_via_flips__float(self):
         aug = iaa.WithChannels([0], iaa.Fliplr(1.0))
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
+
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):
             with self.subTest(dtype=dtype):
@@ -8671,7 +8738,14 @@ class TestChannelShuffle(unittest.TestCase):
 
     def test_other_dtypes_float(self):
         aug = iaa.ChannelShuffle(p=0.5)
-        dtypes = ["float16", "float32", "float64", "float128"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
+
         values = [5000, 1000 ** 2, 1000 ** 3, 1000 ** 4]
         for dtype, value in zip(dtypes, values):
             with self.subTest(dtype=dtype):
@@ -8712,10 +8786,19 @@ class TestRemoveCBAsByOutOfImageFraction(unittest.TestCase):
 
     def test_no_cbas_in_batch(self):
         aug = iaa.RemoveCBAsByOutOfImageFraction(0.51)
-        dtypes = ["uint8", "uint16", "uint32", "uint64",
-                  "int8", "int16", "int32", "int64",
-                  "float16", "float32", "float64", "float128",
-                  "bool"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = [
+            "uint8", "uint16", "uint32", "uint64",
+            "int8", "int16", "int32", "int64",
+            "float16", "float32", "float64",
+            "bool"
+        ] + f128
+
         for dt in dtypes:
             arr = np.ones((5, 10, 3), dtype=dt)
 
@@ -8808,10 +8891,19 @@ class TestClipCBAsToImagePlanes(unittest.TestCase):
 
     def test_no_cbas_in_batch(self):
         aug = iaa.RemoveCBAsByOutOfImageFraction(0.51)
-        dtypes = ["uint8", "uint16", "uint32", "uint64",
-                  "int8", "int16", "int32", "int64",
-                  "float16", "float32", "float64", "float128",
-                  "bool"]
+
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = [
+            "uint8", "uint16", "uint32", "uint64",
+            "int8", "int16", "int32", "int64",
+            "float16", "float32", "float64",
+            "bool"
+        ] + f128
+
         for dt in dtypes:
             arr = np.ones((5, 10, 3), dtype=dt)
 

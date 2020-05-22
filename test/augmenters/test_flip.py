@@ -470,7 +470,11 @@ class _TestFliplrAndFlipudBase(object):
 
     def test_other_dtypes_float(self):
         aug = self.create_aug(1.0)
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128").name]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+        dtypes = ["float16", "float32", "float64"] + f128
         values = [5000, 1000**2, 1000**3, 1000**4]
         for dtype, value in zip(dtypes, values):
             with self.subTest(dtype=dtype):
@@ -734,8 +738,19 @@ class Test_fliplr(unittest.TestCase):
     @mock.patch("imgaug.augmenters.flip._fliplr_sliced")
     @mock.patch("imgaug.augmenters.flip._fliplr_cv2")
     def test__fliplr_sliced_called_mocked(self, mock_cv2, mock_sliced):
-        for dtype in ["bool", "uint32", "uint64", "int32", "int64",
-                      "float16", "float32", "float64", "float128"]:
+        try:
+            f128 = [np.dtype("float128").name]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = [
+            "bool",
+            "uint32", "uint64",
+            "int32", "int64",
+            "float16", "float32", "float64"
+        ] + f128
+
+        for dtype in dtypes:
             mock_cv2.reset_mock()
             mock_sliced.reset_mock()
             arr = np.zeros((1, 1), dtype=dtype)
@@ -901,8 +916,14 @@ class Test_fliplr(unittest.TestCase):
                 assert np.array_equal(arr_flipped, expected)
 
     def test_float_faithful_to_min_max(self):
-        dts = ["float16", "float32", "float64", "float128"]
-        for dt in dts:
+        try:
+            f128 = [np.dtype("float128").name]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dtypes = ["float16", "float32", "float64"] + f128
+
+        for dt in dtypes:
             with self.subTest(dtype=dt):
                 dt = np.dtype(dt)
                 minv, center, maxv = iadt.get_value_range_of_dtype(dt)
@@ -918,7 +939,12 @@ class Test_fliplr(unittest.TestCase):
                 assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
 
     def test_float_faithful_to_large_values(self):
-        dts = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128").name]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+
+        dts = ["float16", "float32", "float64"] + f128
         values = [
             [0.01, 0.1, 1.0, 10.0**1, 10.0**2],  # float16
             [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**4, 10.0**6],  # float32
@@ -1028,7 +1054,11 @@ class Test_flipud(unittest.TestCase):
                 assert np.array_equal(arr_flipped, expected)
 
     def test_float_faithful_to_min_max(self):
-        dts = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+        dts = ["float16", "float32", "float64"] + f128
         for dt in dts:
             with self.subTest(dtype=dt):
                 dt = np.dtype(dt)
@@ -1045,7 +1075,11 @@ class Test_flipud(unittest.TestCase):
                 assert np.allclose(arr_flipped, expected, rtol=0, atol=atol)
 
     def test_float_faithful_to_large_values(self):
-        dts = ["float16", "float32", "float64", "float128"]
+        try:
+            f128 = [np.dtype("float128")]
+        except TypeError:
+            f128 = []  # float128 not known by user system
+        dts = ["float16", "float32", "float64"] + f128
         values = [
             [0.01, 0.1, 1.0, 10.0**1, 10.0**2],  # float16
             [0.01, 0.1, 1.0, 10.0**1, 10.0**2, 10.0**4, 10.0**6],  # float32

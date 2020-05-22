@@ -2697,8 +2697,14 @@ class TestAffine_other_dtypes(unittest.TestCase):
                 return np.isclose(a, b, atol=atol, rtol=0)
 
             isize = np.dtype(dtype).itemsize
-            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                      1000 ** (isize - 1)]
+            values = [
+                0.01,
+                1.0,
+                10.0,
+                100.0,
+                500 ** (isize - 1),
+                float(np.float64(1000 ** (isize - 1)))
+            ]
             values = values + [(-1) * value for value in values]
             values = values + [min_value, max_value]
             for value in values:
@@ -2711,7 +2717,7 @@ class TestAffine_other_dtypes(unittest.TestCase):
                     assert image_aug.dtype.name == dtype
                     assert np.all(_isclose(image_aug[~self.translate_mask], 0))
                     assert np.all(_isclose(image_aug[self.translate_mask],
-                                           np.float128(value)))
+                                           value))
 
     def test_rotate_skimage_order_not_0_bool(self):
         # skimage, order!=0 and rotate=180
@@ -2879,8 +2885,14 @@ class TestAffine_other_dtypes(unittest.TestCase):
                 return np.isclose(a, b, atol=atol, rtol=0)
 
             isize = np.dtype(dtype).itemsize
-            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                      1000 ** (isize - 1)]
+            values = [
+                0.01,
+                1.0,
+                10.0,
+                100.0,
+                500 ** (isize - 1),
+                float(np.float64(1000 ** (isize - 1)))
+            ]
             values = values + [(-1) * value for value in values]
             values = values + [min_value, max_value]
             for value in values:
@@ -2893,7 +2905,7 @@ class TestAffine_other_dtypes(unittest.TestCase):
                     assert image_aug.dtype.name == dtype
                     assert np.all(_isclose(image_aug[~self.translate_mask], 0))
                     assert np.all(_isclose(image_aug[self.translate_mask],
-                                           np.float128(value)))
+                                           value))
 
     def test_rotate_cv2_order_1_and_3_bool(self):
         # cv2, order=1 and rotate=180
@@ -5395,8 +5407,14 @@ class TestPiecewiseAffine(unittest.TestCase):
                 return np.isclose(a, b, atol=atol, rtol=0)
 
             isize = np.dtype(dtype).itemsize
-            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                      1000 ** (isize - 1)]
+            values = [
+                0.01,
+                1.0,
+                10.0,
+                100.0,
+                500 ** (isize - 1),
+                float(np.float64(1000 ** (isize - 1)))
+            ]
             values = values + [(-1) * value for value in values]
             values = values + [min_value, max_value]
             for value in values:
@@ -5407,12 +5425,9 @@ class TestPiecewiseAffine(unittest.TestCase):
                     image_aug = aug.augment_image(image)
 
                     assert image_aug.dtype.name == dtype
-                    # TODO switch all other tests from float(...) to
-                    #      np.float128(...) pattern, seems to be more accurate
-                    #      for 128bit floats
-                    assert not np.all(_isclose(image_aug, np.float128(value)))
+                    assert not np.all(_isclose(image_aug, value))
                     assert np.any(_isclose(image_aug[~self.other_dtypes_mask],
-                                           np.float128(value)))
+                                           value))
 
     def test_pickleable(self):
         aug = iaa.PiecewiseAffine(scale=0.2, nb_rows=4, nb_cols=4, seed=1)
@@ -7714,8 +7729,14 @@ class TestElasticTransformation(unittest.TestCase):
                 return np.isclose(a, b, atol=atol, rtol=0)
 
             isize = np.dtype(dtype).itemsize
-            values = [0.01, 1.0, 10.0, 100.0, 500 ** (isize - 1),
-                      1000 ** (isize - 1)]
+            values = [
+                0.01,
+                1.0,
+                10.0,
+                100.0,
+                500 ** (isize - 1),
+                float(np.float64(1000 ** (isize - 1)))
+            ]
             values = values + [(-1) * value for value in values]
             for value in values:
                 with self.subTest(dtype=dtype, value=value):
@@ -7725,9 +7746,8 @@ class TestElasticTransformation(unittest.TestCase):
                     image_aug = aug.augment_image(image)
 
                     assert image_aug.dtype.name == dtype
-                    assert not np.all(_isclose(image_aug, np.float128(value)))
-                    assert np.any(_isclose(image_aug[~mask],
-                                           np.float128(value)))
+                    assert not np.all(_isclose(image_aug, value))
+                    assert np.any(_isclose(image_aug[~mask], value))
 
     def test_other_dtypes_bool_all_orders(self):
         mask = np.zeros((50, 50), dtype=bool)
@@ -7812,10 +7832,10 @@ class TestElasticTransformation(unittest.TestCase):
                     if order == 0:
                         assert image_aug.dtype.name == dtype
                         assert not np.all(
-                            _isclose(image_aug, np.float128(value))
+                            _isclose(image_aug, value)
                         )
                         assert np.any(
-                            _isclose(image_aug[~mask], np.float128(value))
+                            _isclose(image_aug[~mask], value)
                         )
                     else:
                         atol = (
@@ -7825,13 +7845,13 @@ class TestElasticTransformation(unittest.TestCase):
                         assert not np.all(
                             np.isclose(
                                 image_aug,
-                                np.float128(value),
+                                value,
                                 rtol=0, atol=atol
                             ))
                         assert np.any(
                             np.isclose(
                                 image_aug[~mask],
-                                np.float128(value),
+                                value,
                                 rtol=0, atol=atol
                             ))
 
@@ -8856,14 +8876,27 @@ class TestRot90(unittest.TestCase):
     def test_other_dtypes_float(self):
         aug = iaa.Rot90(2)
 
-        dtypes = ["float16", "float32", "float64", "float128"]
+        try:
+            high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64", "float128"]
+        except AttributeError:
+            high_res_dt = np.float64
+            dtypes = ["float16", "float32", "float64"]
+
         for dtype in dtypes:
             def _allclose(a, b):
                 atol = 1e-4 if dtype == "float16" else 1e-8
                 return np.allclose(a, b, atol=atol, rtol=0)
 
             isize = np.dtype(dtype).itemsize
-            values = [0, 1.0, 10.0, 100.0, 500 ** (isize-1), 1000 ** (isize-1)]
+            values = [
+                0,
+                1.0,
+                10.0,
+                100.0,
+                high_res_dt(500 ** (isize-1)),
+                high_res_dt(1000 ** (isize-1))
+            ]
             values = values + [(-1) * value for value in values]
             for value in values:
                 with self.subTest(dtype=dtype, value=value):
@@ -8874,7 +8907,7 @@ class TestRot90(unittest.TestCase):
 
                     assert image_aug.dtype.name == dtype
                     assert _allclose(image_aug[0, 0], 0)
-                    assert _allclose(image_aug[2, 2], np.float128(value))
+                    assert _allclose(image_aug[2, 2], high_res_dt(value))
 
     def test_pickleable(self):
         aug = iaa.Rot90([0, 1, 2, 3], seed=1)
@@ -9502,10 +9535,17 @@ class TestWithPolarWarping(unittest.TestCase):
 
 class Test_apply_jigsaw(unittest.TestCase):
     def test_no_movement(self):
-        dtypes = ["bool",
-                  "uint8", "uint16", "uint32", "uint64",
-                  "int8", "int16", "int32", "int64",
-                  "float16", "float32", "float64", "float128"]
+        dtypes = [
+            "bool",
+            "uint8", "uint16", "uint32", "uint64",
+            "int8", "int16", "int32", "int64",
+            "float16", "float32", "float64"
+        ]
+
+        try:
+            dtypes.append(np.dtype("float128"))
+        except TypeError:
+            pass  # float128 not known on system
 
         for dtype in dtypes:
             with self.subTest(dtype=dtype):
@@ -9550,10 +9590,17 @@ class Test_apply_jigsaw(unittest.TestCase):
                 assert np.array_equal(observed, arr)
 
     def _test_two_cells_moved__n_channels(self, nb_channels):
-        dtypes = ["bool",
-                  "uint8", "uint16", "uint32", "uint64",
-                  "int8", "int16", "int32", "int64",
-                  "float16", "float32", "float64", "float128"]
+        dtypes = [
+            "bool",
+            "uint8", "uint16", "uint32", "uint64",
+            "int8", "int16", "int32", "int64",
+            "float16", "float32", "float64"
+        ]
+
+        try:
+            dtypes.append(np.dtype("float128").name)
+        except TypeError:
+            pass  # float128 not known by user system
 
         for dtype in dtypes:
             with self.subTest(dtype=dtype):

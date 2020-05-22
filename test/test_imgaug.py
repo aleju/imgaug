@@ -1019,7 +1019,7 @@ def test_imresize_many_images():
         mask[1, :] = 255
         mask[2, :] = 255
         mask = ia.imresize_many_images([mask], (3, 3), interpolation=ip)[0]
-        mask = mask.astype(np.float128) / 255.0
+        mask = mask.astype(np.float64) / 255.0
 
         image = np.zeros((4, 4), dtype=bool)
         image[1, :] = True
@@ -1046,7 +1046,7 @@ def test_imresize_many_images():
         mask[1, :] = 1.0
         mask[2, :] = 1.0
         mask = ia.imresize_many_images([mask], (3, 3), interpolation=ip)[0]
-        mask = mask.astype(np.float128)
+        mask = mask.astype(np.float64)
 
         for dtype in [np.float16, np.float32, np.float64]:
             isize = np.dtype(dtype).itemsize
@@ -1055,12 +1055,12 @@ def test_imresize_many_images():
                 image = np.zeros((4, 4), dtype=dtype)
                 image[1, :] = value
                 image[2, :] = value
-                expected = (mask * np.float128(value)).astype(dtype)
+                expected = (mask * np.float64(value)).astype(dtype)
                 image_rs = ia.imresize_many_images([image], (3, 3), interpolation=ip)[0]
                 assert image_rs.dtype.type == dtype
                 # Our basis for the expected image is derived from uint8 as that is most likely to work, so we will
                 # have to accept here deviations of around 1/255.
-                atol = np.float128(1 / 255) * np.abs(np.float128(value)) + 1e-8
+                atol = np.float64(1 / 255) * np.abs(np.float64(value)) + 1e-8
                 assert np.allclose(image_rs, expected, rtol=0, atol=atol)
                 # Expect at least one cell to have a difference between observed and expected image of approx. 0,
                 # currently we seem to be able to get away with this despite the above mentioned inaccuracy.
@@ -1190,7 +1190,16 @@ def test_pool():
     # -----
     # float
     # -----
-    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+    try:
+        high_res_dt = np.float128
+        dtypes = ["float16", "float32", "float64", "float128"]
+    except AttributeError:
+        high_res_dt = np.float64
+        dtypes = ["float16", "float32", "float64"]
+
+    for dtype in dtypes:
+        dtype = np.dtype(dtype)
+
         def _allclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
             return np.allclose(a, b, atol=atol, rtol=0)
@@ -1236,13 +1245,13 @@ def test_pool():
                 y = np.array(arr_pooled, dtype=dt, copy=False, subok=True)
                 assert arr_pooled.shape == (2, 2)
                 assert arr_pooled.dtype == np.dtype(dtype)
-                assert _allclose(arr_pooled, np.float128(value))
+                assert _allclose(arr_pooled, high_res_dt(value))
 
                 arr = np.full((4, 4, 3), value, dtype=dtype)
                 arr_pooled = ia.pool(arr, 2, func)
                 assert arr_pooled.shape == (2, 2, 3)
                 assert arr_pooled.dtype == np.dtype(dtype)
-                assert _allclose(arr_pooled, np.float128(value))
+                assert _allclose(arr_pooled, high_res_dt(value))
 
     # ----
     # bool
@@ -1702,7 +1711,16 @@ def test_draw_grid():
         assert np.array_equal(grid, expected)
 
     # float
-    for dtype in [np.float16, np.float32, np.float64, np.float128]:
+    try:
+        _high_res_dt = np.float128
+        dtypes = ["float16", "float32", "float64", "float128"]
+    except AttributeError:
+        _high_res_dt = np.float64
+        dtypes = ["float16", "float32", "float64"]
+
+    for dtype in dtypes:
+        dtype = np.dtype(dtype)
+
         def _allclose(a, b):
             atol = 1e-4 if dtype == np.float16 else 1e-8
             return np.allclose(a, b, atol=atol, rtol=0)

@@ -147,8 +147,16 @@ class TestGammaContrast(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_other_dtypes_uint_int(self):
-        dts = [np.uint8, np.uint16, np.uint32, np.uint64,
-               np.int8, np.int16, np.int32, np.int64]
+        try:
+            high_res_dt = np.float128
+            dts = [np.uint8, np.uint16, np.uint32, np.uint64,
+                   np.int8, np.int16, np.int32, np.int64]
+        except AttributeError:
+            # cannot reliably check uint64 and int64 on systems that dont
+            # support float128
+            high_res_dt = np.float64
+            dts = [np.uint8, np.uint16, np.uint32,
+                   np.int8, np.int16, np.int32]
 
         for dtype in dts:
             dtype = np.dtype(dtype)
@@ -170,7 +178,7 @@ class TestGammaContrast(unittest.TestCase):
                         image = np.full((3, 3), value, dtype=dtype)
                         expected = (
                             (
-                                (image.astype(np.float128) / max_value)
+                                (image.astype(high_res_dt) / max_value)
                                 ** exp
                             ) * max_value
                         ).astype(dtype)
@@ -193,7 +201,7 @@ class TestGammaContrast(unittest.TestCase):
                                 image[..., c] += c
                             expected = (
                                 (
-                                    (image.astype(np.float128) / max_value)
+                                    (image.astype(high_res_dt) / max_value)
                                     ** exp
                                 ) * max_value
                             ).astype(dtype)
@@ -231,7 +239,7 @@ class TestGammaContrast(unittest.TestCase):
                                       nb_channels=None):
                         image = np.full((3, 3), value, dtype=dtype)
                         expected = (
-                            image.astype(np.float128)
+                            image.astype(np.float64)
                             ** exp
                         ).astype(dtype)
                         image_aug = aug.augment_image(image)
@@ -248,7 +256,7 @@ class TestGammaContrast(unittest.TestCase):
                             for c in sm.xrange(nb_channels):
                                 image[..., c] += float(c)
                             expected = (
-                                image.astype(np.float128)
+                                image.astype(np.float64)
                                 ** exp
                             ).astype(dtype)
                             image_aug = aug.augment_image(image)
@@ -402,8 +410,16 @@ class TestSigmoidContrast(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_other_dtypes_uint_int(self):
-        dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
-                  np.int8, np.int16, np.int32, np.int64]
+        try:
+            high_res_dt = np.float128
+            dtypes = [np.uint8, np.uint16, np.uint32, np.uint64,
+                      np.int8, np.int16, np.int32, np.int64]
+        except AttributeError:
+            # cannot reliably check uint64 and int64 on systems that dont
+            # support float128
+            high_res_dt = np.float64
+            dtypes = [np.uint8, np.uint16, np.uint32,
+                      np.int8, np.int16, np.int32]
 
         for dtype in dtypes:
             dtype = np.dtype(dtype)
@@ -435,7 +451,7 @@ class TestSigmoidContrast(unittest.TestCase):
                                     gain
                                     * (
                                         cutoff
-                                        - image.astype(np.float128)/max_value
+                                        - image.astype(high_res_dt)/max_value
                                     )
                                 )
                             )
@@ -444,7 +460,7 @@ class TestSigmoidContrast(unittest.TestCase):
                         # expected = (
                         #   1/(1 + np.exp(gain * (
                         #       cutoff - (
-                        #           image.astype(np.float128)-min_value
+                        #           image.astype(high_res_dt)-min_value
                         #       )/dynamic_range
                         #   ))))
                         # expected = (
@@ -484,7 +500,7 @@ class TestSigmoidContrast(unittest.TestCase):
                                     gain
                                     * (
                                         cutoff
-                                        - image.astype(np.float128)
+                                        - image.astype(np.float64)
                                     )
                                 )
                             )
@@ -642,7 +658,7 @@ class TestLogContrast(unittest.TestCase):
                         expected = (
                             gain
                             * np.log2(
-                                1 + (image.astype(np.float128)/max_value)
+                                1 + (image.astype(np.float64)/max_value)
                             )
                         )
                         expected = (expected*max_value).astype(dtype)
@@ -678,7 +694,7 @@ class TestLogContrast(unittest.TestCase):
                         expected = (
                             gain
                             * np.log2(
-                                1 + image.astype(np.float128)
+                                1 + image.astype(np.float64)
                             )
                         )
                         expected = expected.astype(dtype)
