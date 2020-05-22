@@ -22,13 +22,13 @@ jobs:
         # https://raw.githubusercontent.com/actions/python-versions/master/versions-manifest.json
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
         # test only 2.7 and the latest 3.x on mac
-        exclude:
-          - os: macos-latest
-            python-version: 3.5
-          - os: macos-latest
-            python-version: 3.6
-          - os: macos-latest
-            python-version: 3.7
+        #exclude:
+        #  - os: macos-latest
+        #    python-version: 3.5
+        #  - os: macos-latest
+        #    python-version: 3.6
+        #  - os: macos-latest
+        #    python-version: 3.7
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
@@ -43,8 +43,18 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
+    - name: Display python version
+      run: |
+        python -c "import sys; print(sys.version)"
+
+    - name: Display system information
+      run : |
+        python -c "import sys; print(sys.maxsize);"
+        python -c "import platform; print(platform.uname());"
+        python -c "import platform; print(platform.platform());"
+        python -c "import platform; print(platform.architecture());"
+        python -c "import platform; print(platform.processor());"
+        python -c "import platform; print(platform.python_compiler());"
 
     - name: Upgrade basic packages
       run: |

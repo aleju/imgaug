@@ -30,13 +30,23 @@ jobs:
     # ----------------
     # Install python and base packages
     # ----------------
-    - name: Set up Python ${{ matrix.python-version }} on ${{ runner.os }}
+    - name: Set up python ${{ matrix.python-version }} on ${{ runner.os }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
+    - name: Display python version
+      run: |
+        python -c "import sys; print(sys.version)"
+
+    - name: Display system information
+      run : |
+        python -c "import sys; print(sys.maxsize);"
+        python -c "import platform; print(platform.uname());"
+        python -c "import platform; print(platform.platform());"
+        python -c "import platform; print(platform.architecture());"
+        python -c "import platform; print(platform.processor());"
+        python -c "import platform; print(platform.python_compiler());"
 
     - name: Upgrade basic packages
       run: |
