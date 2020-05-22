@@ -56,6 +56,19 @@ def _get_context_method():
                     "hanging programs when also making use of multicore "
                     "augmentation (aka background augmentation). Use "
                     "python 3.5 or later to prevent this.")
+    elif platform.system() == "Darwin" and vinfo[0:2] == (3, 7):
+        # On Mac with python 3.7 there seems to be a problem with matplotlib,
+        # resulting in the error "libc++abi.dylib: terminating with uncaught
+        # exception of type std::runtime_error: Couldn't close file".
+        # The error seems to be due to opened files that get closed in
+        # child processes and can be prevented by switching to spawn mode.
+        # See https://github.com/matplotlib/matplotlib/issues/15410
+        # and https://bugs.python.org/issue33725.
+        # It is possible that this problem also affects other python versions,
+        # but here it only appeared (consistently) in the 3.7 tests and the
+        # reports also seem to be focused around 3.7, suggesting explicitly
+        # to update to 3.8.2.
+        method = "spawn"
 
     if get_context_unsupported:
         return False

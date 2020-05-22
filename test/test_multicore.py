@@ -75,14 +75,42 @@ class Test__get_context(unittest.TestCase):
 
     @unittest.skipUnless(IS_SUPPORTING_CONTEXTS,
                          "Behaviour is only supported in python 3.4+")
+    @mock.patch("platform.system")
     @mock.patch("multiprocessing.get_context")
     @mock.patch("platform.version")
-    def test_mocked_no_nixos_python3(self, mock_version, mock_gctx):
+    def test_mocked_no_nixos_python3(self, mock_version, mock_gctx, mock_system):
         with clean_context():
             mock_version.return_value = "Ubuntu"
+            mock_system.return_value = "Linux"
             _ctx = multicore._get_context()
             assert mock_gctx.call_count == 1
             assert mock_gctx.call_args_list[0][0][0] is None
+
+    @unittest.skipUnless(IS_SUPPORTING_CONTEXTS,
+                         "Behaviour is only supported in python 3.4+")
+    @mock.patch.object(sys, "version_info")
+    @mock.patch("platform.system")
+    @mock.patch("multiprocessing.get_context")
+    @mock.patch("platform.version")
+    def test_mocked_mac_and_37_cause_spawn(
+            self,
+            mock_version,
+            mock_gctx,
+            mock_system,
+            mock_vi
+    ):
+        with clean_context():
+            def version_info(index):
+                if isinstance(index, slice):
+                    return 3, 7
+                return 3 if index == 0 else 7
+
+            mock_vi.__getitem__.side_effect = version_info
+
+            mock_version.return_value = "foo"
+            mock_system.return_value = "Darwin"
+            _ctx = multicore._get_context()
+            mock_gctx.assert_called_once_with("spawn")
 
 
 class TestPool(unittest.TestCase):
