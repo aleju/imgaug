@@ -675,54 +675,56 @@ def test_compute_paddings_for_aspect_ratio():
 
 def test_pad_to_aspect_ratio():
     for dtype in [np.uint8, np.int32, np.float32]:
+        dtype = np.dtype(dtype)
+
         # aspect_ratio = 1.0
         arr = np.zeros((4, 4), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 4
 
         arr = np.zeros((1, 4), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 4
 
         arr = np.zeros((4, 1), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 4
 
         arr = np.zeros((2, 4), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 4
 
         arr = np.zeros((4, 2), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 4
 
         # aspect_ratio != 1.0
         arr = np.zeros((4, 4), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 2.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 8
 
         arr = np.zeros((4, 4), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 0.5)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 8
         assert arr_pad.shape[1] == 4
 
         # 3d arr
         arr = np.zeros((4, 2, 3), dtype=dtype)
         arr_pad = iaa.pad_to_aspect_ratio(arr, 1.0)
-        assert arr_pad.dtype.type == dtype
+        assert arr_pad.dtype.name == dtype.name
         assert arr_pad.shape[0] == 4
         assert arr_pad.shape[1] == 4
         assert arr_pad.shape[2] == 3

@@ -204,12 +204,14 @@ class Test_blend_alpha(unittest.TestCase):
     def test_other_dtypes_uint_int(self):
         try:
             high_res_dt = np.float128
+            dtypes = ["uint8", "uint16", "uint32", "uint64",
+                      "int8", "int16", "int32", "int64"]
         except AttributeError:
+            # uint64 and int64 require float128 in their computation
             high_res_dt = np.float64
+            dtypes = ["uint8", "uint16", "uint32",
+                      "int8", "int16", "int32"]
 
-        #dtypes = ["uint8", "uint16", "uint32", "uint64",
-        #          "int8", "int16", "int32", "int64"]
-        dtypes = ["uint8"]
         for dtype in dtypes:
             with self.subTest(dtype=dtype):
                 dtype = np.dtype(dtype)
@@ -354,10 +356,12 @@ class Test_blend_alpha(unittest.TestCase):
     def test_other_dtypes_float(self):
         try:
             high_res_dt = np.float128
+            dtypes = ["float16", "float32", "float64"]
         except AttributeError:
+            # float64 requires float128 in the computation
             high_res_dt = np.float64
+            dtypes = ["float16", "float32"]
 
-        dtypes = ["float16", "float32", "float64"]
         for dtype in dtypes:
             with self.subTest(dtype=dtype):
                 dtype = np.dtype(dtype)

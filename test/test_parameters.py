@@ -1152,7 +1152,9 @@ class TestAutoPrefetcher(unittest.TestCase):
         assert str(param) == repr(param) == expected
 
     def test_to_string_second_call(self):
-        other_param = iap.DeterministicList(np.arange(200))
+        # use astype(int64) here, because otherwise in windows the array
+        # seems to become int32, causing the assertion below to fail
+        other_param = iap.DeterministicList(np.arange(200).astype(np.int64))
         param = iap.AutoPrefetcher(other_param, 10)
         other_param_str = str(other_param)
 

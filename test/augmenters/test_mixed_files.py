@@ -414,17 +414,17 @@ def test_dtype_preservation():
          _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.Identity(name="Identity"), default_dtypes),
         (iaa.BlendAlpha((0.0, 0.1), iaa.Identity(), name="BlendAlphaIdentity"),
-         default_dtypes),
+         _not_dts([np.float64])),  # float64 requires float128 support
         (iaa.BlendAlphaElementwise((0.0, 0.1), iaa.Identity(),
                                    name="BlendAlphaElementwiseIdentity"),
-         default_dtypes),
+         _not_dts([np.float64])),  # float64 requires float128 support
         (iaa.BlendAlphaSimplexNoise(iaa.Identity(),
                                     name="BlendAlphaSimplexNoiseIdentity"),
-         default_dtypes),
+         _not_dts([np.float64])),  # float64 requires float128 support
         (iaa.BlendAlphaFrequencyNoise(exponent=(-2, 2),
                                       foreground=iaa.Identity(),
                                       name="BlendAlphaFrequencyNoiseIdentity"),
-         default_dtypes),
+         _not_dts([np.float64])),
         (iaa.BlendAlpha((0.0, 0.1), iaa.Add(10), name="BlendAlpha"),
          _not_dts([np.uint32, np.int32, np.float64])),
         (iaa.BlendAlphaElementwise((0.0, 0.1), iaa.Add(10),
