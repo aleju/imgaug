@@ -6126,7 +6126,7 @@ class TestPerspectiveTransform(unittest.TestCase):
         bbsoi = ia.BoundingBoxesOnImage(bbs, shape=img.shape)
         aug = iaa.PerspectiveTransform(scale=(0.05, 0.2), keep_size=True)
 
-        for _ in sm.xrange(10):
+        for _ in sm.xrange(30):
             imgs_aug, bbsois_aug = aug(
                 images=[img, img, img, img],
                 bounding_boxes=[bbsoi, bbsoi, bbsoi, bbsoi])
@@ -6151,7 +6151,7 @@ class TestPerspectiveTransform(unittest.TestCase):
                         assert np.max(rgt_row) > 10
                     else:
                         nb_skipped += 1
-            assert nb_skipped <= 2
+            assert nb_skipped <= 3
 
     def test_bounding_boxes_cover_extreme_points(self):
         # Test that for BBs, the augmented BB x coord is really the minimum
