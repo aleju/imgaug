@@ -166,12 +166,12 @@ def _handle_mode_arg(mode):
 
 def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
                      output_shape=None, backend="auto"):
-    if ia.is_single_integer(cval):
-        cval = [cval] * len(arr.shape[2])
-
     # no changes to zero-sized arrays
     if arr.size == 0:
         return arr
+
+    if ia.is_single_integer(cval) or ia.is_single_float(cval):
+        cval = [cval] * len(arr.shape[2])
 
     min_value, _center_value, max_value = \
         iadt.get_value_range_of_dtype(arr.dtype)
@@ -209,10 +209,11 @@ def _warp_affine_arr(arr, matrix, order=1, mode="constant", cval=0,
             "cannot handle. Try using a different dtype or set "
             "order=0." % (
                 arr.dtype,))
+        cval_type = float if arr.dtype.kind == "f" else int
         image_warped = _warp_affine_arr_cv2(
             arr,
             matrix,
-            cval=tuple([int(v) for v in cval]),
+            cval=tuple([cval_type(v) for v in cval]),
             mode=mode,
             order=order,
             output_shape=output_shape

@@ -1984,6 +1984,20 @@ class TestAffine_cval(unittest.TestCase):
 
         assert nb_changed_aug_det == 0
 
+    def test_float_cval_on_float_image(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=0.25)
+        image = np.full((10, 10, 3), 0.75, dtype=np.float32)
+        image_aug = aug(image=image)
+        assert np.allclose(image_aug, 0.25)
+
+    def test_float_cval_on_int_image(self):
+        aug = iaa.Affine(scale=1.0, translate_px=100, rotate=0, shear=0,
+                         cval=2.75)
+        image = np.full((10, 10, 3), 10, dtype=np.uint8)
+        image_aug = aug(image=image)
+        assert np.allclose(image_aug, 2)  # cval is casted to int, no rounding
+
 
 class TestAffine_fit_output(unittest.TestCase):
     @property
