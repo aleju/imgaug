@@ -11,4 +11,5 @@ opencv-python-headless
 imageio<=2.6.1; python_version<'3.5'
 imageio; python_version>='3.5'
 Shapely
-numba
+# numba is not available in <=3.5
+numba; python_version>='3.6'

@@ -72,9 +72,13 @@ from __future__ import print_function, division, absolute_import
 import warnings
 
 import numpy as np
-import numba
-import skimage.filters
 import six.moves as sm
+import skimage.filters
+# numba cannot be installed in python <=3.5
+try:
+    import numba
+except ImportError:
+    numba = None
 
 import imgaug as ia
 from .. import dtypes as iadt
@@ -491,7 +495,9 @@ def _apply_glass_blur_imgaug(x, severity=1):
         )
     )
 
-    x = _apply_glass_blur_imgaug_loop(x, iterations, max_delta, dxxdyy)
+    x = _apply_glass_blur_imgaug_loop_dispatcher(
+        x, iterations, max_delta, dxxdyy
+    )
 
     return np.clip(
         skimage.filters.gaussian(x / 255., sigma=sigma, multichannel=True),
@@ -500,8 +506,16 @@ def _apply_glass_blur_imgaug(x, severity=1):
 
 
 # Added in 0.5.0.
-# fastmath seems to slow this down
-@numba.jit(nopython=True, nogil=True)
+def _apply_glass_blur_imgaug_loop_dispatcher(x, iterations, max_delta, dxxdyy):
+    func = _apply_glass_blur_imgaug_loop
+    # numba is None if it could not be imported
+    if numba is not None:
+        # fastmath seems to slow this down
+        func = numba.jit(func, nopython=True, nogil=True)
+    return func(x, iterations, max_delta, dxxdyy)
+
+
+# Added in 0.5.0.
 def _apply_glass_blur_imgaug_loop(
         x, iterations, max_delta, dxxdyy
 ):
