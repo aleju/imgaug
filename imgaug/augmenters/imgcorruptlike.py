@@ -71,8 +71,8 @@ from __future__ import print_function, division, absolute_import
 
 import warnings
 
-import numpy as np
 import six.moves as sm
+import numpy as np
 import skimage.filters
 # numba cannot be installed in python <=3.5
 try:
