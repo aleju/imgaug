@@ -379,7 +379,7 @@ def replace_segments_(image, segments, replace_flags):
     bad_dtype = (
         image.dtype not in {iadt._UINT8_DTYPE, iadt._INT8_DTYPE}
     )
-    if bad_dtype or _NUMBA_INSTALLED is None:
+    if bad_dtype or not _NUMBA_INSTALLED:
         func = _replace_segments_np_
     else:
         max_id = np.max(segments)
