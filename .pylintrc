@@ -409,6 +409,9 @@ good-names=i,
            xx,   # x-coordinates
            yy,   # y-coordinates
            zz,   # z-coordinates
+           dx,   # some difference/shift in x
+           dy,
+           dz,
            x1,   # bounding box top left x-coordinate
            x2,   # bounding box bottom right x-coordinate
            x3,
