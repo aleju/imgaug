@@ -20,7 +20,6 @@ import numpy as np
 # with skimage.segmentation for whatever reason
 import skimage.segmentation
 import skimage.measure
-import scipy.ndimage as ndimage
 import six
 import six.moves as sm
 
@@ -29,10 +28,8 @@ from . import meta
 from .. import random as iarandom
 from .. import parameters as iap
 from .. import dtypes as iadt
+from ..imgaug import _NUMBA_INSTALLED, _numbajit
 
-
-_REPLACE_SEGMENTS_NP_BELOW_AREA = 64 * 64
-_REPLACE_SEGMENTS_NP_BELOW_NSEG = 25
 
 _SLIC_SUPPORTS_START_LABEL = (
     tuple(map(int, skimage.__version__.split(".")[0:2]))
@@ -379,18 +376,15 @@ def replace_segments_(image, segments, replace_flags):
         image = image[:, :, np.newaxis]
 
     nb_segments = None
-    func = _replace_segments_scipy_
     bad_dtype = (
         image.dtype not in {iadt._UINT8_DTYPE, iadt._INT8_DTYPE}
     )
-    area = image.shape[0] * image.shape[1]
-    if bad_dtype or area < _REPLACE_SEGMENTS_NP_BELOW_AREA:
+    if bad_dtype or _NUMBA_INSTALLED is None:
         func = _replace_segments_np_
     else:
         max_id = np.max(segments)
         nb_segments = 1 + max_id
-        if nb_segments < _REPLACE_SEGMENTS_NP_BELOW_NSEG:
-            func = _replace_segments_np_
+        func = _replace_segments_numba_dispatcher_
 
     result = func(image, segments, replace_flags, nb_segments)
 
@@ -403,7 +397,7 @@ def replace_segments_(image, segments, replace_flags):
 def _replace_segments_np_(image, segments, replace_flags, _nb_segments):
     seg_ids = np.unique(segments)
     if replace_flags is None:
-        replace_flags = [True] * len(seg_ids)
+        replace_flags = np.ones((len(seg_ids),), dtype=bool)
     for i, seg_id in enumerate(seg_ids):
         if replace_flags[i % len(replace_flags)]:
             mask = (segments == seg_id)
@@ -413,47 +407,74 @@ def _replace_segments_np_(image, segments, replace_flags, _nb_segments):
 
 
 # Added in 0.5.0.
-def _replace_segments_scipy_(image, segments, replace_flags, nb_segments):
-    # Generate segment ids of the segments to actually replace.
-    # Use "...[0:nb_segments]" here, because we can sample more flags than
-    # segments.
-    seg_ids = np.arange(nb_segments)
-    if replace_flags is not None:
-        replace_flags = np.resize(replace_flags, (nb_segments,))
-        seg_ids = seg_ids[replace_flags]
-    if len(seg_ids) == 0:
+def _replace_segments_numba_dispatcher_(
+        image, segments, replace_flags, nb_segments
+):
+    if replace_flags is None:
+        replace_flags = np.ones((nb_segments,), dtype=bool)
+    elif not np.any(replace_flags[:nb_segments]):
         return image
 
-    if len(seg_ids) == nb_segments:
-        mask = np.full(segments.shape, True, dtype=np.bool)
-        segments_to_replace = segments.flat
-        image_to_replace = image.reshape((-1, image.shape[-1]))
-    else:
-        mask = np.isin(segments, seg_ids)
-        segments_to_replace = segments[mask]
-        image_to_replace = image[mask, :]
+    average_colors = _replace_segments_numba_collect_avg_colors(
+        image.astype(np.float64),
+        segments,
+        replace_flags,
+        nb_segments,
+        image.dtype
+    )
+    image = _replace_segments_numba_apply_avg_cols_(
+        image, segments, replace_flags, average_colors
+    )
+    return image
 
-    seg_id_to_intensity = np.full((nb_segments,), 0, dtype=np.uint8)
 
-    for c in sm.xrange(image.shape[2]):
-        # This returns a new array of same length as "seg_ids". Each value is
-        # the mean intensity of that segment in "image[..., c]".
-        labelwise_intensities = ndimage.labeled_comprehension(
-            image_to_replace[:, c],
-            segments_to_replace,
-            seg_ids,
-            np.mean,
-            np.uint8,
-            0
-        )
+# Added in 0.5.0.
+@_numbajit(nopython=True, nogil=True, cache=True)
+def _replace_segments_numba_collect_avg_colors(
+        image_f64, segments, replace_flags, nb_segments, output_dtype
+):
+    h, w, nb_channels = image_f64.shape[0:3]
+    nb_flags = len(replace_flags)
 
-        # we could call "seg_id_to_intensity *= 0" here, but that isn't really
-        # necessary as we set the values of all segments that we actually use
-        seg_id_to_intensity[seg_ids] = labelwise_intensities
+    average_colors = np.zeros((nb_segments, nb_channels), dtype=np.float64)
 
-        # doesn't seem to work here to use `image_to_replace[:, c] = ...`
-        # instead
-        image[mask, c] = seg_id_to_intensity[segments_to_replace]
+    counters = np.zeros((nb_segments,), dtype=np.int32)
+    for seg_id in sm.xrange(nb_segments):
+        if not replace_flags[seg_id % nb_flags]:
+            counters[seg_id] = -1
+
+    for y in sm.xrange(h):
+        for x in sm.xrange(w):
+            seg_id = segments[y, x]
+            count = counters[seg_id]
+
+            if count != -1:
+                col = image_f64[y, x, :]
+                average_colors[seg_id] += col
+                counters[seg_id] += 1
+
+    counters = np.maximum(counters, 1)
+    counters = counters.reshape((-1, 1))
+    average_colors /= counters
+
+    average_colors = average_colors.astype(output_dtype)
+    return average_colors
+
+
+# Added in 0.5.0.
+@_numbajit(nopython=True, nogil=True, cache=True)
+def _replace_segments_numba_apply_avg_cols_(
+        image, segments, replace_flags, average_colors
+):
+    h, w = image.shape[0:2]
+    nb_flags = len(replace_flags)
+
+    for y in sm.xrange(h):
+        for x in sm.xrange(w):
+            seg_id = segments[y, x]
+            if replace_flags[seg_id % nb_flags]:
+                image[y, x, :] = average_colors[seg_id]
+
     return image
 
 

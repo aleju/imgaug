@@ -21,6 +21,10 @@ import six
 import six.moves as sm
 import skimage.draw
 import skimage.measure
+try:
+    import numba
+except ImportError:
+    numba = None
 
 
 ALL = "ALL"
@@ -55,6 +59,9 @@ IMRESIZE_VALID_INTERPOLATIONS = [
 # Cache dict to save kernels used for pooling.
 # Added in 0.5.0.
 _POOLING_KERNELS_CACHE = {}
+
+# Added in 0.5.0.
+_NUMBA_INSTALLED = numba is not None
 
 
 ###############################################################################
@@ -2555,6 +2562,23 @@ def apply_lut_(image, table):
 
     image = cv2.LUT(image, table, dst=image)
     return image
+
+
+# Added in 0.5.0.
+def _identity_decorator(*_dec_args, **_dec_kwargs):
+    def _decorator(func):
+        @functools.wraps(func)
+        def _wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return _wrapper
+    return _decorator
+
+
+# Added in 0.5.0.
+if numba is not None:
+    _numbajit = numba.jit
+else:
+    _numbajit = _identity_decorator
 
 
 class HooksImages(object):

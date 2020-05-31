@@ -27,23 +27,17 @@ from imgaug.testutils import (
     temporary_constants,
     is_parameter_instance
 )
+from imgaug.imgaug import _NUMBA_INSTALLED
+
+
+# On systems without numba we are forced to use numpy-based segment
+# replacement. We can thus only on numba systems test both.
+_NP_REPLACE = [True, False] if _NUMBA_INSTALLED else [True]
 
 
 def _create_replace_np_context(use_np_replace):
-    module_name = "imgaug.augmenters.segmentation."
-    cnames = [
-        module_name + "_REPLACE_SEGMENTS_NP_BELOW_AREA",
-        module_name + "_REPLACE_SEGMENTS_NP_BELOW_NSEG"
-    ]
-    if use_np_replace is True:
-        values = [10000 * 10000, 10000]
-    elif use_np_replace is False:
-        values = [0, 0]
-    else:
-        assert use_np_replace == "auto"
-        values = [temporary_constants.UNCHANGED,
-                  temporary_constants.UNCHANGED]
-
+    cnames = ["imgaug.augmenters.segmentation._NUMBA_INSTALLED"]
+    values = [not use_np_replace]
     return temporary_constants(cnames, values)
 
 
@@ -94,7 +88,7 @@ class TestSuperpixels(unittest.TestCase):
         return base_img_superpixels_right
 
     def test_p_replace_0_n_segments_2(self):
-        for use_np_replace in [True, False]:
+        for use_np_replace in _NP_REPLACE:
             with self.subTest(use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     aug = iaa.Superpixels(p_replace=0, n_segments=2)
@@ -103,7 +97,7 @@ class TestSuperpixels(unittest.TestCase):
                     assert np.allclose(observed, expected)
 
     def test_p_replace_1_n_segments_2(self):
-        for use_np_replace in [True, False]:
+        for use_np_replace in _NP_REPLACE:
             with self.subTest(use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
@@ -112,7 +106,7 @@ class TestSuperpixels(unittest.TestCase):
                     assert self._array_equals_tolerant(observed, expected, 2)
 
     def test_p_replace_1_n_segments_stochastic_parameter(self):
-        for use_np_replace in [True, False]:
+        for use_np_replace in _NP_REPLACE:
             with self.subTest(use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     aug = iaa.Superpixels(
@@ -123,7 +117,7 @@ class TestSuperpixels(unittest.TestCase):
                     assert self._array_equals_tolerant(observed, expected, 2)
 
     def test_p_replace_stochastic_parameter_n_segments_2(self):
-        for use_np_replace in [True, False]:
+        for use_np_replace in _NP_REPLACE:
             with self.subTest(use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     aug = iaa.Superpixels(
@@ -140,7 +134,7 @@ class TestSuperpixels(unittest.TestCase):
     def test_p_replace_050_n_segments_2(self):
         _eq = self._array_equals_tolerant
 
-        for use_np_replace in [True, False]:
+        for use_np_replace in _NP_REPLACE:
             with self.subTest(use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     aug = iaa.Superpixels(p_replace=0.5, n_segments=2)
@@ -196,7 +190,7 @@ class TestSuperpixels(unittest.TestCase):
             (1, 0, 1)
         ]
 
-        for shape, use_np_replace in itertools.product(shapes, [True, False]):
+        for shape, use_np_replace in itertools.product(shapes, _NP_REPLACE):
             with self.subTest(shape=shape, use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     image = np.full(shape, 128, dtype=np.uint8)
@@ -215,7 +209,7 @@ class TestSuperpixels(unittest.TestCase):
             (1, 1, 513)
         ]
 
-        for shape, use_np_replace in itertools.product(shapes, [True, False]):
+        for shape, use_np_replace in itertools.product(shapes, _NP_REPLACE):
             with self.subTest(shape=shape, use_np_replace=use_np_replace):
                 with _create_replace_np_context(use_np_replace):
                     image = np.full(shape, 128, dtype=np.uint8)
@@ -239,7 +233,7 @@ class TestSuperpixels(unittest.TestCase):
         assert params[3] == "nearest"
 
     def test_other_dtypes_bool(self):
-        for use_np_replace in [True, False]:
+        for use_np_replace in _NP_REPLACE:
                 with self.subTest(use_np_replace=use_np_replace):
                     with _create_replace_np_context(use_np_replace):
                         aug = iaa.Superpixels(p_replace=1.0, n_segments=2)
@@ -264,7 +258,7 @@ class TestSuperpixels(unittest.TestCase):
         dtypes = ["uint8", "uint16", "uint32",
                   "int8", "int16", "int32"]
         for dtype in dtypes:
-            for use_np_replace in [True, False]:
+            for use_np_replace in _NP_REPLACE:
                 with self.subTest(dtype=dtype, use_np_replace=use_np_replace):
                     with _create_replace_np_context(use_np_replace):
                         dtype = np.dtype(dtype)
