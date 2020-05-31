@@ -433,7 +433,7 @@ def _replace_segments_numba_dispatcher_(
 def _replace_segments_numba_collect_avg_colors(
         image_f64, segments, replace_flags, nb_segments, output_dtype
 ):
-    h, w, nb_channels = image_f64.shape[0:3]
+    height, width, nb_channels = image_f64.shape
     nb_flags = len(replace_flags)
 
     average_colors = np.zeros((nb_segments, nb_channels), dtype=np.float64)
@@ -443,8 +443,8 @@ def _replace_segments_numba_collect_avg_colors(
         if not replace_flags[seg_id % nb_flags]:
             counters[seg_id] = -1
 
-    for y in sm.xrange(h):
-        for x in sm.xrange(w):
+    for y in sm.xrange(height):
+        for x in sm.xrange(width):
             seg_id = segments[y, x]
             count = counters[seg_id]
 
@@ -466,11 +466,11 @@ def _replace_segments_numba_collect_avg_colors(
 def _replace_segments_numba_apply_avg_cols_(
         image, segments, replace_flags, average_colors
 ):
-    h, w = image.shape[0:2]
+    height, width = image.shape[0:2]
     nb_flags = len(replace_flags)
 
-    for y in sm.xrange(h):
-        for x in sm.xrange(w):
+    for y in sm.xrange(height):
+        for x in sm.xrange(width):
             seg_id = segments[y, x]
             if replace_flags[seg_id % nb_flags]:
                 image[y, x, :] = average_colors[seg_id]
