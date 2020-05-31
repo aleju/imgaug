@@ -74,13 +74,9 @@ import warnings
 import six.moves as sm
 import numpy as np
 import skimage.filters
-# numba cannot be installed in python <=3.5
-try:
-    import numba
-except ImportError:
-    numba = None
 
 import imgaug as ia
+from ..imgaug import _numbajit
 from .. import dtypes as iadt
 from .. import random as iarandom
 from .. import parameters as iap
@@ -495,7 +491,7 @@ def _apply_glass_blur_imgaug(x, severity=1):
         )
     )
 
-    x = _apply_glass_blur_imgaug_loop_dispatcher(
+    x = _apply_glass_blur_imgaug_loop(
         x, iterations, max_delta, dxxdyy
     )
 
@@ -506,16 +502,7 @@ def _apply_glass_blur_imgaug(x, severity=1):
 
 
 # Added in 0.5.0.
-def _apply_glass_blur_imgaug_loop_dispatcher(x, iterations, max_delta, dxxdyy):
-    func = _apply_glass_blur_imgaug_loop
-    # numba is None if it could not be imported
-    if numba is not None:
-        # fastmath seems to slow this down
-        func = numba.jit(func, nopython=True, nogil=True)
-    return func(x, iterations, max_delta, dxxdyy)
-
-
-# Added in 0.5.0.
+@_numbajit(nopython=True, nogil=True, cache=True)
 def _apply_glass_blur_imgaug_loop(
         x, iterations, max_delta, dxxdyy
 ):

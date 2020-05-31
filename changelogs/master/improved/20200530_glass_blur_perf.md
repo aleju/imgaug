@@ -1,4 +1,4 @@
-# Improved Performance of Glass Blur #683
+# Improved Performance of Glass Blur #683 #684
 
 This patch improves the performance of
 `imgaug.augmenters.imgcorruptplike.apply_glass_blur()`
