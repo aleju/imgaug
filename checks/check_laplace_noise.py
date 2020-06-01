@@ -5,7 +5,7 @@ from imgaug import augmenters as iaa
 
 
 def main():
-    img = ia.quokka(0.5)
+    img = ia.data.quokka(0.5)
     mul = 0.025
     augs = [
         ("iaa.AdditiveLaplaceNoise(255*(1*mul))", iaa.AdditiveLaplaceNoise(scale=255*(1*mul))),

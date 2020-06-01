@@ -7,7 +7,7 @@ import imgaug.augmenters as iaa
 
 
 def main():
-    image = ia.quokka(0.25)
+    image = ia.data.quokka(0.25)
 
     for N in [1, 2]:
         print("N=%d" % (N,))

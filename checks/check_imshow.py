@@ -6,7 +6,7 @@ import imgaug as ia
 
 
 def main():
-    image = ia.quokka()
+    image = ia.data.quokka()
     image_gray = np.average(image, axis=2).astype(np.uint8)
     image_gray_3d = image_gray[:, :, np.newaxis]
 

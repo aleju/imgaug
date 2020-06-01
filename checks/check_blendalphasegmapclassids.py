@@ -20,8 +20,8 @@ def main():
         ])
     )
 
-    image = ia.quokka(0.25)
-    segmap = ia.quokka_segmentation_map(0.25)
+    image = ia.data.quokka(0.25)
+    segmap = ia.data.quokka_segmentation_map(0.25)
 
     images_aug, segmaps_aug = aug(images=[image]*25,
                                   segmentation_maps=[segmap]*25)
