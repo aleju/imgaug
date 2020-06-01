@@ -12,9 +12,13 @@ import imageio
 import numpy as np
 
 # filepath to the quokka image, its annotations and depth map
+# Added in 0.5.0.
 _FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Added in 0.5.0.
 _QUOKKA_FP = os.path.join(_FILE_DIR, "quokka.jpg")
+# Added in 0.5.0.
 _QUOKKA_ANNOTATIONS_FP = os.path.join(_FILE_DIR, "quokka_annotations.json")
+# Added in 0.5.0.
 _QUOKKA_DEPTH_MAP_HALFRES_FP = os.path.join(
     _FILE_DIR, "quokka_depth_map_halfres.png")
 
