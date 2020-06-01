@@ -231,6 +231,12 @@ def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
 
     input_dtype = arr.dtype
 
+    # tf.warp() produces a deprecation warning for bool images with
+    # order!=0. We either need to convert them to float or use NN
+    # interpolation.
+    if input_dtype == iadt._BOOL_DTYPE and order != 0:
+        arr = arr.astype(np.float32)
+
     image_warped = tf.warp(
         arr,
         np.linalg.inv(matrix),
