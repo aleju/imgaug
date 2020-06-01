@@ -21,6 +21,10 @@ import six
 import six.moves as sm
 import skimage.draw
 import skimage.measure
+try:
+    import numba
+except ImportError:
+    numba = None
 
 
 ALL = "ALL"
@@ -55,6 +59,12 @@ IMRESIZE_VALID_INTERPOLATIONS = [
 # Cache dict to save kernels used for pooling.
 # Added in 0.5.0.
 _POOLING_KERNELS_CACHE = {}
+
+# Added in 0.5.0.
+_NUMBA_INSTALLED = numba is not None
+
+# Added in 0.5.0.
+_UINT8_DTYPE = np.dtype("uint8")
 
 
 ###############################################################################
@@ -2548,13 +2558,28 @@ def apply_lut_(image, table):
 
         return np.concatenate(subluts, axis=2)
 
-    assert image.dtype.name == "uint8", (
+    assert image.dtype == _UINT8_DTYPE, (
         "Expected uint8 image, got dtype %s." % (image.dtype.name,))
-    assert table.dtype.name == "uint8", (
-        "Expected uint8 table, got dtype %s." % (table.dtype.name,))
 
     image = cv2.LUT(image, table, dst=image)
     return image
+
+
+# Added in 0.5.0.
+def _identity_decorator(*_dec_args, **_dec_kwargs):
+    def _decorator(func):
+        @functools.wraps(func)
+        def _wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return _wrapper
+    return _decorator
+
+
+# Added in 0.5.0.
+if numba is not None:
+    _numbajit = numba.jit
+else:
+    _numbajit = _identity_decorator
 
 
 class HooksImages(object):

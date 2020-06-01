@@ -1,22 +1,16 @@
-# Improved Performance of Segment Replacement #640
+# Improved Performance of Segment Replacement #640 #684
 
 This patch improves the performance of segment
 replacement (by average colors within the segments),
 used in `Superpixels` and `segment_voronoi()`.
-The new method is up to around 7x faster, more for
-smaller images and more segments. It can be slightly
-slower in some cases for large images (512x512 and
-larger).
+The new method is in some cases (especially small
+images) up to 100x faster now. For 224x224 images
+the speed improvement is around 1.4x to 10x,
+depending on how many segments have to be replaced.
 
-This change seems to improve the overall performance
-of `Superpixels` by a factor of around 1.1x to 1.4x
-(more for smaller images).
-It improves the overall performance of
-`segment_voronoi()` by about 1.1x to 2.0x and can
-reach much higher improvements in the case of very few
-segments that have to be replaced.
-
-Note that `segment_voronoi()` is used in `Voronoi`.
+This change is expected to have a moderate positive
+impact on `Superpixels` and `segment_voronoi()` (i.e.
+`Voronoi`).
 
 Added functions:
 * `imgaug.augmenters.segmentation.replace_segments_`
