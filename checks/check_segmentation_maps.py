@@ -7,7 +7,7 @@ from imgaug import augmenters as iaa
 
 
 def main():
-    quokka = ia.quokka(size=0.5)
+    quokka = ia.data.quokka(size=0.5)
     h, w = quokka.shape[0:2]
     c = 1
     segmap = np.zeros((h, w, c), dtype=np.int32)

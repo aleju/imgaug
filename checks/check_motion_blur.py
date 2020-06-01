@@ -13,7 +13,7 @@ TIME_PER_STEP = 1
 
 
 def main():
-    image = ia.quokka(0.5)
+    image = ia.data.quokka(0.5)
     height, width = image.shape[0], image.shape[1]
     center_x = width // 2
     center_y = height // 2

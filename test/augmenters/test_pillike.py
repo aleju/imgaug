@@ -1290,7 +1290,7 @@ class _TestFilter(unittest.TestCase):
         assert aug.func is func
 
     def _test_image(self, cls, pil_kernel):
-        image = ia.quokka(0.25)
+        image = ia.data.quokka(0.25)
         image_aug = cls()(image=image)
         image_aug_pil = PIL.Image.fromarray(image).filter(pil_kernel)
         assert np.array_equal(image_aug, image_aug_pil)
@@ -1511,7 +1511,7 @@ class TestAffine(unittest.TestCase):
             ("shear", {"x": 20}),
             ("shear", {"y": 20})
         ]
-        image = ia.quokka_square((64, 64))
+        image = ia.data.quokka_square((64, 64))
 
         images_aug = []
         for param_name, param_val in params:

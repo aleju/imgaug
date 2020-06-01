@@ -25,7 +25,7 @@ def main():
         ("iaa.Rot90((1, 3), keep_size=True)", iaa.Rot90((1, 3), keep_size=True))
     ]
 
-    image = ia.quokka(0.25)
+    image = ia.data.quokka(0.25)
 
     print("--------")
     print("Image + Keypoints")

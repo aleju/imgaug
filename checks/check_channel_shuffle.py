@@ -6,7 +6,7 @@ iarandom.seed(1)
 
 
 def main():
-    img = ia.quokka(size=(128, 128), extract="square")
+    img = ia.data.quokka(size=(128, 128), extract="square")
 
     aug = iaa.ChannelShuffle()
     imgs_aug = aug.augment_images([img] * 64)

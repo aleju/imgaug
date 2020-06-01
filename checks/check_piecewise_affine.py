@@ -10,7 +10,7 @@ iarandom.seed(3)
 
 
 def main():
-    image = ia.quokka(size=0.5)
+    image = ia.data.quokka(size=0.5)
     print(image.shape)
     kps = [
         ia.KeypointsOnImage(

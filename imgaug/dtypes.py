@@ -1,5 +1,5 @@
 """Functions to interact/analyze with numpy dtypes."""
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 import numpy as np
 import six.moves as sm

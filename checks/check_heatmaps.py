@@ -7,7 +7,7 @@ from imgaug import augmenters as iaa
 
 
 def main():
-    quokka = ia.quokka(size=0.5)
+    quokka = ia.data.quokka(size=0.5)
     h, w = quokka.shape[0:2]
     heatmap = np.zeros((h, w), dtype=np.float32)
     heatmap[70:120, 90:150] = 0.1

@@ -13,11 +13,11 @@ def main():
     ia.imshow(iaa.Resize(64).augment_image(data.camera()))
 
     # test many images
-    images = [ia.quokka(size=0.5), ia.quokka(size=0.5)]
+    images = [ia.data.quokka(size=0.5), ia.data.quokka(size=0.5)]
     images_aug = iaa.Resize(64).augment_images(images)
     ia.imshow(np.hstack(images_aug))
 
-    image = ia.quokka(size=0.5)
+    image = ia.data.quokka(size=0.5)
     kps = [ia.KeypointsOnImage(
         [ia.Keypoint(x=245, y=203), ia.Keypoint(x=365, y=195), ia.Keypoint(x=313, y=269)],
         shape=(image.shape[0]*2, image.shape[1]*2)

@@ -20,7 +20,7 @@ def main():
         ("(0, 100)", iaa.JpegCompression(compression=(0, 100))),
     ]
 
-    image = ia.quokka(size=(256, 256), extract="square")
+    image = ia.data.quokka(size=(256, 256), extract="square")
     images = np.uint8([image] * (5*5))
 
     for i, (name, aug) in enumerate(augs):
