@@ -233,7 +233,7 @@ class TestRNG(_Base):
         mock_is_global.return_value = False
         mock_copy.return_value = "foo"
         result = rng.copy_unless_global_rng()
-        assert result is "foo"
+        assert result == "foo"
         mock_is_global.assert_called_once_with()
         mock_copy.assert_called_once_with()
 
@@ -380,8 +380,165 @@ class TestRNG(_Base):
         self._test_sampling_func("noncentral_f", dfnum=0.5, dfden=1.5,
                                  nonc=2.0, size=(1,))
 
-    def test_normal_mocked(self):
-        self._test_sampling_func("normal", loc=0.5, scale=1.0, size=(1,))
+    def test_normal_loc(self):
+        for size in [None, 1, (1,), (1, 2, 3), (4, 3, 2, 1)]:
+            for loc in [-1.5, -1, -0.5, 0.0, 0.1, 10]:
+                with self.subTest(size=size, loc=loc):
+                    rng = iarandom.RNG(0)
+                    samples = rng.normal(loc=loc, scale=0.0001, size=size)
+                    assert np.allclose(samples, loc, rtol=0, atol=0.025)
+                    if size is not None:
+                        assert samples.dtype.name == "float32"
+
+    def test_normal_scale(self):
+        methods = ["normal", "_normal_np", "_normal_cv2"]
+
+        for method in methods:
+            for scale in [0.001, 1.0, 8.5, 10.0, 50.0, 100.0]:
+                with self.subTest(method=method, scale=scale):
+                    rng = iarandom.RNG(0)
+                    samples = getattr(rng, method)(
+                        loc=5.0, scale=scale, size=(1000,)
+                    )
+                    samples = samples - 5.0
+
+                    observed = np.std(samples)
+                    assert np.isclose(
+                        observed,
+                        scale,
+                        rtol=0,
+                        atol=max(scale*0.1, 0.01)
+                    )
+                    assert samples.dtype.name == "float32"
+
+                    # no samples beyond mean +/- 100*sigma
+                    assert np.all(samples > -100 * scale)
+                    assert np.all(samples < 100 * scale)
+
+                    # at least one value beyond mean +/- 1*sigma
+                    assert np.any(samples < -1 * scale)
+                    assert np.any(samples > 1 * scale)
+
+    def test_normal_scale_with_scalar_samples(self):
+        methods = ["normal", "_normal_np", "_normal_cv2"]
+
+        for method in methods:
+            for scale in [0.5, 8.5, 10.0, 50.5, 100.0]:
+                with self.subTest(method=method, scale=scale):
+                    rng = iarandom.RNG(0)
+                    samples = []
+                    for _ in np.arange(2000):
+                        sample = getattr(rng, method)(
+                            loc=5.0, scale=scale, size=(1,)
+                        )
+                        sample = sample - 5.0
+                        samples.append(sample)
+                    samples = np.concatenate(samples, axis=0)
+
+                    observed = np.std(samples)
+                    assert np.isclose(
+                        observed,
+                        scale,
+                        rtol=0,
+                        atol=max(scale*0.1, 0.01)
+                    )
+                    assert samples.dtype.name == "float32"
+
+                    # no samples beyond mean +/- 100*sigma
+                    assert np.all(samples > -100 * scale)
+                    assert np.all(samples < 100 * scale)
+
+                    # at least one value beyond mean +/- 1*sigma
+                    assert np.any(samples < -1 * scale)
+                    assert np.any(samples > 1 * scale)
+
+    def test_normal_size_is_single_int(self):
+        for size in [0, 1, 10]:
+            rng = iarandom.RNG(0)
+            samples = rng.normal(loc=0.0, scale=1.0, size=size)
+            assert len(samples) == size
+            assert samples.dtype.name == "float32"
+
+    def test_normal_size_is_tuple(self):
+        sizes = [
+            (0,),
+            (1,),
+            (10,),
+            (1, 0),
+            (1, 1),
+            (2, 4),
+            (32, 32),
+            (64, 64),
+            (224, 224),
+            (513, 1025),
+            (224, 224, 0),
+            (224, 224, 1),
+            (224, 224, 2),
+            (224, 224, 3),
+            (224, 224, 4),
+            (224, 224, 10),
+            (2, 5, 513),
+            (2, 5, 1025),
+            (1, 2, 3, 4, 5),
+            (1, 2, 3, 4, 5, 4, 3, 2, 1)
+        ]
+        for size in sizes:
+            with self.subTest(size=size):
+                rng = iarandom.RNG(0)
+                samples = rng.normal(loc=1.0, scale=0.0001, size=size)
+                assert samples.shape == size
+                assert samples.dtype.name == "float32"
+                if np.prod(size) > 0:
+                    assert np.allclose(samples, 1.0, rtol=0, atol=0.01)
+
+    def test_normal_same_seed_leads_to_same_results(self):
+        size = (100,)
+        for seed in [0, 10, 2**30]:
+            with self.subTest(seed=seed):
+                samples1 = iarandom.RNG(seed).normal(
+                    loc=1.0, scale=5.0, size=size
+                )
+                samples2 = iarandom.RNG(seed).normal(
+                    loc=1.0, scale=5.0, size=size
+                )
+                samples3 = iarandom.RNG(seed).normal(
+                    loc=1.0, scale=5.0, size=size
+                )
+
+                assert np.allclose(samples1, samples2, rtol=0, atol=0.01)
+                assert np.allclose(samples2, samples3, rtol=0, atol=0.01)
+
+    def test_normal_different_seeds_lead_to_different_results(self):
+        size = (100,)
+        for seed in [0, 10, 2**30]:
+            with self.subTest(seed=seed):
+                samples1 = iarandom.RNG(seed+0).normal(
+                    loc=1.0, scale=5.0, size=size
+                )
+                samples2 = iarandom.RNG(seed+1).normal(
+                    loc=1.0, scale=5.0, size=size
+                )
+                samples3 = iarandom.RNG(seed+2).normal(
+                    loc=1.0, scale=5.0, size=size
+                )
+
+                assert not np.allclose(samples1, samples2, rtol=0, atol=0.01)
+                assert not np.allclose(samples1, samples3, rtol=0, atol=0.01)
+                assert not np.allclose(samples2, samples3, rtol=0, atol=0.01)
+
+    def test_normal_consecutive_calls_produce_different_results(self):
+        size = (100,)
+        for seed in [0, 10, 2**30]:
+            with self.subTest(seed=seed):
+                rng = iarandom.RNG(0)
+
+                samples1 = rng.normal(loc=1.0, scale=5.0, size=size)
+                samples2 = rng.normal(loc=1.0, scale=5.0, size=size)
+                samples3 = rng.normal(loc=1.0, scale=5.0, size=size)
+
+                assert not np.allclose(samples1, samples2, rtol=0, atol=0.01)
+                assert not np.allclose(samples1, samples3, rtol=0, atol=0.01)
+                assert not np.allclose(samples2, samples3, rtol=0, atol=0.01)
 
     def test_pareto_mocked(self):
         self._test_sampling_func("pareto", a=0.5, size=(1,))
@@ -546,8 +703,194 @@ class TestRNG(_Base):
         self._test_sampling_func("triangular", left=1.0, mode=1.5, right=2.0,
                                  size=(1,))
 
-    def test_uniform_mocked(self):
-        self._test_sampling_func("uniform", low=0.5, high=1.5, size=(1,))
+    def test_uniform_low_high(self):
+        methods = ["uniform", "_uniform_np", "_uniform_cv2"]
+        sizes = [
+            None, 1000, (1000,), (10, 100), (10, 10, 10), (10, 10, 10, 2),
+            (10, 1, 10, 2, 5)
+        ]
+
+        for method in methods:
+            for size in sizes:
+                for low in [-2.5, -0.75, 0.0, 10.2]:
+                    for high in [-1.5, 1.75, 1.0, 11.2]:
+                        if low > high:
+                            continue
+
+                        if method == "_uniform_cv2" and (
+                                size is None or ia.is_single_integer(size)):
+                            continue
+
+                        with self.subTest(method=method, size=size, low=low,
+                                          high=high):
+                            rng = iarandom.RNG(0)
+                            samples = getattr(rng, method)(
+                                low=low, high=high, size=size
+                            )
+                            assert np.all(samples >= low)
+                            assert np.all(samples < high)
+                            if size is not None and np.prod(size) >= 1000:
+                                assert np.any(np.isclose(samples, low, rtol=0,
+                                                         atol=0.1))
+                                assert np.any(np.isclose(samples, high, rtol=0,
+                                                         atol=0.1))
+                            if size is not None:
+                                assert samples.dtype.name == "float32"
+
+    def test_uniform_low_equals_high(self):
+        methods = ["uniform", "_uniform_np", "_uniform_cv2"]
+        sizes = [
+            None, 1000, (1000,), (10, 100), (10, 10, 10), (10, 10, 10, 2),
+            (10, 1, 10, 2, 5)
+        ]
+
+        for method in methods:
+            for size in sizes:
+                for value in [-2.5, -0.75, 0.0, 10.2]:
+                    if method == "_uniform_cv2" and (
+                            size is None or ia.is_single_integer(size)):
+                        continue
+
+                    with self.subTest(method=method, size=size, value=value):
+                        rng = iarandom.RNG(0)
+                        samples = getattr(rng, method)(
+                            low=value, high=value, size=size
+                        )
+                        assert np.allclose(samples, value, rtol=0,
+                                           atol=0.01)
+                        if size is not None:
+                            assert samples.dtype.name == "float32"
+
+    def test_uniform_low_high_scalar_samples(self):
+        methods = ["uniform", "_uniform_np", "_uniform_cv2"]
+
+        for method in methods:
+            for low in [-2.5, 0.0, 10.2]:
+                for high in [1.0, 11.2]:
+                    if low > high:
+                        continue
+
+                    with self.subTest(method=method, low=low, high=high):
+                        rng = iarandom.RNG(0)
+                        samples = []
+                        for _ in np.arange(2000):
+                            sample = getattr(rng, method)(
+                                low=low, high=high, size=(1,)
+                            )
+                            samples.append(sample)
+                        samples = np.concatenate(samples, axis=0)
+
+                        samples_sorted = np.sort(samples)
+                        dishomogenity = np.average(
+                            np.abs(
+                                samples_sorted[1:] - samples_sorted[:-1]
+                            )
+                        )
+                        dishomogenity_thresh = 2 * ((high - low) / 2000)
+
+                        assert np.all(samples >= low)
+                        assert np.all(samples < high)
+                        assert np.any(np.isclose(samples, low, rtol=0,
+                                                 atol=0.1))
+                        assert np.any(np.isclose(samples, high, rtol=0,
+                                                 atol=0.1))
+                        assert dishomogenity < dishomogenity_thresh
+
+    def test_uniform_size_is_single_int(self):
+        for size in [0, 1, 10]:
+            rng = iarandom.RNG(0)
+            samples = rng.uniform(low=0.5, high=1.0, size=size)
+            assert len(samples) == size
+            assert samples.dtype.name == "float32"
+
+    def test_uniform_size_is_tuple(self):
+        sizes = [
+            (0,),
+            (1,),
+            (10,),
+            (1, 0),
+            (1, 1),
+            (2, 4),
+            (32, 32),
+            (64, 64),
+            (224, 224),
+            (513, 1025),
+            (224, 224, 0),
+            (224, 224, 1),
+            (224, 224, 2),
+            (224, 224, 3),
+            (224, 224, 4),
+            (224, 224, 10),
+            (2, 5, 513),
+            (2, 5, 1025),
+            (1, 2, 3, 4, 5),
+            (1, 2, 3, 4, 5, 4, 3, 2, 1)
+        ]
+        low = 2.0
+        high = 5.0
+        for size in sizes:
+            with self.subTest(size=size):
+                rng = iarandom.RNG(0)
+                samples = rng.uniform(low=low, high=high, size=size)
+                assert samples.shape == size
+                assert samples.dtype.name == "float32"
+                if np.prod(size) > 0:
+                    assert np.all(samples >= low)
+                    assert np.all(samples < high)
+                if np.prod(size) > 1000:
+                    assert np.any(np.isclose(samples, low, rtol=0,
+                                             atol=0.1))
+                    assert np.any(np.isclose(samples, high, rtol=0,
+                                             atol=0.1))
+
+    def test_uniform_same_seed_leads_to_same_results(self):
+        size = (100,)
+        for seed in [0, 10, 2**30]:
+            with self.subTest(seed=seed):
+                samples1 = iarandom.RNG(seed).uniform(
+                    low=2.0, high=5.0, size=size
+                )
+                samples2 = iarandom.RNG(seed).uniform(
+                    low=2.0, high=5.0, size=size
+                )
+                samples3 = iarandom.RNG(seed).uniform(
+                    low=2.0, high=5.0, size=size
+                )
+
+                assert np.allclose(samples1, samples2, rtol=0, atol=0.01)
+                assert np.allclose(samples2, samples3, rtol=0, atol=0.01)
+
+    def test_uniform_different_seeds_lead_to_different_results(self):
+        size = (100,)
+        for seed in [0, 10, 2**30]:
+            with self.subTest(seed=seed):
+                samples1 = iarandom.RNG(seed+0).uniform(
+                    low=2.0, high=5.0, size=size
+                )
+                samples2 = iarandom.RNG(seed+1).uniform(
+                    low=2.0, high=5.0, size=size
+                )
+                samples3 = iarandom.RNG(seed+2).uniform(
+                    low=2.0, high=5.0, size=size
+                )
+
+                assert not np.allclose(samples1, samples2, rtol=0, atol=0.01)
+                assert not np.allclose(samples1, samples3, rtol=0, atol=0.01)
+                assert not np.allclose(samples2, samples3, rtol=0, atol=0.01)
+
+    def test_uniform_consecutive_calls_produce_different_results(self):
+        size = (100,)
+        for seed in [0, 10, 2**30]:
+            with self.subTest(seed=seed):
+                rng = iarandom.RNG(0)
+
+                samples1 = rng.uniform(low=2.0, high=5.0, size=size)
+                samples2 = rng.uniform(low=2.0, high=5.0, size=size)
+                samples3 = rng.uniform(low=2.0, high=5.0, size=size)
+
+                assert not np.allclose(samples1, samples2, rtol=0, atol=0.01)
+                assert not np.allclose(samples1, samples3, rtol=0, atol=0.01)
+                assert not np.allclose(samples2, samples3, rtol=0, atol=0.01)
 
     def test_vonmises_mocked(self):
         self._test_sampling_func("vonmises", mu=1.0, kappa=1.5, size=(1,))
@@ -641,7 +984,7 @@ class TestRNG(_Base):
 
     def test_random_sample(self):
         result = iarandom.RNG(0).random_sample((10, 20, 3))
-        assert result.dtype.name == "float64"
+        assert result.dtype.name == "float32"
         assert result.shape == (10, 20, 3)
         assert np.all(result >= 0.0)
         assert np.all(result <= 1.0)
