@@ -1383,7 +1383,17 @@ class BoundingBoxesOnImage(IAugmentable):
 
     """
     def __init__(self, bounding_boxes, shape):
-        self.bounding_boxes = bounding_boxes
+        if isinstance(bounding_boxes, list):
+            self.bounding_boxes = bounding_boxes
+        elif isinstance(bboxes.items, ia.augmentables.bbs.BoundingBox):
+            self.bounding_boxes = [bounding_boxes]
+        elif isinstance(bboxes.items, ia.augmentables.bbs.BoundingBoxesOnImage):
+            self.bounding_boxes = bounding_boxes.items
+        else:
+            raise Exception(
+                f"Cannot assign {type(bounding_boxes)}"
+                f"bounding_boxes should be a list of ia.augmentables.bbs.BoundingBox"
+                )
         self.shape = _handle_on_image_shape(shape, self)
 
     @property
