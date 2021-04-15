@@ -774,7 +774,7 @@ class _AffineSamplingResult(object):
         return matrix, arr_shape
 
     # Added in 0.4.0.
-    def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.0, 0.0)):
+    def to_matrix_cba(self, idx, arr_shape, fit_output, shift_add=(0.5, 0.5)):
         return self.to_matrix(idx, arr_shape, arr_shape, fit_output, shift_add)
 
     # Added in 0.4.0.
