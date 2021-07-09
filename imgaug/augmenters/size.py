@@ -3204,11 +3204,11 @@ class CropToFixedSize(meta.Augmenter):
         crop_left = 0
 
         if height_max is not None and height_image > height_max:
-            crop_top = int(offset_y * (height_image - height_max))
+            crop_top = max(0, int(offset_y * height_image - height_max // 2))
             crop_bottom = height_image - height_max - crop_top
 
         if width_max is not None and width_image > width_max:
-            crop_left = int(offset_x * (width_image - width_max))
+            crop_left = max(0, int(offset_x * width_image - width_max // 2))
             crop_right = width_image - width_max - crop_left
 
         return crop_top, crop_right, crop_bottom, crop_left
