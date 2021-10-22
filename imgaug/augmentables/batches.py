@@ -454,7 +454,8 @@ class Batch(object):
             keypoints=_copy(self.keypoints_unaug),
             bounding_boxes=_copy(self.bounding_boxes_unaug),
             polygons=_copy(self.polygons_unaug),
-            line_strings=_copy(self.line_strings_unaug)
+            line_strings=_copy(self.line_strings_unaug),
+            data=self.data
         )
 
     def fill_from_batch_in_augmentation_(self, batch_in_augmentation):
