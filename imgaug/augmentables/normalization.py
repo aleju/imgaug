@@ -1,6 +1,7 @@
 """Functions dealing with normalization of user input data to imgaug classes."""
 from __future__ import print_function, division, absolute_import
 import functools
+import itertools
 
 import numpy as np
 
@@ -565,7 +566,7 @@ def invert_normalize_images(images, images_old):
         return images
     if ia.is_iterable(images_old):
         result = []
-        for image, image_old in zip(images, images_old):
+        for image, image_old in itertools.product(images, images_old):
             if image_old.ndim == 2:
                 assert image.shape[2] == 1, (
                     "Expected each image of shape (H,W,C) to have C=1 due to "
