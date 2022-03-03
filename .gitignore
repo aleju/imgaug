@@ -13,6 +13,9 @@ imgaug/parameters-testcode.py
 imgaug/bak/*
 imgaug/quokka_depth_map.xcf
 
+# Generated files
+imgaug/__version__.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
