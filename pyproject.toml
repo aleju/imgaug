@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=61.2.0", "wheel", "setuptools_scm[toml]>=3.4.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "imgaug"
+authors = [{name = "Alexander Jung", email = "kontakt@ajung.name"}]
+license = {text = "MIT"}
+description = "Image augmentation library for deep neural networks"
+keywords = [
+    "augmentation",
+    "image",
+    "deep learning",
+    "neural network",
+    "CNN",
+    "machine learning",
+    "computer vision",
+    "overfitting",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "six",
+    "numpy>=1.15",
+    "scipy",
+    "Pillow",
+    "matplotlib",
+    "scikit-image>=0.14.2",
+    "imageio<=2.6.1; python_version<'3.5'",
+    "imageio; python_version>='3.5'",
+    "Shapely",
+]
+dynamic = ["version"]
+
+[project.readme]
+text = """
+A library for image augmentation in machine learning experiments, particularly convolutional
+neural networks. Supports the augmentation of images, keypoints/landmarks, bounding boxes, heatmaps and segmentation
+maps in a variety of different ways."""
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://github.com/aleju/imgaug"
+Download = "https://github.com/aleju/imgaug/archive/0.4.0.tar.gz"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages]
+find = {namespaces = false}
+
+[tool.setuptools.package-data]
+"*" = ["LICENSE"] # README.md; requirements.txt
+imgaug = [
+    "DejaVuSans.ttf",
+    "quokka.jpg",
+    "quokka_annotations.json",
+    "quokka_depth_map_halfres.png",
+]
+"imgaug.checks" = ["README.md"]
+
+
+[tool.setuptools_scm]
+write_to = "imgaug/__version__.py"
+write_to_template = "__version__ = '{version}'\n"
