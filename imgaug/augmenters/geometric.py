@@ -1311,8 +1311,12 @@ class Affine(meta.Augmenter):
         # mode would lead to averaging class ids, which makes no sense to do.
         self._order_heatmaps = 3
         self._order_segmentation_maps = 0
-        self._mode_heatmaps = "constant"
-        self._mode_segmentation_maps = "constant"
+        if mode in ["symmetric", "reflect", "wrap"]:
+            self._mode_heatmaps = mode
+            self._mode_segmentation_maps = mode
+        else:
+            self._mode_heatmaps = "constant"
+            self._mode_segmentation_maps = "constant"
         self._cval_heatmaps = 0
         self._cval_segmentation_maps = 0
 
