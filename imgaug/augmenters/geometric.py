@@ -635,7 +635,7 @@ class _AffineMatrixGenerator(object):
 
     # Added in 0.5.0.
     def translate(self, x_px, y_px):
-        if x_px < 1e-4 or x_px > 1e-4 or y_px < 1e-4 or x_px > 1e-4:
+        if x_px < 1e-4 or x_px > 1e-4 or y_px < 1e-4 or y_px > 1e-4:
             matrix = np.array([
                 [1, 0, x_px],
                 [0, 1, y_px],
