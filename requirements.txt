@@ -1,4 +1,4 @@
-six
+six>=1.4.0,<=1.16.0
 # The test for imgaug.augmenters.blend.blend_alpha() fails for numpy<1.15.
 # All other tests seemed to work as of 2019/01/04.
 numpy>=1.15
