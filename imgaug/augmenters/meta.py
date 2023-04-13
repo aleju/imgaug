@@ -3384,7 +3384,7 @@ class SomeOf(Augmenter, list):
         # pylint: disable=invalid-name
         nn = self._get_n(nb_rows, random_state)
         nn = [min(n, len(self)) for n in nn]
-        augmenter_active = np.zeros((nb_rows, len(self)), dtype=np.bool)
+        augmenter_active = np.zeros((nb_rows, len(self)), dtype=bool)
         for row_idx, n_true in enumerate(nn):
             if n_true > 0:
                 augmenter_active[row_idx, 0:n_true] = 1
