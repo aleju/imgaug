@@ -107,7 +107,7 @@ class TestSegmentationMapsOnImage___init__(unittest.TestCase):
     def test_boolean_masks(self):
         # Test for #189 (boolean mask inputs into SegmentationMapsOnImage not
         # working)
-        for dt in [bool, np.bool]:
+        for dt in [bool, bool]:
             arr = np.array([
                 [0, 0, 0],
                 [0, 1, 0],
