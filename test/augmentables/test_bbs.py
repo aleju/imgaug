@@ -749,7 +749,7 @@ class TestBoundingBox(unittest.TestCase):
     def _get_standard_draw_box_on_image_vars(cls):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         bb = ia.BoundingBox(y1=1, x1=1, y2=3, x2=3)
-        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool_)
         bb_mask[1:3+1, 1] = True
         bb_mask[1:3+1, 3] = True
         bb_mask[1, 1:3+1] = True
@@ -823,7 +823,7 @@ class TestBoundingBox(unittest.TestCase):
     def test_draw_box_on_image_bb_outside_of_image(self):
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         bb = ia.BoundingBox(y1=-1, x1=-1, y2=2, x2=2)
-        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool_)
         bb_mask[2, 0:3] = True
         bb_mask[0:3, 2] = True
 
@@ -837,7 +837,7 @@ class TestBoundingBox(unittest.TestCase):
     def test_draw_box_on_image_bb_outside_of_image_and_very_small(self):
         image, bb, bb_mask = self._get_standard_draw_box_on_image_vars()
         bb = ia.BoundingBox(y1=-1, x1=-1, y2=1, x2=1)
-        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool_)
         bb_mask[0:1+1, 1] = True
         bb_mask[1, 0:1+1] = True
 
@@ -850,7 +850,7 @@ class TestBoundingBox(unittest.TestCase):
 
     def test_draw_box_on_image_size_2(self):
         image, bb, _ = self._get_standard_draw_box_on_image_vars()
-        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        bb_mask = np.zeros(image.shape[0:2], dtype=np.bool_)
         bb_mask[0:5, 0:5] = True
         bb_mask[2, 2] = False
 
