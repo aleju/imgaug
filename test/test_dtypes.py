@@ -378,9 +378,6 @@ class Test_change_dtypes_(unittest.TestCase):
 # TODO is the copy_* function still used anywhere
 class Test_copy_dtypes_for_restore(unittest.TestCase):
     def test_images_as_list(self):
-        # TODO using dtype=np.bool is causing this to fail as it ends up
-        #      being <type bool> instead of <type 'numpy.bool_'>.
-        #      Any problems from that for the library?
         images = [
             np.zeros((1, 1, 3), dtype=np.uint8),
             np.zeros((10, 16, 3), dtype=np.float32),

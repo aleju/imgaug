@@ -950,7 +950,7 @@ class Polygon(object):
         rr_face, cc_face = skimage.draw.polygon(
             yy_mask, xx_mask, shape=(height_mask, width_mask))
 
-        mask = np.zeros((height_mask, width_mask), dtype=np.bool)
+        mask = np.zeros((height_mask, width_mask), dtype=np.bool_)
         mask[rr_face, cc_face] = True
 
         if image.ndim == 3:
