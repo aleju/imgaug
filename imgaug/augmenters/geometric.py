@@ -237,6 +237,9 @@ def _warp_affine_arr_skimage(arr, matrix, cval, mode, order, output_shape):
     if input_dtype == iadt._BOOL_DTYPE and order != 0:
         arr = arr.astype(np.float32)
 
+    if input_dtype == np.float16 and order == 0:
+        arr = arr.astype(np.float32)
+
     image_warped = tf.warp(
         arr,
         np.linalg.inv(matrix),
@@ -3204,12 +3207,16 @@ class PiecewiseAffine(meta.Augmenter):
                 if image.dtype.kind == "b":
                     image = image.astype(np.float64)
 
+                if image.dtype == np.float16 and samples.order[i] == 0:
+                    image = image.astype(np.float32)
+
+                cval = samples.get_clipped_cval(i, image.dtype)
                 image_warped = tf.warp(
                     image,
                     transformer,
                     order=samples.order[i],
                     mode=samples.mode[i],
-                    cval=samples.get_clipped_cval(i, image.dtype),
+                    cval=cval,
                     preserve_range=True,
                     output_shape=images[i].shape
                 )
@@ -3217,6 +3224,9 @@ class PiecewiseAffine(meta.Augmenter):
                 if input_dtype.kind == "b":
                     image_warped = image_warped > 0.5
                 else:
+                    # fill skimage.transform.warp output nan values with cval
+                    image_warped = np.where(np.isnan(image_warped), cval.astype(input_dtype), image_warped)
+
                     # warp seems to change everything to float64, including
                     # uint8, making this necessary
                     image_warped = iadt.restore_dtypes_(
@@ -4789,7 +4799,7 @@ class ElasticTransformation(meta.Augmenter):
             result = np.empty_like(image)
 
             for c in sm.xrange(image.shape[2]):
-                remapped_flat = ndimage.interpolation.map_coordinates(
+                remapped_flat = ndimage.map_coordinates(
                     image[..., c],
                     (y_shifted.flatten(), x_shifted.flatten()),
                     order=order,
@@ -4878,7 +4888,6 @@ class _ElasticTfShiftMapGenerator(object):
         # somewhere by 2. It is fastes to multiply the (fewer) alphas, which
         # we will have to multiply the shift maps with anyways.
         alphas *= 2
-
         # Configuration for each chunk.
         # switch dx / dy, flip dx lr, flip dx ud, flip dy lr, flip dy ud
         switch = [False, True]
@@ -4948,9 +4957,8 @@ class _ElasticTfShiftMapGenerator(object):
     # Added in 0.5.0.
     @classmethod
     def _mul_alpha(cls, dx, dy, alpha):
-        # performance drops for cv2.multiply here
-        dx = dx * alpha
-        dy = dy * alpha
+        dx = (dx * alpha).astype(dx.dtype)
+        dy = (dy * alpha).astype(dy.dtype)
         return dx, dy
 
     # Added in 0.5.0.
@@ -4961,6 +4969,8 @@ class _ElasticTfShiftMapGenerator(object):
             dy = blur_lib.blur_gaussian_(dy, sigma)
         else:
             ksize = int(round(2*sigma))
+            dx = np.ascontiguousarray(dx)
+            dy = np.ascontiguousarray(dy)
             dx = cv2.blur(dx, (ksize, ksize), dst=dx)
             dy = cv2.blur(dy, (ksize, ksize), dst=dy)
         return dx, dy

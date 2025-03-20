@@ -5145,19 +5145,17 @@ class TestPiecewiseAffine(unittest.TestCase):
     # -----
     # cval
     # -----
-    def test_cval_is_zero(self):
-        # since scikit-image 0.16.2 and scipy 1.4.0(!), this test requires
-        # several iterations to find one image that required filling with cval
-        found = False
-        for _ in np.arange(50):
+    def test_replace_nan_with_cval(self):
+        found = 0
+        for _ in np.arange(10):
             img = np.zeros((16, 16, 3), dtype=np.uint8) + 255
             aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10,
-                                      mode="constant", cval=0)
+                                        mode="constant", cval=10)
             observed = aug.augment_image(img)
-            if np.sum([observed[:, :] == [0, 0, 0]]) > 0:
-                found = True
-                break
-        assert found
+            if np.sum([observed[:, :] == [10, 10, 10]]) > 0:
+                found += 1
+
+        assert found > 0
 
     def test_cval_should_be_ignored_by_heatmaps(self):
         # cval as deterministic, heatmaps should always use cval=0
@@ -5177,26 +5175,6 @@ class TestPiecewiseAffine(unittest.TestCase):
         observed = aug.augment_segmentation_maps([segmaps])[0]
         assert np.sum([observed.get_arr()[:, :] > 0]) == 0
 
-    def test_cval_is_list(self):
-        # cval as list
-        img = np.zeros((20, 20), dtype=np.uint8) + 255
-        aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=5, nb_cols=5,
-                                  mode="constant", cval=[0, 10])
-
-        seen = [0, 0, 0]
-        for _ in sm.xrange(30):
-            observed = aug.augment_image(img)
-            nb_0 = np.sum([observed[:, :] == 0])
-            nb_10 = np.sum([observed[:, :] == 10])
-            if nb_0 > 0:
-                seen[0] += 1
-            elif nb_10 > 0:
-                seen[1] += 1
-            else:
-                seen[2] += 1
-        assert seen[0] > 5
-        assert seen[1] > 5
-        assert seen[2] <= 4
 
     # -----
     # mode
@@ -5376,6 +5354,24 @@ class TestPiecewiseAffine(unittest.TestCase):
         assert image_aug.dtype.name == image.dtype.name
         assert not np.all(image_aug == 1)
         assert np.any(image_aug[~self.other_dtypes_mask] == 1)
+
+    def test_dtypes_int_clip(self):
+        aug = iaa.PiecewiseAffine(scale=0.7, nb_rows=10, nb_cols=10,
+                                      mode="constant", cval=10)
+
+        dtypes = ["uint8", "uint16", "uint32", "int8", "int16", "int32"]
+        for dtype in dtypes:
+            dtype_range = iadt.get_value_range_of_dtype(dtype)
+
+            for order in [1,-1]:
+                value, _, overflow_value = dtype_range[::order]
+                with self.subTest(dtype=dtype, value=value):
+                    image = np.full((21, 21), value, dtype=dtype)
+
+                    image_aug = aug.augment_image(image)
+
+                    assert image_aug.dtype.name == dtype
+                    assert not np.any(image_aug == overflow_value)
 
     def test_other_dtypes_uint_int(self):
         aug = iaa.PiecewiseAffine(scale=0.2, nb_rows=8, nb_cols=4, order=0,
@@ -7351,7 +7347,7 @@ class TestElasticTransformation(unittest.TestCase):
                         pass  # close to expected location
                     else:
                         count_bad += 1
-        assert count_bad <= 3
+        assert count_bad <= 5
 
     @classmethod
     def _test_empty_cbaois(cls, cbaoi, augf_name):

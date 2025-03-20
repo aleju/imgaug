@@ -10,20 +10,29 @@ maps in a variety of different ways."""
 
 INSTALL_REQUIRES = [
     "six",
-    "numpy>=1.15",
+    "numpy>=1.21",
     "scipy",
     "Pillow",
     "matplotlib",
-    "scikit-image>=0.14.2",
+    "scikit-image>=0.17",
     "opencv-python-headless",
-    "imageio<=2.6.1; python_version<'3.5'",
-    "imageio; python_version>='3.5'",
-    "Shapely"
+    "opencv-python",
+    "imageio",
+    "Shapely",
+    "imagecorruptions-imaug>=1.1.3",
 ]
 
 ALT_INSTALL_REQUIRES = {
     "opencv-python-headless": ["opencv-python", "opencv-contrib-python", "opencv-contrib-python-headless"],
 }
+
+DEV_REQUIRES = [
+    "pytest-subtests",
+    "xdoctest >= 0.7.2",
+    "coverage",
+    "pytest-cov",
+    "flake8",
+]
 
 
 def check_alternative_installation(install_require, alternative_install_requires):
@@ -58,12 +67,16 @@ INSTALL_REQUIRES = get_install_requirements(INSTALL_REQUIRES, ALT_INSTALL_REQUIR
 
 setup(
     name="imgaug",
-    version="0.4.0",
-    author="Alexander Jung",
-    author_email="kontakt@ajung.name",
-    url="https://github.com/aleju/imgaug",
-    download_url="https://github.com/aleju/imgaug/archive/0.4.0.tar.gz",
+    version="0.4.0", # TODO(erjel)
+    author="imaug",
+    author_email="ej_foss@mailbox.org",
+    url="https://github.com/imaug/imaug",
+    # TODO(erjel) download_url="https://github.com/aleju/imgaug/archive/0.4.0.tar.gz",
+    python_requires='>3.6,<3.13', # imagecorruptions require numba -> numba 0.60 requires python <3.13
     install_requires=INSTALL_REQUIRES,
+    extras_require={
+        'dev': DEV_REQUIRES,
+    },
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -84,13 +97,12 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Image Recognition",
         "Topic :: Software Development :: Libraries :: Python Modules"

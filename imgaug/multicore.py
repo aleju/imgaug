@@ -612,7 +612,7 @@ class BatchLoader(object):
                 worker = multiprocessing.Process(
                     target=self._load_batches,
                     args=(load_batch_func, self._queue_internal,
-                          self.join_signal, seeds[i])
+                          self.join_signal, int(seeds[i]))
                 )
             worker.daemon = True
             worker.start()
@@ -828,7 +828,7 @@ class BackgroundAugmenter(object):
         for i in range(nb_workers):
             worker = multiprocessing.Process(
                 target=self._augment_images_worker,
-                args=(augseq, self.queue_source, self.queue_result, seeds[i])
+                args=(augseq, self.queue_source, self.queue_result, int(seeds[i]))
             )
             worker.daemon = True
             worker.start()

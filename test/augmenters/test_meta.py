@@ -4496,7 +4496,7 @@ class TestAugmenter_augment(unittest.TestCase):
         heatmaps = (
             np.copy(base_arr)[:, :, :, np.newaxis].astype(np.float32)
             / np.max(base_arr)
-        )
+        ).astype(np.float32)
         segmaps = np.copy(base_arr)[:, :, :, np.newaxis].astype(np.int32)
 
         batch_aug = aug.augment(images=images, heatmaps=heatmaps,

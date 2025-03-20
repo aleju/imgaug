@@ -12,6 +12,7 @@ try:
 except ImportError:
     import mock
 import functools
+import inspect
 
 import numpy as np
 
@@ -144,7 +145,11 @@ class _CompareFuncWithImageCorruptions(unittest.TestCase):
         func_imagecor = functools.partial(corrupt, corruption_name=fname)
 
         with iarandom.temporary_numpy_seed(seed):
-            image_aug_exp = func_imagecor(image_imgcor, severity=severity)
+            kwargs = {}
+            if 'seed' in inspect.getfullargspec(imagecorruptions.corruption_dict[fname]).args:
+                kwargs = {'seed': seed}
+
+            image_aug_exp = func_imagecor(image_imgcor, severity=severity, **kwargs)
             if not ia.is_np_array(image_aug_exp):
                 image_aug_exp = np.asarray(image_aug_exp)
             if image_imgcor.ndim == 2:

@@ -23,6 +23,7 @@ import imgaug.random as iarandom
 NP_VERSION = np.__version__
 IS_NP_117_OR_HIGHER = (
     NP_VERSION.startswith("2.")
+    or NP_VERSION.startswith("1.26")
     or NP_VERSION.startswith("1.25")
     or NP_VERSION.startswith("1.24")
     or NP_VERSION.startswith("1.23")

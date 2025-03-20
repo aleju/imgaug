@@ -175,7 +175,7 @@ def _add_scalar_to_uint8_(image, value):
         return cv2.add(image, value, dst=image, dtype=cv2.CV_8U)
 
     input_shape = image.shape
-    image = image.ravel()
+    image = image.reshape(-1, 1)
     values = np.array(value)
     if not is_channelwise:
         values = np.broadcast_to(values, image.shape)
@@ -1442,6 +1442,8 @@ def _invert_uint8_lut_pregenerated_(arr, min_value, max_value, threshold,
 # Added in 0.5.0.
 def _invert_uint8_subtract_(arr, max_value):
     # seems to work with arr.base.shape[0] > 1
+    if arr.size == 0:
+        return arr
     if arr.base is not None and arr.base.shape[0] == 1:
         arr = np.copy(arr)
     if not arr.flags["C_CONTIGUOUS"]:
@@ -1449,7 +1451,7 @@ def _invert_uint8_subtract_(arr, max_value):
 
     input_shape = arr.shape
     if len(input_shape) > 2 and input_shape[-1] > 1:
-        arr = arr.ravel()
+        arr = arr.reshape(-1, 1)
     # This also supports a mask, which would help for thresholded invert, but
     # it seems that all non-masked components are set to zero in the output
     # array. Tackling this issue seems to rather require more time than just

@@ -784,8 +784,10 @@ class Test_fliplr(unittest.TestCase):
     def test__fliplr_sliced_3d_four_channels(self):
         self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 4)
 
-    def test__fliplr_sliced_3d_513_channels(self):
-        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 513)
+    def test__fliplr_sliced_3d_256_channels(self):
+        # NOTE(erjel): Why this works:
+        # https://docs.opencv.org/4.10.0/d0/d86/tutorial_py_image_arithmetics.html
+        self._test__fliplr_subfunc_n_channels(fliplib._fliplr_sliced, 256)
 
     @classmethod
     def _test__fliplr_subfunc_n_channels(cls, func, nb_channels):

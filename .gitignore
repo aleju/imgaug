@@ -76,3 +76,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Extra docs repository
+docs

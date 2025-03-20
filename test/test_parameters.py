@@ -3811,7 +3811,7 @@ class TestPower(unittest.TestCase):
 
                 assert (
                     base ** exponent - _eps(sample)
-                    < sample <
+                    < float(sample) <
                     base ** exponent + _eps(sample)
                 )
                 assert samples.dtype.kind == "f"
@@ -3841,7 +3841,7 @@ class TestPower(unittest.TestCase):
 
                 assert (
                     base ** exponent - _eps(sample)
-                    < sample <
+                    < float(sample) <
                     base ** exponent + _eps(sample)
                 )
                 assert samples.dtype.kind == "f"

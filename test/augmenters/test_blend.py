@@ -428,7 +428,7 @@ class Test_blend_alpha(unittest.TestCase):
                         assert img_blend.shape == (3, 3, c)
                         assert _allclose(
                             img_blend,
-                            0.75*max_float_dt(v1) + 0.25*max_float_dt(v2)
+                            0.75*v1 + 0.25*v2
                         )
 
                     img_fg = np.full((3, 3, 2), v1, dtype=dtype)
@@ -641,6 +641,14 @@ class TestBlendAlpha(unittest.TestCase):
                 assert np.array_equal(observed.get_arr(),
                                       self.segmaps_l1.get_arr())
 
+
+    # opencv-python (3.4.18.65) function `addWeighted` on macos-14 with
+    # python 3.8.10 shows inconsistent rounding behavior i.e. some values
+    # are 12 others 13
+    @unittest.skipIf(
+        sys.platform == "darwin",
+        "Inconsistent OpenCV rounding on MacOS"
+    )
     def test_images_factor_is_075(self):
         aug = iaa.BlendAlpha(0.75, iaa.Add(10), iaa.Add(20))
         observed = aug.augment_image(self.image)

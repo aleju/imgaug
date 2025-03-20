@@ -107,24 +107,23 @@ class TestSegmentationMapsOnImage___init__(unittest.TestCase):
     def test_boolean_masks(self):
         # Test for #189 (boolean mask inputs into SegmentationMapsOnImage not
         # working)
-        for dt in [bool, np.bool]:
-            arr = np.array([
+        arr = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0]
+        ], dtype=bool)
+        assert arr.dtype.kind == "b"
+        segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
+        assert np.array_equal(
+            segmap.arr,
+            np.int32([
                 [0, 0, 0],
                 [0, 1, 0],
                 [0, 0, 0]
-            ], dtype=dt)
-            assert arr.dtype.kind == "b"
-            segmap = ia.SegmentationMapsOnImage(arr, shape=(3, 3))
-            assert np.array_equal(
-                segmap.arr,
-                np.int32([
-                    [0, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 0]
-                ])[:, :, np.newaxis]
-            )
-            assert segmap.get_arr().dtype.name == arr.dtype.name
-            assert np.array_equal(segmap.get_arr(), arr)
+            ])[:, :, np.newaxis]
+        )
+        assert segmap.get_arr().dtype.name == arr.dtype.name
+        assert np.array_equal(segmap.get_arr(), arr)
 
     def test_uint32_fails(self):
         got_exception = False

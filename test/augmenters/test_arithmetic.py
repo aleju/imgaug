@@ -6253,13 +6253,15 @@ class TestInvert(unittest.TestCase):
 
     def test_other_dtypes_p_is_one_with_max_value(self):
         # with p=1.0 and max_value
-        aug = iaa.Invert(p=1.0, max_value=16)
         dtypes = [np.uint8, np.uint16, np.uint32,
                   np.int8, np.int16, np.int32,
                   np.float16, np.float32]
         for dtype in dtypes:
             min_value, _center_value, _max_value = iadt.get_value_range_of_dtype(dtype)
-            max_value = 16
+
+            max_value = 16 if dtype != np.float16 else 15
+            aug = iaa.Invert(p=1.0, max_value=max_value)
+
             kind = np.dtype(dtype).kind
             center_value = min_value + 0.5 * (max_value - min_value)
             image_min = np.full((3, 3), min_value, dtype=dtype)

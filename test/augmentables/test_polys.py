@@ -1261,27 +1261,44 @@ class TestPolygon_draw_on_image(unittest.TestCase):
         # alpha=0.8
         poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
         image = self.image
+        color_face = [32, 128, 32]
+        color_lines = [0, 255, 0]
+        alpha = 0.8
         image_poly = poly.draw_on_image(image,
                                         color=[32, 128, 32],
-                                        color_face=[32, 128, 32],
-                                        color_lines=[0, 255, 0],
+                                        color_face=color_face,
+                                        color_lines=color_lines,
                                         color_points=[0, 255, 0],
-                                        alpha=0.8,
+                                        alpha=alpha,
                                         alpha_points=0.0,
                                         raise_if_out_of_image=False)
         assert image_poly.dtype.type == np.uint8
         assert image_poly.shape == (10, 10, 3)
-        for c_idx, value in enumerate([0, 255, 0]):
-            expected = np.round(
-                (1-0.8)*image[2:9, 8:9, c_idx]
-                + np.full((7, 1), 0.8*value, dtype=np.float32)
+        for c_idx, (value_line, value_face) in enumerate(zip(color_lines, color_face)):
+
+            expected_right = np.round(
+                # apply face color
+                ((image[2:9, 8:9, c_idx] * (1 - (alpha * 0.5)))
+                    + ((alpha * 0.5) * value_face))
+                # apply line color
+                * (1 - alpha) + (alpha * value_line)
+            ).astype(np.uint8)
+
+            expected_left = np.round(
+                ((image[2:9, 2:3, c_idx] * (1 - (alpha * 0.5)))
+                    + ((alpha * 0.5) * value_face))
+                * (1 - alpha) + (alpha * value_line)
             ).astype(np.uint8)
 
             # right boundary
-            assert np.all(image_poly[2:9, 8:9, c_idx] == expected)
-        expected = (0.8 * 0.5) * np.tile(
-            np.uint8([32, 128, 32]).reshape((1, 1, 3)), (5, 5, 1)
-        ) + (1 - (0.8 * 0.5)) * image[3:8, 3:8, :]
+            assert np.all(image_poly[2:9, 8:9, c_idx] == expected_right)
+
+            # left boundary
+            assert np.all(image_poly[2:9, 2:3, c_idx] == expected_left)
+
+        expected =  (image[3:8, 3:8, :] * (1 - (alpha * 0.5))) + ((alpha * 0.5)
+            * np.array(color_face).reshape(1,1,3))
+
         assert np.all(image_poly[3:8, 3:8, :]
                       == np.round(expected).astype(np.uint8))
 
@@ -1289,22 +1306,26 @@ class TestPolygon_draw_on_image(unittest.TestCase):
         # alpha of fill and perimeter 0.5
         poly = ia.Polygon([(2, 2), (8, 2), (8, 8), (2, 8)])
         image = self.image
+        alpha_face = alpha_lines = 0.5
+        color_lines = [0, 255, 0]
+        color_face = [32, 128, 32]
         image_poly = poly.draw_on_image(image,
                                         color=[32, 128, 32],
-                                        color_face=[32, 128, 32],
-                                        color_lines=[0, 255, 0],
+                                        color_face=color_face,
+                                        color_lines=color_lines,
                                         color_points=[0, 255, 0],
                                         alpha=1.0,
-                                        alpha_face=0.5,
-                                        alpha_lines=0.5,
+                                        alpha_face=alpha_face,
+                                        alpha_lines=alpha_lines,
                                         alpha_points=0.0,
                                         raise_if_out_of_image=False)
         assert image_poly.dtype.type == np.uint8
         assert image_poly.shape == (10, 10, 3)
-        for c_idx, value in enumerate([0, 255, 0]):
+        for c_idx, (value_line, value_face) in enumerate(zip(color_lines, color_face)):
             expected = np.round(
-                0.5*image[2:9, 8:9, c_idx]
-                + np.full((7, 1), 0.5*value, dtype=np.float32)
+                ((image[2:9, 8:9, c_idx] * (1 - (alpha_face)))
+                    + ((alpha_face) * value_face))
+                * (1 - alpha_lines) + (alpha_lines * value_line)
             ).astype(np.uint8)
 
             # right boundary
@@ -1373,8 +1394,8 @@ class TestPolygon_extract_from_image(unittest.TestCase):
                            (20, 20), (10, 20), (10, 5), (0, 5)])
         subimage = poly.extract_from_image(self.image)
         expected = np.copy(self.image)
-        expected[:5, 10:, :] = 0  # top right block
-        expected[5:, :10, :] = 0  # left bottom block
+        expected[:5, 11:, :] = 0  # top right block
+        expected[6:, :10, :] = 0  # left bottom block
         assert np.array_equal(subimage, expected)
 
     def test_polygon_is_partially_outside_of_image(self):
@@ -1757,26 +1778,26 @@ class TestPolygon_to_bounding_box(unittest.TestCase):
     def test_square_polygon(self):
         poly = ia.Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         bb = poly.to_bounding_box()
-        assert 0 - 1e-8 < bb.x1 < 0 + 1e-8
-        assert 0 - 1e-8 < bb.y1 < 0 + 1e-8
-        assert 1 - 1e-8 < bb.x2 < 1 + 1e-8
-        assert 1 - 1e-8 < bb.y2 < 1 + 1e-8
+        assert 0 - 1e-8 < float(bb.x1) < 0 + 1e-8
+        assert 0 - 1e-8 < float(bb.y1) < 0 + 1e-8
+        assert 1 - 1e-8 < float(bb.x2) < 1 + 1e-8
+        assert 1 - 1e-8 < float(bb.y2) < 1 + 1e-8
 
     def test_triangular_polygon(self):
         poly = ia.Polygon([(0.5, 0), (1, 1), (0, 1)])
         bb = poly.to_bounding_box()
-        assert 0 - 1e-8 < bb.x1 < 0 + 1e-8
-        assert 0 - 1e-8 < bb.y1 < 0 + 1e-8
-        assert 1 - 1e-8 < bb.x2 < 1 + 1e-8
-        assert 1 - 1e-8 < bb.y2 < 1 + 1e-8
+        assert 0 - 1e-8 < float(bb.x1) < 0 + 1e-8
+        assert 0 - 1e-8 < float(bb.y1) < 0 + 1e-8
+        assert 1 - 1e-8 < float(bb.x2) < 1 + 1e-8
+        assert 1 - 1e-8 < float(bb.y2) < 1 + 1e-8
 
     def test_triangular_polygon2(self):
         poly = ia.Polygon([(0.5, 0.5), (2, 0.1), (1, 1)])
         bb = poly.to_bounding_box()
-        assert 0.5 - 1e-8 < bb.x1 < 0.5 + 1e-8
-        assert 0.1 - 1e-8 < bb.y1 < 0.1 + 1e-8
-        assert 2.0 - 1e-8 < bb.x2 < 2.0 + 1e-8
-        assert 1.0 - 1e-8 < bb.y2 < 1.0 + 1e-8
+        assert 0.5 - 1e-8 < float(bb.x1) < 0.5 + 1e-8
+        assert 0.1 - 1e-8 < float(bb.y1) < 0.1 + 1e-8
+        assert 2.0 - 1e-8 < float(bb.x2) < 2.0 + 1e-8
+        assert 1.0 - 1e-8 < float(bb.y2) < 1.0 + 1e-8
 
 
 class TestPolygon_to_line_string(unittest.TestCase):
@@ -1857,8 +1878,8 @@ class TestPolygon_from_shapely(unittest.TestCase):
         poly = poly.change_first_point_by_index(start_idx)
 
         for (x_exp, y_exp), (x_obs, y_obs) in zip(exterior, poly.exterior):
-            assert x_exp - 1e-8 < x_obs < x_exp + 1e-8
-            assert y_exp - 1e-8 < y_obs < y_exp + 1e-8
+            assert (x_exp - 1e-8) < float(x_obs) < (x_exp + 1e-8)
+            assert (y_exp - 1e-8) < float(y_obs) < (y_exp + 1e-8)
 
     def test_polygon_with_zero_points(self):
         poly_shapely = shapely.geometry.Polygon([])

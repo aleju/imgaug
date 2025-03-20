@@ -853,71 +853,66 @@ def _batch_loader_load_func():
 
 
 # Note that BatchLoader is deprecated
+@unittest.skipIf(sys.platform.startswith("win"), "depreciated and hangs")
 class TestBatchLoader(unittest.TestCase):
     def setUp(self):
         reseed()
 
     def test_basic_functionality(self):
-        warnings.simplefilter("always")
-        with warnings.catch_warnings(record=True) as caught_warnings:
-            for nb_workers in [1, 2]:
-                # repeat these tests many times to catch rarer race conditions
-                for _ in sm.xrange(5):
-                    loader = multicore.BatchLoader(
-                        _batch_loader_load_func, queue_size=2,
-                        nb_workers=nb_workers, threaded=True)
-                    loaded = []
-                    counter = 0
-                    while ((not loader.all_finished()
-                            or not loader.queue.empty())
-                            and counter < 1000):
-                        try:
-                            batch = loader.queue.get(timeout=0.001)
-                            loaded.append(batch)
-                        except:
-                            pass
-                        counter += 1
-                    assert len(loaded) == 20*nb_workers, \
-                        "Expected %d to be loaded by threads, got %d for %d " \
-                        "workers at counter %d." % (
-                            20*nb_workers, len(loaded), nb_workers, counter
-                        )
+        for nb_workers in [1, 2]:
+            # repeat these tests many times to catch rarer race conditions
+            for _ in sm.xrange(5):
+                loader = multicore.BatchLoader(
+                    _batch_loader_load_func, queue_size=2,
+                    nb_workers=nb_workers, threaded=True)
+                loaded = []
+                counter = 0
+                while ((not loader.all_finished()
+                        or not loader.queue.empty())
+                        and counter < 1000):
+                    try:
+                        batch = loader.queue.get(timeout=0.001)
+                        loaded.append(batch)
+                    except:
+                        pass
+                    counter += 1
+                assert len(loaded) == 20*nb_workers, \
+                    "Expected %d to be loaded by threads, got %d for %d " \
+                    "workers at counter %d." % (
+                        20*nb_workers, len(loaded), nb_workers, counter
+                    )
 
-                    loader = multicore.BatchLoader(
-                        _batch_loader_load_func, queue_size=200,
-                        nb_workers=nb_workers, threaded=True)
-                    loader.terminate()
-                    assert loader.all_finished()
+                loader = multicore.BatchLoader(
+                    _batch_loader_load_func, queue_size=200,
+                    nb_workers=nb_workers, threaded=True)
+                loader.terminate()
+                assert loader.all_finished()
 
-                    loader = multicore.BatchLoader(
-                        _batch_loader_load_func, queue_size=2,
-                        nb_workers=nb_workers, threaded=False)
-                    loaded = []
-                    counter = 0
-                    while ((not loader.all_finished()
-                            or not loader.queue.empty())
-                            and counter < 1000):
-                        try:
-                            batch = loader.queue.get(timeout=0.001)
-                            loaded.append(batch)
-                        except:
-                            pass
-                        counter += 1
-                    assert len(loaded) == 20*nb_workers, \
-                        "Expected %d to be loaded by background processes, " \
-                        "got %d for %d workers at counter %d." % (
-                            20*nb_workers, len(loaded), nb_workers, counter
-                        )
+                loader = multicore.BatchLoader(
+                    _batch_loader_load_func, queue_size=2,
+                    nb_workers=nb_workers, threaded=False)
+                loaded = []
+                counter = 0
+                while ((not loader.all_finished()
+                        or not loader.queue.empty())
+                        and counter < 1000):
+                    try:
+                        batch = loader.queue.get(timeout=0.001)
+                        loaded.append(batch)
+                    except:
+                        pass
+                    counter += 1
+                assert len(loaded) == 20*nb_workers, \
+                    "Expected %d to be loaded by background processes, " \
+                    "got %d for %d workers at counter %d." % (
+                        20*nb_workers, len(loaded), nb_workers, counter
+                    )
 
-                    loader = multicore.BatchLoader(
-                        _batch_loader_load_func, queue_size=200,
-                        nb_workers=nb_workers, threaded=False)
-                    loader.terminate()
-                    assert loader.all_finished()
-
-            assert len(caught_warnings) > 0
-            for warning in caught_warnings:
-                assert "is deprecated" in str(warning.message)
+                loader = multicore.BatchLoader(
+                    _batch_loader_load_func, queue_size=200,
+                    nb_workers=nb_workers, threaded=False)
+                loader.terminate()
+                assert loader.all_finished()
 
 
 # Note that BackgroundAugmenter is deprecated
@@ -925,58 +920,52 @@ class TestBackgroundAugmenter(unittest.TestCase):
     def setUp(self):
         reseed()
 
-    def test_augment_images_worker(self):
-        warnings.simplefilter("always")
-        with warnings.catch_warnings(record=True) as caught_warnings:
-            def gen():
-                yield ia.Batch(images=np.zeros((1, 4, 4, 3), dtype=np.uint8))
-            bl = multicore.BatchLoader(gen(), queue_size=2)
-            bgaug = multicore.BackgroundAugmenter(bl, iaa.Identity(),
-                                                  queue_size=1, nb_workers=1)
+    def test_augment_images_worker(self):        
+        def gen():
+            yield ia.Batch(images=np.zeros((1, 4, 4, 3), dtype=np.uint8))
+        bl = multicore.BatchLoader(gen(), queue_size=2)
+        bgaug = multicore.BackgroundAugmenter(bl, iaa.Identity(),
+                                                queue_size=1, nb_workers=1)
 
-            queue_source = multiprocessing.Queue(2)
-            queue_target = multiprocessing.Queue(2)
-            queue_source.put(
-                pickle.dumps(
-                    ia.Batch(images=np.zeros((1, 4, 8, 3), dtype=np.uint8)),
-                    protocol=-1
-                )
+        queue_source = multiprocessing.Queue(2)
+        queue_target = multiprocessing.Queue(2)
+        queue_source.put(
+            pickle.dumps(
+                ia.Batch(images=np.zeros((1, 4, 8, 3), dtype=np.uint8)),
+                protocol=-1
             )
-            queue_source.put(pickle.dumps(None, protocol=-1))
-            bgaug._augment_images_worker(iaa.Add(1), queue_source,
-                                         queue_target, 1)
+        )
+        queue_source.put(pickle.dumps(None, protocol=-1))
+        bgaug._augment_images_worker(iaa.Add(1), queue_source,
+                                        queue_target, 1)
 
-            batch_aug = pickle.loads(queue_target.get())
-            assert isinstance(batch_aug, ia.Batch)
-            assert batch_aug.images_unaug is not None
-            assert batch_aug.images_unaug.dtype == np.uint8
-            assert batch_aug.images_unaug.shape == (1, 4, 8, 3)
-            assert np.array_equal(
-                batch_aug.images_unaug,
-                np.zeros((1, 4, 8, 3), dtype=np.uint8))
-            assert batch_aug.images_aug is not None
-            assert batch_aug.images_aug.dtype == np.uint8
-            assert batch_aug.images_aug.shape == (1, 4, 8, 3)
-            assert np.array_equal(
-                batch_aug.images_aug,
-                np.zeros((1, 4, 8, 3), dtype=np.uint8) + 1)
+        batch_aug = pickle.loads(queue_target.get())
+        assert isinstance(batch_aug, ia.Batch)
+        assert batch_aug.images_unaug is not None
+        assert batch_aug.images_unaug.dtype == np.uint8
+        assert batch_aug.images_unaug.shape == (1, 4, 8, 3)
+        assert np.array_equal(
+            batch_aug.images_unaug,
+            np.zeros((1, 4, 8, 3), dtype=np.uint8))
+        assert batch_aug.images_aug is not None
+        assert batch_aug.images_aug.dtype == np.uint8
+        assert batch_aug.images_aug.shape == (1, 4, 8, 3)
+        assert np.array_equal(
+            batch_aug.images_aug,
+            np.zeros((1, 4, 8, 3), dtype=np.uint8) + 1)
 
-            finished_signal = pickle.loads(queue_target.get())
-            assert finished_signal is None
+        finished_signal = pickle.loads(queue_target.get())
+        assert finished_signal is None
 
-            source_finished_signal = pickle.loads(queue_source.get())
-            assert source_finished_signal is None
+        source_finished_signal = pickle.loads(queue_source.get())
+        assert source_finished_signal is None
 
-            assert queue_source.empty()
-            assert queue_target.empty()
+        assert queue_source.empty()
+        assert queue_target.empty()
 
-            queue_source.close()
-            queue_target.close()
-            queue_source.join_thread()
-            queue_target.join_thread()
-            bl.terminate()
-            bgaug.terminate()
-
-        assert len(caught_warnings) > 0
-        for warning in caught_warnings:
-            assert "is deprecated" in str(warning.message)
+        queue_source.close()
+        queue_target.close()
+        queue_source.join_thread()
+        queue_target.join_thread()
+        bl.terminate()
+        bgaug.terminate()

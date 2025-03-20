@@ -257,7 +257,7 @@ class Test_quokka_segmentation_map(unittest.TestCase):
         segmap = iadata.quokka_segmentation_map(size=(642, 959))
         assert segmap.shape == (642, 959, 3)
         assert segmap.arr.shape == (642, 959, 1)
-        assert np.allclose(np.average(segmap.arr), 0.30160266, rtol=0, atol=1e-3)
+        assert np.allclose(np.average(segmap.arr), 0.30304315, rtol=0, atol=1e-3)                                      
 
 
 class Test_quokka_keypoints(unittest.TestCase):

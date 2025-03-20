@@ -147,16 +147,8 @@ class TestGammaContrast(unittest.TestCase):
                 assert image_aug.shape == shape
 
     def test_other_dtypes_uint_int(self):
-        try:
-            high_res_dt = np.float128
-            dts = [np.uint8, np.uint16, np.uint32, np.uint64,
-                   np.int8, np.int16, np.int32, np.int64]
-        except AttributeError:
-            # cannot reliably check uint64 and int64 on systems that dont
-            # support float128
-            high_res_dt = np.float64
-            dts = [np.uint8, np.uint16, np.uint32,
-                   np.int8, np.int16, np.int32]
+        dts = [np.uint8, np.uint16, np.uint32, np.uint64,
+                np.int8, np.int16, np.int32, np.int64]
 
         for dtype in dts:
             dtype = np.dtype(dtype)
@@ -178,8 +170,8 @@ class TestGammaContrast(unittest.TestCase):
                         image = np.full((3, 3), value, dtype=dtype)
                         expected = (
                             (
-                                (image.astype(high_res_dt) / max_value)
-                                ** exp
+                                (image / max_value)
+                                ** np.array([exp], dtype=dtype)
                             ) * max_value
                         ).astype(dtype)
                         image_aug = aug.augment_image(image)
@@ -201,8 +193,8 @@ class TestGammaContrast(unittest.TestCase):
                                 image[..., c] += c
                             expected = (
                                 (
-                                    (image.astype(high_res_dt) / max_value)
-                                    ** exp
+                                    (image / max_value)
+                                    ** np.array([exp], dtype=dtype)
                                 ) * max_value
                             ).astype(dtype)
                             image_aug = aug.augment_image(image)

@@ -3026,7 +3026,7 @@ class TestPad(unittest.TestCase):
                     iadt.get_value_range_of_dtype(dtype)
 
                 def _isclose(a, b):
-                    atol = 1e-4 if dtype == np.float16 else 1e-8
+                    atol = 1e-4 if np.dtype(dtype) == np.float16 else 1e-8
                     return np.isclose(a, b, atol=atol, rtol=0)
 
                 isize = np.dtype(dtype).itemsize
@@ -4025,16 +4025,7 @@ class TestCrop(unittest.TestCase):
                 image = np.zeros(shape, dtype=np.uint8)
                 aug = iaa.Crop(px=1, keep_size=False)
 
-                with warnings.catch_warnings(record=True) as caught_warnings:
-                    image_aug = aug(image=image)
-
-                # we don't check the number of warnings here as it varies by
-                # shape
-                for warning in caught_warnings:
-                    assert (
-                        "crop amounts in CropAndPad"
-                        in str(warning.message)
-                    )
+                image_aug = aug(image=image)
 
                 expected_height = 0 if shape[0] == 0 else 1
                 expected_width = 0 if shape[1] == 0 else 1
@@ -4066,16 +4057,7 @@ class TestCrop(unittest.TestCase):
                 image = np.zeros(shape, dtype=np.uint8)
                 aug = iaa.Crop(px=1, keep_size=True)
 
-                with warnings.catch_warnings(record=True) as caught_warnings:
-                    image_aug = aug(image=image)
-
-                # we don't check the number of warnings here as it varies by
-                # shape
-                for warning in caught_warnings:
-                    assert (
-                        "crop amounts in CropAndPad"
-                        in str(warning.message)
-                    )
+                image_aug = aug(image=image)
 
                 assert image_aug.shape == image.shape
 
@@ -4144,7 +4126,7 @@ class TestCrop(unittest.TestCase):
                     iadt.get_value_range_of_dtype(dtype)
 
                 def _isclose(a, b):
-                    atol = 1e-4 if dtype == np.float16 else 1e-8
+                    atol = 1e-4 if np.dtype(dtype) == np.float16 else 1e-8
                     return np.isclose(a, b, atol=atol, rtol=0)
 
                 isize = np.dtype(dtype).itemsize

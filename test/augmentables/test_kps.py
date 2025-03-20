@@ -624,7 +624,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -640,7 +640,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -659,7 +659,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -678,7 +678,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -694,7 +694,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -710,7 +710,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         kpi = ia.KeypointsOnImage(keypoints=kps, shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -733,7 +733,7 @@ class TestKeypointsOnImage(unittest.TestCase):
         )
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -766,7 +766,7 @@ class TestKeypointsOnImage(unittest.TestCase):
             shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -784,7 +784,7 @@ class TestKeypointsOnImage(unittest.TestCase):
             shape=(5, 5, 3))
         image = np.zeros((5, 5, 3), dtype=np.uint8) + 10
 
-        kps_mask = np.zeros(image.shape[0:2], dtype=np.bool)
+        kps_mask = np.zeros(image.shape[0:2], dtype=bool)
         kps_mask[2, 1] = 1
         kps_mask[4, 3] = 1
 
@@ -908,7 +908,7 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         image = kpi.to_keypoint_image(size=1)
 
-        kps_mask = np.zeros((5, 5, 2), dtype=np.bool)
+        kps_mask = np.zeros((5, 5, 2), dtype=bool)
         kps_mask[2, 1, 0] = 1
         kps_mask[4, 3, 1] = 1
         assert np.all(image[kps_mask] == 255)
@@ -920,7 +920,7 @@ class TestKeypointsOnImage(unittest.TestCase):
 
         image = kpi.to_keypoint_image(size=3)
 
-        kps_mask = np.zeros((5, 5, 2), dtype=np.bool)
+        kps_mask = np.zeros((5, 5, 2), dtype=bool)
         kps_mask[2-1:2+1+1, 1-1:1+1+1, 0] = 1
         kps_mask[4-1:4+1+1, 3-1:3+1+1, 1] = 1
         assert np.all(image[kps_mask] >= 128)
