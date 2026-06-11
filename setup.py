@@ -1,7 +1,7 @@
 # pylint: disable=missing-module-docstring
 import re
 
-from pkg_resources import get_distribution, DistributionNotFound
+from importlib.metadata import version as get_distribution, PackageNotFoundError as DistributionNotFound
 from setuptools import setup, find_packages
 
 long_description = """A library for image augmentation in machine learning experiments, particularly convolutional
