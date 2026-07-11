@@ -1249,3 +1249,7 @@ If this library has helped you during your research, feel free to cite it:
   note = {Online; accessed 01-Feb-2020}
 }
 ```
+
+---
+
+*[Mukller](https://github.com/Mukller)*
